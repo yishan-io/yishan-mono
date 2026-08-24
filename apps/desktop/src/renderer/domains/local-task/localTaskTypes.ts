@@ -32,6 +32,34 @@ export type LocalTaskContextDetails = {
   outcomePath: string;
 };
 
+/** Daemon-resolved project display metadata for a Local Task detail view. */
+export type LocalTaskProjectDisplay = {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+};
+
+/**
+ * Workspace kind emitted by `localTask.getDetails`: managed daemon worktrees,
+ * local primary checkouts, and non-git folders.
+ */
+export type LocalTaskWorkspaceDisplayKind = "managed" | "local" | "folder";
+
+/** Daemon-resolved workspace display metadata for a Local Task detail view. */
+export type LocalTaskWorkspaceDisplay = {
+  id: string;
+  name: string;
+  kind: LocalTaskWorkspaceDisplayKind;
+};
+
+/** Detail projection containing a task and daemon-resolved display relationships. */
+export type LocalTaskDetails = {
+  task: LocalTask;
+  project: LocalTaskProjectDisplay | null;
+  workspaces: LocalTaskWorkspaceDisplay[];
+};
+
 /** One historical relationship between a Local Task and a local workspace. */
 export type LocalTaskWorkspaceLink = {
   id: string;

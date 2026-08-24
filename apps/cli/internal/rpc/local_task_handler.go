@@ -17,6 +17,8 @@ func (h *LocalTaskHandler) Call(ctx context.Context, connection *Connection, met
 		return callLocalTask(ctx, params, h.Services.Create)
 	case MethodLocalTaskGet:
 		return callLocalTask(ctx, params, h.Services.Get)
+	case MethodLocalTaskGetDetails:
+		return callLocalTask(ctx, params, h.Services.GetDetails)
 	case MethodLocalTaskGetContextDetails:
 		return callLocalTask(ctx, params, h.Services.GetContextDetails)
 	case MethodLocalTaskList:

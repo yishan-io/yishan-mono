@@ -17,6 +17,7 @@ const commands = vi.hoisted(() => ({
   })),
   createAndLinkLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
+  loadLocalTaskDetails: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
   openLocalTaskContextInFileTree: vi.fn(),
   refreshLocalTaskHub: vi.fn(async () => undefined),
@@ -30,30 +31,29 @@ vi.mock("../../commands/localTaskCommands", () => commands);
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: { page?: number }) => (options?.page ? `${key} ${options.page}` : key),
+    i18n: { language: "en-US" },
   }),
 }));
 vi.mock("@renderer/domains/project", () => ({
-  projectStore: (selector: (state: { projects: Array<{ id: string; name: string }> }) => unknown) =>
-    selector({ projects: [{ id: "project-1", name: "Project One" }] }),
+  projectStore: (
+    selector: (state: { projects: Array<{ id: string; name: string; icon: string; color: string }> }) => unknown,
+  ) => selector({ projects: [{ id: "project-1", name: "Project One", icon: "rocket", color: "primary.main" }] }),
+  renderProjectIcon: (iconId: string | undefined) => `project-icon-${iconId}`,
 }));
 vi.mock("@renderer/domains/workbench", () => ({
   PaneHeader: ({ children }: { children: React.ReactNode }) => children,
   PaneToggleButton: () => null,
   useWorkspacePaneVisibilityContext: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
+  createFixedRuntimeLayer: () => ({
+    register: vi.fn(),
+    attach: vi.fn(),
+    detach: vi.fn(),
+    remove: vi.fn(),
+    refresh: vi.fn(),
+  }),
 }));
-vi.mock("../workspace-tasks/WorkspaceTaskDetails", () => ({
-  WorkspaceTaskDetails: ({
-    task,
-    showTitle,
-  }: {
-    task: { title: string; description: string };
-    showTitle?: boolean;
-  }) => (
-    <div>
-      {showTitle === false ? null : <div>{task.title}</div>}
-      <div>{task.description}</div>
-    </div>
-  ),
+vi.mock("../tags/LocalTaskTagsInlineEditor", () => ({
+  LocalTaskTagsInlineEditor: () => null,
 }));
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
@@ -82,12 +82,45 @@ const initialState = localTaskStore.getState();
 describe("TaskHubView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localTaskStore.setState({ ...initialState, hubTasks: [task], hubLoadState: "loaded", hubError: null });
+    localTaskStore.setState({
+      ...initialState,
+      hubTasks: [task],
+      hubLoadState: "loaded",
+      hubError: null,
+      detailsByTaskId: {
+        [task.id]: {
+          task,
+          project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
+          workspaces: [
+            { id: "workspace-1", name: "Workspace One", kind: "local" },
+            { id: "workspace-2", name: "Workspace Two", kind: "managed" },
+          ],
+        },
+      },
+      detailsLoadStateByTaskId: { [task.id]: "loaded" },
+    });
   });
 
   afterEach(() => {
     cleanup();
     localTaskStore.setState(initialState, true);
+  });
+
+  it("renders and retries a detail projection error", () => {
+    localTaskStore.setState({
+      detailsByTaskId: {},
+      detailsLoadStateByTaskId: { [task.id]: "error" },
+      detailsErrorByTaskId: { [task.id]: "detail projection unavailable" },
+    });
+
+    render(<TaskHubView />);
+    const taskRow = screen.getByText(task.title).closest("button");
+    if (!taskRow) throw new Error("Expected a task row button");
+    fireEvent.click(taskRow);
+
+    expect(screen.getByRole("alert").textContent).toContain("detail projection unavailable");
+    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.retry" }));
+    expect(commands.loadLocalTaskDetails).toHaveBeenCalledWith(task.id);
   });
 
   it("searches, filters, and creates through Local Task commands", async () => {
@@ -230,7 +263,7 @@ describe("TaskHubView", () => {
     expect(screen.queryByText("localTask.priority.high")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Ship Task Hub/ }));
     expect(screen.getByText("Desktop UX")).toBeTruthy();
-    expect(screen.getAllByText("Ship Task Hub")).toHaveLength(1);
+    expect(screen.getAllByText("Ship Task Hub")).toHaveLength(2);
     expect(screen.queryByRole("textbox", { name: "localTask.search.label" })).toBeNull();
     expect(screen.queryByRole("button", { name: "localTask.actions.create" })).toBeNull();
     const detailTitleBar = screen.getByTestId("local-task-hub-title");
@@ -242,6 +275,18 @@ describe("TaskHubView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
     expect(screen.getByRole("textbox", { name: "localTask.search.label" })).toBeTruthy();
+  });
+
+  it("renders daemon projection display metadata without renderer workspace state", () => {
+    render(<TaskHubView />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Ship Task Hub/ }));
+
+    expect(commands.loadLocalTaskDetails).not.toHaveBeenCalled();
+    expect(screen.getByText("Project One")).toBeTruthy();
+    expect(screen.getByTestId("local-task-project-icon").textContent).toBe("project-icon-rocket");
+    expect(screen.getByText("Workspace One")).toBeTruthy();
+    expect(screen.getByText("Workspace Two")).toBeTruthy();
   });
 
   it("groups the header icon and title, keeps create in the header, and puts filter and refresh after search", () => {

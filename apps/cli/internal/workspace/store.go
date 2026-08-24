@@ -26,6 +26,7 @@ type StoredWorkspace struct {
 	LocalPath      string
 	State          string
 	Health         *string
+	Name           *string
 }
 
 // StoredWorkspaceUpdate carries the mutable fields of a persisted workspace row.

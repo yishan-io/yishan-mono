@@ -67,6 +67,13 @@ describe("DaemonLocalTaskClient", () => {
         };
       }
       if (method === "localTask.deleteTag") return { deletedTagId: "tag-desktop" };
+      if (method === "localTask.getDetails") {
+        return {
+          task: taskPayload,
+          project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
+          workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" }],
+        };
+      }
       if (method === "localTask.getContextDetails") {
         return {
           directory: "/context/task-1",
@@ -83,6 +90,7 @@ describe("DaemonLocalTaskClient", () => {
 
     await client.create({ title: "Ship desktop", priority: "high", tagIds: ["tag-desktop"] });
     await client.get("task-1");
+    await client.getDetails("task-1");
     await client.list({
       projectId: "project-1",
       status: "active",
@@ -108,6 +116,7 @@ describe("DaemonLocalTaskClient", () => {
     expect(invoke.mock.calls).toEqual([
       ["localTask.create", { title: "Ship desktop", priority: "high", tagRefs: [{ id: "tag-desktop" }] }],
       ["localTask.get", { id: "task-1" }],
+      ["localTask.getDetails", { id: "task-1" }],
       [
         "localTask.list",
         {
@@ -257,4 +266,26 @@ describe("stable tag ID mutations", () => {
     await expect(client.updateTagColor("stale-tag-id", "#3B82F6")).rejects.toThrow("tag not found");
     expect(invoke.mock.calls).toEqual([["localTask.updateTagColor", { id: "stale-tag-id", color: "#3B82F6" }]]);
   });
+});
+
+it("strictly parses the documented Local Task detail workspace-kind wire contract", async () => {
+  const projection = {
+    task: taskPayload,
+    project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
+    workspaces: [
+      { id: "workspace-managed", name: "Managed workspace", kind: "managed" },
+      { id: "workspace-local", name: "Primary checkout", kind: "local" },
+      { id: "workspace-folder", name: "Folder workspace", kind: "folder" },
+    ],
+  };
+  const client = new DaemonLocalTaskClient(vi.fn(async () => projection));
+
+  await expect(client.getDetails("task-1")).resolves.toEqual(projection);
+  for (const kind of ["worktree", "primary", 1]) {
+    await expect(
+      new DaemonLocalTaskClient(
+        vi.fn(async () => ({ ...projection, workspaces: [{ ...projection.workspaces[0], kind }] })),
+      ).getDetails("task-1"),
+    ).rejects.toThrow("invalid Local Task details payload");
+  }
 });

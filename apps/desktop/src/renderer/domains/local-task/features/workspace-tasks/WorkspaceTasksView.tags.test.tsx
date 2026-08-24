@@ -15,6 +15,7 @@ const commands = vi.hoisted(() => ({
   })),
   loadLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
+  loadLocalTaskDetails: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
   loadLocalTaskLinkCandidates: vi.fn(async () => undefined),
   refreshSelectedWorkspaceTasks: vi.fn(async () => undefined),
@@ -32,6 +33,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, values?: { title?: string; taskId?: string; error?: string }) =>
       values ? `${key} ${values.title ?? ""} ${values.taskId ?? ""} ${values.error ?? ""}` : key,
+    i18n: { language: "en-US" },
   }),
 }));
 vi.mock("@tanstack/react-virtual", () => ({
@@ -120,7 +122,7 @@ describe("WorkspaceTasksView tags", () => {
     });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
-    const metadata = screen.getByTestId("local-task-metadata");
+    const metadata = screen.getByTestId("local-task-details-sidebar");
     expect(metadata.contains(screen.getByTestId("local-task-status-icon"))).toBe(true);
     expect(metadata.contains(screen.getByText("backend"))).toBe(true);
     // Open the tag selector popover by clicking the add button.
@@ -131,7 +133,9 @@ describe("WorkspaceTasksView tags", () => {
     await waitFor(() => expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { tagIds: [] }));
 
     act(() => localTaskStore.setState({ isMutationLoading: true }));
-    expect((screen.getByRole("button", { name: "localTask.tags.add", hidden: true }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "localTask.tags.add", hidden: true }) as HTMLButtonElement).disabled,
+    ).toBe(true);
     expect(commands.updateLocalTask).toHaveBeenCalledTimes(1);
   });
 
@@ -149,7 +153,9 @@ describe("WorkspaceTasksView tags", () => {
     expect(rowChip?.querySelector(".MuiChip-icon")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
-    const detailChip = within(screen.getByTestId("local-task-metadata")).getByText("backend").closest(".MuiChip-root");
+    const detailChip = within(screen.getByTestId("local-task-details-sidebar"))
+      .getByText("backend")
+      .closest(".MuiChip-root");
     expect(detailChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     expect(detailChip?.querySelector(".MuiChip-icon")).toBeNull();
   });

@@ -126,6 +126,21 @@ describe("localTaskStore", () => {
     expect(localTaskStore.getState().tagSuggestions).toEqual(["current"]);
   });
 
+  it("stores Local Task detail projections and ignores stale responses", () => {
+    const staleRequestId = localTaskStore.getState().beginDetailsLoad("task-1");
+    const requestId = localTaskStore.getState().beginDetailsLoad("task-1");
+    const details = {
+      task,
+      project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
+      workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" as const }],
+    };
+    localTaskStore.getState().setDetails(staleRequestId, "task-1", { ...details, project: null });
+    localTaskStore.getState().setDetails(requestId, "task-1", details);
+
+    expect(localTaskStore.getState().detailsByTaskId["task-1"]).toEqual(details);
+    expect(localTaskStore.getState().detailsLoadStateByTaskId["task-1"]).toBe("loaded");
+  });
+
   it("upserts a detail entity without changing list projections", () => {
     let requestId = localTaskStore.getState().beginHubLoad();
     localTaskStore.getState().setHubResults(requestId, [task], 1);

@@ -74,6 +74,7 @@ func storedWorkspaceFromRow(row Workspace) workspace.StoredWorkspace {
 		LocalPath:      row.LocalPath,
 		State:          row.State,
 		Health:         row.Health,
+		Name:           row.Name,
 	}
 }
 

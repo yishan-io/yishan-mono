@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	domain "yishan/apps/cli/internal/localtask"
 	eventbus "yishan/apps/cli/internal/events"
+	domain "yishan/apps/cli/internal/localtask"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -24,6 +24,7 @@ type Deps struct {
 	Repository          domain.Repository
 	Registry            WorkspaceRegistry
 	WorkspaceStore      workspace.WorkspaceStore
+	ProjectResolver     domain.ProjectResolver
 	Events              *eventbus.Hub
 	TaskContextsChanged func()
 	TaskTitleChanged    func(context.Context, string, string)

@@ -24,6 +24,7 @@ vi.mock("../daemon/localTaskDaemonClient", () => ({
   localTaskClient: {
     create: vi.fn(),
     get: vi.fn(),
+    getDetails: vi.fn(),
     list: vi.fn(),
     search: vi.fn(),
     listTags: vi.fn(),

@@ -1,92 +1,9 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type {
-  LocalTask,
-  LocalTaskContextDetails,
-  LocalTaskFilters,
-  LocalTaskLoadState,
-  LocalTaskTagCatalogEntry,
-  LocalTaskTagRef,
-  LocalTaskWorkspaceLink,
-} from "../localTaskTypes";
+import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskTagRef } from "../localTaskTypes";
+import type { LocalTaskStoreState } from "./localTaskStoreState";
 
-/** Mutable Local Task state and synchronous mutation actions. */
-export type LocalTaskStoreState = {
-  taskById: Record<string, LocalTask>;
-  hubTasks: LocalTask[];
-  hubFilters: LocalTaskFilters;
-  hubSearchQuery: string;
-  activeTaskCount: number;
-  hubLoadState: LocalTaskLoadState;
-  hubError: string | null;
-  tagCatalog: LocalTaskTagCatalogEntry[];
-  tagSuggestions: string[];
-  tagSuggestionsLoadState: LocalTaskLoadState;
-  tagSuggestionsError: string | null;
-  selectedWorkspaceId: string | null;
-  selectedWorkspaceTaskId: string | null;
-  workspaceTasks: LocalTask[];
-  workspaceLinks: LocalTaskWorkspaceLink[];
-  workspaceActiveTaskCount: number;
-  workspaceLoadState: LocalTaskLoadState;
-  workspaceError: string | null;
-  linkCandidateWorkspaceId: string | null;
-  linkCandidateTasks: LocalTask[];
-  linkCandidateLoadState: LocalTaskLoadState;
-  linkCandidateError: string | null;
-  taskLoadStateByTaskId: Record<string, LocalTaskLoadState>;
-  taskErrorByTaskId: Record<string, string | null>;
-  contextByTaskId: Record<string, LocalTaskContextDetails>;
-  contextLoadStateByTaskId: Record<string, LocalTaskLoadState>;
-  contextErrorByTaskId: Record<string, string | null>;
-  taskLinksByTaskId: Record<string, LocalTaskWorkspaceLink[]>;
-  taskLinksLoadStateByTaskId: Record<string, LocalTaskLoadState>;
-  taskLinksErrorByTaskId: Record<string, string | null>;
-  pendingMutationCount: number;
-  isMutationLoading: boolean;
-  mutationError: string | null;
-  setHubFilters: (filters: LocalTaskFilters) => void;
-  reconcileHubTagFilter: (removedTagId: string, survivingTagId?: string) => void;
-  setHubSearchQuery: (query: string) => void;
-  beginTagCatalogLoad: () => number;
-  setTagCatalog: (requestId: number, catalog: LocalTaskTagCatalogEntry[]) => void;
-  setTagCatalogError: (requestId: number, error: string) => void;
-  upsertTagCatalogEntry: (entry: LocalTaskTagCatalogEntry) => void;
-  reconcileTagRename: (renamedTag: LocalTaskTagCatalogEntry, removedTagId?: string) => void;
-  reconcileTagDeletion: (deletedTagId: string) => void;
-  beginActiveTaskCountLoad: () => number;
-  setActiveTaskCount: (requestId: number, activeTaskCount: number) => void;
-  beginHubLoad: () => number;
-  setHubResults: (requestId: number, tasks: LocalTask[], activeTaskCount: number) => void;
-  setHubError: (requestId: number, error: string) => void;
-  beginWorkspaceLoad: (workspaceId: string) => number;
-  clearSelectedWorkspace: () => void;
-  selectWorkspaceTask: (taskId: string) => void;
-  setWorkspaceData: (
-    requestId: number,
-    workspaceId: string,
-    tasks: LocalTask[],
-    links: LocalTaskWorkspaceLink[],
-  ) => void;
-  setWorkspaceError: (requestId: number, workspaceId: string, error: string) => void;
-  beginLinkCandidateLoad: (workspaceId: string) => number;
-  setLinkCandidates: (requestId: number, workspaceId: string, tasks: LocalTask[]) => void;
-  setLinkCandidateError: (requestId: number, workspaceId: string, error: string) => void;
-  beginTaskLoad: (taskId: string) => number;
-  setTaskEntity: (requestId: number, taskId: string, task: LocalTask) => void;
-  setTaskError: (requestId: number, taskId: string, error: string) => void;
-  beginContextLoad: (taskId: string) => number;
-  setContext: (requestId: number, taskId: string, context: LocalTaskContextDetails) => void;
-  setContextError: (requestId: number, taskId: string, error: string) => void;
-  beginTaskLinksLoad: (taskId: string) => number;
-  invalidateTaskLinksLoads: (taskIds: string[]) => void;
-  setTaskLinks: (requestId: number, taskId: string, links: LocalTaskWorkspaceLink[]) => void;
-  setTaskLinksError: (requestId: number, taskId: string, error: string) => void;
-  beginMutation: () => void;
-  finishMutation: (error?: string) => void;
-  upsertTaskEntity: (task: LocalTask) => void;
-  invalidateTaskEntities: (taskIds: string[]) => void;
-};
+export type { LocalTaskStoreState } from "./localTaskStoreState";
 
 /** Stores Local Task entities, projections, context, links, and operation state. */
 export const localTaskStore = create<LocalTaskStoreState>()(
@@ -100,6 +17,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
     const taskEntityRevisionByTaskId: Record<string, number> = {};
     const taskLoadRevisionByTaskId: Record<string, number> = {};
     const contextRequestGenerationByTaskId: Record<string, number> = {};
+    const detailsRequestGenerationByTaskId: Record<string, number> = {};
     const taskLinksRequestGenerationByTaskId: Record<string, number> = {};
 
     const writeTaskEntity = (state: LocalTaskStoreState, task: LocalTask) => {
@@ -179,6 +97,9 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       contextByTaskId: {},
       contextLoadStateByTaskId: {},
       contextErrorByTaskId: {},
+      detailsByTaskId: {},
+      detailsLoadStateByTaskId: {},
+      detailsErrorByTaskId: {},
       taskLinksByTaskId: {},
       taskLinksLoadStateByTaskId: {},
       taskLinksErrorByTaskId: {},
@@ -401,6 +322,43 @@ export const localTaskStore = create<LocalTaskStoreState>()(
         set((state) => {
           state.contextLoadStateByTaskId[taskId] = "error";
           state.contextErrorByTaskId[taskId] = error;
+        });
+      },
+      beginDetailsLoad: (taskId) => {
+        const requestId = (detailsRequestGenerationByTaskId[taskId] ?? 0) + 1;
+        detailsRequestGenerationByTaskId[taskId] = requestId;
+        set((state) => {
+          state.detailsLoadStateByTaskId[taskId] = "loading";
+          state.detailsErrorByTaskId[taskId] = null;
+        });
+        return requestId;
+      },
+      setDetails: (requestId, taskId, details) => {
+        if (requestId !== detailsRequestGenerationByTaskId[taskId]) return;
+        set((state) => {
+          state.detailsByTaskId[taskId] = details;
+          writeTaskEntity(state, details.task);
+          state.detailsLoadStateByTaskId[taskId] = "loaded";
+          state.detailsErrorByTaskId[taskId] = null;
+        });
+      },
+      setDetailsError: (requestId, taskId, error) => {
+        if (requestId !== detailsRequestGenerationByTaskId[taskId]) return;
+        set((state) => {
+          state.detailsLoadStateByTaskId[taskId] = "error";
+          state.detailsErrorByTaskId[taskId] = error;
+        });
+      },
+      invalidateDetailsLoads: (taskIds) => {
+        for (const taskId of taskIds) {
+          detailsRequestGenerationByTaskId[taskId] = (detailsRequestGenerationByTaskId[taskId] ?? 0) + 1;
+        }
+        set((state) => {
+          for (const taskId of taskIds) {
+            delete state.detailsByTaskId[taskId];
+            state.detailsLoadStateByTaskId[taskId] = "idle";
+            state.detailsErrorByTaskId[taskId] = null;
+          }
         });
       },
       beginTaskLinksLoad: (taskId) => {

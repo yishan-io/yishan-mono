@@ -4,6 +4,7 @@ import { localTaskClient } from "../daemon/localTaskDaemonClient";
 import type {
   CreateLocalTaskInput,
   LocalTask,
+  LocalTaskDetails,
   LocalTaskFilters,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
@@ -14,10 +15,16 @@ import type {
 import { localTaskStore } from "../state/localTaskStore";
 
 const taskLoadsInFlight = new Map<string, Promise<LocalTask>>();
+const detailLoadsInFlight = new Map<string, Promise<LocalTaskDetails>>();
 
 function getTrackedTaskLinkProjectionIds(): string[] {
   const { taskLinksByTaskId, taskLinksLoadStateByTaskId } = localTaskStore.getState();
   return [...new Set([...Object.keys(taskLinksByTaskId), ...Object.keys(taskLinksLoadStateByTaskId)])];
+}
+
+function getTrackedTaskDetailProjectionIds(): string[] {
+  const { detailsByTaskId, detailsLoadStateByTaskId } = localTaskStore.getState();
+  return [...new Set([...Object.keys(detailsByTaskId), ...Object.keys(detailsLoadStateByTaskId)])];
 }
 
 function getAffectedTaskLinkProjectionIds(predicate: (link: LocalTaskWorkspaceLink) => boolean): string[] {
@@ -41,8 +48,20 @@ function invalidateTaskLinkProjections(taskIds: string[]): string[] {
   return uniqueTaskIds;
 }
 
+function invalidateTaskDetailProjections(taskIds: string[]): string[] {
+  const trackedTaskIds = new Set(getTrackedTaskDetailProjectionIds());
+  const detailTaskIds = [...new Set(taskIds)].filter((taskId) => trackedTaskIds.has(taskId));
+  for (const taskId of detailTaskIds) detailLoadsInFlight.delete(taskId);
+  localTaskStore.getState().invalidateDetailsLoads(detailTaskIds);
+  return detailTaskIds;
+}
+
 async function refreshTaskLinkProjections(taskIds: string[]): Promise<void> {
   await Promise.all([...new Set(taskIds)].map(loadLocalTaskLinks));
+}
+
+async function refreshTaskDetailProjections(taskIds: string[]): Promise<void> {
+  await Promise.all([...new Set(taskIds)].map(loadLocalTaskDetails));
 }
 
 async function refreshAfterMutation(): Promise<void> {
@@ -176,6 +195,29 @@ export function loadLocalTask(taskId: string): Promise<LocalTask> {
   return load;
 }
 
+/** Loads a Local Task detail projection with daemon-resolved display metadata. */
+export function loadLocalTaskDetails(taskId: string): Promise<LocalTaskDetails> {
+  const existingLoad = detailLoadsInFlight.get(taskId);
+  if (existingLoad) return existingLoad;
+
+  const requestId = localTaskStore.getState().beginDetailsLoad(taskId);
+  const load = localTaskClient
+    .getDetails(taskId)
+    .then((details) => {
+      localTaskStore.getState().setDetails(requestId, taskId, details);
+      return details;
+    })
+    .catch((error) => {
+      localTaskStore.getState().setDetailsError(requestId, taskId, getErrorMessage(error));
+      throw error;
+    })
+    .finally(() => {
+      if (detailLoadsInFlight.get(taskId) === load) detailLoadsInFlight.delete(taskId);
+    });
+  detailLoadsInFlight.set(taskId, load);
+  return load;
+}
+
 /** Loads a dedicated projection of tasks that can be linked to one workspace. */
 export async function loadLocalTaskLinkCandidates(workspaceId: string): Promise<void> {
   const requestId = localTaskStore.getState().beginLinkCandidateLoad(workspaceId);
@@ -256,8 +298,9 @@ export async function deleteLocalTaskTag(id: string): Promise<void> {
 export async function updateLocalTask(taskId: string, input: UpdateLocalTaskInput): Promise<LocalTask> {
   return runMutation(async () => {
     const task = await localTaskClient.update(taskId, input);
+    const detailTaskIds = invalidateTaskDetailProjections([taskId]);
     localTaskStore.getState().upsertTaskEntity(task);
-    await refreshAfterTaskMutation();
+    await Promise.all([refreshAfterTaskMutation(), refreshTaskDetailProjections(detailTaskIds)]);
     return task;
   });
 }
@@ -269,7 +312,12 @@ export async function linkLocalTaskWorkspace(taskId: string, workspaceId: string
       getTrackedTaskLinkProjectionIds().filter((trackedTaskId) => trackedTaskId === taskId),
     );
     const link = await localTaskClient.linkWorkspace(taskId, workspaceId);
-    await Promise.all([refreshAfterMutation(), refreshTaskLinkProjections(taskIds)]);
+    const detailTaskIds = invalidateTaskDetailProjections([taskId]);
+    await Promise.all([
+      refreshAfterMutation(),
+      refreshTaskDetailProjections(detailTaskIds),
+      refreshTaskLinkProjections(taskIds),
+    ]);
     return link;
   });
 }
@@ -277,9 +325,15 @@ export async function linkLocalTaskWorkspace(taskId: string, workspaceId: string
 /** Unlinks a workspace relationship and refreshes affected projections. */
 export async function unlinkLocalTaskWorkspace(linkId: string): Promise<void> {
   await runMutation(async () => {
-    const taskIds = invalidateTaskLinkProjections(getAffectedTaskLinkProjectionIds((link) => link.id === linkId));
+    const affectedTaskIds = getAffectedTaskLinkProjectionIds((link) => link.id === linkId);
+    const taskIds = invalidateTaskLinkProjections(affectedTaskIds);
     await localTaskClient.unlinkWorkspace(linkId);
-    await Promise.all([refreshAfterMutation(), refreshTaskLinkProjections(taskIds)]);
+    const detailTaskIds = invalidateTaskDetailProjections(getTrackedTaskDetailProjectionIds());
+    await Promise.all([
+      refreshAfterMutation(),
+      refreshTaskDetailProjections(detailTaskIds),
+      refreshTaskLinkProjections(taskIds),
+    ]);
   });
 }
 
@@ -289,12 +343,16 @@ export async function updateLocalTaskLinkStatus(
   status: LocalTaskStatus,
 ): Promise<LocalTaskWorkspaceLink> {
   return runMutation(async () => {
-    const taskIds = invalidateTaskLinkProjections(getAffectedTaskLinkProjectionIds((link) => link.id === linkId));
+    const affectedTaskIds = getAffectedTaskLinkProjectionIds((link) => link.id === linkId);
+    const taskIds = invalidateTaskLinkProjections(affectedTaskIds);
     const link = await localTaskClient.updateLinkStatus(linkId, status);
-    if (getTrackedTaskLinkProjectionIds().includes(link.localTaskId)) {
-      taskIds.push(link.localTaskId);
-    }
-    await Promise.all([refreshAfterMutation(), refreshTaskLinkProjections(taskIds)]);
+    const detailTaskIds = invalidateTaskDetailProjections([...affectedTaskIds, link.localTaskId]);
+    if (getTrackedTaskLinkProjectionIds().includes(link.localTaskId)) taskIds.push(link.localTaskId);
+    await Promise.all([
+      refreshAfterMutation(),
+      refreshTaskDetailProjections(detailTaskIds),
+      refreshTaskLinkProjections(taskIds),
+    ]);
     return link;
   });
 }

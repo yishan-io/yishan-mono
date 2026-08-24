@@ -12,7 +12,8 @@
       "status": "状态",
       "project": "项目",
       "workspace": "工作区",
-      "tags": "标签"
+      "tags": "标签",
+      "updatedAt": "更新时间"
     },
     "search": {
       "label": "搜索任务"
@@ -63,7 +64,9 @@
       "loading": "正在加载任务",
       "empty": "没有符合当前搜索和筛选条件的任务。",
       "noDescription": "没有描述。",
-      "globalTask": "全局任务"
+      "globalTask": "全局任务",
+      "noValue": "—",
+      "unknownDate": "未知日期"
     },
     "workspace": {
       "title": "工作区任务",
@@ -75,7 +78,9 @@
       "title": "任务上下文",
       "openFolder": "在文件树中打开上下文目录",
       "loading": "正在加载任务上下文",
-      "error": "无法加载任务上下文。"
+      "error": "无法加载任务上下文。",
+      "directory": "目录",
+      "files": "文件"
     },
     "link": {
       "title": "将任务关联到工作区",

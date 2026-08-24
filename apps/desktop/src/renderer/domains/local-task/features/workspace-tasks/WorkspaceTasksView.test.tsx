@@ -16,6 +16,7 @@ const commands = vi.hoisted(() => ({
   })),
   loadLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
+  loadLocalTaskDetails: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
   loadLocalTaskLinkCandidates: vi.fn(async () => undefined),
   refreshSelectedWorkspaceTasks: vi.fn(async () => undefined),
@@ -33,6 +34,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, values?: { title?: string; taskId?: string; error?: string }) =>
       values ? `${key} ${values.title ?? ""} ${values.taskId ?? ""} ${values.error ?? ""}` : key,
+    i18n: { language: "en-US" },
   }),
 }));
 vi.mock("@tanstack/react-virtual", () => ({
@@ -46,7 +48,7 @@ vi.mock("@tanstack/react-virtual", () => ({
 
 const primaryTask = {
   id: "task-primary",
-  projectId: null,
+  projectId: "project-1",
   title: "Primary task",
   description: "Primary details",
   status: "active" as const,
@@ -108,6 +110,14 @@ describe("WorkspaceTasksView", () => {
       linkCandidateTasks: [],
       linkCandidateLoadState: "loaded",
       linkCandidateError: null,
+      detailsByTaskId: {
+        [primaryTask.id]: {
+          task: primaryTask,
+          project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
+          workspaces: [{ id: "workspace-1", name: "Workspace One", kind: "local" }],
+        },
+      },
+      detailsLoadStateByTaskId: { [primaryTask.id]: "loaded" },
       contextLoadStateByTaskId: { [primaryTask.id]: "loaded" },
       contextByTaskId: {
         [primaryTask.id]: {
@@ -153,11 +163,20 @@ describe("WorkspaceTasksView", () => {
     const relatedDescription = screen.getByText("Related details");
     const statusIcon = screen.getByTestId("local-task-status-icon");
     expect(screen.queryByText("task-related")).toBeNull();
-    expect(relatedTitle.compareDocumentPosition(statusIcon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(statusIcon.compareDocumentPosition(relatedDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(relatedTitle.compareDocumentPosition(relatedDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(relatedDescription.compareDocumentPosition(statusIcon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByTestId("local-task-priority-icon")).toBeTruthy();
     expect(screen.queryByText("localTask.fields.status: localTask.status.active")).toBeNull();
     expect(screen.queryByText("localTask.fields.priority: localTask.priority.medium")).toBeNull();
+  });
+
+  it("renders daemon projection project and workspace displays when renderer stores are unhydrated", () => {
+    render(<WorkspaceTasksView workspaceId="workspace-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
+    expect(screen.getByText("Project One")).toBeTruthy();
+    expect(screen.getByTestId("local-task-project-icon")).toBeTruthy();
+    expect(screen.getByText("Workspace One")).toBeTruthy();
   });
 
   it("keeps card menus independent from task-details navigation", () => {
@@ -425,9 +444,20 @@ describe("WorkspaceTasksView", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
 
-    expect(screen.queryByRole("button", { name: "plan.md" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "notes.md" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "outcome.md" })).toBeNull();
+    expect(screen.getByText("Project One")).toBeTruthy();
+    expect(screen.getByText("Workspace One")).toBeTruthy();
+    expect(screen.getByText("/contexts/task-primary")).toBeTruthy();
+    expect(screen.getByText("plan.md")).toBeTruthy();
+    expect(screen.getByText("notes.md")).toBeTruthy();
+    expect(screen.getByText("outcome.md")).toBeTruthy();
+    const statusSelect = screen.getByRole("combobox", { name: "localTask.fields.status" });
+    const prioritySelect = screen.getByRole("combobox", { name: "localTask.fields.priority" });
+    fireEvent.mouseDown(statusSelect);
+    fireEvent.click(screen.getByRole("option", { name: "localTask.status.paused" }));
+    expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { status: "paused" });
+    fireEvent.mouseDown(prioritySelect);
+    fireEvent.click(screen.getByRole("option", { name: "localTask.priority.low" }));
+    expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { priority: "low" });
     fireEvent.click(screen.getByRole("button", { name: "localTask.context.openFolder" }));
     expect(commands.openLocalTaskContextInFileTree).toHaveBeenCalledWith("task-primary");
   });

@@ -18,6 +18,7 @@ import {
   createLocalTaskTag,
   loadLocalTask,
   loadLocalTaskContext,
+  loadLocalTaskDetails,
   loadLocalTaskTagSuggestions,
   openLocalTaskContextInFileTree,
   refreshSelectedWorkspaceTasks,
@@ -49,6 +50,9 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
   const contextLoadStateByTaskId = localTaskStore((state) => state.contextLoadStateByTaskId);
   const contextErrorByTaskId = localTaskStore((state) => state.contextErrorByTaskId);
   const tagCatalog = localTaskStore((state) => state.tagCatalog);
+  const detailsByTaskId = localTaskStore((state) => state.detailsByTaskId);
+  const detailsLoadStateByTaskId = localTaskStore((state) => state.detailsLoadStateByTaskId);
+  const detailsErrorByTaskId = localTaskStore((state) => state.detailsErrorByTaskId);
   const [isLinkOpen, setIsLinkOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
@@ -80,6 +84,15 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
       );
     }
   }, [detailTaskId, taskById, taskLoadStateByTaskId]);
+  useEffect(() => {
+    const detailsLoadState = selectedTask ? detailsLoadStateByTaskId[selectedTask.id] : undefined;
+    if (selectedTask && !detailsByTaskId[selectedTask.id] && (!detailsLoadState || detailsLoadState === "idle")) {
+      void loadLocalTaskDetails(selectedTask.id).catch((loadError) =>
+        console.error("Failed to load Local Task detail projection", loadError),
+      );
+    }
+  }, [detailsByTaskId, detailsLoadStateByTaskId, selectedTask]);
+
   useEffect(() => {
     const contextLoadState = selectedTask ? contextLoadStateByTaskId[selectedTask.id] : undefined;
     if (selectedTask && !contextByTaskId[selectedTask.id] && (!contextLoadState || contextLoadState === "idle")) {
@@ -118,6 +131,16 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
     },
     [detailTaskId],
   );
+  const handleDetailPriority = useCallback(
+    (priority: "low" | "medium" | "high") => {
+      if (detailTaskId) {
+        void updateLocalTask(detailTaskId, { priority }).catch((priorityError) =>
+          console.error("Failed to update Local Task priority", priorityError),
+        );
+      }
+    },
+    [detailTaskId],
+  );
   const handleToggleDetailStatus = useCallback(() => {
     if (selectedTask) handleDetailStatus(selectedTask.status === "active" ? "paused" : "active");
   }, [handleDetailStatus, selectedTask]);
@@ -130,6 +153,13 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
     }
     void loadLocalTaskContext(selectedTask.id);
   }, [contextByTaskId, selectedTask]);
+  const handleRetryDetails = useCallback(() => {
+    if (selectedTask) {
+      void loadLocalTaskDetails(selectedTask.id).catch((loadError) =>
+        console.error("Failed to retry Local Task detail projection", loadError),
+      );
+    }
+  }, [selectedTask]);
   const handleRetryTask = useCallback(() => {
     if (detailTaskId) {
       void loadLocalTask(detailTaskId).catch((loadError) =>
@@ -176,9 +206,16 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
           {selectedTask ? (
             <WorkspaceTaskDetails
               task={selectedTask}
+              context={contextByTaskId[selectedTask.id]}
               contextLoadState={contextLoadStateByTaskId[selectedTask.id] ?? "idle"}
               contextError={contextErrorByTaskId[selectedTask.id] ?? null}
+              details={detailsByTaskId[selectedTask.id]}
+              detailsLoadState={detailsLoadStateByTaskId[selectedTask.id] ?? "idle"}
+              detailsError={detailsErrorByTaskId[selectedTask.id] ?? null}
+              onRetryDetails={handleRetryDetails}
               isMutationLoading={isMutationLoading}
+              onStatusChange={handleDetailStatus}
+              onPriorityChange={handleDetailPriority}
               onTagIdsChange={(tagIds) => updateLocalTask(selectedTask.id, { tagIds })}
               onCreateTag={createLocalTaskTag}
               tagCatalog={tagCatalog}

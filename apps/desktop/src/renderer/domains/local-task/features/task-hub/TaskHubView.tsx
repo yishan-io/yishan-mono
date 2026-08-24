@@ -16,33 +16,20 @@ import { projectStore } from "@renderer/domains/project";
 import { PaneHeader, PaneToggleButton, useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LuArrowLeft, LuListFilter, LuListTodo, LuPanelLeft, LuPlus, LuRefreshCw, LuSearch } from "react-icons/lu";
 import {
-  LuArrowLeft,
-  LuCheck,
-  LuFolderOpen,
-  LuListFilter,
-  LuListTodo,
-  LuPanelLeft,
-  LuPause,
-  LuPlay,
-  LuPlus,
-  LuRefreshCw,
-  LuSearch,
-} from "react-icons/lu";
-import {
-  createLocalTaskTag,
-  loadLocalTaskContext,
   loadLocalTaskTagSuggestions,
   openLocalTaskContextInFileTree,
   refreshLocalTaskHub,
   setLocalTaskHubSearchQuery,
-  updateLocalTask,
 } from "../../commands/localTaskCommands";
 import { localTaskStore } from "../../state/localTaskStore";
-import { WorkspaceTaskDetails } from "../workspace-tasks/WorkspaceTaskDetails";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
 import { LocalTaskHubFilters } from "./LocalTaskHubFilters";
 import { LocalTaskList } from "./LocalTaskList";
+import { TaskHubDetailHeaderActions } from "./TaskHubDetailHeaderActions";
+import { TaskHubTaskDetails } from "./TaskHubTaskDetails";
+import { useTaskHubDetailProjection } from "./useTaskHubDetailProjection";
 
 const TASK_HUB_PAGE_SIZE = 20;
 
@@ -55,14 +42,8 @@ export function TaskHubView() {
   const searchQuery = localTaskStore((state) => state.hubSearchQuery);
   const loadState = localTaskStore((state) => state.hubLoadState);
   const error = localTaskStore((state) => state.hubError);
-  const mutationError = localTaskStore((state) => state.mutationError);
-  const isMutationLoading = localTaskStore((state) => state.isMutationLoading);
   const taskById = localTaskStore((state) => state.taskById);
-  const contextByTaskId = localTaskStore((state) => state.contextByTaskId);
-  const contextLoadStateByTaskId = localTaskStore((state) => state.contextLoadStateByTaskId);
-  const contextErrorByTaskId = localTaskStore((state) => state.contextErrorByTaskId);
   const projects = projectStore((state) => state.projects);
-  const tagCatalog = localTaskStore((state) => state.tagCatalog);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -77,6 +58,7 @@ export function TaskHubView() {
   const selectedTask = selectedTaskId
     ? (taskById[selectedTaskId] ?? tasks.find((task) => task.id === selectedTaskId))
     : undefined;
+  const detailProjection = useTaskHubDetailProjection(selectedTask);
   const projectNameById = useMemo(
     () => Object.fromEntries(projects.map((project) => [project.id, project.name])),
     [projects],
@@ -99,14 +81,6 @@ export function TaskHubView() {
     setCurrentPage(resolvedCurrentPage);
   }, [resolvedCurrentPage]);
 
-  useEffect(() => {
-    if (!selectedTask) return;
-    const contextLoadState = contextLoadStateByTaskId[selectedTask.id];
-    if (!contextByTaskId[selectedTask.id] && (!contextLoadState || contextLoadState === "idle")) {
-      void loadLocalTaskContext(selectedTask.id);
-    }
-  }, [contextByTaskId, contextLoadStateByTaskId, selectedTask]);
-
   const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     void setLocalTaskHubSearchQuery(event.target.value);
   }, []);
@@ -127,26 +101,17 @@ export function TaskHubView() {
   const handleBackToList = useCallback(() => setSelectedTaskId(null), []);
   const handleOpenContextFolder = useCallback(() => {
     if (!selectedTask) return;
-    if (contextByTaskId[selectedTask.id]) {
+    if (detailProjection.context) {
       openLocalTaskContextInFileTree(selectedTask.id);
       return;
     }
-    void loadLocalTaskContext(selectedTask.id);
-  }, [contextByTaskId, selectedTask]);
-  const handleDetailStatus = useCallback(
-    (status: "active" | "paused" | "completed") => {
-      if (selectedTask) {
-        void updateLocalTask(selectedTask.id, { status }).catch((statusError) =>
-          console.error("Failed to update Local Task status", statusError),
-        );
-      }
-    },
-    [selectedTask],
-  );
+    // fire-and-forget: Local Task store owns loading and error state.
+    void detailProjection.handleRetryContext();
+  }, [detailProjection, selectedTask]);
   const handleToggleDetailStatus = useCallback(() => {
-    if (selectedTask) handleDetailStatus(selectedTask.status === "active" ? "paused" : "active");
-  }, [handleDetailStatus, selectedTask]);
-  const handleCompleteDetail = useCallback(() => handleDetailStatus("completed"), [handleDetailStatus]);
+    if (selectedTask) detailProjection.handleDetailStatus(selectedTask.status === "active" ? "paused" : "active");
+  }, [detailProjection, selectedTask]);
+  const handleCompleteDetail = useCallback(() => detailProjection.handleDetailStatus("completed"), [detailProjection]);
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
@@ -178,54 +143,13 @@ export function TaskHubView() {
         <Box sx={{ flex: 1 }} />
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {selectedTask ? (
-            <>
-              <Tooltip title={t("localTask.context.openFolder")}>
-                <Box component="span">
-                  <IconButton
-                    size="small"
-                    disabled={contextLoadStateByTaskId[selectedTask.id] === "loading"}
-                    aria-label={t("localTask.context.openFolder")}
-                    onClick={handleOpenContextFolder}
-                  >
-                    <LuFolderOpen size={16} />
-                  </IconButton>
-                </Box>
-              </Tooltip>
-              <Tooltip
-                title={t(
-                  selectedTask.status === "active" ? "localTask.actions.pauseTask" : "localTask.actions.reactivateTask",
-                )}
-              >
-                <Box component="span">
-                  <IconButton
-                    size="small"
-                    disabled={isMutationLoading}
-                    aria-label={t(
-                      selectedTask.status === "active"
-                        ? "localTask.actions.pauseTask"
-                        : "localTask.actions.reactivateTask",
-                    )}
-                    onClick={handleToggleDetailStatus}
-                  >
-                    {selectedTask.status === "active" ? <LuPause size={16} /> : <LuPlay size={16} />}
-                  </IconButton>
-                </Box>
-              </Tooltip>
-              {selectedTask.status !== "completed" ? (
-                <Tooltip title={t("localTask.actions.completeTask")}>
-                  <Box component="span">
-                    <IconButton
-                      size="small"
-                      disabled={isMutationLoading}
-                      aria-label={t("localTask.actions.completeTask")}
-                      onClick={handleCompleteDetail}
-                    >
-                      <LuCheck size={16} />
-                    </IconButton>
-                  </Box>
-                </Tooltip>
-              ) : null}
-            </>
+            <TaskHubDetailHeaderActions
+              task={selectedTask}
+              detailProjection={detailProjection}
+              onOpenContextFolder={handleOpenContextFolder}
+              onToggleStatus={handleToggleDetailStatus}
+              onComplete={handleCompleteDetail}
+            />
           ) : (
             <Button size="small" variant="text" color="inherit" startIcon={<LuPlus />} onClick={handleOpenCreate}>
               {t("localTask.actions.create")}
@@ -234,23 +158,7 @@ export function TaskHubView() {
         </Box>
       </PaneHeader>
       {selectedTask ? (
-        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", p: 2 }}>
-          {mutationError ? (
-            <Alert severity="error" sx={{ mb: 1 }}>
-              {mutationError}
-            </Alert>
-          ) : null}
-          <WorkspaceTaskDetails
-            task={selectedTask}
-            showTitle={false}
-            contextLoadState={contextLoadStateByTaskId[selectedTask.id] ?? "idle"}
-            contextError={contextErrorByTaskId[selectedTask.id] ?? null}
-            isMutationLoading={isMutationLoading}
-            onTagIdsChange={(tagIds) => updateLocalTask(selectedTask.id, { tagIds })}
-            onCreateTag={createLocalTaskTag}
-            tagCatalog={tagCatalog}
-          />
-        </Box>
+        <TaskHubTaskDetails task={selectedTask} detailProjection={detailProjection} />
       ) : (
         <>
           <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1 }}>
@@ -292,13 +200,13 @@ export function TaskHubView() {
             </Box>
             <Collapse in={areFiltersOpen}>
               <Box id="local-task-hub-filters" sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                <LocalTaskHubFilters filters={filters} projects={projects} tagCatalog={tagCatalog} />
+                <LocalTaskHubFilters filters={filters} projects={projects} tagCatalog={detailProjection.tagCatalog} />
               </Box>
             </Collapse>
           </Box>
-          {mutationError ? (
+          {detailProjection.mutationError ? (
             <Alert severity="error" sx={{ mx: 2, mb: 1 }}>
-              {mutationError}
+              {detailProjection.mutationError}
             </Alert>
           ) : null}
           {loadState === "loading" || loadState === "idle" ? (
@@ -328,7 +236,7 @@ export function TaskHubView() {
                 tasks={paginatedTasks}
                 onSelect={handleSelectTask}
                 projectNameById={projectNameById}
-                tagCatalog={tagCatalog}
+                tagCatalog={detailProjection.tagCatalog}
               />
               {pageCount > 1 ? (
                 <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>

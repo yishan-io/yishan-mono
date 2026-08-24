@@ -22,6 +22,9 @@ func (s *recordingLocalTaskService) Create(context.Context, LocalTaskCreateParam
 func (s *recordingLocalTaskService) Get(context.Context, LocalTaskIDParams) (any, error) {
 	return s.called(MethodLocalTaskGet)
 }
+func (s *recordingLocalTaskService) GetDetails(context.Context, LocalTaskIDParams) (any, error) {
+	return s.called(MethodLocalTaskGetDetails)
+}
 func (s *recordingLocalTaskService) GetContextDetails(context.Context, LocalTaskIDParams) (any, error) {
 	return s.called(MethodLocalTaskGetContextDetails)
 }
@@ -75,6 +78,7 @@ func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 	}{
 		{MethodLocalTaskCreate, `{"title":"Task"}`},
 		{MethodLocalTaskGet, `{"id":"task-1"}`},
+		{MethodLocalTaskGetDetails, `{"id":"task-1"}`},
 		{MethodLocalTaskGetContextDetails, `{"id":"task-1"}`},
 		{MethodLocalTaskList, `{}`},
 		{MethodLocalTaskListTags, `{}`},

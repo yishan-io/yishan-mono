@@ -54,6 +54,7 @@ const (
 
 	MethodLocalTaskCreate                    = "localTask.create"
 	MethodLocalTaskGet                       = "localTask.get"
+	MethodLocalTaskGetDetails                = "localTask.getDetails"
 	MethodLocalTaskGetContextDetails         = "localTask.getContextDetails"
 	MethodLocalTaskList                      = "localTask.list"
 	MethodLocalTaskListTags                  = "localTask.listTags"

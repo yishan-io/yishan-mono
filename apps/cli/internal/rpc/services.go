@@ -144,6 +144,7 @@ type ContextService interface {
 type LocalTaskService interface {
 	Create(ctx context.Context, req LocalTaskCreateParams) (any, error)
 	Get(ctx context.Context, req LocalTaskIDParams) (any, error)
+	GetDetails(ctx context.Context, req LocalTaskIDParams) (any, error)
 	GetContextDetails(ctx context.Context, req LocalTaskIDParams) (any, error)
 	List(ctx context.Context, req LocalTaskListParams) (any, error)
 	ListTags(ctx context.Context) (any, error)
