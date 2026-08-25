@@ -59,7 +59,7 @@ const historicalLink: LocalTaskWorkspaceLink = {
   workspaceId: "workspace-1",
   status: "completed",
   linkedAt: "linked",
-  unlinkedAt: "unlinked",
+  unlinkedAt: null,
 };
 
 function deferredTask() {
@@ -87,9 +87,11 @@ describe("WorkspaceTasksView detail loading", () => {
     });
     vi.mocked(daemon.localTaskClient.getContext).mockResolvedValue({
       directory: "/context/historical-task",
-      planPath: "/context/historical-task/plan.md",
-      notesPath: "/context/historical-task/notes.md",
-      outcomePath: "/context/historical-task/outcome.md",
+      files: [
+        { name: "plan.md", path: "/context/historical-task/plan.md" },
+        { name: "notes.md", path: "/context/historical-task/notes.md" },
+        { name: "outcome.md", path: "/context/historical-task/outcome.md" },
+      ],
     });
     localTaskStore.setState({
       workspaceLoadState: "loaded",
@@ -125,7 +127,7 @@ describe("WorkspaceTasksView detail loading", () => {
     await waitFor(() => expect(localTaskStore.getState().taskById[historicalTask.id]).toEqual(historicalTask));
     expect(daemon.localTaskClient.get).toHaveBeenCalledTimes(1);
   });
-  it("shows a historical detail failure and retries the same task", async () => {
+  it("shows a linked task detail failure and retries the same task", async () => {
     vi.mocked(daemon.localTaskClient.get)
       .mockRejectedValueOnce(new Error("transient detail failure"))
       .mockResolvedValueOnce(historicalTask);
@@ -136,9 +138,11 @@ describe("WorkspaceTasksView detail loading", () => {
     });
     vi.mocked(daemon.localTaskClient.getContext).mockResolvedValue({
       directory: "/context/historical-task",
-      planPath: "/context/historical-task/plan.md",
-      notesPath: "/context/historical-task/notes.md",
-      outcomePath: "/context/historical-task/outcome.md",
+      files: [
+        { name: "plan.md", path: "/context/historical-task/plan.md" },
+        { name: "notes.md", path: "/context/historical-task/notes.md" },
+        { name: "outcome.md", path: "/context/historical-task/outcome.md" },
+      ],
     });
     localTaskStore.setState({
       workspaceLoadState: "loaded",

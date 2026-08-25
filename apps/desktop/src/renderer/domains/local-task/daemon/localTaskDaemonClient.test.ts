@@ -86,9 +86,11 @@ describe("DaemonLocalTaskClient", () => {
       if (method === "localTask.getContextDetails") {
         return {
           directory: "/context/task-1",
-          planPath: "/context/task-1/plan.md",
-          notesPath: "/context/task-1/notes.md",
-          outcomePath: "/context/task-1/outcome.md",
+          files: [
+            { name: "plan.md", path: "/context/task-1/plan.md" },
+            { name: "notes.md", path: "/context/task-1/notes.md" },
+            { name: "outcome.md", path: "/context/task-1/outcome.md" },
+          ],
         };
       }
       if (method === "localTask.unlinkWorkspace") return null;

@@ -99,9 +99,11 @@ describe("Local Task workspace creation and document commands", () => {
       contextByTaskId: {
         "task-1": {
           directory: "/contexts/task-1",
-          planPath: "/contexts/task-1/plan.md",
-          notesPath: "/contexts/task-1/notes.md",
-          outcomePath: "/contexts/task-1/outcome.md",
+          files: [
+            { name: "plan.md", path: "/contexts/task-1/plan.md" },
+            { name: "notes.md", path: "/contexts/task-1/notes.md" },
+            { name: "outcome.md", path: "/contexts/task-1/outcome.md" },
+          ],
         },
       },
     });

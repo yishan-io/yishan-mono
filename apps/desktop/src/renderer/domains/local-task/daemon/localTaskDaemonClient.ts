@@ -4,6 +4,8 @@ import type {
   CreateLocalTaskInput,
   LocalTask,
   LocalTaskContextDetails,
+  LocalTaskContextFile,
+  LocalTaskContextFileName,
   LocalTaskDetails,
   LocalTaskFilters,
   LocalTaskListProjection,
@@ -226,13 +228,21 @@ function parseDetails(payload: unknown): LocalTaskDetails {
   }
 }
 
+function parseContextFile(payload: unknown): LocalTaskContextFile {
+  const record = requireRecord(payload, "Local Task context file");
+  const name = requireString(record, "name", "Local Task context file");
+  if (name !== "plan.md" && name !== "notes.md" && name !== "outcome.md") {
+    throw new TypeError("invalid Local Task context file payload");
+  }
+  return { name: name as LocalTaskContextFileName, path: requireString(record, "path", "Local Task context file") };
+}
+
 function parseContext(payload: unknown): LocalTaskContextDetails {
   const record = requireRecord(payload, "Local Task context");
+  if (!Array.isArray(record.files)) throw new TypeError("invalid Local Task context payload");
   return {
     directory: requireString(record, "directory", "Local Task context"),
-    planPath: requireString(record, "planPath", "Local Task context"),
-    notesPath: requireString(record, "notesPath", "Local Task context"),
-    outcomePath: requireString(record, "outcomePath", "Local Task context"),
+    files: record.files.map(parseContextFile),
   };
 }
 

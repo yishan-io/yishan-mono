@@ -2,13 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   activateWorkspace: vi.fn(),
+  openTab: vi.fn(),
   workspaces: [
     { id: "workspace-managed", projectId: "project-1", repoId: "project-1", kind: "managed" },
     { id: "workspace-local", projectId: "project-1", repoId: "project-1", kind: "local" },
   ],
 }));
 
-vi.mock("@renderer/domains/workbench", () => ({ activateWorkspace: mocked.activateWorkspace }));
+vi.mock("@renderer/domains/workbench", () => ({
+  activateWorkspace: mocked.activateWorkspace,
+  openTab: mocked.openTab,
+}));
 vi.mock("@renderer/domains/workspace", () => ({
   selectFolderInFileTree: vi.fn(),
   workspaceStore: { getState: () => ({ workspaces: mocked.workspaces }) },
@@ -16,7 +20,11 @@ vi.mock("@renderer/domains/workspace", () => ({
     workspaces.find((workspace) => workspace.kind === "local" && workspace.projectId === projectId)?.id ?? "",
 }));
 
-import { navigateToLocalTaskProject, navigateToLocalTaskWorkspace } from "./localTaskCommands";
+import {
+  navigateToLocalTaskProject,
+  navigateToLocalTaskWorkspace,
+  openLocalTaskContextFile,
+} from "./localTaskCommands";
 
 describe("Local Task navigation commands", () => {
   beforeEach(() => {
@@ -27,6 +35,16 @@ describe("Local Task navigation commands", () => {
       { id: "workspace-managed", projectId: "project-1", repoId: "project-1", kind: "managed" },
       { id: "workspace-local", projectId: "project-1", repoId: "project-1", kind: "local" },
     );
+  });
+
+  it("opens an existing context document in a tab for the current workspace", () => {
+    openLocalTaskContextFile("workspace-1", "task-1", "plan.md");
+
+    expect(mocked.openTab).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      kind: "file",
+      path: ".my-context/task-context/task-1/plan.md",
+    });
   });
 
   it("activates the selected active workspace through canonical workbench navigation", () => {

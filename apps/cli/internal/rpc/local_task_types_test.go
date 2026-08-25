@@ -17,16 +17,16 @@ func TestLocalTaskUpdateLinkStatusParams_DecodeTypedStatus(t *testing.T) {
 	}
 }
 
-func TestLocalTaskContextDetails_UsesV1DocumentFields(t *testing.T) {
+func TestLocalTaskContextDetails_UsesExistingDocumentFields(t *testing.T) {
 	details := localtask.ContextDetails{
-		Directory: "/context/task-1", PlanPath: "/context/task-1/plan.md",
-		NotesPath: "/context/task-1/notes.md", OutcomePath: "/context/task-1/outcome.md",
+		Directory: "/context/task-1",
+		Files:     []localtask.ContextFile{{Name: "plan.md", Path: "/context/task-1/plan.md"}},
 	}
 	encoded, err := json.Marshal(details)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"directory":"/context/task-1","planPath":"/context/task-1/plan.md","notesPath":"/context/task-1/notes.md","outcomePath":"/context/task-1/outcome.md"}`
+	want := `{"directory":"/context/task-1","files":[{"name":"plan.md","path":"/context/task-1/plan.md"}]}`
 	if string(encoded) != want {
 		t.Fatalf("encoded details = %s, want %s", encoded, want)
 	}

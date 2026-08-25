@@ -31,12 +31,19 @@ export type LocalTaskListProjection = {
   total: number;
 };
 
-/** Derived filesystem locations for one Local Task's context documents. */
+/** Names of the v1 documents supported in a Local Task context. */
+export type LocalTaskContextFileName = "plan.md" | "notes.md" | "outcome.md";
+
+/** One existing filesystem document in a Local Task's context. */
+export type LocalTaskContextFile = {
+  name: LocalTaskContextFileName;
+  path: string;
+};
+
+/** Derived filesystem locations and existing documents for one Local Task's context. */
 export type LocalTaskContextDetails = {
   directory: string;
-  planPath: string;
-  notesPath: string;
-  outcomePath: string;
+  files: LocalTaskContextFile[];
 };
 
 /** Daemon-resolved project display metadata for a Local Task detail view. */

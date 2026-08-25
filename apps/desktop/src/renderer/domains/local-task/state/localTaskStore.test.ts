@@ -81,9 +81,11 @@ describe("localTaskStore", () => {
     requestId = localTaskStore.getState().beginContextLoad("task-1");
     localTaskStore.getState().setContext(requestId, "task-1", {
       directory: "/context/task-1",
-      planPath: "/context/task-1/plan.md",
-      notesPath: "/context/task-1/notes.md",
-      outcomePath: "/context/task-1/outcome.md",
+      files: [
+        { name: "plan.md", path: "/context/task-1/plan.md" },
+        { name: "notes.md", path: "/context/task-1/notes.md" },
+        { name: "outcome.md", path: "/context/task-1/outcome.md" },
+      ],
     });
 
     const state = localTaskStore.getState();
@@ -93,7 +95,7 @@ describe("localTaskStore", () => {
     expect(state.workspaceTasks).toEqual([task]);
     expect(state.workspaceLinks).toEqual([link]);
     expect(state.workspaceActiveTaskCount).toBe(1);
-    expect(state.contextByTaskId["task-1"]?.planPath).toContain("plan.md");
+    expect(state.contextByTaskId["task-1"]?.files[0]?.name).toBe("plan.md");
     expect(state.contextLoadStateByTaskId["task-1"]).toBe("loaded");
   });
 

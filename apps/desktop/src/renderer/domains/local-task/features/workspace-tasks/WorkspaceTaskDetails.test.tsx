@@ -17,6 +17,24 @@ vi.mock("react-i18next", () => ({
 vi.mock("../../commands/localTaskCommands", () => ({
   loadLocalTaskContext: vi.fn(),
 }));
+vi.mock("@renderer/domains/files", () => ({
+  markdownService: { parse: vi.fn(async (content: string) => `<p>${content}</p>`) },
+  FileTree: ({
+    files,
+    onSelectEntry,
+  }: {
+    files: string[];
+    onSelectEntry?: (input: { path: string; isDirectory: boolean }) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid="task-context-file-tree-content"
+      onClick={() => onSelectEntry?.({ path: files[0] ?? "", isDirectory: false })}
+    >
+      {files.join(" ")}
+    </button>
+  ),
+}));
 vi.mock("@renderer/domains/project", () => ({
   renderProjectIcon: (iconId: string | undefined) => `project-icon-${iconId}`,
 }));
@@ -35,7 +53,10 @@ const task = {
   tagRefs: [],
 };
 
-function renderDetails(context?: { directory: string; planPath: string; notesPath: string; outcomePath: string }) {
+function renderDetails(context?: {
+  directory: string;
+  files: { name: "plan.md" | "notes.md" | "outcome.md"; path: string }[];
+}) {
   return render(
     <WorkspaceTaskDetails
       task={task}
@@ -214,14 +235,49 @@ describe("WorkspaceTaskDetails", () => {
   it("renders context file names from POSIX and Windows paths", () => {
     renderDetails({
       directory: "C:\\contexts\\task-1",
-      planPath: "C:\\contexts\\task-1\\plan.md",
-      notesPath: "/contexts/task-1/notes.md",
-      outcomePath: "C:\\contexts\\task-1/outcome.md",
+      files: [
+        { name: "plan.md", path: "C:\\contexts\\task-1\\plan.md" },
+        { name: "notes.md", path: "/contexts/task-1/notes.md" },
+        { name: "outcome.md", path: "C:\\contexts\\task-1/outcome.md" },
+      ],
     });
 
-    expect(screen.getByText("plan.md")).toBeTruthy();
-    expect(screen.getByText("notes.md")).toBeTruthy();
-    expect(screen.getByText("outcome.md")).toBeTruthy();
+    const contextFileTree = screen.getByTestId("task-context-file-tree-content");
+    expect(contextFileTree.textContent).toContain("plan.md");
+    expect(contextFileTree.textContent).toContain("notes.md");
+    expect(contextFileTree.textContent).toContain("outcome.md");
+  });
+
+  it("shows an empty-state placeholder for an empty Task Context directory", () => {
+    renderDetails({ directory: "/contexts/task-1", files: [] });
+
+    const contextTitle = screen.getByText("localTask.context.files");
+    expect(contextTitle.parentElement?.textContent).toContain("localTask.states.noValue");
+    expect(screen.queryByTestId("task-context-file-tree")).toBeNull();
+  });
+
+  it("renders only daemon-confirmed context files and opens them on click", () => {
+    const onContextFileOpen = vi.fn();
+    render(
+      <WorkspaceTaskDetails
+        task={task}
+        context={{ directory: "/contexts/task-1", files: [{ name: "notes.md", path: "/contexts/task-1/notes.md" }] }}
+        contextLoadState="loaded"
+        contextError={null}
+        isMutationLoading={false}
+        onStatusChange={vi.fn()}
+        onPriorityChange={vi.fn()}
+        onTagIdsChange={vi.fn()}
+        onCreateTag={vi.fn()}
+        onContextFileOpen={onContextFileOpen}
+      />,
+    );
+
+    expect(screen.getByTestId("task-context-file-tree")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("task-context-file-tree-content"));
+    expect(onContextFileOpen).toHaveBeenCalledWith("notes.md");
+    expect(screen.queryByText("plan.md")).toBeNull();
+    expect(screen.queryByText("outcome.md")).toBeNull();
   });
 
   it("centers the entire detail surface at 1200px without overflowing the pane", () => {

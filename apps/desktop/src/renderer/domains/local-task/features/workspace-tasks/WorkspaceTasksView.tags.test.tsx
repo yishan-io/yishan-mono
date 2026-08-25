@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { localTaskStore } from "../../state/localTaskStore";
 import { WorkspaceTasksView } from "./WorkspaceTasksView";
@@ -24,6 +24,7 @@ const commands = vi.hoisted(() => ({
   linkLocalTaskWorkspace: vi.fn(),
   createAndLinkLocalTask: vi.fn(),
   openLocalTaskContextInFileTree: vi.fn(),
+  openLocalTaskContextFile: vi.fn(),
   selectWorkspaceLocalTask: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
   updateLocalTask: vi.fn(async () => undefined),
@@ -103,9 +104,11 @@ describe("WorkspaceTasksView tags", () => {
       contextByTaskId: {
         [primaryTask.id]: {
           directory: "/contexts/task-primary",
-          planPath: "/contexts/task-primary/plan.md",
-          notesPath: "/contexts/task-primary/notes.md",
-          outcomePath: "/contexts/task-primary/outcome.md",
+          files: [
+            { name: "plan.md", path: "/contexts/task-primary/plan.md" },
+            { name: "notes.md", path: "/contexts/task-primary/notes.md" },
+            { name: "outcome.md", path: "/contexts/task-primary/outcome.md" },
+          ],
         },
       },
     });
@@ -125,8 +128,12 @@ describe("WorkspaceTasksView tags", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
     const metadata = screen.getByTestId("local-task-details-sidebar");
-    expect(metadata.contains(screen.getByTestId("local-task-status-icon"))).toBe(true);
-    expect(metadata.contains(screen.getByText("backend"))).toBe(true);
+    expect(metadata.contains(screen.getByTestId("local-task-status-icon"))).toBe(false);
+    const detailTag = screen.getByText("backend");
+    expect(metadata.contains(detailTag)).toBe(false);
+    const description = screen.getByText("Primary details");
+    expect(detailTag.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("localTask.fields.tags")).toBeNull();
     // Open the tag selector popover by clicking the add button.
     fireEvent.click(screen.getByRole("button", { name: "localTask.tags.add" }));
     // LocalTaskTagSelector renders a listbox; click the "backend" option to deselect it.
@@ -155,14 +162,12 @@ describe("WorkspaceTasksView tags", () => {
     expect(rowChip?.querySelector(".MuiChip-icon")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
-    const detailChip = within(screen.getByTestId("local-task-details-sidebar"))
-      .getByText("backend")
-      .closest(".MuiChip-root");
+    const detailChip = screen.getByText("backend").closest(".MuiChip-root");
     expect(detailChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
     expect(detailChip?.querySelector(".MuiChip-icon")).toBeNull();
   });
 
-  it("shows full workspace row labels and leaves the overflow count unadorned", () => {
+  it("shows every workspace row tag without an overflow count", () => {
     const longTag = "first".repeat(6);
     const taggedTask = {
       ...primaryTask,
@@ -182,7 +187,8 @@ describe("WorkspaceTasksView tags", () => {
     expect(getComputedStyle(firstTagChip as Element).minHeight).toBe("18px");
     expect(getComputedStyle(firstTagChip as Element).maxWidth).not.toBe("88px");
     expect(firstTagChip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
-    const overflowChip = screen.getByText("+1").closest(".MuiChip-root");
-    expect(overflowChip?.querySelector("svg")).toBeNull();
+    expect(screen.getByText("second")).toBeTruthy();
+    expect(screen.getByText("third")).toBeTruthy();
+    expect(screen.queryByText("+1")).toBeNull();
   });
 });

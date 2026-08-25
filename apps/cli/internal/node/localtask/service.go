@@ -3,6 +3,7 @@ package localtask
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 
 	"github.com/google/uuid"
@@ -268,9 +269,20 @@ func (s *Service) resolveContextDirectory(task domain.Task) (string, error) {
 	return domain.ResolveTaskContextPath(task, workspaces)
 }
 
+var contextDocumentNames = []string{"plan.md", "notes.md", "outcome.md"}
+
 func buildContextDetails(directory string) domain.ContextDetails {
-	return domain.ContextDetails{
-		Directory: directory, PlanPath: filepath.Join(directory, "plan.md"),
-		NotesPath: filepath.Join(directory, "notes.md"), OutcomePath: filepath.Join(directory, "outcome.md"),
+	details := domain.ContextDetails{Directory: directory, Files: make([]domain.ContextFile, 0)}
+	for _, name := range contextDocumentNames {
+		path := filepath.Join(directory, name)
+		if isRegularFile(path) {
+			details.Files = append(details.Files, domain.ContextFile{Name: name, Path: path})
+		}
 	}
+	return details
+}
+
+func isRegularFile(path string) bool {
+	fileInfo, err := os.Stat(path)
+	return err == nil && fileInfo.Mode().IsRegular()
 }
