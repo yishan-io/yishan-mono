@@ -19,6 +19,7 @@ import (
 	"yishan/apps/cli/internal/adapter/sqlite"
 	piauth "yishan/apps/cli/internal/agent/auth"
 	modellist "yishan/apps/cli/internal/agent/catalog"
+	"yishan/apps/cli/internal/agent/dsh"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/events"
@@ -75,6 +76,12 @@ type Config struct {
 	RelayEnabled bool
 	RelayURL     string
 	RelayToken   string
+
+	// DSHEnabled starts the experimental DSH runtime supervisor. DSHCommand
+	// is injected until a production DSH binary composition is available.
+	DSHEnabled    bool
+	DSHCommand    dsh.CommandFactory
+	DSHInitialize dsh.InitializeConfig
 }
 
 // App is the daemon's composition root. It owns the composed service graph,
@@ -126,6 +133,8 @@ type App struct {
 	rpcServer *rpc.Server
 	// relay is the relay client (connection state owned by internal/relay).
 	relay *relay.Client
+	// dsh supervises the experimental SDK JSON-RPC runtime when enabled.
+	dsh *dsh.Supervisor
 
 	cleanupCtx           context.Context
 	cancelCleanup        context.CancelFunc
@@ -375,8 +384,25 @@ func Bootstrap(cfg Config) (*App, error) {
 	})
 	terminalSvc.SetRelayClient(app.relay)
 	workspaceSvc.SetRelayClient(app.relay)
+	if err := app.startDSHSupervisor(cfg); err != nil {
+		_ = app.Close() // cleanup after failed experimental runtime startup
+		return nil, err
+	}
 
 	return app, nil
+}
+
+func (a *App) startDSHSupervisor(cfg Config) error {
+	if !cfg.DSHEnabled {
+		return nil
+	}
+	a.dsh = dsh.NewSupervisor(dsh.Config{
+		Command: cfg.DSHCommand, Initialize: cfg.DSHInitialize, Diagnostics: logDSHDiagnostic,
+	})
+	if err := a.dsh.Start(context.Background()); err != nil {
+		return fmt.Errorf("start DSH supervisor: %w", err)
+	}
+	return nil
 }
 
 // Start creates the agent/cleanup lifecycle contexts and starts the
@@ -416,6 +442,10 @@ func (a *App) applyComputerSettings() error {
 	return nil
 }
 
+func logDSHDiagnostic(message string) {
+	log.Warn().Str("component", "dsh-supervisor").Msg(message)
+}
+
 // Close stops the service graph in the daemon's historical shutdown order:
 // event hub subscription → PR tracker → token usage → memory → agent
 // lifecycle → agent manager → model list shell → cleanup/health background
@@ -426,6 +456,11 @@ func (a *App) Close() error {
 	}
 	if a.prTracker != nil {
 		a.prTracker.Stop()
+	}
+	if a.dsh != nil {
+		if err := a.dsh.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close DSH supervisor")
+		}
 	}
 	if a.tokenUsage != nil {
 		a.tokenUsage.Close()
@@ -448,6 +483,14 @@ func (a *App) Close() error {
 		}
 	}
 	return nil
+}
+
+// DSHHealth returns the experimental runtime state when it is configured.
+func (a *App) DSHHealth() (dsh.Health, bool) {
+	if a.dsh == nil {
+		return dsh.Health{}, false
+	}
+	return a.dsh.Health(), true
 }
 
 // RPCServer exposes the JSON-RPC/WebSocket transport server to the daemon

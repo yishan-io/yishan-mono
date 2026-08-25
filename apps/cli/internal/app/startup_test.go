@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -177,6 +178,34 @@ func TestAppClose_ShutdownOrder(t *testing.T) {
 	// Second close must be a no-op (daemon shutdown paths may race).
 	if err := app.Close(); err != nil {
 		t.Fatalf("second Close: %v", err)
+	}
+}
+
+func TestBootstrap_DSHEnabledFailsClosedWithoutRuntimeCommand(t *testing.T) {
+	database := openTestDB(t)
+	_, err := Bootstrap(Config{
+		NodeID: "node-1", Database: database, EnvDir: t.TempDir(), DataDir: t.TempDir(), DSHEnabled: true,
+	})
+	if err == nil {
+		t.Fatal("Bootstrap succeeded without a DSH runtime command")
+	}
+}
+
+func TestBootstrap_DSHValidatesInitializeBeforeStartingCommand(t *testing.T) {
+	database := openTestDB(t)
+	commandCalled := false
+	_, err := Bootstrap(Config{
+		NodeID: "node-1", Database: database, EnvDir: t.TempDir(), DataDir: t.TempDir(), DSHEnabled: true,
+		DSHCommand: func(context.Context) (*exec.Cmd, error) {
+			commandCalled = true
+			return &exec.Cmd{}, nil
+		},
+	})
+	if err == nil {
+		t.Fatal("Bootstrap succeeded without DSH initialize settings")
+	}
+	if commandCalled {
+		t.Fatal("DSH command was built before initialize validation")
 	}
 }
 
