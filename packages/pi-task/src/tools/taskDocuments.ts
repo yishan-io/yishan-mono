@@ -152,8 +152,8 @@ export function validateContextDocumentPath(
   document: TaskContextDocument,
 ): ValidatedDocumentPath {
   const directory = context.directory;
-  const path = context[`${document}Path`];
   const requiredBasename = DOCUMENT_BASENAMES[document];
+  const path = join(directory, requiredBasename);
   if (
     hasNul(directory) ||
     hasNul(path) ||

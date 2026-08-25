@@ -154,12 +154,7 @@ function execute(tools: RegisteredTool[], name: string, params: Record<string, u
 }
 function createBackend(overrides: { getResult?: LocalTask } = {}): LocalTaskToolBackend {
   const localTask = task();
-  const details: LocalTaskContextDetails = {
-    directory: contextDirectory,
-    planPath: join(contextDirectory, "plan.md"),
-    notesPath: join(contextDirectory, "notes.md"),
-    outcomePath: join(contextDirectory, "outcome.md"),
-  };
+  const details: LocalTaskContextDetails = { directory: contextDirectory, files: [] };
   return {
     create: vi.fn().mockResolvedValue(localTask),
     get: vi.fn().mockResolvedValue(overrides.getResult ?? localTask),

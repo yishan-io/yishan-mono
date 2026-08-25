@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import contractFixture from "../../../../fixtures/local-task-rpc-contract.json";
 
 import { LocalTaskRpcClient, validateLocalTaskDaemonURL } from "./localTaskRpcClient";
-import { parseLocalTask } from "./localTaskTypes";
+import { parseLocalTask, parseLocalTaskContextDetails } from "./localTaskTypes";
 
 class FakeWebSocket {
   readonly listeners = new Map<string, Set<(event: Event) => void>>();
@@ -205,6 +205,29 @@ describe("LocalTaskRpcClient", () => {
     expect(() => parseLocalTask({ ...task, unexpected: true })).toThrow("invalid Local Task payload");
     expect(() => parseLocalTask({ ...task, tags: [1] })).toThrow("invalid Local Task payload");
     expect(() => parseLocalTask({ ...task, tagRefs: [{ id: 1 }] })).toThrow("invalid Local Task payload");
+  });
+
+  it("accepts only current daemon context files in the declared directory", () => {
+    const context = { directory: "/tmp/tasks/task-1", files: [{ name: "plan.md", path: "/tmp/tasks/task-1/plan.md" }] };
+    expect(parseLocalTaskContextDetails(context)).toEqual(context);
+    expect(() =>
+      parseLocalTaskContextDetails({
+        directory: context.directory,
+        files: [{ name: "other.md", path: "/tmp/tasks/task-1/other.md" }],
+      }),
+    ).toThrow("invalid Local Task context payload");
+    expect(() =>
+      parseLocalTaskContextDetails({
+        directory: context.directory,
+        files: [{ name: "plan.md", path: "/tmp/tasks/task-1/nested/plan.md" }],
+      }),
+    ).toThrow("invalid Local Task context payload");
+    expect(() =>
+      parseLocalTaskContextDetails({
+        directory: context.directory,
+        files: [{ name: "plan.md", path: "/tmp/tasks/task-1/plan.md", extra: true }],
+      }),
+    ).toThrow("invalid Local Task context payload");
   });
 });
 
