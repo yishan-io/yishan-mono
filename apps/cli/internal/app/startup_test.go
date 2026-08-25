@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -181,31 +180,22 @@ func TestAppClose_ShutdownOrder(t *testing.T) {
 	}
 }
 
-func TestBootstrap_DSHEnabledFailsClosedWithoutRuntimeCommand(t *testing.T) {
+func TestBootstrap_DSHFailureKeepsPiFallbackActive(t *testing.T) {
 	database := openTestDB(t)
-	_, err := Bootstrap(Config{
+	app, err := Bootstrap(Config{
 		NodeID: "node-1", Database: database, EnvDir: t.TempDir(), DataDir: t.TempDir(), DSHEnabled: true,
+		DSHDataDir: t.TempDir(), DSHProvider: "deepseek-official", DSHModel: "deepseek-chat",
 	})
-	if err == nil {
-		t.Fatal("Bootstrap succeeded without a DSH runtime command")
+	if err != nil {
+		t.Fatalf("Bootstrap: %v", err)
 	}
-}
-
-func TestBootstrap_DSHValidatesInitializeBeforeStartingCommand(t *testing.T) {
-	database := openTestDB(t)
-	commandCalled := false
-	_, err := Bootstrap(Config{
-		NodeID: "node-1", Database: database, EnvDir: t.TempDir(), DataDir: t.TempDir(), DSHEnabled: true,
-		DSHCommand: func(context.Context) (*exec.Cmd, error) {
-			commandCalled = true
-			return &exec.Cmd{}, nil
-		},
-	})
-	if err == nil {
-		t.Fatal("Bootstrap succeeded without DSH initialize settings")
+	defer app.Close()
+	health, configured := app.DSHHealth()
+	if !configured || health.IsReady || health.LastError == "" {
+		t.Fatalf("DSH health = %#v, configured=%t", health, configured)
 	}
-	if commandCalled {
-		t.Fatal("DSH command was built before initialize validation")
+	if app.agentSvc == nil || app.agentMgr == nil {
+		t.Fatal("Pi fallback services are unavailable")
 	}
 }
 

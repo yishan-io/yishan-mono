@@ -10,11 +10,11 @@
   "type": "module",
   "main": "dist/electron/main.cjs",
   "scripts": {
-    "start": "vite build && bun run electron:build && electron dist/electron/main.cjs",
+    "start": "bun run dsh:build && vite build && bun run electron:build && electron dist/electron/main.cjs",
     "dev": "bun run dev:hmr",
-    "dev:hmr": "concurrently \"bun run hmr\" \"bun run electron:watch:main\" \"bun run electron:watch:preload\" \"bun run electron:dev\"",
+    "dev:hmr": "bun run dsh:build && concurrently \"bun run hmr\" \"bun run electron:watch:main\" \"bun run electron:watch:preload\" \"bun run electron:dev\"",
     "hmr": "vite --host 127.0.0.1 --port 5173",
-    "build": "vite build && bun run electron:build",
+    "build": "bun run dsh:build && vite build && bun run electron:build",
     "cli:build": "node scripts/buildCliBinary.mjs",
     "build:app": "bun run cli:build && bun run build && node scripts/packageApp.mjs --publish never",
     "build:app:dir": "bun run cli:build && bun run build && node scripts/packageApp.mjs --dir --publish never",
@@ -23,8 +23,9 @@
     "electron:build:preload": "esbuild src/main/preload.ts --bundle --platform=node --format=cjs --outfile=dist/electron/preload.js --external:electron --define:import.meta.env.DEV=false --define:import.meta.env.VITE_API_BASE_URL=undefined",
     "electron:watch:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --outfile=dist/electron/main.cjs --external:electron --external:electron-updater --watch --define:import.meta.env.DEV=false --define:import.meta.env.VITE_API_BASE_URL=undefined",
     "electron:watch:preload": "esbuild src/main/preload.ts --bundle --platform=node --format=cjs --outfile=dist/electron/preload.js --external:electron --watch --define:import.meta.env.DEV=false --define:import.meta.env.VITE_API_BASE_URL=undefined",
-    "electron:dev": "cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 wait-on tcp:5173 file:dist/electron/main.cjs file:dist/electron/preload.js && cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron dist/electron/main.cjs",
-    "check": "tsc --noEmit -p tsconfig.json"
+    "electron:dev": "cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 wait-on tcp:5173 file:dist/electron/main.cjs file:dist/electron/preload.js file:dist/resources/dsh-runtime.mjs && cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron dist/electron/main.cjs",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "dsh:build": "node scripts/buildDshRuntime.mjs"
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",
@@ -109,7 +110,8 @@
         "from": "dist/resources",
         "to": ".",
         "filter": [
-          "yishan"
+          "yishan",
+          "dsh-runtime.mjs"
         ]
       }
     ],

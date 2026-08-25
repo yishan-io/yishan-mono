@@ -336,7 +336,7 @@ func (s *Service) BeginWorkspaceAgentCleanup(ctx context.Context, workspaceID st
 	if s.afterWorkspaceClaims != nil {
 		s.afterWorkspaceClaims()
 	}
-	handle.err = errors.Join(beginErr, s.stopWorkspaceClaims(ctx, claims))
+	handle.err = errors.Join(beginErr, s.stopWorkspaceClaims(ctx, claims), s.stopDSHWorkspaceSessions(ctx, workspaceID))
 	return handle, handle.err
 }
 

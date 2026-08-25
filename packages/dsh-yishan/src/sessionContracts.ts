@@ -45,6 +45,15 @@ export type SessionReadResult = {
 /** Workspace-scoped request to resume one DSH session. */
 export type SessionResumeRequest = SessionReadRequest;
 
+/** Workspace-scoped request to dispose one live DSH session. */
+export type SessionDisposeRequest = SessionReadRequest;
+
+/** Result of disposing a live DSH session. */
+export type SessionDisposeResult = {
+  sessionId: string;
+  disposed: boolean;
+};
+
 /** Workspace-scoped result of resuming one DSH session. */
 export type SessionResumeResult = {
   sessionId: string;
@@ -64,6 +73,11 @@ export function parseSessionReadRequest(payload: unknown): SessionReadRequest {
 /** Parses an exact workspace-scoped session resume request. */
 export function parseSessionResumeRequest(payload: unknown): SessionResumeRequest {
   return parseSessionRequest(payload, "session resume request");
+}
+
+/** Parses an exact workspace-scoped session dispose request. */
+export function parseSessionDisposeRequest(payload: unknown): SessionDisposeRequest {
+  return parseSessionRequest(payload, "session dispose request");
 }
 
 function parseSessionRequest(payload: unknown, name: string): SessionReadRequest {

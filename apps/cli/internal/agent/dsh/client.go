@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	yishanSessionListMethod   = "yishan.v1.session.list"
-	yishanSessionReadMethod   = "yishan.v1.session.read"
-	yishanSessionResumeMethod = "yishan.v1.session.resume"
+	yishanSessionDisposeMethod = "yishan.v1.session.dispose"
+	yishanSessionListMethod    = "yishan.v1.session.list"
+	yishanSessionReadMethod    = "yishan.v1.session.read"
+	yishanSessionResumeMethod  = "yishan.v1.session.resume"
 )
 
 var (
@@ -75,6 +76,24 @@ type SessionReadResult struct {
 // SessionResumeResult is the response to a session resume request.
 type SessionResumeResult struct {
 	SessionID string `json:"sessionId"`
+}
+
+// SessionDisposeResult is the response to a session dispose request.
+type SessionDisposeResult struct {
+	SessionID string `json:"sessionId"`
+	Disposed  bool   `json:"disposed"`
+}
+
+// DisposeSession stops one resumed live session after DSH verifies its cwd.
+func (s *Supervisor) DisposeSession(ctx context.Context, request SessionReadRequest) (SessionDisposeResult, error) {
+	if err := validateSessionReadRequest(request); err != nil {
+		return SessionDisposeResult{}, err
+	}
+	var response sessionDisposeWireResult
+	if err := s.call(ctx, yishanSessionDisposeMethod, request, &response); err != nil {
+		return SessionDisposeResult{}, err
+	}
+	return response.validate(request)
 }
 
 // ListSessions requests persisted top-level sessions for one workspace.

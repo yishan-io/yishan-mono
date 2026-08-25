@@ -87,6 +87,18 @@ func requestSessionList(supervisor *Supervisor, index int, waitGroup *sync.WaitG
 	}
 }
 
+func TestSupervisor_DisposeSession_SendsDisposeRequest(t *testing.T) {
+	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc")})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	response, err := supervisor.DisposeSession(context.Background(), SessionReadRequest{CWD: "/workspace", SessionID: "session"})
+	if err != nil || response.SessionID != "session" || !response.Disposed {
+		t.Fatalf("DisposeSession = %#v, %v", response, err)
+	}
+}
+
 func TestSupervisor_ResumeSession_SendsResumeRequest(t *testing.T) {
 	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc")})
 	defer supervisor.Close()

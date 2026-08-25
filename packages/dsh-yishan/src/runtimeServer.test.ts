@@ -88,8 +88,9 @@ describe("Yishan runtime server", () => {
       owner.prompt({ sessionId: "session-1", contentBlocks: [{ type: "text", text: "continue" }] }),
     ).resolves.toEqual({ messageId: expect.any(String) });
     expect(followup).toHaveBeenCalledTimes(1);
-    await owner.dispose();
+    await expect(owner.disposeSession(SessionId("session-1"))).resolves.toBe(true);
     expect(dispose).toHaveBeenCalledTimes(1);
+    await owner.dispose();
   });
 
   it("routes prompts to an already-live agent without cold resume", async () => {

@@ -7,6 +7,18 @@ import (
 	"io"
 )
 
+type sessionDisposeWireResult struct {
+	SessionID string `json:"sessionId"`
+	Disposed  *bool  `json:"disposed"`
+}
+
+func (response sessionDisposeWireResult) validate(request SessionReadRequest) (SessionDisposeResult, error) {
+	if response.SessionID != request.SessionID || response.Disposed == nil {
+		return SessionDisposeResult{}, errors.New("invalid DSH session dispose response")
+	}
+	return SessionDisposeResult{SessionID: response.SessionID, Disposed: *response.Disposed}, nil
+}
+
 type sessionListWireEntry struct {
 	SessionID     string `json:"sessionId"`
 	CreatedAt     *int64 `json:"createdAt"`

@@ -4,11 +4,13 @@ import type { SessionLogSnapshot, SessionRecord } from "@deepseek-ai/dsh-session
 
 import { YISHAN_METHODS } from "./protocol";
 import {
+  type SessionDisposeResult,
   type SessionHeaderResult,
   type SessionListResult,
   type SessionReadRequest,
   type SessionReadResult,
   type SessionResumeResult,
+  parseSessionDisposeRequest,
   parseSessionListRequest,
   parseSessionReadRequest,
   parseSessionResumeRequest,
@@ -77,12 +79,15 @@ export type YishanSessionHandlerDependencies = {
     readSession(sessionId: SessionId): Promise<SessionLogSnapshot>;
   };
   resumeSession(sessionId: SessionId): Promise<void>;
+  disposeSession(sessionId: SessionId): Promise<boolean>;
 };
 
 /** Handles corrected Phase 2 workspace-scoped session requests through DSH services. */
 export function createSessionHandler(dependencies: YishanSessionHandlerDependencies) {
   return async (method: string, params: Record<string, unknown>): Promise<unknown> => {
     switch (method) {
+      case YISHAN_METHODS.dispose:
+        return await handleDispose(dependencies, params);
       case YISHAN_METHODS.list:
         return await handleList(dependencies, params);
       case YISHAN_METHODS.read:
@@ -93,6 +98,16 @@ export function createSessionHandler(dependencies: YishanSessionHandlerDependenc
         throw new YishanUnsupportedMethodError(method);
     }
   };
+}
+
+async function handleDispose(
+  dependencies: YishanSessionHandlerDependencies,
+  params: Record<string, unknown>,
+): Promise<SessionDisposeResult> {
+  const request = parseSessionDisposeRequest(params);
+  const snapshot = await readWorkspaceSession(dependencies, request);
+  const disposed = await dependencies.disposeSession(snapshot.session.id);
+  return { sessionId: snapshot.session.id, disposed };
 }
 
 async function handleList(

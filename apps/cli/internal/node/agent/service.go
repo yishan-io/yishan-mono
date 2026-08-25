@@ -11,6 +11,7 @@ import (
 
 	piauth "yishan/apps/cli/internal/agent/auth"
 	modellist "yishan/apps/cli/internal/agent/catalog"
+	"yishan/apps/cli/internal/agent/dsh"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/events"
@@ -27,6 +28,15 @@ type WorkspaceResolver interface {
 	GetWorkspace(workspaceID string) (workspace.Workspace, error)
 }
 
+// DSHSessions is the internal DSH runtime boundary used by workspace-scoped
+// session operations. It is intentionally not exposed through the RPC layer.
+type DSHSessions interface {
+	ListSessions(context.Context, dsh.SessionListRequest) (dsh.SessionListResult, error)
+	ReadSession(context.Context, dsh.SessionReadRequest) (dsh.SessionReadResult, error)
+	ResumeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionResumeResult, error)
+	DisposeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionDisposeResult, error)
+}
+
 // Deps are the explicit dependencies of the agent application service.
 type Deps struct {
 	// Workspace resolves workspace-scoped handles (skill active workspace).
@@ -37,6 +47,9 @@ type Deps struct {
 	Events       *eventbus.Hub
 	Terminals    *term.Manager
 	ContextStore *contextstore.Store
+
+	// DSH serves account-scoped DSH session operations when the feature is enabled.
+	DSH DSHSessions
 
 	// AgentLifecycleCtx bounds pi agent process lifetimes.
 	AgentLifecycleCtx context.Context

@@ -16,10 +16,27 @@ function createDependencies() {
       readSession: vi.fn(),
     },
     resumeSession: vi.fn(),
+    disposeSession: vi.fn(),
   };
 }
 
 describe("createSessionHandler", () => {
+  it("disposes a live resumed session only after its persisted cwd matches", async () => {
+    const dependencies = createDependencies();
+    dependencies.sessionQuery.readSession.mockResolvedValue({
+      session: { id: "session-1", createdAt: 1, cwd: WORKSPACE_CWD },
+      events: [],
+    });
+    dependencies.disposeSession.mockResolvedValue(true);
+    const handle = createSessionHandler(dependencies);
+
+    await expect(handle("yishan.v1.session.dispose", { cwd: WORKSPACE_CWD, sessionId: "session-1" })).resolves.toEqual({
+      sessionId: "session-1",
+      disposed: true,
+    });
+    expect(dependencies.disposeSession).toHaveBeenCalledWith("session-1");
+  });
+
   it("lists only top-level sessions for the exact workspace cwd", async () => {
     const dependencies = createDependencies();
     dependencies.sessionQuery.listSessions.mockResolvedValue([

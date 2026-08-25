@@ -31,6 +31,11 @@ type RunConfig struct {
 	MemorySummarizer      bool
 	MemorySummarizerAgent string
 	MemorySummarizerModel string
+	DSHEnabled            bool
+	DSHNodePath           string
+	DSHRuntimePath        string
+	DSHProvider           string
+	DSHModel              string
 	// LogFilePath is the resolved path to the daemon log file.
 	// Set by the command layer; passed through to handlers for diagnostics.
 	LogFilePath string

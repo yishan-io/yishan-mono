@@ -248,5 +248,9 @@ func writeRPCResponse(request struct {
 		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessions":[{"sessionId":"%s","createdAt":1,"live":false,"persisted":true}]}}`+"\n", request.ID, request.Params.CWD)
 		return
 	}
+	if request.Method == yishanSessionDisposeMethod {
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","disposed":true}}`+"\n", request.ID, request.Params.SessionID)
+		return
+	}
 	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s"}}`+"\n", request.ID, request.Params.SessionID)
 }

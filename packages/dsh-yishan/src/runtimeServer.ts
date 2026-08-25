@@ -39,6 +39,16 @@ export class ResumedSessionOwner {
     return task;
   }
 
+  async disposeSession(sessionId: SessionId): Promise<boolean> {
+    const key = String(sessionId);
+    await this.tasks.get(key);
+    const handle = this.handles.get(key);
+    if (handle === undefined) return false;
+    this.handles.delete(key);
+    await handle.dispose();
+    return true;
+  }
+
   async prompt(params: SessionPromptParams): Promise<{ messageId: string } | undefined> {
     const agent = this.handles.get(params.sessionId)?.agent ?? this.ctx.agents.get(params.sessionId as SessionId);
     if (agent === undefined) return undefined;
@@ -82,6 +92,7 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
   const sessions = createSessionHandler({
     sessionQuery: ctx.sessionQuery,
     resumeSession: async (sessionId) => await resumed.resume(sessionId),
+    disposeSession: async (sessionId) => await resumed.disposeSession(sessionId),
   });
   const route = createRequestRouter(async (method, params) => {
     if (method === "session/prompt") {

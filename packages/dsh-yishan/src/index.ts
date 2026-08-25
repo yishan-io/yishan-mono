@@ -31,9 +31,12 @@ export {
   type YishanRuntimeServerConfig,
 } from "./runtimeServer";
 export {
+  parseSessionDisposeRequest,
   parseSessionListRequest,
   parseSessionReadRequest,
   parseSessionResumeRequest,
+  type SessionDisposeRequest,
+  type SessionDisposeResult,
   type SessionHeaderResult,
   type SessionListEntry,
   type SessionListRequest,
@@ -53,3 +56,11 @@ export {
   type YishanSessionErrorCode,
   type YishanSessionHandlerDependencies,
 } from "./sessionHandler";
+
+export {
+  createYishanRuntime,
+  installRuntimeShutdownHandlers,
+  runYishanRuntime,
+  type YishanRuntime,
+  type YishanRuntimeConfig,
+} from "./runtime";

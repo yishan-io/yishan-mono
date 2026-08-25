@@ -77,11 +77,14 @@ type Config struct {
 	RelayURL     string
 	RelayToken   string
 
-	// DSHEnabled starts the experimental DSH runtime supervisor. DSHCommand
-	// is injected until a production DSH binary composition is available.
-	DSHEnabled    bool
-	DSHCommand    dsh.CommandFactory
-	DSHInitialize dsh.InitializeConfig
+	// DSHEnabled starts the experimental bundled DSH runtime supervisor. The
+	// executable and runtime paths must be explicitly provided; no PATH lookup occurs.
+	DSHEnabled     bool
+	DSHNodePath    string
+	DSHRuntimePath string
+	DSHDataDir     string
+	DSHProvider    string
+	DSHModel       string
 }
 
 // App is the daemon's composition root. It owns the composed service graph,
@@ -147,6 +150,7 @@ type App struct {
 // context store → token usage → computer (+ settings) → memory → hydrate →
 // watch → background tasks → rpc layer.
 func Bootstrap(cfg Config) (*App, error) {
+	dshSupervisor := newDSHSupervisor(cfg)
 	filesService := files.NewFileService()
 	registry := instance.NewRegistry(filesService)
 	store := sqlite.NewStore(sqlite.NewWorkspaceStore(cfg.Database))
@@ -260,6 +264,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	})
 	agentSvc = nodeagent.NewService(nodeagent.Deps{
 		Workspace:         workspaceSvc,
+		DSH:               dshSessionsFor(dshSupervisor),
 		AgentMgr:          agentMgr,
 		PIAuth:            piAuth,
 		ModelList:         modelList,
@@ -337,6 +342,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		workspaceSvc:         workspaceSvc,
 		localTaskSvc:         localTaskSvc,
 		hookIngress:          hookIngress,
+		dsh:                  dshSupervisor,
 	}
 
 	// Computer feature config comes from settings.yaml.
@@ -384,25 +390,11 @@ func Bootstrap(cfg Config) (*App, error) {
 	})
 	terminalSvc.SetRelayClient(app.relay)
 	workspaceSvc.SetRelayClient(app.relay)
-	if err := app.startDSHSupervisor(cfg); err != nil {
-		_ = app.Close() // cleanup after failed experimental runtime startup
-		return nil, err
+	if err := app.startDSHSupervisor(); err != nil {
+		log.Error().Err(err).Msg("DSH runtime unavailable; Pi fallback remains active")
 	}
 
 	return app, nil
-}
-
-func (a *App) startDSHSupervisor(cfg Config) error {
-	if !cfg.DSHEnabled {
-		return nil
-	}
-	a.dsh = dsh.NewSupervisor(dsh.Config{
-		Command: cfg.DSHCommand, Initialize: cfg.DSHInitialize, Diagnostics: logDSHDiagnostic,
-	})
-	if err := a.dsh.Start(context.Background()); err != nil {
-		return fmt.Errorf("start DSH supervisor: %w", err)
-	}
-	return nil
 }
 
 // Start creates the agent/cleanup lifecycle contexts and starts the
@@ -442,10 +434,6 @@ func (a *App) applyComputerSettings() error {
 	return nil
 }
 
-func logDSHDiagnostic(message string) {
-	log.Warn().Str("component", "dsh-supervisor").Msg(message)
-}
-
 // Close stops the service graph in the daemon's historical shutdown order:
 // event hub subscription → PR tracker → token usage → memory → agent
 // lifecycle → agent manager → model list shell → cleanup/health background
@@ -483,14 +471,6 @@ func (a *App) Close() error {
 		}
 	}
 	return nil
-}
-
-// DSHHealth returns the experimental runtime state when it is configured.
-func (a *App) DSHHealth() (dsh.Health, bool) {
-	if a.dsh == nil {
-		return dsh.Health{}, false
-	}
-	return a.dsh.Health(), true
 }
 
 // RPCServer exposes the JSON-RPC/WebSocket transport server to the daemon
