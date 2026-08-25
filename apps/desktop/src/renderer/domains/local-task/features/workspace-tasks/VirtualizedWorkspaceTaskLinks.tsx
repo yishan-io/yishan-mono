@@ -34,7 +34,7 @@ export function VirtualizedWorkspaceTaskLinks({
   });
 
   return (
-    <Box ref={scrollRef} sx={{ mt: 1, overflow: "auto", maxHeight: MAX_LIST_HEIGHT }}>
+    <Box ref={scrollRef} sx={{ mt: 1, mx: 2, overflow: "auto", maxHeight: MAX_LIST_HEIGHT }}>
       <Box
         component="ul"
         sx={{ height: virtualizer.getTotalSize(), position: "relative", p: 0, m: 0, listStyle: "none" }}

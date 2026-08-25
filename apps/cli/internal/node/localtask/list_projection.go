@@ -20,11 +20,11 @@ func (s *Service) ListProjection(ctx context.Context, req rpc.LocalTaskListProje
 		return nil, err
 	}
 	total := len(tasks)
-	tasks = projectPage(tasks, req.Offset, req.Limit)
 	projectsByID, err := s.resolveListProjects(ctx, tasks)
 	if err != nil {
 		return nil, err
 	}
+	tasks = projectPage(tasks, req.Offset, req.Limit)
 	return domain.ListProjection{Tasks: tasks, ProjectsByID: projectsByID, Total: total}, nil
 }
 

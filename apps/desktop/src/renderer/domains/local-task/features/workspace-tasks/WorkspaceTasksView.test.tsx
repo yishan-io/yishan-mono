@@ -454,8 +454,8 @@ describe("WorkspaceTasksView", () => {
     const cardQueries = within(primaryCard as HTMLElement);
     const statusIcon = cardQueries.getByLabelText("localTask.status.active");
     const priorityIcon = cardQueries.getByLabelText("localTask.fields.priority: localTask.priority.high");
-    expect(statusIcon.nextElementSibling).toBe(priorityIcon);
-    expect(priorityIcon.nextElementSibling?.textContent).toBe("Primary task");
+    expect(priorityIcon.nextElementSibling).toBe(statusIcon);
+    expect(statusIcon.nextElementSibling?.textContent).toBe("Primary task");
     expect(cardQueries.queryByText("localTask.status.active")).toBeNull();
     const taskMenu = cardQueries.getByRole("button", { name: "localTask.actions.taskMenu" });
     expect(getComputedStyle(taskMenu).position).toBe("absolute");
@@ -498,7 +498,7 @@ describe("WorkspaceTasksView", () => {
     expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { status: "paused" });
     fireEvent.mouseDown(prioritySelect);
     const lowPriorityOption = screen.getByRole("option", { name: "localTask.priority.low" });
-    expect(lowPriorityOption.querySelector("[data-testid='local-task-priority-icon-low']")).toBeTruthy();
+    expect(lowPriorityOption.querySelector("[data-testid='local-task-priority-icon']")).toBeTruthy();
     fireEvent.click(lowPriorityOption);
     expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { priority: "low" });
   });

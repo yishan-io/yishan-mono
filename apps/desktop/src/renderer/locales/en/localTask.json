@@ -29,7 +29,11 @@
       "allProjects": "All projects",
       "allStatuses": "All statuses",
       "allPriorities": "All priorities",
-      "allWorkspaces": "All workspaces"
+      "allWorkspaces": "All workspaces",
+      "addFilter": "Add filter…",
+      "searchTags": "Search tags",
+      "is": "is",
+      "remove": "Remove {{field}} filter"
     },
     "status": {
       "active": "Active",

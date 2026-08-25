@@ -89,7 +89,7 @@ func taskIDs(tasks []domain.Task) []string {
 	return ids
 }
 
-func TestService_ListProjectionResolvesOnlyPageProjects(t *testing.T) {
+func TestService_ListProjectionResolvesAllFilteredProjectsBeforePaging(t *testing.T) {
 	service, workspaceStore, repository := newTestService(t)
 	createProjectionWorkspace(t, workspaceStore, "workspace-1", "org-1", "project-1")
 	createProjectionWorkspace(t, workspaceStore, "workspace-2", "org-1", "project-2")
@@ -106,7 +106,7 @@ func TestService_ListProjectionResolvesOnlyPageProjects(t *testing.T) {
 	if len(projection.Tasks) != 1 || projection.Tasks[0].ProjectID == nil {
 		t.Fatalf("page tasks = %#v", projection.Tasks)
 	}
-	if got, want := resolver.requests, map[string][]string{"org-1": {*projection.Tasks[0].ProjectID}}; !reflect.DeepEqual(got, want) {
+	if got, want := resolver.requests, map[string][]string{"org-1": {"project-1", "project-2"}}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("resolution requests = %#v, want %#v", got, want)
 	}
 }

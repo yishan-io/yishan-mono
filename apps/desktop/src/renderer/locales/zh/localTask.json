@@ -29,7 +29,11 @@
       "allProjects": "所有项目",
       "allStatuses": "所有状态",
       "allPriorities": "所有优先级",
-      "allWorkspaces": "所有工作区"
+      "allWorkspaces": "所有工作区",
+      "addFilter": "添加筛选…",
+      "searchTags": "搜索标签",
+      "is": "为",
+      "remove": "移除 {{field}} 筛选"
     },
     "status": {
       "active": "进行中",

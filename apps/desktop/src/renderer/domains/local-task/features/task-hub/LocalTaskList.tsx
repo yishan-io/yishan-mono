@@ -32,7 +32,7 @@ export function LocalTaskList({ tasks, onSelect, projectDisplayById, tagCatalog 
   });
 
   return (
-    <Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+    <Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, mx: 2, overflow: "auto" }}>
       <Box sx={{ height: virtualizer.getTotalSize(), position: "relative" }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const task = tasks[virtualRow.index];

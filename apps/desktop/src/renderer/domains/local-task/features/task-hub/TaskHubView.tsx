@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Collapse,
   IconButton,
   InputAdornment,
   Pagination,
@@ -12,7 +11,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { projectStore } from "@renderer/domains/project";
+import { type WorkspaceProjectRecord, projectStore } from "@renderer/domains/project";
 import { PaneHeader, PaneToggleButton, useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,12 +23,41 @@ import {
 } from "../../commands/localTaskCommands";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
-import { LocalTaskHubFilters } from "./LocalTaskHubFilters";
+import { LocalTaskHubFilterChips } from "./LocalTaskHubFilterChips";
+import { LocalTaskHubFilterMenu } from "./LocalTaskHubFilterMenu";
 import { LocalTaskList } from "./LocalTaskList";
 import { TaskHubTaskDetails } from "./TaskHubTaskDetails";
 import { useTaskHubDetailProjection } from "./useTaskHubDetailProjection";
 
 const TASK_HUB_PAGE_SIZE = 20;
+
+type TaskHubProjectFilterOption = Pick<WorkspaceProjectRecord, "id" | "name" | "icon">;
+
+/** Merges the renderer catalog with all daemon-resolved Hub project displays by stable project ID. */
+export function getTaskHubProjectFilterOptions(
+  projects: WorkspaceProjectRecord[],
+  projectDisplayById: Record<string, TaskHubProjectFilterOption>,
+): TaskHubProjectFilterOption[] {
+  const projectsById = new Map(
+    projects.map((project) => [
+      project.id,
+      project.icon
+        ? { id: project.id, name: project.name, icon: project.icon }
+        : { id: project.id, name: project.name },
+    ]),
+  );
+  for (const project of Object.values(projectDisplayById)) {
+    projectsById.set(
+      project.id,
+      project.icon
+        ? { id: project.id, name: project.name, icon: project.icon }
+        : { id: project.id, name: project.name },
+    );
+  }
+  return [...projectsById.values()].sort((firstProject, secondProject) =>
+    firstProject.name.localeCompare(secondProject.name),
+  );
+}
 
 /** Renders the global Local Task Hub with creation, search, filters, and list states. */
 export function TaskHubView() {
@@ -44,7 +72,7 @@ export function TaskHubView() {
   const projectDisplayById = localTaskStore((state) => state.hubProjectDisplayById);
   const projects = projectStore((state) => state.projects);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
+  const [filterMenuAnchor, setFilterMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const previousHubQueryRef = useRef({ filters, searchQuery });
@@ -58,6 +86,10 @@ export function TaskHubView() {
     ? (taskById[selectedTaskId] ?? tasks.find((task) => task.id === selectedTaskId))
     : undefined;
   const detailProjection = useTaskHubDetailProjection(selectedTask);
+  const filterProjects = useMemo(
+    () => getTaskHubProjectFilterOptions(projects, projectDisplayById),
+    [projectDisplayById, projects],
+  );
 
   useEffect(() => {
     // fire-and-forget: Local Task store owns loading and error state.
@@ -80,7 +112,8 @@ export function TaskHubView() {
     void setLocalTaskHubSearchQuery(event.target.value);
   }, []);
   const handleRetry = useCallback(() => void refreshLocalTaskHub(), []);
-  const handleToggleFilters = useCallback(() => setAreFiltersOpen((isOpen) => !isOpen), []);
+  const handleOpenFilterMenu = useCallback((anchor: HTMLElement) => setFilterMenuAnchor(anchor), []);
+  const handleCloseFilterMenu = useCallback(() => setFilterMenuAnchor(null), []);
   const handleOpenCreate = useCallback(() => setIsCreateOpen(true), []);
   const handleCloseCreate = useCallback(() => setIsCreateOpen(false), []);
   const handleSelectTask = useCallback((taskId: string) => setSelectedTaskId(taskId), []);
@@ -153,7 +186,7 @@ export function TaskHubView() {
                   htmlInput: { "aria-label": t("localTask.search.label") },
                 }}
                 sx={{
-                  minWidth: 240,
+                  minWidth: 0,
                   flex: 1,
                   "& .MuiInputBase-root": { minHeight: 32 },
                   "& .MuiInputBase-input": { py: 0.5, fontSize: "0.8125rem" },
@@ -162,11 +195,11 @@ export function TaskHubView() {
               <Tooltip title={t("localTask.actions.filter")}>
                 <IconButton
                   size="small"
-                  color={areFiltersOpen ? "primary" : "default"}
+                  color={filterMenuAnchor ? "primary" : "default"}
                   aria-label={t("localTask.actions.filter")}
-                  aria-expanded={areFiltersOpen}
-                  aria-controls="local-task-hub-filters"
-                  onClick={handleToggleFilters}
+                  aria-expanded={Boolean(filterMenuAnchor)}
+                  aria-controls="local-task-hub-filter-menu"
+                  onClick={(event) => handleOpenFilterMenu(event.currentTarget)}
                 >
                   <LuListFilter size={17} />
                 </IconButton>
@@ -177,11 +210,18 @@ export function TaskHubView() {
                 </IconButton>
               </Tooltip>
             </Box>
-            <Collapse in={areFiltersOpen}>
-              <Box id="local-task-hub-filters" sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                <LocalTaskHubFilters filters={filters} projects={projects} tagCatalog={detailProjection.tagCatalog} />
-              </Box>
-            </Collapse>
+            <LocalTaskHubFilterChips
+              filters={filters}
+              projects={filterProjects}
+              tagCatalog={detailProjection.tagCatalog}
+            />
+            <LocalTaskHubFilterMenu
+              anchorEl={filterMenuAnchor}
+              filters={filters}
+              projects={filterProjects}
+              tagCatalog={detailProjection.tagCatalog}
+              onClose={handleCloseFilterMenu}
+            />
           </Box>
           {detailProjection.mutationError ? (
             <Alert severity="error" sx={{ mx: 2, mb: 1 }}>
