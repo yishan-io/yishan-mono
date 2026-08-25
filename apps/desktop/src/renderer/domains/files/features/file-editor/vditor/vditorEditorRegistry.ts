@@ -13,6 +13,7 @@ export type VditorEditorOptions = {
   defaultValue: string;
   isDark: boolean;
   lang: VditorLang;
+  placeholder?: string;
 };
 
 export type AcquiredVditorEditor = {
@@ -41,6 +42,7 @@ export function acquireVditorEditor(
         defaultValue: options.defaultValue,
         isDark: options.isDark,
         lang: options.lang,
+        placeholder: options.placeholder,
         onMarkdownChange: (md) => rootEmitters.get(root)?.(md),
       }),
       refCount: 0,

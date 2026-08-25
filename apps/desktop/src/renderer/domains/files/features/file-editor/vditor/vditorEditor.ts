@@ -77,6 +77,8 @@ export interface VditorEditorOptions {
   isDark: boolean;
   /** Vditor UI language (toolbar tooltips, hints). Defaults to en_US. */
   lang?: VditorLang;
+  /** Placeholder text shown when the editor is empty. */
+  placeholder?: string;
   /** Called on every user edit with the current markdown string. */
   onMarkdownChange: (markdown: string) => void;
 }
@@ -157,6 +159,7 @@ export function createVditorEditor(root: HTMLElement, options: VditorEditorOptio
           },
         },
         value: options.defaultValue,
+        placeholder: options.placeholder,
         _lutePath: luteUrl,
         input(markdown: string): void {
           options.onMarkdownChange(markdown);

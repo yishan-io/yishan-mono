@@ -14,6 +14,7 @@ type LocalTaskTagsInputProps = {
   onChange: (tagIds: string[]) => void;
   onCreateTag?: (name: string) => Promise<LocalTaskTagCatalogEntry>;
   disabled?: boolean;
+  disablePortal?: boolean;
   label?: string;
   autoFocus?: boolean;
   isSelectorOpen?: boolean;
@@ -45,6 +46,7 @@ export function LocalTaskTagsInput({
   onChange,
   onCreateTag,
   disabled = false,
+  disablePortal = true,
   label,
   autoFocus = false,
   isSelectorOpen,
@@ -112,7 +114,7 @@ export function LocalTaskTagsInput({
         freeSolo
         size="small"
         disabled={isDisabled}
-        disablePortal
+        disablePortal={disablePortal}
         open={isSelectorOpen}
         options={tagCatalog}
         value={selectedTags}
