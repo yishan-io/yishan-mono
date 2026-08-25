@@ -231,6 +231,7 @@ function createTask(overrides: Partial<LocalTask> = {}): LocalTask {
     updatedAt: "2026-08-23T00:00:00Z",
     completedAt: null,
     tags: ["tag"],
+    tagRefs: [],
     ...overrides,
   };
 }

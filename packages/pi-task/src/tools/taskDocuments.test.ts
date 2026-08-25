@@ -182,5 +182,6 @@ function task(status: LocalTask["status"] = "active"): LocalTask {
     updatedAt: "",
     completedAt: null,
     tags: [],
+    tagRefs: [],
   };
 }

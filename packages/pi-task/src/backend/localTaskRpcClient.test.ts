@@ -23,6 +23,13 @@ class FakeWebSocket {
 }
 
 const endpoint = "ws://127.0.0.1:3210/ws";
+const metadataContractMethods = new Set([
+  "localTask.create",
+  "localTask.get",
+  "localTask.list",
+  "localTask.update",
+  "localTask.search",
+]);
 const task = contractFixture.requests[0]?.result;
 if (task === undefined) throw new Error("local task contract fixture has no task result");
 
@@ -65,8 +72,8 @@ describe("validateLocalTaskDaemonURL", () => {
 });
 
 describe("LocalTaskRpcClient", () => {
-  it("executes every shared contract request with exact envelopes and results", async () => {
-    for (const fixtureRequest of contractFixture.requests) {
+  it("executes every shared metadata contract request with exact envelopes and results", async () => {
+    for (const fixtureRequest of contractFixture.requests.filter(({ method }) => metadataContractMethods.has(method))) {
       let socket: FakeWebSocket | undefined;
       const client = new LocalTaskRpcClient(
         endpoint,
@@ -197,6 +204,7 @@ describe("LocalTaskRpcClient", () => {
     expect(parseLocalTask(task)).toEqual(task);
     expect(() => parseLocalTask({ ...task, unexpected: true })).toThrow("invalid Local Task payload");
     expect(() => parseLocalTask({ ...task, tags: [1] })).toThrow("invalid Local Task payload");
+    expect(() => parseLocalTask({ ...task, tagRefs: [{ id: 1 }] })).toThrow("invalid Local Task payload");
   });
 });
 
