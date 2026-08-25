@@ -119,7 +119,7 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		t.Fatalf("get context details: %v", err)
 	}
 	details := contextValue.(domain.ContextDetails)
-	if details.Directory == "" || details.PlanPath == "" || details.NotesPath == "" || details.OutcomePath == "" {
+	if details.Directory == "" || len(details.Files) != 0 {
 		t.Fatalf("context details = %#v", details)
 	}
 	linkedValue, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskLinkWorkspace,
