@@ -90,6 +90,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
         }
         const input = {
           projectId: project?.id,
+          organizationId: project?.organizationId,
           title: trimmedTitle,
           description: description.trim(),
           priority,
@@ -113,7 +114,18 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
         else setSubmitError(errorMessage);
       }
     },
-    [createdTask, description, isMutationLoading, priority, project?.id, resetAndClose, tagIds, title, workspaceId],
+    [
+      createdTask,
+      description,
+      isMutationLoading,
+      priority,
+      project?.id,
+      project?.organizationId,
+      resetAndClose,
+      tagIds,
+      title,
+      workspaceId,
+    ],
   );
   const handleDialogClose = useCallback(() => {
     if (!isMutationLoading) resetAndClose();

@@ -35,6 +35,13 @@ describe("DaemonLocalTaskClient", () => {
         return method === "localTask.list" ? [taskPayload] : [linkPayload];
       }
       if (method === "localTask.search") return [{ ...taskPayload, rank: -0.5 }];
+      if (method === "localTask.listProjection") {
+        return {
+          tasks: [taskPayload],
+          projectsById: { "project-1": { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" } },
+          total: 1,
+        };
+      }
       if (method === "localTask.listTags") return ["desktop", "cli"];
       if (method === "localTask.listTagCatalog" || method === "localTask.updateTagColor")
         return method === "localTask.listTagCatalog"
@@ -90,7 +97,13 @@ describe("DaemonLocalTaskClient", () => {
     });
     const client = new DaemonLocalTaskClient(invoke);
 
-    await client.create({ title: "Ship desktop", priority: "high", tagIds: ["tag-desktop"] });
+    await client.create({
+      projectId: "project-1",
+      organizationId: "org-1",
+      title: "Ship desktop",
+      priority: "high",
+      tagIds: ["tag-desktop"],
+    });
     await client.get("task-1");
     await client.getDetails("task-1");
     await client.list({
@@ -102,6 +115,7 @@ describe("DaemonLocalTaskClient", () => {
       tagIds: ["tag-desktop", "tag-cli"],
     });
     await client.search("desktop", { status: "active", tags: ["desktop"], tagIds: ["tag-desktop"] });
+    await client.listProjection({ status: "active" }, "desktop");
     await client.listTags();
     await client.listTagCatalog();
     await client.updateTagColor("tag-desktop", "#3B82F6");
@@ -116,7 +130,16 @@ describe("DaemonLocalTaskClient", () => {
     await client.listTaskLinks("task-1");
 
     expect(invoke.mock.calls).toEqual([
-      ["localTask.create", { title: "Ship desktop", priority: "high", tagRefs: [{ id: "tag-desktop" }] }],
+      [
+        "localTask.create",
+        {
+          projectId: "project-1",
+          organizationId: "org-1",
+          title: "Ship desktop",
+          priority: "high",
+          tagRefs: [{ id: "tag-desktop" }],
+        },
+      ],
       ["localTask.get", { id: "task-1" }],
       ["localTask.getDetails", { id: "task-1" }],
       [
@@ -131,6 +154,7 @@ describe("DaemonLocalTaskClient", () => {
         },
       ],
       ["localTask.search", { query: "desktop", status: "active", tags: ["desktop"], tagIds: ["tag-desktop"] }],
+      ["localTask.listProjection", { query: "desktop", status: "active" }],
       ["localTask.listTags", {}],
       ["localTask.listTagCatalog", {}],
       ["localTask.updateTagColor", { id: "tag-desktop", color: "#3B82F6" }],
@@ -144,6 +168,25 @@ describe("DaemonLocalTaskClient", () => {
       ["localTask.listWorkspaceLinks", { workspaceId: "workspace-1" }],
       ["localTask.listTaskLinks", { id: "task-1" }],
     ]);
+  });
+
+  it.each([
+    ["array projection", []],
+    ["project display array", { tasks: [], projectsById: [], total: 0 }],
+    [
+      "project map key differs from parsed ID",
+      {
+        tasks: [taskPayload],
+        projectsById: {
+          "project-1": { id: "different-project", name: "Project One", icon: "rocket", color: "#3B82F6" },
+        },
+        total: 1,
+      },
+    ],
+  ])("rejects malformed list projection: %s", async (_name, payload) => {
+    const client = new DaemonLocalTaskClient(vi.fn(async () => payload));
+
+    await expect(client.listProjection()).rejects.toThrow("invalid Local Task list projection payload");
   });
 
   it("preserves removedTagId from a tag merge", async () => {

@@ -31,3 +31,25 @@ func findTaskProject(projects []cloud.Project, projectID string) (domain.Project
 	}
 	return domain.ProjectDisplay{}, false
 }
+
+// ResolveTaskProjects resolves Task Hub project display metadata with one remote list call per organization.
+func (s *Service) ResolveTaskProjects(ctx context.Context, projectIDsByOrganization map[string][]string) (map[string]domain.ProjectDisplay, error) {
+	resolved := make(map[string]domain.ProjectDisplay)
+	if s.deps.Session == nil || !s.deps.Session.APIConfigured() {
+		return resolved, nil
+	}
+	for organizationID, projectIDs := range projectIDsByOrganization {
+		response, err := s.deps.Session.APIClient().ListProjects(organizationID)
+		if err != nil {
+			log.Warn().Err(err).Str("orgId", organizationID).Msg("task project bulk resolution failed")
+			continue
+		}
+		for _, projectID := range projectIDs {
+			project, found := findTaskProject(response.Projects, projectID)
+			if found {
+				resolved[projectID] = project
+			}
+		}
+	}
+	return resolved, nil
+}

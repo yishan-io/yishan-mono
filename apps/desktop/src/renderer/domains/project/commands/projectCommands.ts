@@ -111,6 +111,7 @@ export async function createProject(input: {
     organizationId: selectedOrganizationId,
     backendProject: {
       id: project.id,
+      organizationId: project.organizationId,
       name: project.name || normalizedName,
       key: project.repoKey ?? undefined,
       repoKey: project.repoKey ?? null,

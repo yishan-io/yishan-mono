@@ -252,9 +252,15 @@ describe("WorkspaceTasksView", () => {
     localTaskStore.setState({ workspaceLinks: [primaryLink, historicalLink] });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
 
-    expect(screen.getByRole("button", { name: /Primary task/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Related task/ })).toBeTruthy();
-    expect(screen.getAllByText("localTask.status.active")).toHaveLength(1);
+    const primaryTitle = screen.getByText("Primary task");
+    const relatedTitle = screen.getByText("Related task");
+    const activeStatusIcon = screen.getByLabelText("localTask.status.active");
+    const unlinkedStatusIcon = screen.getByLabelText("localTask.link.unlinked");
+
+    expect(activeStatusIcon.compareDocumentPosition(primaryTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(unlinkedStatusIcon.compareDocumentPosition(relatedTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("localTask.status.active")).toBeNull();
+    expect(screen.queryByText("localTask.link.unlinked")).toBeNull();
   });
 
   it("keeps refresh beside one compact workspace action menu", () => {
@@ -446,9 +452,11 @@ describe("WorkspaceTasksView", () => {
     expect(primaryCard).toBeTruthy();
     if (!primaryCard) return;
     const cardQueries = within(primaryCard as HTMLElement);
-    const statusChip = cardQueries.getByText("localTask.status.active").closest(".MuiChip-root");
+    const statusIcon = cardQueries.getByLabelText("localTask.status.active");
     const priorityChip = cardQueries.getByText("localTask.priority.high").closest(".MuiChip-root");
-    expect(statusChip?.parentElement).toBe(priorityChip?.parentElement);
+    expect(statusIcon.nextElementSibling?.textContent).toBe("Primary task");
+    expect(priorityChip).toBeTruthy();
+    expect(cardQueries.queryByText("localTask.status.active")).toBeNull();
     const taskMenu = cardQueries.getByRole("button", { name: "localTask.actions.taskMenu" });
     expect(getComputedStyle(taskMenu).position).toBe("absolute");
     expect(getComputedStyle(taskMenu).top).toBe("4px");

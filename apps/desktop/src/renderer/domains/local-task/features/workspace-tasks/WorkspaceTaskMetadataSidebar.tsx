@@ -11,7 +11,7 @@ import {
 import { renderProjectIcon } from "@renderer/domains/project";
 import { useCallback } from "react";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
-import { LuArrowDown, LuArrowUp, LuCircleCheck, LuCirclePause, LuCirclePlay, LuFolder, LuMinus } from "react-icons/lu";
+import { LuArrowDown, LuArrowUp, LuFolder, LuMinus } from "react-icons/lu";
 import type {
   LocalTask,
   LocalTaskContextDetails,
@@ -20,14 +20,24 @@ import type {
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
 } from "../../localTaskTypes";
+import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsInlineEditor } from "../tags/LocalTaskTagsInlineEditor";
 
-const STATUS_ICONS = { active: LuCirclePlay, paused: LuCirclePause, completed: LuCircleCheck } as const;
 const PRIORITY_ICONS = { low: LuArrowDown, medium: LuMinus, high: LuArrowUp } as const;
 const STATUS_OPTIONS: LocalTaskStatus[] = ["active", "paused", "completed"];
 const PRIORITY_OPTIONS: LocalTaskPriority[] = ["low", "medium", "high"];
 const COMPACT_METADATA_SELECT_SX = { typography: "caption", "& .MuiSelect-select": { py: 0.5, pl: 1, pr: 4 } };
 const SIDEBAR_SECTION_TITLE_SX = { display: "block", mb: 0.5 };
+const NAVIGATION_ITEM_SX = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 0.75,
+  px: 0.5,
+  py: 0.25,
+  borderRadius: 0.5,
+  textAlign: "left",
+  "&:hover": { bgcolor: "action.hover" },
+};
 
 type WorkspaceTaskMetadataSidebarProps = {
   task: LocalTask;
@@ -69,14 +79,13 @@ export function WorkspaceTaskMetadataSidebar({
     (event: SelectChangeEvent<LocalTaskPriority>) => onPriorityChange(event.target.value),
     [onPriorityChange],
   );
-  const StatusIcon = STATUS_ICONS[task.status];
   const PriorityIcon = PRIORITY_ICONS[task.priority];
   const project = details?.project;
 
   return (
     <Stack
       data-testid="local-task-details-sidebar"
-      spacing={2}
+      spacing={3}
       sx={{ minWidth: 0, position: "sticky", top: 0, alignSelf: "start" }}
     >
       <Box>
@@ -93,16 +102,15 @@ export function WorkspaceTaskMetadataSidebar({
             inputProps={{ "aria-label": t("localTask.fields.status") }}
             renderValue={() => (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                <StatusIcon data-testid="local-task-status-icon" size={15} />
+                <LocalTaskStatusIcon status={task.status} />
                 {t(`localTask.status.${task.status}`)}
               </Box>
             )}
           >
             {STATUS_OPTIONS.map((status) => {
-              const Icon = STATUS_ICONS[status];
               return (
                 <MenuItem key={status} value={status}>
-                  <Icon size={15} />
+                  <LocalTaskStatusIcon status={status} />
                   <Box component="span" sx={{ ml: 0.75 }}>
                     {t(`localTask.status.${status}`)}
                   </Box>
@@ -166,7 +174,7 @@ export function WorkspaceTaskMetadataSidebar({
           <ButtonBase
             data-testid="local-task-project-navigation"
             onClick={() => onProjectNavigate?.(project.id)}
-            sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, borderRadius: 0.5, textAlign: "left" }}
+            sx={NAVIGATION_ITEM_SX}
           >
             <Box
               data-testid="local-task-project-icon"
@@ -216,13 +224,7 @@ export function WorkspaceTaskMetadataSidebar({
                     <ButtonBase
                       data-testid="local-task-workspace-navigation"
                       onClick={() => onWorkspaceNavigate?.(workspaceDisplay.id, workspaceDisplay.projectId)}
-                      sx={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 0.75,
-                        borderRadius: 0.5,
-                        textAlign: "left",
-                      }}
+                      sx={NAVIGATION_ITEM_SX}
                     >
                       <WorkspaceIcon data-testid="local-task-workspace-icon" size={16} />
                       <Typography variant="body2">{workspaceDisplay.name}</Typography>

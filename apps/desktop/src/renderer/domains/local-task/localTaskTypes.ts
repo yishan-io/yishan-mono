@@ -24,6 +24,13 @@ export type LocalTaskSearchResult = LocalTask & {
   rank: number;
 };
 
+/** Task Hub list response with daemon-resolved project display metadata. */
+export type LocalTaskListProjection = {
+  tasks: LocalTask[];
+  projectsById: Record<string, LocalTaskProjectDisplay>;
+  total: number;
+};
+
 /** Derived filesystem locations for one Local Task's context documents. */
 export type LocalTaskContextDetails = {
   directory: string;
@@ -100,6 +107,7 @@ export type LocalTaskTagRenameResult = {
 /** Metadata accepted when creating a Local Task. */
 export type CreateLocalTaskInput = {
   projectId?: string;
+  organizationId?: string;
   title: string;
   description?: string;
   priority?: LocalTaskPriority;

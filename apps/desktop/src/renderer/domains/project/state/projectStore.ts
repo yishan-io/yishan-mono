@@ -131,6 +131,7 @@ const initialProjectState = {
 
 type CreatedProjectInput = {
   name: string;
+  organizationId: string;
   source: "local" | "remote";
   normalizedPath: string;
   normalizedGitUrl: string;
@@ -189,6 +190,7 @@ function applyCreatedProjectState(
   const repoPath = (input.backendProject.localPath ?? input.resolvedPath).trim();
   const nextProject = {
     id: nextRepoId,
+    organizationId: input.organizationId,
     key: input.backendProject.key ?? input.backendProject.repoKey ?? nextRepoId,
     name: input.name.trim(),
     path: repoPath,
@@ -263,6 +265,7 @@ export const projectStore = create<ProjectStoreState>()(
             normalizedGitUrl,
             resolvedPath,
             backendProject,
+            organizationId,
           });
 
           // Persist display preferences into organization-scoped storage.

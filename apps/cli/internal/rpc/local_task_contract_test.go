@@ -35,6 +35,7 @@ func TestLocalTaskRPCContractFixture_UsesActualMethodsAndExactPayloads(t *testin
 		MethodLocalTaskGet,
 		MethodLocalTaskGetDetails,
 		MethodLocalTaskList,
+		MethodLocalTaskListProjection,
 		MethodLocalTaskUpdate,
 		MethodLocalTaskUpdate,
 		MethodLocalTaskSearch,
@@ -88,6 +89,8 @@ func assertLocalTaskContractPayload(t *testing.T, method string, payload json.Ra
 		assertExactJSON(t, payload, LocalTaskIDParams{})
 	case MethodLocalTaskList:
 		assertExactJSON(t, payload, LocalTaskListParams{})
+	case MethodLocalTaskListProjection:
+		assertExactJSON(t, payload, LocalTaskListProjectionParams{})
 	case MethodLocalTaskUpdate:
 		assertExactJSON(t, payload, LocalTaskUpdateParams{})
 	case MethodLocalTaskSearch:
@@ -116,6 +119,8 @@ func assertLocalTaskContractResult(t *testing.T, method string, payload json.Raw
 		assertExactJSON(t, payload, localtask.Details{})
 	case MethodLocalTaskList:
 		assertExactJSON(t, payload, []localtask.Task{})
+	case MethodLocalTaskListProjection:
+		assertExactJSON(t, payload, localtask.ListProjection{})
 	case MethodLocalTaskSearch:
 		assertExactJSON(t, payload, []localtask.SearchResult{})
 	case MethodLocalTaskGetContextDetails:

@@ -72,6 +72,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
     return {
       taskById: {},
       hubTasks: [],
+      hubProjectDisplayById: {},
       hubFilters: {},
       hubSearchQuery: "",
       activeTaskCount: 0,
@@ -180,10 +181,11 @@ export const localTaskStore = create<LocalTaskStoreState>()(
         set({ hubLoadState: "loading", hubError: null });
         return requestId;
       },
-      setHubResults: (requestId, hubTasks, activeTaskCount) => {
+      setHubResults: (requestId, hubTasks, hubProjectDisplayById, activeTaskCount) => {
         if (requestId !== hubRequestGeneration) return;
         set((state) => {
           state.hubTasks = hubTasks;
+          state.hubProjectDisplayById = hubProjectDisplayById;
           if (requestId === activeTaskCountRequestGeneration) state.activeTaskCount = activeTaskCount;
           state.hubLoadState = "loaded";
           state.hubError = null;

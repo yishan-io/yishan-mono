@@ -44,13 +44,17 @@ describe("localTaskStore", () => {
     actions.setHubFilters({ status: "paused", priority: "high" });
     actions.setHubSearchQuery("desktop");
     const requestId = actions.beginHubLoad();
-    actions.setHubResults(requestId, [task], 4);
+    const projectDisplayById = {
+      "project-1": { id: "project-1", name: "Daemon Project", icon: "rocket", color: "#3B82F6" },
+    };
+    actions.setHubResults(requestId, [task], projectDisplayById, 4);
 
     expect(localTaskStore.getState()).toMatchObject({
       hubFilters: { status: "paused", priority: "high" },
       hubSearchQuery: "desktop",
       hubTasks: [task],
       activeTaskCount: 4,
+      hubProjectDisplayById: projectDisplayById,
       hubLoadState: "loaded",
       hubError: null,
     });
@@ -69,7 +73,7 @@ describe("localTaskStore", () => {
 
   it("retains refresh data on errors and stores selected-workspace relationships and context", () => {
     let requestId = localTaskStore.getState().beginHubLoad();
-    localTaskStore.getState().setHubResults(requestId, [task], 1);
+    localTaskStore.getState().setHubResults(requestId, [task], {}, 1);
     requestId = localTaskStore.getState().beginHubLoad();
     localTaskStore.getState().setHubError(requestId, "offline");
     requestId = localTaskStore.getState().beginWorkspaceLoad("workspace-1");
@@ -151,7 +155,7 @@ describe("localTaskStore", () => {
 
   it("upserts a detail entity without changing list projections", () => {
     let requestId = localTaskStore.getState().beginHubLoad();
-    localTaskStore.getState().setHubResults(requestId, [task], 1);
+    localTaskStore.getState().setHubResults(requestId, [task], {}, 1);
     requestId = localTaskStore.getState().beginWorkspaceLoad("workspace-1");
     localTaskStore.getState().setWorkspaceData(requestId, "workspace-1", [task], [link]);
 

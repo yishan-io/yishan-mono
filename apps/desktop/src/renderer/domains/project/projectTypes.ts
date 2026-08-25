@@ -8,6 +8,7 @@ export type WorkspaceProjectCommand = {
 
 export type WorkspaceProjectRecord = {
   id: string;
+  organizationId?: string;
   name: string;
   key?: string;
   path?: string;

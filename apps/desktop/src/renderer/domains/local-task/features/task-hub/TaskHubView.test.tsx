@@ -39,7 +39,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("@renderer/domains/project", () => ({
   projectStore: (
     selector: (state: { projects: Array<{ id: string; name: string; icon: string; color: string }> }) => unknown,
-  ) => selector({ projects: [{ id: "project-1", name: "Project One", icon: "rocket", color: "primary.main" }] }),
+  ) => selector({ projects: [{ id: "project-1", name: "Renderer Project", icon: "bug", color: "error.main" }] }),
   renderProjectIcon: (iconId: string | undefined) => `project-icon-${iconId}`,
 }));
 vi.mock("@renderer/domains/workbench", () => ({
@@ -89,6 +89,9 @@ describe("TaskHubView", () => {
       hubTasks: [task],
       hubLoadState: "loaded",
       hubError: null,
+      hubProjectDisplayById: {
+        "project-1": { id: "project-1", name: "Daemon Project", icon: "rocket", color: "#3B82F6" },
+      },
       detailsByTaskId: {
         [task.id]: {
           task,
@@ -168,6 +171,7 @@ describe("TaskHubView", () => {
     if (submitButton) fireEvent.click(submitButton);
     expect(commands.createLocalTask).toHaveBeenCalledWith({
       projectId: undefined,
+      organizationId: undefined,
       title: "New task",
       description: "",
       priority: "medium",
@@ -197,11 +201,42 @@ describe("TaskHubView", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "localTask.actions.create" }).at(-1) as HTMLButtonElement);
     expect(commands.createLocalTask).toHaveBeenCalledWith({
       projectId: undefined,
+      organizationId: undefined,
       title: "Tagged",
       description: "",
       priority: "medium",
       tagIds: ["tag-Café"],
     });
+  });
+
+  it("renders daemon project metadata when renderer project state differs and omits global task chips", () => {
+    localTaskStore.setState({
+      hubTasks: [task, { ...task, id: "global-task", projectId: null, title: "Global task" }],
+      hubProjectDisplayById: {
+        "project-1": { id: "project-1", name: "Daemon Project", icon: "rocket", color: "#3B82F6" },
+      },
+    });
+    render(<TaskHubView />);
+
+    const daemonProjectChip = screen.getByText("Daemon Project").closest(".MuiChip-root");
+    expect(daemonProjectChip).toBeTruthy();
+    expect(screen.queryByText("Renderer Project")).toBeNull();
+    expect(daemonProjectChip?.querySelector(".MuiChip-icon")?.textContent).toBe("project-icon-rocket");
+    expect(daemonProjectChip?.querySelector("[style*='background']")).toBeNull();
+    expect(screen.getByText("Global task").closest("button")?.querySelector(".MuiChip-root")).toBeNull();
+  });
+
+  it("falls back to the project ID when legacy task project metadata is unresolved", () => {
+    localTaskStore.setState({
+      hubTasks: [{ ...task, id: "legacy-task", projectId: "legacy-project", title: "Historical task" }],
+      hubProjectDisplayById: {},
+    });
+    render(<TaskHubView />);
+
+    const projectChip = screen.getByText("legacy-project").closest(".MuiChip-root");
+    expect(projectChip).toBeTruthy();
+    expect(projectChip?.querySelector(".MuiChip-icon")).toBeNull();
+    expect(screen.queryByText("localTask.states.noValue")).toBeNull();
   });
 
   it("propagates catalog color tokens to Task Hub row tag chips", () => {
@@ -257,11 +292,15 @@ describe("TaskHubView", () => {
   it("opens a task detail view and returns to the task list", () => {
     render(<TaskHubView />);
 
-    expect(screen.getByText("Project One")).toBeTruthy();
+    expect(screen.getByText("Daemon Project")).toBeTruthy();
+    expect(screen.queryByText("Renderer Project")).toBeNull();
     expect(screen.queryByText("Desktop UX")).toBeNull();
     const taskTitle = screen.getByText("Ship Task Hub");
+    const statusIcon = screen.getByLabelText("localTask.status.active");
     const priorityIcon = screen.getByLabelText("localTask.fields.priority: localTask.priority.high");
-    expect(priorityIcon.compareDocumentPosition(taskTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(statusIcon.compareDocumentPosition(taskTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(statusIcon.compareDocumentPosition(priorityIcon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("localTask.status.active")).toBeNull();
     expect(screen.queryByText("localTask.priority.high")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Ship Task Hub/ }));
     expect(screen.getByText("Desktop UX")).toBeTruthy();

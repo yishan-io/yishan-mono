@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { LuEllipsis } from "react-icons/lu";
 import { unlinkLocalTaskWorkspace, updateLocalTaskLinkStatus } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskWorkspaceLink } from "../../localTaskTypes";
+import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
 
 const DENSE_CHIP_SX = {
@@ -35,6 +36,8 @@ export function WorkspaceTaskLinkRow({
   const [isConfirmingUnlink, setIsConfirmingUnlink] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const isUnlinked = link.unlinkedAt !== null;
+  const linkStatus = isUnlinked ? "unlinked" : link.status;
+  const linkStatusLabel = isUnlinked ? t("localTask.link.unlinked") : t(`localTask.status.${link.status}`);
   const runLinkMutation = useCallback((operation: () => Promise<unknown>, message: string) => {
     void operation().catch((error) => console.error(message, error));
   }, []);
@@ -80,16 +83,13 @@ export function WorkspaceTaskLinkRow({
         aria-pressed={selected}
         sx={{ width: "100%", p: 1.25, pr: isUnlinked ? 1.25 : 4.5, display: "block", textAlign: "left" }}
       >
-        <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
-          {task?.title ?? link.localTaskId}
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}>
+          <LocalTaskStatusIcon status={linkStatus} label={linkStatusLabel} />
+          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+            {task?.title ?? link.localTaskId}
+          </Typography>
+        </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, mt: 0.5, minWidth: 0 }}>
-          <Chip
-            size="small"
-            variant="outlined"
-            label={isUnlinked ? t("localTask.link.unlinked") : t(`localTask.status.${link.status}`)}
-            sx={DENSE_CHIP_SX}
-          />
           {task ? (
             <>
               <Chip

@@ -5,6 +5,7 @@ import "testing"
 func TestLocalTaskMethodNames_AreStable(t *testing.T) {
 	tests := map[string]string{
 		"details":            MethodLocalTaskGetDetails,
+		"list projection":    MethodLocalTaskListProjection,
 		"context details":    MethodLocalTaskGetContextDetails,
 		"update link status": MethodLocalTaskUpdateWorkspaceLinkStatus,
 		"list tags":          MethodLocalTaskListTags,
@@ -16,6 +17,7 @@ func TestLocalTaskMethodNames_AreStable(t *testing.T) {
 	}
 	want := map[string]string{
 		"details":            "localTask.getDetails",
+		"list projection":    "localTask.listProjection",
 		"context details":    "localTask.getContextDetails",
 		"update link status": "localTask.updateWorkspaceLinkStatus",
 		"list tags":          "localTask.listTags",

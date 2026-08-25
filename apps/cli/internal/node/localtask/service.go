@@ -54,7 +54,7 @@ func (s *Service) publishTaskChanged() {
 // Create validates and persists a new Local Task.
 func (s *Service) Create(ctx context.Context, req rpc.LocalTaskCreateParams) (any, error) {
 	task := domain.Task{
-		ID: uuid.NewString(), ProjectID: req.ProjectID, Title: req.Title, Description: req.Description,
+		ID: uuid.NewString(), ProjectID: req.ProjectID, OrganizationID: req.OrganizationID, Title: req.Title, Description: req.Description,
 		Status: domain.StatusActive, Priority: req.Priority, Tags: req.Tags, TagRefs: req.TagRefs,
 	}
 	if task.Priority == "" {

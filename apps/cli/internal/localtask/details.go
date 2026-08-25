@@ -40,6 +40,13 @@ type ProjectDisplay struct {
 	Color string `json:"color"`
 }
 
+// ListProjection is the Task Hub-specific list response with task rows and resolved project display metadata.
+type ListProjection struct {
+	Tasks        []Task                    `json:"tasks"`
+	ProjectsByID map[string]ProjectDisplay `json:"projectsById"`
+	Total        int                       `json:"total"`
+}
+
 // Details is the detail-specific Local Task RPC projection.
 type Details struct {
 	Task       Task               `json:"task"`
@@ -50,4 +57,5 @@ type Details struct {
 // ProjectResolver resolves display metadata without exposing a remote adapter.
 type ProjectResolver interface {
 	ResolveTaskProject(context.Context, string, string) (ProjectDisplay, bool, error)
+	ResolveTaskProjects(context.Context, map[string][]string) (map[string]ProjectDisplay, error)
 }

@@ -1,9 +1,11 @@
 import { Box, Chip, Paper, Tooltip, Typography } from "@mui/material";
+import { renderProjectIcon } from "@renderer/domains/project";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowDown, LuArrowUp, LuMinus } from "react-icons/lu";
 import type { LocalTask, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
+import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
 
 const TASK_ROW_ESTIMATE = 112;
@@ -14,15 +16,17 @@ const PRIORITY_ICONS = {
   high: LuArrowUp,
 } as const;
 
+type ProjectDisplay = { name: string; icon: string; color: string };
+
 type LocalTaskListProps = {
   tasks: LocalTask[];
   onSelect: (taskId: string) => void;
-  projectNameById: Readonly<Record<string, string>>;
+  projectDisplayById: Readonly<Record<string, ProjectDisplay>>;
   tagCatalog: LocalTaskTagCatalogEntry[];
 };
 
 /** Renders a virtualized Local Task result list. */
-export function LocalTaskList({ tasks, onSelect, projectNameById, tagCatalog }: LocalTaskListProps) {
+export function LocalTaskList({ tasks, onSelect, projectDisplayById, tagCatalog }: LocalTaskListProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -40,6 +44,7 @@ export function LocalTaskList({ tasks, onSelect, projectNameById, tagCatalog }: 
           const task = tasks[virtualRow.index];
           if (!task) return null;
           const PriorityIcon = PRIORITY_ICONS[task.priority];
+          const project = task.projectId ? projectDisplayById[task.projectId] : undefined;
           return (
             <Box
               key={task.id}
@@ -69,6 +74,7 @@ export function LocalTaskList({ tasks, onSelect, projectNameById, tagCatalog }: 
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                    <LocalTaskStatusIcon status={task.status} label={t(`localTask.status.${task.status}`)} />
                     <Tooltip title={t(`localTask.priority.${task.priority}`)}>
                       <Box
                         component="span"
@@ -91,20 +97,44 @@ export function LocalTaskList({ tasks, onSelect, projectNameById, tagCatalog }: 
                       {task.title}
                     </Typography>
                   </Box>
-                  <Typography variant="body2" color="text.secondary" noWrap>
-                    {task.projectId
-                      ? (projectNameById[task.projectId] ?? task.projectId)
-                      : t("localTask.states.globalTask")}
-                  </Typography>
                 </Box>
-                <LocalTaskTagsDisplay
-                  tagRefs={task.tagRefs}
-                  tags={task.tagRefs.length === 0 ? task.tags : undefined}
-                  maxVisible={2}
-                  tagCatalog={tagCatalog}
-                />
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Chip size="small" label={t(`localTask.status.${task.status}`)} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  {project ? (
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      icon={
+                        <Box
+                          sx={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: project.color,
+                          }}
+                        >
+                          {renderProjectIcon(project.icon, 14)}
+                        </Box>
+                      }
+                      label={project.name}
+                      sx={{
+                        "& .MuiChip-icon": { ml: 0.75 },
+                        "& .MuiChip-label": { px: 1.25 },
+                      }}
+                    />
+                  ) : task.projectId ? (
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={task.projectId}
+                      sx={{ "& .MuiChip-label": { px: 1.25 } }}
+                    />
+                  ) : null}
+                  <LocalTaskTagsDisplay
+                    tagRefs={task.tagRefs}
+                    tags={task.tagRefs.length === 0 ? task.tags : undefined}
+                    maxVisible={2}
+                    tagCatalog={tagCatalog}
+                  />
                 </Box>
               </Paper>
             </Box>

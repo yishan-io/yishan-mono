@@ -117,11 +117,13 @@ export async function refreshLocalTaskHub(): Promise<void> {
   const query = hubSearchQuery.trim();
   const requestId = localTaskStore.getState().beginHubLoad();
   try {
-    const [hubTasks, activeTasks] = await Promise.all([
-      query ? localTaskClient.search(query, hubFilters) : localTaskClient.list(hubFilters),
+    const [hubProjection, activeTasks] = await Promise.all([
+      localTaskClient.listProjection(hubFilters, query),
       localTaskClient.list({ status: "active" }),
     ]);
-    localTaskStore.getState().setHubResults(requestId, hubTasks, activeTasks.length);
+    localTaskStore
+      .getState()
+      .setHubResults(requestId, hubProjection.tasks, hubProjection.projectsById, activeTasks.length);
   } catch (error) {
     localTaskStore.getState().setHubError(requestId, getErrorMessage(error));
   }

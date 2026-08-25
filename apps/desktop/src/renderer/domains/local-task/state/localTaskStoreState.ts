@@ -4,6 +4,7 @@ import type {
   LocalTaskDetails,
   LocalTaskFilters,
   LocalTaskLoadState,
+  LocalTaskProjectDisplay,
   LocalTaskTagCatalogEntry,
   LocalTaskWorkspaceLink,
 } from "../localTaskTypes";
@@ -12,6 +13,7 @@ import type {
 export type LocalTaskStoreState = {
   taskById: Record<string, LocalTask>;
   hubTasks: LocalTask[];
+  hubProjectDisplayById: Record<string, LocalTaskProjectDisplay>;
   hubFilters: LocalTaskFilters;
   hubSearchQuery: string;
   activeTaskCount: number;
@@ -58,7 +60,12 @@ export type LocalTaskStoreState = {
   beginActiveTaskCountLoad: () => number;
   setActiveTaskCount: (requestId: number, activeTaskCount: number) => void;
   beginHubLoad: () => number;
-  setHubResults: (requestId: number, tasks: LocalTask[], activeTaskCount: number) => void;
+  setHubResults: (
+    requestId: number,
+    tasks: LocalTask[],
+    projectDisplayById: Record<string, LocalTaskProjectDisplay>,
+    activeTaskCount: number,
+  ) => void;
   setHubError: (requestId: number, error: string) => void;
   beginWorkspaceLoad: (workspaceId: string) => number;
   clearSelectedWorkspace: () => void;

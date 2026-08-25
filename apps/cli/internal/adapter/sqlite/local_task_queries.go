@@ -19,7 +19,7 @@ func buildLocalTaskListQuery(filter localtask.TaskFilter) (string, []any) {
 }
 
 func buildLocalTaskSearchQuery(search string, filter localtask.TaskFilter) (string, []any) {
-	query := `SELECT local_tasks.id, local_tasks.project_id, local_tasks.title, local_tasks.description,
+	query := `SELECT local_tasks.id, local_tasks.project_id, local_tasks.organization_id, local_tasks.title, local_tasks.description,
 		local_tasks.status, local_tasks.priority, local_tasks.created_at, local_tasks.updated_at,
 		local_tasks.completed_at, bm25(local_tasks_fts) FROM local_tasks_fts
 		JOIN local_tasks ON local_tasks.id = local_tasks_fts.local_task_id`
@@ -153,14 +153,17 @@ func scanLocalTasks(rows *sql.Rows) ([]localtask.Task, error) {
 
 func scanLocalTask(scanner interface{ Scan(...any) error }) (localtask.Task, error) {
 	task := localtask.Task{Tags: make([]string, 0)}
-	var projectID, completedAt sql.NullString
-	err := scanner.Scan(&task.ID, &projectID, &task.Title, &task.Description, &task.Status, &task.Priority,
+	var projectID, organizationID, completedAt sql.NullString
+	err := scanner.Scan(&task.ID, &projectID, &organizationID, &task.Title, &task.Description, &task.Status, &task.Priority,
 		&task.CreatedAt, &task.UpdatedAt, &completedAt)
 	if err != nil {
 		return localtask.Task{}, err
 	}
 	if projectID.Valid {
 		task.ProjectID = stringPointer(projectID.String)
+	}
+	if organizationID.Valid {
+		task.OrganizationID = stringPointer(organizationID.String)
 	}
 	if completedAt.Valid {
 		task.CompletedAt = stringPointer(completedAt.String)
@@ -185,14 +188,17 @@ func scanLocalTaskSearchResults(rows *sql.Rows) ([]localtask.SearchResult, error
 
 func scanLocalTaskSearchResult(scanner interface{ Scan(...any) error }) (localtask.SearchResult, error) {
 	var result localtask.SearchResult
-	var projectID, completedAt sql.NullString
-	err := scanner.Scan(&result.ID, &projectID, &result.Title, &result.Description, &result.Status,
+	var projectID, organizationID, completedAt sql.NullString
+	err := scanner.Scan(&result.ID, &projectID, &organizationID, &result.Title, &result.Description, &result.Status,
 		&result.Priority, &result.CreatedAt, &result.UpdatedAt, &completedAt, &result.Rank)
 	if err != nil {
 		return localtask.SearchResult{}, err
 	}
 	if projectID.Valid {
 		result.ProjectID = stringPointer(projectID.String)
+	}
+	if organizationID.Valid {
+		result.OrganizationID = stringPointer(organizationID.String)
 	}
 	if completedAt.Valid {
 		result.CompletedAt = stringPointer(completedAt.String)

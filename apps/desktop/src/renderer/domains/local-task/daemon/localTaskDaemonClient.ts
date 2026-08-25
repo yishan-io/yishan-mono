@@ -6,6 +6,7 @@ import type {
   LocalTaskContextDetails,
   LocalTaskDetails,
   LocalTaskFilters,
+  LocalTaskListProjection,
   LocalTaskPriority,
   LocalTaskProjectDisplay,
   LocalTaskSearchResult,
@@ -118,6 +119,38 @@ function parseTask(payload: unknown): LocalTask {
 function parseTaskArray(payload: unknown): LocalTask[] {
   if (!Array.isArray(payload)) throw new TypeError("invalid Local Task list payload");
   return payload.map(parseTask);
+}
+
+function parseListProjection(payload: unknown): LocalTaskListProjection {
+  if (Array.isArray(payload)) throw new TypeError("invalid Local Task list projection payload");
+  const record = requireRecord(payload, "Local Task list projection");
+  const total = record.total;
+  const projectsById = asRecord(record.projectsById);
+  if (
+    !Array.isArray(record.tasks) ||
+    !projectsById ||
+    Array.isArray(projectsById) ||
+    typeof total !== "number" ||
+    !Number.isInteger(total) ||
+    total < 0
+  ) {
+    throw new TypeError("invalid Local Task list projection payload");
+  }
+  try {
+    return {
+      tasks: record.tasks.map(parseTask),
+      projectsById: Object.fromEntries(
+        Object.entries(projectsById).map(([projectId, project]) => {
+          const parsedProject = parseProjectDisplay(project);
+          if (parsedProject.id !== projectId) throw new TypeError("invalid Local Task list projection payload");
+          return [projectId, parsedProject];
+        }),
+      ),
+      total,
+    };
+  } catch {
+    throw new TypeError("invalid Local Task list projection payload");
+  }
 }
 
 function parseSearchResult(payload: unknown): LocalTaskSearchResult {
@@ -233,6 +266,13 @@ export class DaemonLocalTaskClient {
   /** Lists Local Tasks matching optional hub or workspace filters. */
   async list(filters: LocalTaskFilters = {}): Promise<LocalTask[]> {
     return parseTaskArray(await this.invoke("localTask.list", filters));
+  }
+
+  /** Lists Task Hub rows with daemon-resolved project display metadata. */
+  async listProjection(filters: LocalTaskFilters = {}, query = ""): Promise<LocalTaskListProjection> {
+    return parseListProjection(
+      await this.invoke("localTask.listProjection", { ...filters, ...(query ? { query } : {}) }),
+    );
   }
 
   /** Searches Local Task title and description metadata. */

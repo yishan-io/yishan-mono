@@ -31,6 +31,9 @@ func (s *recordingLocalTaskService) GetContextDetails(context.Context, LocalTask
 func (s *recordingLocalTaskService) List(context.Context, LocalTaskListParams) (any, error) {
 	return s.called(MethodLocalTaskList)
 }
+func (s *recordingLocalTaskService) ListProjection(context.Context, LocalTaskListProjectionParams) (any, error) {
+	return s.called(MethodLocalTaskListProjection)
+}
 func (s *recordingLocalTaskService) ListTags(context.Context) (any, error) {
 	return s.called(MethodLocalTaskListTags)
 }
@@ -81,6 +84,7 @@ func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 		{MethodLocalTaskGetDetails, `{"id":"task-1"}`},
 		{MethodLocalTaskGetContextDetails, `{"id":"task-1"}`},
 		{MethodLocalTaskList, `{}`},
+		{MethodLocalTaskListProjection, `{}`},
 		{MethodLocalTaskListTags, `{}`},
 		{MethodLocalTaskListTagCatalog, `{}`},
 		{MethodLocalTaskUpdateTagColor, `{"id":"tag-1","color":null}`},

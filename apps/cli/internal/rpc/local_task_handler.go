@@ -23,6 +23,8 @@ func (h *LocalTaskHandler) Call(ctx context.Context, connection *Connection, met
 		return callLocalTask(ctx, params, h.Services.GetContextDetails)
 	case MethodLocalTaskList:
 		return callLocalTask(ctx, params, h.Services.List)
+	case MethodLocalTaskListProjection:
+		return callLocalTask(ctx, params, h.Services.ListProjection)
 	case MethodLocalTaskListTags:
 		return callLocalTask(ctx, params, func(ctx context.Context, _ struct{}) (any, error) {
 			return h.Services.ListTags(ctx)

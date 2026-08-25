@@ -26,6 +26,10 @@ func (resolver *detailProjectResolver) ResolveTaskProject(_ context.Context, org
 	return resolver.project, resolver.isFound, nil
 }
 
+func (resolver *detailProjectResolver) ResolveTaskProjects(context.Context, map[string][]string) (map[string]domain.ProjectDisplay, error) {
+	return map[string]domain.ProjectDisplay{}, nil
+}
+
 func TestService_GetDetailsReturnsResolvedDisplays(t *testing.T) {
 	service, workspaceStore, repository := newTestService(t)
 	if err := workspaceStore.Create(context.Background(), &sqlite.Workspace{

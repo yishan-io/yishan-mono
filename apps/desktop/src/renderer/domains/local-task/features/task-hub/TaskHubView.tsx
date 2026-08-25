@@ -41,6 +41,7 @@ export function TaskHubView() {
   const loadState = localTaskStore((state) => state.hubLoadState);
   const error = localTaskStore((state) => state.hubError);
   const taskById = localTaskStore((state) => state.taskById);
+  const projectDisplayById = localTaskStore((state) => state.hubProjectDisplayById);
   const projects = projectStore((state) => state.projects);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
@@ -57,10 +58,6 @@ export function TaskHubView() {
     ? (taskById[selectedTaskId] ?? tasks.find((task) => task.id === selectedTaskId))
     : undefined;
   const detailProjection = useTaskHubDetailProjection(selectedTask);
-  const projectNameById = useMemo(
-    () => Object.fromEntries(projects.map((project) => [project.id, project.name])),
-    [projects],
-  );
 
   useEffect(() => {
     // fire-and-forget: Local Task store owns loading and error state.
@@ -212,7 +209,7 @@ export function TaskHubView() {
               <LocalTaskList
                 tasks={paginatedTasks}
                 onSelect={handleSelectTask}
-                projectNameById={projectNameById}
+                projectDisplayById={projectDisplayById}
                 tagCatalog={detailProjection.tagCatalog}
               />
               {pageCount > 1 ? (
