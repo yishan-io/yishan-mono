@@ -25,6 +25,7 @@ const commands = vi.hoisted(() => ({
   linkLocalTaskWorkspace: vi.fn(),
   createAndLinkLocalTask: vi.fn(),
   openLocalTaskContextInFileTree: vi.fn(),
+  openLocalTaskContextFile: vi.fn(),
   selectWorkspaceLocalTask: vi.fn(),
   unlinkLocalTaskWorkspace: vi.fn(),
   updateLocalTask: vi.fn(async () => undefined),
@@ -126,9 +127,11 @@ describe("WorkspaceTasksView", () => {
       contextByTaskId: {
         [primaryTask.id]: {
           directory: "/contexts/task-primary",
-          planPath: "/contexts/task-primary/plan.md",
-          notesPath: "/contexts/task-primary/notes.md",
-          outcomePath: "/contexts/task-primary/outcome.md",
+          files: [
+            { name: "plan.md", path: "/contexts/task-primary/plan.md" },
+            { name: "notes.md", path: "/contexts/task-primary/notes.md" },
+            { name: "outcome.md", path: "/contexts/task-primary/outcome.md" },
+          ],
         },
       },
     });
@@ -162,54 +165,21 @@ describe("WorkspaceTasksView", () => {
     expect(commands.selectWorkspaceLocalTask).toHaveBeenCalledWith("task-related");
     const relatedTitle = screen.getByText("Related task");
     const relatedDescription = screen.getByText("Related details");
-    const statusIcon = screen.getByTestId("local-task-status-icon");
     expect(screen.queryByText("task-related")).toBeNull();
     expect(relatedTitle.compareDocumentPosition(relatedDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(relatedDescription.compareDocumentPosition(statusIcon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByTestId("local-task-priority-icon")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "localTask.fields.status" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "localTask.fields.priority" })).toBeTruthy();
     expect(screen.queryByText("localTask.fields.status: localTask.status.active")).toBeNull();
     expect(screen.queryByText("localTask.fields.priority: localTask.priority.medium")).toBeNull();
   });
 
-  it("renders daemon projection project and workspace displays when renderer stores are unhydrated", () => {
+  it("hides project and workspace metadata inside the workspace detail pane", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
 
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
-    expect(screen.getByText("Project One")).toBeTruthy();
-    expect(screen.getByTestId("local-task-project-icon")).toBeTruthy();
-    expect(screen.getByText("Workspace One")).toBeTruthy();
-  });
-
-  it("navigates through commands for the project and active workspace, but not inactive workspaces", () => {
-    localTaskStore.setState({
-      detailsByTaskId: {
-        [primaryTask.id]: {
-          task: primaryTask,
-          project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
-          workspaces: [
-            { id: "workspace-1", projectId: "project-1", name: "Workspace One", kind: "local", status: "active" },
-            {
-              id: "workspace-closed",
-              projectId: "project-1",
-              name: "Closed workspace",
-              kind: "managed",
-              status: "closed",
-            },
-          ],
-        },
-      },
-    });
-    render(<WorkspaceTasksView workspaceId="workspace-1" />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
-    fireEvent.click(screen.getByTestId("local-task-project-navigation"));
-    fireEvent.click(screen.getByTestId("local-task-workspace-navigation"));
-
-    expect(commands.navigateToLocalTaskProject).toHaveBeenCalledWith("project-1");
-    expect(commands.navigateToLocalTaskWorkspace).toHaveBeenCalledWith("workspace-1", "project-1");
-    expect(screen.getByText("localTask.workspaceStatus.active")).toBeTruthy();
-    expect(screen.getByText("localTask.workspaceStatus.closed")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Closed workspace/ })).toBeNull();
+    expect(screen.queryByText("Project One")).toBeNull();
+    expect(screen.queryByTestId("local-task-project-icon")).toBeNull();
+    expect(screen.queryByText("Workspace One")).toBeNull();
   });
 
   it("keeps card menus independent from task-details navigation", () => {
@@ -218,6 +188,8 @@ describe("WorkspaceTasksView", () => {
     const relatedCard = relatedSelection.closest(".MuiPaper-root");
     expect(relatedCard).toBeTruthy();
     if (!relatedCard) return;
+    expect(relatedCard.classList.contains("MuiCard-root")).toBe(true);
+    expect(relatedCard.classList.contains("MuiPaper-outlined")).toBe(true);
 
     const taskMenus = screen.getAllByLabelText("localTask.actions.taskMenu");
     const relatedTaskMenu = taskMenus[1];
@@ -226,6 +198,7 @@ describe("WorkspaceTasksView", () => {
     fireEvent.click(relatedTaskMenu);
     expect(commands.selectWorkspaceLocalTask).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "common.actions.back" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "localTask.actions.pauseLink" })).toBeNull();
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.actions.unlink" }));
     expect(commands.unlinkLocalTaskWorkspace).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.unlink" }));
@@ -247,20 +220,14 @@ describe("WorkspaceTasksView", () => {
     expect(screen.getByRole("button", { name: /Primary task/ })).toBeTruthy();
   });
 
-  it("renders active and historical links in daemon order without role controls", () => {
+  it("hides unlinked task history from the workspace task list", () => {
     const historicalLink = { ...relatedLink, status: "completed" as const, unlinkedAt: "2026-02-01" };
     localTaskStore.setState({ workspaceLinks: [primaryLink, historicalLink] });
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
 
-    const primaryTitle = screen.getByText("Primary task");
-    const relatedTitle = screen.getByText("Related task");
-    const activeStatusIcon = screen.getByLabelText("localTask.status.active");
-    const unlinkedStatusIcon = screen.getByLabelText("localTask.link.unlinked");
-
-    expect(activeStatusIcon.compareDocumentPosition(primaryTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(unlinkedStatusIcon.compareDocumentPosition(relatedTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.queryByText("localTask.status.active")).toBeNull();
-    expect(screen.queryByText("localTask.link.unlinked")).toBeNull();
+    expect(screen.getByText("Primary task")).toBeTruthy();
+    expect(screen.queryByText("Related task")).toBeNull();
+    expect(screen.queryByLabelText("localTask.link.unlinked")).toBeNull();
   });
 
   it("keeps refresh beside one compact workspace action menu", () => {
@@ -427,12 +394,12 @@ describe("WorkspaceTasksView", () => {
     expect(screen.queryByRole("button", { name: /History/ })).toBeNull();
   });
 
-  it("loads details only for the selected historical row instead of every mounted history row", () => {
+  it("loads details only for the selected linked row instead of every mounted row", () => {
     const historyLinks = Array.from({ length: 20 }, (_, index) => ({
       ...relatedLink,
       id: `history-link-${index}`,
       localTaskId: `history-task-${index}`,
-      unlinkedAt: "2026-02-01",
+      unlinkedAt: null,
     }));
     localTaskStore.setState({
       workspaceLinks: [primaryLink, ...historyLinks],
@@ -446,7 +413,7 @@ describe("WorkspaceTasksView", () => {
     expect(commands.loadLocalTask).toHaveBeenCalledWith("history-task-0");
   });
 
-  it("supports explicit task pause and link pause interactions", () => {
+  it("supports explicit task pause interactions", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     const primaryCard = screen.getByRole("button", { name: /Primary task/ }).closest(".MuiPaper-root");
     expect(primaryCard).toBeTruthy();
@@ -457,17 +424,6 @@ describe("WorkspaceTasksView", () => {
     expect(priorityIcon.nextElementSibling).toBe(statusIcon);
     expect(statusIcon.nextElementSibling?.textContent).toBe("Primary task");
     expect(cardQueries.queryByText("localTask.status.active")).toBeNull();
-    const taskMenu = cardQueries.getByRole("button", { name: "localTask.actions.taskMenu" });
-    expect(getComputedStyle(taskMenu).position).toBe("absolute");
-    expect(getComputedStyle(taskMenu).top).toBe("4px");
-    fireEvent.click(taskMenu);
-    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.actions.pauseLink" }));
-    expect(commands.updateLocalTaskLinkStatus).toHaveBeenCalledWith("link-primary", "paused");
-
-    fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.status" }));
-    fireEvent.click(screen.getByRole("option", { name: "localTask.status.paused" }));
-    expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { status: "paused" });
   });
 
   it("uses valid list roles for virtualized history without ul child violations", () => {
@@ -486,18 +442,18 @@ describe("WorkspaceTasksView", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
 
-    expect(screen.getByText("Project One")).toBeTruthy();
-    expect(screen.getByText("Workspace One")).toBeTruthy();
     expect(screen.getByText("plan.md")).toBeTruthy();
     expect(screen.getByText("notes.md")).toBeTruthy();
     expect(screen.getByText("outcome.md")).toBeTruthy();
-    const statusSelect = screen.getByRole("combobox", { name: "localTask.fields.status" });
-    const prioritySelect = screen.getByRole("combobox", { name: "localTask.fields.priority" });
-    fireEvent.mouseDown(statusSelect);
-    fireEvent.click(screen.getByRole("option", { name: "localTask.status.paused" }));
+    expect(screen.queryByRole("combobox", { name: "localTask.fields.status" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "localTask.fields.priority" })).toBeNull();
+    expect(screen.getByText("localTask.status.active")).toBeTruthy();
+    expect(screen.getByText("localTask.priority.high")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "localTask.fields.status" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.paused" }));
     expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { status: "paused" });
-    fireEvent.mouseDown(prioritySelect);
-    const lowPriorityOption = screen.getByRole("option", { name: "localTask.priority.low" });
+    fireEvent.click(screen.getByRole("button", { name: "localTask.fields.priority" }));
+    const lowPriorityOption = screen.getByRole("menuitem", { name: "localTask.priority.low" });
     expect(lowPriorityOption.querySelector("[data-testid='local-task-priority-icon']")).toBeTruthy();
     fireEvent.click(lowPriorityOption);
     expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { priority: "low" });

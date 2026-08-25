@@ -8,6 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { FileTree } from "@renderer/domains/files";
 import { renderProjectIcon } from "@renderer/domains/project";
 import { useCallback } from "react";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
@@ -44,6 +45,9 @@ type WorkspaceTaskMetadataSidebarProps = {
   context?: LocalTaskContextDetails;
   details?: LocalTaskDetails;
   updatedAt: string;
+  showLocationMetadata: boolean;
+  showStatusAndPriority: boolean;
+  showTags: boolean;
   isMutationLoading: boolean;
   tagCatalog: LocalTaskTagCatalogEntry[];
   onStatusChange: (status: LocalTaskStatus) => void;
@@ -52,6 +56,7 @@ type WorkspaceTaskMetadataSidebarProps = {
   onCreateTag: (name: string) => Promise<LocalTaskTagCatalogEntry>;
   onProjectNavigate?: (projectId: string) => void;
   onWorkspaceNavigate?: (workspaceId: string, projectId: string) => void;
+  onContextFileOpen?: (fileName: LocalTaskContextDetails["files"][number]["name"]) => void;
   t: (key: string) => string;
 };
 
@@ -61,6 +66,9 @@ export function WorkspaceTaskMetadataSidebar({
   context,
   details,
   updatedAt,
+  showLocationMetadata,
+  showStatusAndPriority,
+  showTags,
   isMutationLoading,
   tagCatalog,
   onStatusChange,
@@ -69,6 +77,7 @@ export function WorkspaceTaskMetadataSidebar({
   onCreateTag,
   onProjectNavigate,
   onWorkspaceNavigate,
+  onContextFileOpen,
   t,
 }: WorkspaceTaskMetadataSidebarProps) {
   const handleStatusChange = useCallback(
@@ -80,6 +89,14 @@ export function WorkspaceTaskMetadataSidebar({
     [onPriorityChange],
   );
   const project = details?.project;
+  const handleContextFileSelect = useCallback(
+    (path: string, isDirectory: boolean) => {
+      if (isDirectory) return;
+      const file = context?.files.find((contextFile) => contextFile.name === path);
+      if (file) onContextFileOpen?.(file.name);
+    },
+    [context?.files, onContextFileOpen],
+  );
 
   return (
     <Stack
@@ -87,165 +104,179 @@ export function WorkspaceTaskMetadataSidebar({
       spacing={3}
       sx={{ minWidth: 0, position: "sticky", top: 0, alignSelf: "start" }}
     >
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
-          {t("localTask.fields.status")}
-        </Typography>
-        <FormControl size="small" sx={{ minWidth: 132 }}>
-          <Select
-            size="small"
-            sx={COMPACT_METADATA_SELECT_SX}
-            value={task.status}
-            onChange={handleStatusChange}
-            disabled={isMutationLoading}
-            inputProps={{ "aria-label": t("localTask.fields.status") }}
-            renderValue={() => (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                <LocalTaskStatusIcon status={task.status} />
-                {t(`localTask.status.${task.status}`)}
-              </Box>
-            )}
-          >
-            {STATUS_OPTIONS.map((status) => {
-              return (
-                <MenuItem key={status} value={status}>
-                  <LocalTaskStatusIcon status={status} />
-                  <Box component="span" sx={{ ml: 0.75 }}>
-                    {t(`localTask.status.${status}`)}
+      {showStatusAndPriority ? (
+        <>
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
+              {t("localTask.fields.status")}
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 132 }}>
+              <Select
+                size="small"
+                sx={COMPACT_METADATA_SELECT_SX}
+                value={task.status}
+                onChange={handleStatusChange}
+                disabled={isMutationLoading}
+                inputProps={{ "aria-label": t("localTask.fields.status") }}
+                renderValue={() => (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                    <LocalTaskStatusIcon status={task.status} />
+                    {t(`localTask.status.${task.status}`)}
                   </Box>
-                </MenuItem>
-              );
-            })}
-          </Select>
-        </FormControl>
-      </Box>
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
-          {t("localTask.fields.priority")}
-        </Typography>
-        <FormControl size="small" sx={{ minWidth: 132 }}>
-          <Select
-            size="small"
-            sx={COMPACT_METADATA_SELECT_SX}
-            value={task.priority}
-            onChange={handlePriorityChange}
-            disabled={isMutationLoading}
-            inputProps={{ "aria-label": t("localTask.fields.priority") }}
-            renderValue={() => (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                <LocalTaskPriorityIcon priority={task.priority} />
-                {t(`localTask.priority.${task.priority}`)}
-              </Box>
-            )}
-          >
-            {PRIORITY_OPTIONS.map((priority) => {
-              return (
-                <MenuItem key={priority} value={priority}>
-                  <LocalTaskPriorityIcon priority={priority} />
-                  <Box component="span" sx={{ ml: 0.75 }}>
-                    {t(`localTask.priority.${priority}`)}
+                )}
+              >
+                {STATUS_OPTIONS.map((status) => {
+                  return (
+                    <MenuItem key={status} value={status}>
+                      <LocalTaskStatusIcon status={status} />
+                      <Box component="span" sx={{ ml: 0.75 }}>
+                        {t(`localTask.status.${status}`)}
+                      </Box>
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
+              {t("localTask.fields.priority")}
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 132 }}>
+              <Select
+                size="small"
+                sx={COMPACT_METADATA_SELECT_SX}
+                value={task.priority}
+                onChange={handlePriorityChange}
+                disabled={isMutationLoading}
+                inputProps={{ "aria-label": t("localTask.fields.priority") }}
+                renderValue={() => (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                    <LocalTaskPriorityIcon priority={task.priority} />
+                    {t(`localTask.priority.${task.priority}`)}
                   </Box>
-                </MenuItem>
-              );
-            })}
-          </Select>
-        </FormControl>
-      </Box>
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
-          {t("localTask.fields.tags")}
-        </Typography>
-        <LocalTaskTagsInlineEditor
-          tagRefs={task.tagRefs}
-          tags={task.tagRefs.length === 0 ? task.tags : undefined}
-          tagCatalog={tagCatalog}
-          onTagIdsChange={onTagIdsChange}
-          onCreateTag={onCreateTag}
-          isMutationLoading={isMutationLoading}
-        />
-      </Box>
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
-          {t("localTask.fields.project")}
-        </Typography>
-        {project ? (
-          <ButtonBase
-            data-testid="local-task-project-navigation"
-            onClick={() => onProjectNavigate?.(project.id)}
-            sx={NAVIGATION_ITEM_SX}
-          >
-            <Box
-              data-testid="local-task-project-icon"
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 16,
-                height: 16,
-                borderRadius: 0.5,
-                bgcolor: project.color,
-                color: "common.white",
-                fontSize: 10,
-                fontWeight: 700,
-                flexShrink: 0,
-              }}
-            >
-              {renderProjectIcon(project.icon, 10)}
-            </Box>
-            <Typography variant="body2">{project.name}</Typography>
-          </ButtonBase>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            {task.projectId === null && details?.workspaces.length === 0
-              ? t("localTask.states.globalTask")
-              : t("localTask.states.noValue")}
+                )}
+              >
+                {PRIORITY_OPTIONS.map((priority) => {
+                  return (
+                    <MenuItem key={priority} value={priority}>
+                      <LocalTaskPriorityIcon priority={priority} />
+                      <Box component="span" sx={{ ml: 0.75 }}>
+                        {t(`localTask.priority.${priority}`)}
+                      </Box>
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+          </Box>
+        </>
+      ) : null}
+      {showTags ? (
+        <Box>
+          <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
+            {t("localTask.fields.tags")}
           </Typography>
-        )}
-      </Box>
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
-          {t("localTask.fields.workspace")}
-        </Typography>
-        {(details?.workspaces.length ?? 0) > 0 ? (
-          <Stack component="ul" spacing={0.25} sx={{ my: 0, p: 0, listStyle: "none" }}>
-            {details?.workspaces.map((workspaceDisplay) => {
-              const WorkspaceIcon =
-                workspaceDisplay.kind === "local"
-                  ? HiOutlineCube
-                  : workspaceDisplay.kind === "folder"
-                    ? LuFolder
-                    : HiCubeTransparent;
-              const isActive = workspaceDisplay.status === "active";
-              return (
-                <Box component="li" key={workspaceDisplay.id} sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                  {isActive ? (
-                    <ButtonBase
-                      data-testid="local-task-workspace-navigation"
-                      onClick={() => onWorkspaceNavigate?.(workspaceDisplay.id, workspaceDisplay.projectId)}
-                      sx={NAVIGATION_ITEM_SX}
-                    >
-                      <WorkspaceIcon data-testid="local-task-workspace-icon" size={16} />
-                      <Typography variant="body2">{workspaceDisplay.name}</Typography>
-                    </ButtonBase>
-                  ) : (
-                    <>
-                      <WorkspaceIcon data-testid="local-task-workspace-icon" size={16} />
-                      <Typography variant="body2">{workspaceDisplay.name}</Typography>
-                    </>
-                  )}
-                  <Typography variant="caption" color="text.secondary">
-                    {t(`localTask.workspaceStatus.${workspaceDisplay.status}`)}
-                  </Typography>
+          <LocalTaskTagsInlineEditor
+            tagRefs={task.tagRefs}
+            tags={task.tagRefs.length === 0 ? task.tags : undefined}
+            tagCatalog={tagCatalog}
+            onTagIdsChange={onTagIdsChange}
+            onCreateTag={onCreateTag}
+            isMutationLoading={isMutationLoading}
+          />
+        </Box>
+      ) : null}
+      {showLocationMetadata ? (
+        <>
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
+              {t("localTask.fields.project")}
+            </Typography>
+            {project ? (
+              <ButtonBase
+                data-testid="local-task-project-navigation"
+                onClick={() => onProjectNavigate?.(project.id)}
+                sx={NAVIGATION_ITEM_SX}
+              >
+                <Box
+                  data-testid="local-task-project-icon"
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 16,
+                    height: 16,
+                    borderRadius: 0.5,
+                    bgcolor: project.color,
+                    color: "common.white",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  {renderProjectIcon(project.icon, 10)}
                 </Box>
-              );
-            })}
-          </Stack>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            {t("localTask.states.noValue")}
-          </Typography>
-        )}
-      </Box>
+                <Typography variant="body2">{project.name}</Typography>
+              </ButtonBase>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                {task.projectId === null && details?.workspaces.length === 0
+                  ? t("localTask.states.globalTask")
+                  : t("localTask.states.noValue")}
+              </Typography>
+            )}
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
+              {t("localTask.fields.workspace")}
+            </Typography>
+            {(details?.workspaces.length ?? 0) > 0 ? (
+              <Stack component="ul" spacing={0.25} sx={{ my: 0, p: 0, listStyle: "none" }}>
+                {details?.workspaces.map((workspaceDisplay) => {
+                  const WorkspaceIcon =
+                    workspaceDisplay.kind === "local"
+                      ? HiOutlineCube
+                      : workspaceDisplay.kind === "folder"
+                        ? LuFolder
+                        : HiCubeTransparent;
+                  const isActive = workspaceDisplay.status === "active";
+                  return (
+                    <Box
+                      component="li"
+                      key={workspaceDisplay.id}
+                      sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
+                    >
+                      {isActive ? (
+                        <ButtonBase
+                          data-testid="local-task-workspace-navigation"
+                          onClick={() => onWorkspaceNavigate?.(workspaceDisplay.id, workspaceDisplay.projectId)}
+                          sx={NAVIGATION_ITEM_SX}
+                        >
+                          <WorkspaceIcon data-testid="local-task-workspace-icon" size={16} />
+                          <Typography variant="body2">{workspaceDisplay.name}</Typography>
+                        </ButtonBase>
+                      ) : (
+                        <>
+                          <WorkspaceIcon data-testid="local-task-workspace-icon" size={16} />
+                          <Typography variant="body2">{workspaceDisplay.name}</Typography>
+                        </>
+                      )}
+                      <Typography variant="caption" color="text.secondary">
+                        {t(`localTask.workspaceStatus.${workspaceDisplay.status}`)}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                {t("localTask.states.noValue")}
+              </Typography>
+            )}
+          </Box>
+        </>
+      ) : null}
       <Box>
         <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
           {t("localTask.fields.updatedAt")}
@@ -257,13 +288,18 @@ export function WorkspaceTaskMetadataSidebar({
           <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
             {t("localTask.context.files")}
           </Typography>
-          <Stack component="ul" spacing={0.25} sx={{ my: 0, pl: 2 }}>
-            {[context.planPath, context.notesPath, context.outcomePath].map((path) => (
-              <Typography component="li" key={path} variant="body2">
-                {path.split(/[\\/]/).at(-1)}
-              </Typography>
-            ))}
-          </Stack>
+          {context.files.length > 0 ? (
+            <Box data-testid="task-context-file-tree" sx={{ height: 120 }}>
+              <FileTree
+                files={context.files.map((file) => file.name)}
+                onSelectEntry={({ path, isDirectory }) => handleContextFileSelect(path, isDirectory)}
+              />
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              {t("localTask.states.noValue")}
+            </Typography>
+          )}
         </Box>
       ) : null}
     </Stack>

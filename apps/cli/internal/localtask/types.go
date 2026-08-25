@@ -105,12 +105,16 @@ type TagColorUpdate struct {
 	DisplayName *string
 }
 
-// ContextDetails contains derived filesystem locations for v1 task documents.
+// ContextDetails contains derived Task Context locations and existing v1 documents.
 type ContextDetails struct {
-	Directory   string `json:"directory"`
-	PlanPath    string `json:"planPath"`
-	NotesPath   string `json:"notesPath"`
-	OutcomePath string `json:"outcomePath"`
+	Directory string        `json:"directory"`
+	Files     []ContextFile `json:"files"`
+}
+
+// ContextFile identifies one existing v1 Task Context document.
+type ContextFile struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 // ContextRoot identifies one derived Task Context directory for Memory indexing.

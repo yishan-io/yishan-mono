@@ -1,4 +1,4 @@
-import { activateWorkspace } from "@renderer/domains/workbench";
+import { activateWorkspace, openTab } from "@renderer/domains/workbench";
 import { resolveLocalWorkspaceIdForProject, selectFolderInFileTree, workspaceStore } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { localTaskClient } from "../daemon/localTaskDaemonClient";
@@ -6,6 +6,7 @@ import type {
   CreateLocalTaskInput,
   LocalTask,
   LocalTaskDetails,
+  LocalTaskContextFileName,
   LocalTaskFilters,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
@@ -406,6 +407,15 @@ export async function createAndLinkLocalTask(
 }
 
 const TASK_CONTEXT_RELATIVE_ROOT = ".my-context/task-context";
+
+/** Opens an existing Task Context document in a tab for the selected workspace. */
+export function openLocalTaskContextFile(
+  workspaceId: string,
+  taskId: string,
+  fileName: LocalTaskContextFileName,
+): void {
+  openTab({ workspaceId, kind: "file", path: `${TASK_CONTEXT_RELATIVE_ROOT}/${taskId}/${fileName}` });
+}
 
 /** Opens a project's derived Task Context directory in the workspace file tree. */
 export function openLocalTaskContextInFileTree(taskId: string): void {

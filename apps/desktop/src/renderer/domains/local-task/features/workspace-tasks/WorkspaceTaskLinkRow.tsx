@@ -1,9 +1,9 @@
-import { Box, ButtonBase, IconButton, Menu, MenuItem, Paper, Tooltip, Typography } from "@mui/material";
+import { Box, ButtonBase, Card, IconButton, Menu, MenuItem, Tooltip, Typography } from "@mui/material";
 import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEllipsis } from "react-icons/lu";
-import { unlinkLocalTaskWorkspace, updateLocalTaskLinkStatus } from "../../commands/localTaskCommands";
+import { unlinkLocalTaskWorkspace } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskWorkspaceLink } from "../../localTaskTypes";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
@@ -41,17 +41,6 @@ export function WorkspaceTaskLinkRow({
     runLinkMutation(() => unlinkLocalTaskWorkspace(link.id), "Failed to unlink Local Task");
     setIsConfirmingUnlink(false);
   }, [link.id, runLinkMutation]);
-  const handleToggleStatus = useCallback(() => {
-    setActionMenuAnchor(null);
-    runLinkMutation(
-      () => updateLocalTaskLinkStatus(link.id, link.status === "active" ? "paused" : "active"),
-      "Failed to update Local Task link",
-    );
-  }, [link.id, link.status, runLinkMutation]);
-  const handleComplete = useCallback(() => {
-    setActionMenuAnchor(null);
-    runLinkMutation(() => updateLocalTaskLinkStatus(link.id, "completed"), "Failed to complete Local Task link");
-  }, [link.id, runLinkMutation]);
   const handleRequestUnlink = useCallback(() => {
     setActionMenuAnchor(null);
     setIsConfirmingUnlink(true);
@@ -62,13 +51,13 @@ export function WorkspaceTaskLinkRow({
   const handleCloseActionMenu = useCallback(() => setActionMenuAnchor(null), []);
 
   return (
-    <Paper
-      elevation={0}
+    <Card
+      variant="outlined"
       sx={{
+        mb: 0.5,
+        p: 1.25,
         overflow: "visible",
-        border: 0,
-        boxShadow: "none",
-        bgcolor: "transparent",
+        bgcolor: "background.paper",
         transition: (theme) =>
           theme.transitions.create("background-color", { duration: theme.transitions.duration.shortest }),
         position: "relative",
@@ -80,15 +69,15 @@ export function WorkspaceTaskLinkRow({
         aria-pressed={selected}
         sx={{
           width: "100%",
-          p: 0.5,
-          pr: isUnlinked ? 0.5 : 4.5,
+          p: 0,
+          pr: isUnlinked ? 0 : 3.5,
           display: "flex",
-          alignItems: "center",
-          gap: 1,
+          flexDirection: "column",
+          alignItems: "stretch",
           textAlign: "left",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flex: 1, minWidth: 0 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}>
           {task ? (
             <Tooltip title={t(`localTask.priority.${task.priority}`)}>
               <LocalTaskPriorityIcon
@@ -98,16 +87,15 @@ export function WorkspaceTaskLinkRow({
             </Tooltip>
           ) : null}
           <LocalTaskStatusIcon status={linkStatus} label={linkStatusLabel} />
-          <Typography variant="body2" sx={{ fontSize: "0.8125rem" }} noWrap>
+          <Typography variant="body2" sx={{ fontSize: "0.875rem" }} noWrap>
             {task?.title ?? link.localTaskId}
           </Typography>
         </Box>
         {task ? (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: "auto", minWidth: 0 }}>
+          <Box data-testid="workspace-task-card-tags" sx={{ mt: 1.5, minWidth: 0 }}>
             <LocalTaskTagsDisplay
               tagRefs={task.tagRefs}
               tags={task.tagRefs.length === 0 ? task.tags : undefined}
-              maxVisible={2}
               dense
               tagCatalog={tagCatalog}
             />
@@ -121,19 +109,11 @@ export function WorkspaceTaskLinkRow({
             disabled={isMutationLoading}
             aria-label={t("localTask.actions.taskMenu")}
             onClick={handleOpenActionMenu}
-            sx={{ position: "absolute", top: 4, right: 4 }}
+            sx={{ position: "absolute", top: 6, right: 6 }}
           >
             <LuEllipsis size={16} />
           </IconButton>
           <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={handleCloseActionMenu}>
-            <MenuItem disabled={isMutationLoading} onClick={handleToggleStatus}>
-              {t(link.status === "active" ? "localTask.actions.pauseLink" : "localTask.actions.reactivateLink")}
-            </MenuItem>
-            {link.status !== "completed" ? (
-              <MenuItem disabled={isMutationLoading} onClick={handleComplete}>
-                {t("localTask.actions.completeLink")}
-              </MenuItem>
-            ) : null}
             <MenuItem disabled={isMutationLoading} onClick={handleRequestUnlink} sx={{ color: "error.main" }}>
               {t("localTask.actions.unlink")}
             </MenuItem>
@@ -151,6 +131,6 @@ export function WorkspaceTaskLinkRow({
         onCancel={() => setIsConfirmingUnlink(false)}
         onConfirm={handleConfirmUnlink}
       />
-    </Paper>
+    </Card>
   );
 }

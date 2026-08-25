@@ -11,6 +11,7 @@ import type {
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
 } from "../../localTaskTypes";
+import { LocalTaskTagsInlineEditor } from "../tags/LocalTaskTagsInlineEditor";
 import { TaskDescriptionMarkdown } from "./TaskDescriptionMarkdown";
 import { WorkspaceTaskMetadataSidebar } from "./WorkspaceTaskMetadataSidebar";
 
@@ -23,6 +24,9 @@ type WorkspaceTaskDetailsProps = {
   detailsLoadState?: LocalTaskLoadState;
   detailsError?: string | null;
   showTitle?: boolean;
+  showLocationMetadata?: boolean;
+  showStatusAndPriority?: boolean;
+  showTagsAboveDescription?: boolean;
   isMutationLoading: boolean;
   onStatusChange: (status: LocalTaskStatus) => void;
   onPriorityChange: (priority: LocalTaskPriority) => void;
@@ -30,6 +34,7 @@ type WorkspaceTaskDetailsProps = {
   onCreateTag: (name: string) => Promise<LocalTaskTagCatalogEntry>;
   onProjectNavigate?: (projectId: string) => void;
   onWorkspaceNavigate?: (workspaceId: string, projectId: string) => void;
+  onContextFileOpen?: (fileName: LocalTaskContextDetails["files"][number]["name"]) => void;
   onRetryDetails?: () => void;
   tagCatalog?: LocalTaskTagCatalogEntry[];
 };
@@ -44,6 +49,9 @@ export function WorkspaceTaskDetails({
   detailsLoadState = "idle",
   detailsError = null,
   showTitle = true,
+  showLocationMetadata = true,
+  showStatusAndPriority = true,
+  showTagsAboveDescription = false,
   isMutationLoading,
   onStatusChange,
   onPriorityChange,
@@ -51,6 +59,7 @@ export function WorkspaceTaskDetails({
   onCreateTag,
   onProjectNavigate,
   onWorkspaceNavigate,
+  onContextFileOpen,
   onRetryDetails,
   tagCatalog = [],
 }: WorkspaceTaskDetailsProps) {
@@ -77,6 +86,16 @@ export function WorkspaceTaskDetails({
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
               {task.title}
             </Typography>
+          ) : null}
+          {showTagsAboveDescription ? (
+            <LocalTaskTagsInlineEditor
+              tagRefs={task.tagRefs}
+              tags={task.tagRefs.length === 0 ? task.tags : undefined}
+              tagCatalog={tagCatalog}
+              onTagIdsChange={onTagIdsChange}
+              onCreateTag={onCreateTag}
+              isMutationLoading={isMutationLoading}
+            />
           ) : null}
           <TaskDescriptionMarkdown content={task.description || t("localTask.states.noDescription")} />
           {detailsLoadState === "error" ? (
@@ -109,6 +128,9 @@ export function WorkspaceTaskDetails({
           context={context}
           details={details}
           updatedAt={updatedAt}
+          showLocationMetadata={showLocationMetadata}
+          showStatusAndPriority={showStatusAndPriority}
+          showTags={!showTagsAboveDescription}
           isMutationLoading={isMutationLoading}
           tagCatalog={tagCatalog}
           onStatusChange={onStatusChange}
@@ -117,6 +139,7 @@ export function WorkspaceTaskDetails({
           onCreateTag={onCreateTag}
           onProjectNavigate={onProjectNavigate}
           onWorkspaceNavigate={onWorkspaceNavigate}
+          onContextFileOpen={onContextFileOpen}
           t={t}
         />
       </Box>

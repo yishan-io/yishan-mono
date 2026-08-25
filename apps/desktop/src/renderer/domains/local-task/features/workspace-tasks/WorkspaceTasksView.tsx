@@ -11,7 +11,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEllipsis, LuLink, LuPlus, LuRefreshCw } from "react-icons/lu";
 import {
@@ -22,10 +22,12 @@ import {
   loadLocalTaskTagSuggestions,
   navigateToLocalTaskProject,
   navigateToLocalTaskWorkspace,
+  openLocalTaskContextFile,
   refreshSelectedWorkspaceTasks,
   selectWorkspaceLocalTask,
   updateLocalTask,
 } from "../../commands/localTaskCommands";
+import type { LocalTaskContextFileName } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "../task-hub/CreateLocalTaskDialog";
 import { LinkLocalTaskDialog } from "./LinkLocalTaskDialog";
@@ -54,6 +56,7 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
   const detailsByTaskId = localTaskStore((state) => state.detailsByTaskId);
   const detailsLoadStateByTaskId = localTaskStore((state) => state.detailsLoadStateByTaskId);
   const detailsErrorByTaskId = localTaskStore((state) => state.detailsErrorByTaskId);
+  const linkedLinks = useMemo(() => links.filter((link) => link.unlinkedAt === null), [links]);
   const [isLinkOpen, setIsLinkOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
@@ -73,10 +76,10 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
     setIsCreateOpen(false);
   }, [workspaceId]);
   useEffect(() => {
-    if (detailTaskId && loadState === "loaded" && !links.some((link) => link.localTaskId === detailTaskId)) {
+    if (detailTaskId && loadState === "loaded" && !linkedLinks.some((link) => link.localTaskId === detailTaskId)) {
       setDetailNavigation(null);
     }
-  }, [detailTaskId, links, loadState]);
+  }, [detailTaskId, linkedLinks, loadState]);
   useEffect(() => {
     const taskLoadState = detailTaskId ? taskLoadStateByTaskId[detailTaskId] : undefined;
     if (detailTaskId && !taskById[detailTaskId] && (!taskLoadState || taskLoadState === "idle")) {
@@ -156,6 +159,12 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
       );
     }
   }, [detailTaskId]);
+  const handleContextFileOpen = useCallback(
+    (fileName: LocalTaskContextFileName) => {
+      if (detailTaskId) openLocalTaskContextFile(workspaceId, detailTaskId, fileName);
+    },
+    [detailTaskId, workspaceId],
+  );
 
   if (loadState === "loading" || loadState === "idle") {
     return (
@@ -183,7 +192,13 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
       ) : null}
       {detailTaskId ? (
         <>
-          <WorkspaceTaskDetailHeader onBack={handleBack} />
+          <WorkspaceTaskDetailHeader
+            task={selectedTask}
+            isMutationLoading={isMutationLoading}
+            onBack={handleBack}
+            onStatusChange={handleDetailStatus}
+            onPriorityChange={handleDetailPriority}
+          />
           {selectedTask ? (
             <WorkspaceTaskDetails
               task={selectedTask}
@@ -194,6 +209,9 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
               detailsLoadState={detailsLoadStateByTaskId[selectedTask.id] ?? "idle"}
               detailsError={detailsErrorByTaskId[selectedTask.id] ?? null}
               onRetryDetails={handleRetryDetails}
+              showLocationMetadata={false}
+              showStatusAndPriority={false}
+              showTagsAboveDescription
               isMutationLoading={isMutationLoading}
               onStatusChange={handleDetailStatus}
               onPriorityChange={handleDetailPriority}
@@ -201,6 +219,7 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
               onCreateTag={createLocalTaskTag}
               onProjectNavigate={navigateToLocalTaskProject}
               onWorkspaceNavigate={navigateToLocalTaskWorkspace}
+              onContextFileOpen={handleContextFileOpen}
               tagCatalog={tagCatalog}
             />
           ) : taskLoadStateByTaskId[detailTaskId] === "error" ? (
@@ -258,9 +277,9 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
               </MenuItem>
             </Menu>
           </Box>
-          {links.length > 0 ? (
+          {linkedLinks.length > 0 ? (
             <VirtualizedWorkspaceTaskLinks
-              links={links}
+              links={linkedLinks}
               taskById={taskById}
               selectedTaskId={selectedTaskId}
               isMutationLoading={isMutationLoading}
