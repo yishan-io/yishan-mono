@@ -1,6 +1,6 @@
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { type RefObject, useEffect } from "react";
-import type { VditorEditorHandle } from "./vditorEditor";
+import type { VditorEditorHandle } from "./vditorEditorTypes";
 
 type UseVditorFocusRequestInput = {
   focusRequestKey: number;

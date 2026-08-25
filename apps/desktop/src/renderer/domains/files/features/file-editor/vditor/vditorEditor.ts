@@ -11,92 +11,7 @@
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import Vditor from "vditor";
 import luteUrl from "vditor/dist/js/lute/lute.min.js?url";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-/** Languages Vditor ships built-in i18n for (toolbar tooltips etc.). */
-export type VditorLang =
-  | "de_DE"
-  | "en_US"
-  | "es_ES"
-  | "fr_FR"
-  | "ja_JP"
-  | "ko_KR"
-  | "pt_BR"
-  | "ru_RU"
-  | "sv_SE"
-  | "vi_VN"
-  | "zh_CN"
-  | "zh_TW";
-
-/**
- * Maps the app's runtime language ("en", "zh", …) to a Vditor i18n code.
- * Falls back to en_US for unsupported languages.
- */
-export function resolveVditorLang(appLanguage: string | undefined): VditorLang {
-  const base = appLanguage?.split(/[-_]/)[0]?.toLowerCase();
-  if (base === "zh") {
-    return "zh_CN";
-  }
-  if (base === "de") {
-    return "de_DE";
-  }
-  if (base === "es") {
-    return "es_ES";
-  }
-  if (base === "fr") {
-    return "fr_FR";
-  }
-  if (base === "ja") {
-    return "ja_JP";
-  }
-  if (base === "ko") {
-    return "ko_KR";
-  }
-  if (base === "pt") {
-    return "pt_BR";
-  }
-  if (base === "ru") {
-    return "ru_RU";
-  }
-  if (base === "sv") {
-    return "sv_SE";
-  }
-  if (base === "vi") {
-    return "vi_VN";
-  }
-  return "en_US";
-}
-
-export interface VditorEditorOptions {
-  /** Initial markdown content to load into the editor. */
-  defaultValue: string;
-  /** Whether the editor should use dark theme. */
-  isDark: boolean;
-  /** Vditor UI language (toolbar tooltips, hints). Defaults to en_US. */
-  lang?: VditorLang;
-  /** Called on every user edit with the current markdown string. */
-  onMarkdownChange: (markdown: string) => void;
-}
-
-export interface VditorEditorHandle {
-  /** The underlying Vditor instance. */
-  vditor: Vditor;
-  /** Returns the current markdown content. */
-  getValue(): string;
-  /** Replaces the editor content without re-firing the input callback. */
-  setValue(markdown: string): void;
-  /** Synchronously returns current markdown (alias for getValue). */
-  flush(): string;
-  /** Destroys the editor and cleans up all resources. */
-  destroy(): void;
-  /** Enables or disables read-only mode. */
-  setReadOnly(readOnly: boolean): void;
-  /** Focuses the editor. */
-  focus(): void;
-}
+import type { VditorEditorHandle, VditorEditorOptions } from "./vditorEditorTypes";
 
 // ---------------------------------------------------------------------------
 // Factory
@@ -157,6 +72,7 @@ export function createVditorEditor(root: HTMLElement, options: VditorEditorOptio
           },
         },
         value: options.defaultValue,
+        placeholder: options.placeholder,
         _lutePath: luteUrl,
         input(markdown: string): void {
           options.onMarkdownChange(markdown);

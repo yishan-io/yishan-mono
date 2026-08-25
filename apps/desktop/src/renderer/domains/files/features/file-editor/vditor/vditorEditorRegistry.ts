@@ -1,4 +1,12 @@
-import { type VditorEditorHandle, type VditorLang, createVditorEditor } from "./vditorEditor";
+import { createVditorEditor } from "./vditorEditor";
+import type { AcquiredVditorEditor, VditorEditorHandle, VditorLang } from "./vditorEditorTypes";
+
+interface VditorRegistryOptions {
+  defaultValue: string;
+  isDark: boolean;
+  lang: VditorLang;
+  placeholder?: string;
+}
 
 /** Shared state for a single root div, reused across StrictMode remounts. */
 interface RootEditorState {
@@ -9,19 +17,6 @@ interface RootEditorState {
 const rootEditorStates = new WeakMap<HTMLElement, RootEditorState>();
 const rootEmitters = new WeakMap<HTMLElement, (markdown: string) => void>();
 
-export type VditorEditorOptions = {
-  defaultValue: string;
-  isDark: boolean;
-  lang: VditorLang;
-};
-
-export type AcquiredVditorEditor = {
-  /** Resolves to the shared editor handle once created. */
-  promise: Promise<VditorEditorHandle>;
-  /** Releases this mount's claim; destroys the editor when the last mount leaves. */
-  release: () => void;
-};
-
 /**
  * Acquires the shared editor for one root div (get-or-create under
  * StrictMode remounts) and routes emissions to the currently-mounted
@@ -29,7 +24,7 @@ export type AcquiredVditorEditor = {
  */
 export function acquireVditorEditor(
   root: HTMLElement,
-  options: VditorEditorOptions,
+  options: VditorRegistryOptions,
   emitContent: (markdown: string) => void,
 ): AcquiredVditorEditor {
   rootEmitters.set(root, emitContent);
@@ -41,6 +36,7 @@ export function acquireVditorEditor(
         defaultValue: options.defaultValue,
         isDark: options.isDark,
         lang: options.lang,
+        placeholder: options.placeholder,
         onMarkdownChange: (md) => rootEmitters.get(root)?.(md),
       }),
       refCount: 0,
@@ -53,6 +49,7 @@ export function acquireVditorEditor(
 
   let destroyed = false;
   const release = () => {
+    if (destroyed) return;
     destroyed = true;
 
     // Remove this mount's emitter if it is still the current one

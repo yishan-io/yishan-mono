@@ -9,10 +9,13 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   MenuItem,
+  Select,
+  type SelectChangeEvent,
   TextField,
 } from "@mui/material";
-import { type WorkspaceProjectRecord, projectStore } from "@renderer/domains/project";
+import { type WorkspaceProjectRecord, projectStore, renderProjectIcon } from "@renderer/domains/project";
 import { VirtualizedListbox } from "@renderer/ui/components/VirtualizedListbox";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import type React from "react";
@@ -27,7 +30,9 @@ import {
 } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskPriority } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
+import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskTagsInput } from "../tags/LocalTaskTagsInput";
+import { LocalTaskDescriptionEditor } from "./LocalTaskDescriptionEditor";
 
 type CreateLocalTaskDialogProps = {
   open: boolean;
@@ -36,6 +41,22 @@ type CreateLocalTaskDialogProps = {
 };
 
 type SubmitHandler = NonNullable<React.ComponentProps<"form">["onSubmit"]>;
+
+const PRIORITY_OPTIONS: LocalTaskPriority[] = ["low", "medium", "high"];
+const PROJECT_ICON_BADGE_SX = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 18,
+  height: 18,
+  borderRadius: 0.5,
+  color: "common.white",
+  fontSize: 10,
+  fontWeight: 700,
+  flexShrink: 0,
+};
+const PROJECT_OPTION_SX = { display: "flex", alignItems: "center", gap: 1 };
+const PRIORITY_VALUE_SX = { display: "flex", alignItems: "center", gap: 0.75 };
 
 /** Collects metadata and creates one Local Task through the command layer. */
 export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLocalTaskDialogProps) {
@@ -58,11 +79,47 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
     (_event: React.SyntheticEvent, nextProject: WorkspaceProjectRecord | null) => setProject(nextProject),
     [],
   );
+  const handlePriorityChange = useCallback(
+    (event: SelectChangeEvent<LocalTaskPriority>) => setPriority(event.target.value),
+    [],
+  );
   const renderProjectInput = useCallback(
     (params: AutocompleteRenderInputParams) => (
-      <TextField {...params} size="small" label={t("localTask.fields.project")} />
+      <TextField
+        {...params}
+        size="small"
+        placeholder={t("localTask.fields.project")}
+        slotProps={{
+          ...params.slotProps,
+          htmlInput: { ...params.slotProps.htmlInput, "aria-label": t("localTask.fields.project") },
+          input: {
+            ...params.slotProps.input,
+            startAdornment: project ? (
+              <>
+                <Box sx={{ ...PROJECT_ICON_BADGE_SX, bgcolor: project.color ?? "primary.main", ml: 0.5 }}>
+                  {renderProjectIcon(project.icon ?? undefined, 10)}
+                </Box>
+                {params.slotProps.input.startAdornment}
+              </>
+            ) : (
+              params.slotProps.input.startAdornment
+            ),
+          },
+        }}
+      />
     ),
-    [t],
+    [project, t],
+  );
+  const renderProjectOption = useCallback(
+    (optionProps: React.HTMLAttributes<HTMLLIElement>, option: WorkspaceProjectRecord) => (
+      <Box component="li" {...optionProps} sx={PROJECT_OPTION_SX}>
+        <Box sx={{ ...PROJECT_ICON_BADGE_SX, bgcolor: option.color ?? "primary.main" }}>
+          {renderProjectIcon(option.icon ?? undefined, 10)}
+        </Box>
+        {option.name}
+      </Box>
+    ),
+    [],
   );
   const resetAndClose = useCallback(() => {
     setProject(null);
@@ -132,7 +189,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
   }, [isMutationLoading, resetAndClose]);
 
   return (
-    <Dialog open={open} onClose={handleDialogClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={handleDialogClose} fullWidth maxWidth="md">
       <Box component="form" onSubmit={handleSubmit}>
         <DialogTitle>{t("localTask.create.title")}</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: "12px !important" }}>
@@ -154,6 +211,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
             onChange={handleProjectChange}
             getOptionLabel={(option) => option.name}
             renderInput={renderProjectInput}
+            renderOption={renderProjectOption}
             slotProps={{ listbox: { component: VirtualizedListbox } }}
           />
           <TextField
@@ -161,18 +219,17 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
             required
             size="small"
             disabled={isMutationLoading || Boolean(createdTask)}
-            label={t("localTask.fields.title")}
+            placeholder={t("localTask.fields.title")}
+            slotProps={{ htmlInput: { "aria-label": t("localTask.fields.title") } }}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
-          <TextField
-            multiline
-            minRows={3}
-            size="small"
-            disabled={isMutationLoading || Boolean(createdTask)}
-            label={t("localTask.fields.description")}
+          <LocalTaskDescriptionEditor
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={setDescription}
+            disabled={isMutationLoading || Boolean(createdTask)}
+            ariaLabel={t("localTask.fields.description")}
+            placeholder={t("localTask.fields.description")}
           />
           <LocalTaskTagsInput
             tagIds={tagIds}
@@ -180,19 +237,31 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
             onChange={setTagIds}
             onCreateTag={createLocalTaskTag}
             disabled={isMutationLoading || Boolean(createdTask)}
+            disablePortal={false}
           />
-          <TextField
-            select
-            size="small"
-            disabled={isMutationLoading || Boolean(createdTask)}
-            label={t("localTask.fields.priority")}
-            value={priority}
-            onChange={(event) => setPriority(event.target.value as LocalTaskPriority)}
-          >
-            <MenuItem value="low">{t("localTask.priority.low")}</MenuItem>
-            <MenuItem value="medium">{t("localTask.priority.medium")}</MenuItem>
-            <MenuItem value="high">{t("localTask.priority.high")}</MenuItem>
-          </TextField>
+          <FormControl size="small">
+            <Select
+              value={priority}
+              onChange={handlePriorityChange}
+              disabled={isMutationLoading || Boolean(createdTask)}
+              inputProps={{ "aria-label": t("localTask.fields.priority") }}
+              renderValue={() => (
+                <Box sx={PRIORITY_VALUE_SX}>
+                  <LocalTaskPriorityIcon priority={priority} />
+                  {t(`localTask.priority.${priority}`)}
+                </Box>
+              )}
+            >
+              {PRIORITY_OPTIONS.map((priorityOption) => (
+                <MenuItem key={priorityOption} value={priorityOption}>
+                  <LocalTaskPriorityIcon priority={priorityOption} />
+                  <Box component="span" sx={{ ml: 0.75 }}>
+                    {t(`localTask.priority.${priorityOption}`)}
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button disabled={isMutationLoading} onClick={handleDialogClose}>
