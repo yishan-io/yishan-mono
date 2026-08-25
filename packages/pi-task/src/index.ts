@@ -8,6 +8,7 @@ export type {
   LocalTaskPriority,
   LocalTaskSearchResult,
   LocalTaskStatus,
+  LocalTaskTagRef,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "./backend/localTaskTypes";

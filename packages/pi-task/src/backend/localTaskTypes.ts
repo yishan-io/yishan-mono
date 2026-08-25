@@ -2,6 +2,8 @@
 export type LocalTaskStatus = "active" | "paused" | "completed";
 /** Local Task priority values accepted by the daemon. */
 export type LocalTaskPriority = "low" | "medium" | "high";
+/** A catalog tag assigned to a Local Task. */
+export type LocalTaskTagRef = { id: string; name?: string };
 /** Authoritative Local Task metadata returned by the daemon. */
 export type LocalTask = {
   id: string;
@@ -14,6 +16,7 @@ export type LocalTask = {
   updatedAt: string;
   completedAt: string | null;
   tags: string[];
+  tagRefs: LocalTaskTagRef[];
 };
 /** A Local Task metadata search result. */
 export type LocalTaskSearchResult = LocalTask & { rank: number };
@@ -80,6 +83,20 @@ function parseStringArray(payload: unknown, name: string): string[] {
     throw new TypeError(`invalid ${name} payload`);
   return payload;
 }
+function parseLocalTaskTagRefs(payload: unknown): LocalTaskTagRef[] {
+  if (!Array.isArray(payload)) throw new TypeError("invalid Local Task payload");
+  return payload.map((entry) => {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry))
+      throw new TypeError("invalid Local Task payload");
+    const tagRef = entry as WireRecord;
+    const hasName = "name" in tagRef;
+    if (!hasExactKeys(tagRef, hasName ? ["id", "name"] : ["id"]) || typeof tagRef.id !== "string")
+      throw new TypeError("invalid Local Task payload");
+    if (!hasName) return { id: tagRef.id };
+    if (typeof tagRef.name !== "string") throw new TypeError("invalid Local Task payload");
+    return { id: tagRef.id, name: tagRef.name };
+  });
+}
 function parseStatus(payload: unknown): LocalTaskStatus {
   if (payload === "active" || payload === "paused" || payload === "completed") return payload;
   throw new TypeError("invalid Local Task payload");
@@ -101,6 +118,7 @@ export function parseLocalTask(payload: unknown): LocalTask {
     "updatedAt",
     "completedAt",
     "tags",
+    "tagRefs",
   ]);
   if (
     typeof record.title !== "string" ||
@@ -120,6 +138,7 @@ export function parseLocalTask(payload: unknown): LocalTask {
     updatedAt: record.updatedAt,
     completedAt: parseNullableString(record.completedAt, "Local Task"),
     tags: parseStringArray(record.tags, "Local Task"),
+    tagRefs: parseLocalTaskTagRefs(record.tagRefs),
   };
 }
 /** Strictly parses a daemon Local Task workspace link. */
@@ -163,6 +182,7 @@ export function parseLocalTaskSearchResults(payload: unknown): LocalTaskSearchRe
       "updatedAt",
       "completedAt",
       "tags",
+      "tagRefs",
       "rank",
     ]);
     if (typeof record.rank !== "number" || !Number.isFinite(record.rank))
