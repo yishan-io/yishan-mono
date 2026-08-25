@@ -1,17 +1,13 @@
-import { Box, ButtonBase, Chip, IconButton, Menu, MenuItem, Paper, Typography } from "@mui/material";
+import { Box, ButtonBase, IconButton, Menu, MenuItem, Paper, Tooltip, Typography } from "@mui/material";
 import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEllipsis } from "react-icons/lu";
 import { unlinkLocalTaskWorkspace, updateLocalTaskLinkStatus } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskWorkspaceLink } from "../../localTaskTypes";
+import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
+import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
-
-const DENSE_CHIP_SX = {
-  height: 18,
-  fontSize: "0.6875rem",
-  "& .MuiChip-label": { px: 0.625 },
-} as const;
 
 type WorkspaceTaskLinkRowProps = {
   link: LocalTaskWorkspaceLink;
@@ -35,6 +31,8 @@ export function WorkspaceTaskLinkRow({
   const [isConfirmingUnlink, setIsConfirmingUnlink] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const isUnlinked = link.unlinkedAt !== null;
+  const linkStatus = isUnlinked ? "unlinked" : link.status;
+  const linkStatusLabel = isUnlinked ? t("localTask.link.unlinked") : t(`localTask.status.${link.status}`);
   const runLinkMutation = useCallback((operation: () => Promise<unknown>, message: string) => {
     void operation().catch((error) => console.error(message, error));
   }, []);
@@ -65,10 +63,12 @@ export function WorkspaceTaskLinkRow({
 
   return (
     <Paper
-      variant="outlined"
+      elevation={0}
       sx={{
         overflow: "visible",
-        borderColor: "divider",
+        border: 0,
+        boxShadow: "none",
+        bgcolor: "transparent",
         transition: (theme) =>
           theme.transitions.create("background-color", { duration: theme.transitions.duration.shortest }),
         position: "relative",
@@ -78,38 +78,41 @@ export function WorkspaceTaskLinkRow({
       <ButtonBase
         onClick={handleSelect}
         aria-pressed={selected}
-        sx={{ width: "100%", p: 1.25, pr: isUnlinked ? 1.25 : 4.5, display: "block", textAlign: "left" }}
+        sx={{
+          width: "100%",
+          p: 0.5,
+          pr: isUnlinked ? 0.5 : 4.5,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          textAlign: "left",
+        }}
       >
-        <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
-          {task?.title ?? link.localTaskId}
-        </Typography>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, mt: 0.5, minWidth: 0 }}>
-          <Chip
-            size="small"
-            variant="outlined"
-            label={isUnlinked ? t("localTask.link.unlinked") : t(`localTask.status.${link.status}`)}
-            sx={DENSE_CHIP_SX}
-          />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flex: 1, minWidth: 0 }}>
           {task ? (
-            <>
-              <Chip
-                size="small"
-                variant="outlined"
-                label={t(`localTask.priority.${task.priority}`)}
-                sx={DENSE_CHIP_SX}
+            <Tooltip title={t(`localTask.priority.${task.priority}`)}>
+              <LocalTaskPriorityIcon
+                priority={task.priority}
+                aria-label={`${t("localTask.fields.priority")}: ${t(`localTask.priority.${task.priority}`)}`}
               />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <LocalTaskTagsDisplay
-                  tagRefs={task.tagRefs}
-                  tags={task.tagRefs.length === 0 ? task.tags : undefined}
-                  maxVisible={2}
-                  dense
-                  tagCatalog={tagCatalog}
-                />
-              </Box>
-            </>
+            </Tooltip>
           ) : null}
+          <LocalTaskStatusIcon status={linkStatus} label={linkStatusLabel} />
+          <Typography variant="body2" sx={{ fontSize: "0.8125rem" }} noWrap>
+            {task?.title ?? link.localTaskId}
+          </Typography>
         </Box>
+        {task ? (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: "auto", minWidth: 0 }}>
+            <LocalTaskTagsDisplay
+              tagRefs={task.tagRefs}
+              tags={task.tagRefs.length === 0 ? task.tags : undefined}
+              maxVisible={2}
+              dense
+              tagCatalog={tagCatalog}
+            />
+          </Box>
+        ) : null}
       </ButtonBase>
       {!isUnlinked ? (
         <>

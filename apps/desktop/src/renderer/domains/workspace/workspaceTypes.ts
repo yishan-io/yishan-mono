@@ -58,6 +58,14 @@ export function resolveWorkspaceProjectId(workspace: { projectId?: string; repoI
   return workspace.projectId ?? workspace.repoId;
 }
 
+/** Resolves a project's local primary workspace, or an empty ID when it is not hydrated. */
+export function resolveLocalWorkspaceIdForProject(workspaces: WorkspaceItem[], projectId: string): string {
+  return (
+    workspaces.find((workspace) => workspace.kind === "local" && resolveWorkspaceProjectId(workspace) === projectId)
+      ?.id ?? ""
+  );
+}
+
 /** Resolves the workspace to activate for a project (first workspace of the project, or ""). */
 export function resolveWorkspaceIdForProject(workspaces: WorkspaceItem[], projectId: string): string {
   return workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === projectId)?.id ?? "";

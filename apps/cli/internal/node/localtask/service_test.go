@@ -35,6 +35,23 @@ func TestService_CreateDefaultsAndCompletesTask(t *testing.T) {
 	}
 }
 
+func TestService_CreatePersistsProjectOrganizationContext(t *testing.T) {
+	service, _, _ := newTestService(t)
+	projectID := "project-1"
+	organizationID := "org-1"
+
+	createdValue, err := service.Create(context.Background(), rpc.LocalTaskCreateParams{
+		ProjectID: &projectID, OrganizationID: &organizationID, Title: "Scoped task",
+	})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	created := createdValue.(domain.Task)
+	if created.ProjectID == nil || *created.ProjectID != projectID || created.OrganizationID == nil || *created.OrganizationID != organizationID {
+		t.Fatalf("created task = %#v", created)
+	}
+}
+
 func TestService_CreateNotifiesTaskContextLifecycle(t *testing.T) {
 	service, _, _ := newTestService(t)
 	calls := 0

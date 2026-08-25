@@ -22,11 +22,17 @@ func (s *recordingLocalTaskService) Create(context.Context, LocalTaskCreateParam
 func (s *recordingLocalTaskService) Get(context.Context, LocalTaskIDParams) (any, error) {
 	return s.called(MethodLocalTaskGet)
 }
+func (s *recordingLocalTaskService) GetDetails(context.Context, LocalTaskIDParams) (any, error) {
+	return s.called(MethodLocalTaskGetDetails)
+}
 func (s *recordingLocalTaskService) GetContextDetails(context.Context, LocalTaskIDParams) (any, error) {
 	return s.called(MethodLocalTaskGetContextDetails)
 }
 func (s *recordingLocalTaskService) List(context.Context, LocalTaskListParams) (any, error) {
 	return s.called(MethodLocalTaskList)
+}
+func (s *recordingLocalTaskService) ListProjection(context.Context, LocalTaskListProjectionParams) (any, error) {
+	return s.called(MethodLocalTaskListProjection)
 }
 func (s *recordingLocalTaskService) ListTags(context.Context) (any, error) {
 	return s.called(MethodLocalTaskListTags)
@@ -75,8 +81,10 @@ func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 	}{
 		{MethodLocalTaskCreate, `{"title":"Task"}`},
 		{MethodLocalTaskGet, `{"id":"task-1"}`},
+		{MethodLocalTaskGetDetails, `{"id":"task-1"}`},
 		{MethodLocalTaskGetContextDetails, `{"id":"task-1"}`},
 		{MethodLocalTaskList, `{}`},
+		{MethodLocalTaskListProjection, `{}`},
 		{MethodLocalTaskListTags, `{}`},
 		{MethodLocalTaskListTagCatalog, `{}`},
 		{MethodLocalTaskUpdateTagColor, `{"id":"tag-1","color":null}`},

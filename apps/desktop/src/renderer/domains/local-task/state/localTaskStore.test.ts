@@ -44,13 +44,17 @@ describe("localTaskStore", () => {
     actions.setHubFilters({ status: "paused", priority: "high" });
     actions.setHubSearchQuery("desktop");
     const requestId = actions.beginHubLoad();
-    actions.setHubResults(requestId, [task], 4);
+    const projectDisplayById = {
+      "project-1": { id: "project-1", name: "Daemon Project", icon: "rocket", color: "#3B82F6" },
+    };
+    actions.setHubResults(requestId, [task], projectDisplayById, 4);
 
     expect(localTaskStore.getState()).toMatchObject({
       hubFilters: { status: "paused", priority: "high" },
       hubSearchQuery: "desktop",
       hubTasks: [task],
       activeTaskCount: 4,
+      hubProjectDisplayById: projectDisplayById,
       hubLoadState: "loaded",
       hubError: null,
     });
@@ -69,7 +73,7 @@ describe("localTaskStore", () => {
 
   it("retains refresh data on errors and stores selected-workspace relationships and context", () => {
     let requestId = localTaskStore.getState().beginHubLoad();
-    localTaskStore.getState().setHubResults(requestId, [task], 1);
+    localTaskStore.getState().setHubResults(requestId, [task], {}, 1);
     requestId = localTaskStore.getState().beginHubLoad();
     localTaskStore.getState().setHubError(requestId, "offline");
     requestId = localTaskStore.getState().beginWorkspaceLoad("workspace-1");
@@ -126,9 +130,32 @@ describe("localTaskStore", () => {
     expect(localTaskStore.getState().tagSuggestions).toEqual(["current"]);
   });
 
+  it("stores Local Task detail projections and ignores stale responses", () => {
+    const staleRequestId = localTaskStore.getState().beginDetailsLoad("task-1");
+    const requestId = localTaskStore.getState().beginDetailsLoad("task-1");
+    const details = {
+      task,
+      project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
+      workspaces: [
+        {
+          id: "workspace-1",
+          projectId: "project-1",
+          name: "Workspace One",
+          kind: "local" as const,
+          status: "active" as const,
+        },
+      ],
+    };
+    localTaskStore.getState().setDetails(staleRequestId, "task-1", { ...details, project: null });
+    localTaskStore.getState().setDetails(requestId, "task-1", details);
+
+    expect(localTaskStore.getState().detailsByTaskId["task-1"]).toEqual(details);
+    expect(localTaskStore.getState().detailsLoadStateByTaskId["task-1"]).toBe("loaded");
+  });
+
   it("upserts a detail entity without changing list projections", () => {
     let requestId = localTaskStore.getState().beginHubLoad();
-    localTaskStore.getState().setHubResults(requestId, [task], 1);
+    localTaskStore.getState().setHubResults(requestId, [task], {}, 1);
     requestId = localTaskStore.getState().beginWorkspaceLoad("workspace-1");
     localTaskStore.getState().setWorkspaceData(requestId, "workspace-1", [task], [link]);
 

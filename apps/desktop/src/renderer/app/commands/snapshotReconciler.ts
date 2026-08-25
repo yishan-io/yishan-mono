@@ -258,7 +258,7 @@ function mapApiData(
         summaryId: workspace.id,
         worktreePath: workspace.localPath,
         nodeId: workspace.nodeId,
-        kind: "managed",
+        kind: workspace.kind === "primary" ? "local" : "managed",
         status: workspace.status as WorkspaceStatus,
         state: workspace.state,
         health: workspace.health,

@@ -12,7 +12,7 @@ import (
 	"yishan/apps/cli/internal/localtask"
 )
 
-const localTaskColumns = `id, project_id, title, description, status, priority, created_at, updated_at, completed_at`
+const localTaskColumns = `id, project_id, organization_id, title, description, status, priority, created_at, updated_at, completed_at`
 const localTaskLinkColumns = `id, local_task_id, workspace_id, status, linked_at, unlinked_at`
 
 // LocalTaskStore persists Local Task metadata and local workspace links.
@@ -49,9 +49,9 @@ func (store *LocalTaskStore) insertTask(ctx context.Context, task localtask.Task
 		return localtask.Task{}, fmt.Errorf("begin create local task: %w", err)
 	}
 	if _, err := transaction.ExecContext(ctx, `INSERT INTO local_tasks (`+localTaskColumns+`)
-		VALUES (?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), datetime('now')), datetime('now'),
+		VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), datetime('now')), datetime('now'),
 		CASE WHEN ? = 'completed' THEN COALESCE(NULLIF(?, ''), datetime('now')) ELSE NULL END)`, task.ID,
-		task.ProjectID, task.Title, task.Description, task.Status, task.Priority, task.CreatedAt, task.Status, task.CompletedAt); err != nil {
+		task.ProjectID, task.OrganizationID, task.Title, task.Description, task.Status, task.Priority, task.CreatedAt, task.Status, task.CompletedAt); err != nil {
 		_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
 		return localtask.Task{}, fmt.Errorf("create local task: %w", err)
 	}

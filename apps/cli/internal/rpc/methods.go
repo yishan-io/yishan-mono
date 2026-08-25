@@ -54,8 +54,10 @@ const (
 
 	MethodLocalTaskCreate                    = "localTask.create"
 	MethodLocalTaskGet                       = "localTask.get"
+	MethodLocalTaskGetDetails                = "localTask.getDetails"
 	MethodLocalTaskGetContextDetails         = "localTask.getContextDetails"
 	MethodLocalTaskList                      = "localTask.list"
+	MethodLocalTaskListProjection            = "localTask.listProjection"
 	MethodLocalTaskListTags                  = "localTask.listTags"
 	MethodLocalTaskListTagCatalog            = "localTask.listTagCatalog"
 	MethodLocalTaskUpdateTagColor            = "localTask.updateTagColor"

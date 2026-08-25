@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_LOCAL_TASK_TAGS, MAX_LOCAL_TASK_TAG_CODE_POINTS } from "../../localTaskTags";
 import { localTaskStore } from "../../state/localTaskStore";
-import { TaskHubView } from "./TaskHubView";
+import { TaskHubView, getTaskHubProjectFilterOptions } from "./TaskHubView";
 
 const commands = vi.hoisted(() => ({
   createLocalTask: vi.fn(async () => undefined),
@@ -17,7 +18,10 @@ const commands = vi.hoisted(() => ({
   })),
   createAndLinkLocalTask: vi.fn(async () => undefined),
   loadLocalTaskContext: vi.fn(async () => undefined),
+  loadLocalTaskDetails: vi.fn(async () => undefined),
   loadLocalTaskTagSuggestions: vi.fn(async () => undefined),
+  navigateToLocalTaskProject: vi.fn(),
+  navigateToLocalTaskWorkspace: vi.fn(),
   openLocalTaskContextInFileTree: vi.fn(),
   refreshLocalTaskHub: vi.fn(async () => undefined),
   setLocalTaskHubFilters: vi.fn(async () => undefined),
@@ -29,31 +33,39 @@ const commands = vi.hoisted(() => ({
 vi.mock("../../commands/localTaskCommands", () => commands);
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { page?: number }) => (options?.page ? `${key} ${options.page}` : key),
+    t: (key: string, options?: { field?: string; page?: number }) =>
+      options?.page ? `${key} ${options.page}` : options?.field ? `${key} ${options.field}` : key,
+    i18n: { language: "en-US" },
   }),
 }));
 vi.mock("@renderer/domains/project", () => ({
-  projectStore: (selector: (state: { projects: Array<{ id: string; name: string }> }) => unknown) =>
-    selector({ projects: [{ id: "project-1", name: "Project One" }] }),
+  projectStore: (
+    selector: (state: { projects: Array<{ id: string; name: string; icon: string; color: string }> }) => unknown,
+  ) =>
+    selector({
+      projects: Array.from({ length: 100 }, (_, index) => ({
+        id: `project-${index + 1}`,
+        name: index === 0 ? "Renderer Project" : `Renderer Project ${index + 1}`,
+        icon: "bug",
+        color: "error.main",
+      })),
+    }),
+  renderProjectIcon: (iconId: string | undefined) => `project-icon-${iconId}`,
 }));
 vi.mock("@renderer/domains/workbench", () => ({
   PaneHeader: ({ children }: { children: React.ReactNode }) => children,
   PaneToggleButton: () => null,
   useWorkspacePaneVisibilityContext: () => ({ leftCollapsed: false, onToggleLeftPane: vi.fn() }),
+  createFixedRuntimeLayer: () => ({
+    register: vi.fn(),
+    attach: vi.fn(),
+    detach: vi.fn(),
+    remove: vi.fn(),
+    refresh: vi.fn(),
+  }),
 }));
-vi.mock("../workspace-tasks/WorkspaceTaskDetails", () => ({
-  WorkspaceTaskDetails: ({
-    task,
-    showTitle,
-  }: {
-    task: { title: string; description: string };
-    showTitle?: boolean;
-  }) => (
-    <div>
-      {showTitle === false ? null : <div>{task.title}</div>}
-      <div>{task.description}</div>
-    </div>
-  ),
+vi.mock("../tags/LocalTaskTagsInlineEditor", () => ({
+  LocalTaskTagsInlineEditor: () => null,
 }));
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
@@ -79,15 +91,72 @@ const task = {
 
 const initialState = localTaskStore.getState();
 
+describe("getTaskHubProjectFilterOptions", () => {
+  it("merges the complete renderer catalog with daemon Hub displays and deduplicates IDs", () => {
+    expect(
+      getTaskHubProjectFilterOptions(
+        [
+          { id: "project-renderer", name: "Renderer Project" },
+          { id: "project-shared", name: "Stale Project" },
+        ],
+        {
+          "project-daemon": { id: "project-daemon", name: "Daemon-only Project" },
+          "project-shared": { id: "project-shared", name: "Daemon Project" },
+        },
+      ),
+    ).toEqual([
+      { id: "project-shared", name: "Daemon Project" },
+      { id: "project-daemon", name: "Daemon-only Project" },
+      { id: "project-renderer", name: "Renderer Project" },
+    ]);
+  });
+});
+
 describe("TaskHubView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localTaskStore.setState({ ...initialState, hubTasks: [task], hubLoadState: "loaded", hubError: null });
+    localTaskStore.setState({
+      ...initialState,
+      hubTasks: [task],
+      hubLoadState: "loaded",
+      hubError: null,
+      hubProjectDisplayById: {
+        "project-1": { id: "project-1", name: "Daemon Project", icon: "rocket", color: "#3B82F6" },
+      },
+      detailsByTaskId: {
+        [task.id]: {
+          task,
+          project: { id: "project-1", name: "Project One", icon: "rocket", color: "#3B82F6" },
+          workspaces: [
+            { id: "workspace-1", projectId: "project-1", name: "Workspace One", kind: "local", status: "active" },
+            { id: "workspace-2", projectId: "project-1", name: "Workspace Two", kind: "managed", status: "closed" },
+          ],
+        },
+      },
+      detailsLoadStateByTaskId: { [task.id]: "loaded" },
+    });
   });
 
   afterEach(() => {
     cleanup();
     localTaskStore.setState(initialState, true);
+  });
+
+  it("renders and retries a detail projection error", () => {
+    localTaskStore.setState({
+      detailsByTaskId: {},
+      detailsLoadStateByTaskId: { [task.id]: "error" },
+      detailsErrorByTaskId: { [task.id]: "detail projection unavailable" },
+    });
+
+    render(<TaskHubView />);
+    const taskRow = screen.getByText(task.title).closest("button");
+    if (!taskRow) throw new Error("Expected a task row button");
+    fireEvent.click(taskRow);
+
+    expect(screen.getByRole("alert").textContent).toContain("detail projection unavailable");
+    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.retry" }));
+    expect(commands.loadLocalTaskDetails).toHaveBeenCalledWith(task.id);
   });
 
   it("searches, filters, and creates through Local Task commands", async () => {
@@ -102,26 +171,17 @@ describe("TaskHubView", () => {
 
     const filterButton = screen.getByRole("button", { name: "localTask.actions.filter" });
     expect(filterButton.getAttribute("aria-expanded")).toBe("false");
-    expect(screen.queryByRole("combobox", { name: "localTask.fields.status" })).toBeNull();
     fireEvent.click(filterButton);
     expect(filterButton.getAttribute("aria-expanded")).toBe("true");
-
-    const projectSelect = screen.getByPlaceholderText("localTask.fields.project") as HTMLInputElement;
-    expect(projectSelect.getAttribute("role")).toBe("combobox");
-    for (const field of ["project", "status", "priority"]) {
-      expect(screen.queryByText(`localTask.fields.${field}`, { selector: "label" })).toBeNull();
-    }
-
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.status" }));
-    fireEvent.click(await screen.findByRole("option", { name: "localTask.status.paused" }));
+    expect(screen.queryByRole("textbox", { name: "localTask.filters.addFilter" })).toBeNull();
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.paused" }));
     expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: "paused" });
-    expect(screen.queryByRole("combobox", { name: "localTask.fields.workspace" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.refresh" }));
     expect(commands.refreshLocalTaskHub).toHaveBeenCalledTimes(2);
-    fireEvent.click(filterButton);
     expect(filterButton.getAttribute("aria-expanded")).toBe("false");
-    await waitFor(() => expect(screen.queryByRole("combobox", { name: "localTask.fields.status" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.create" }));
     const titleInput = screen.getByRole("textbox", { name: "localTask.fields.title" });
@@ -133,6 +193,7 @@ describe("TaskHubView", () => {
     if (submitButton) fireEvent.click(submitButton);
     expect(commands.createLocalTask).toHaveBeenCalledWith({
       projectId: undefined,
+      organizationId: undefined,
       title: "New task",
       description: "",
       priority: "medium",
@@ -140,17 +201,134 @@ describe("TaskHubView", () => {
     });
   });
 
-  it("uses catalog IDs for filters and task creation", async () => {
+  it("opens the filter menu and lets users select a filter type", () => {
+    render(<TaskHubView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
+    expect(screen.queryByRole("textbox", { name: "localTask.filters.addFilter" })).toBeNull();
+    const filterFieldMenuItems = [
+      screen.getByRole("menuitem", { name: "localTask.fields.project" }),
+      screen.getByRole("menuitem", { name: "localTask.fields.status" }),
+      screen.getByRole("menuitem", { name: "localTask.fields.priority" }),
+      screen.getByRole("menuitem", { name: "localTask.fields.tags" }),
+    ];
+    for (const filterFieldMenuItem of filterFieldMenuItems) {
+      expect(filterFieldMenuItem.querySelector("svg")).toBeTruthy();
+    }
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
+    expect(screen.getByRole("menuitem", { name: "localTask.status.paused" })).toBeTruthy();
+  });
+
+  it("renders value icons and searches only the Tag filter menu", () => {
     localTaskStore.setState({
-      tagCatalog: [{ id: "tag-alpha", key: "alpha", name: "alpha", aliases: ["alpha"], color: null }],
+      tagCatalog: [
+        { id: "tag-backend", key: "backend", name: "Backend", aliases: [], color: "#3B82F6" },
+        { id: "tag-frontend", key: "frontend", name: "Frontend", aliases: [], color: null },
+      ],
     });
     render(<TaskHubView />);
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
-    const filterInput = screen.getByRole("combobox", { name: "localTask.fields.tags" });
-    fireEvent.mouseDown(filterInput);
-    fireEvent.click(await screen.findByRole("option", { name: "alpha" }));
+    expect(screen.queryByRole("textbox", { name: "localTask.filters.searchTags" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.project" }));
+    expect(screen.getByRole("menuitem", { name: "Daemon Project" }).textContent).toContain("project-icon-rocket");
+
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
+    expect(
+      screen
+        .getByRole("menuitem", { name: "localTask.status.active" })
+        .querySelector("[data-testid='local-task-status-icon']"),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.priority" }));
+    expect(
+      screen
+        .getByRole("menuitem", { name: "localTask.priority.high" })
+        .querySelector("[data-testid='local-task-priority-icon']"),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.tags" }));
+    const tagSearch = screen.getByRole("textbox", { name: "localTask.filters.searchTags" });
+    expect(document.activeElement).toBe(tagSearch);
+    fireEvent.change(tagSearch, { target: { value: "backend" } });
+    expect(screen.getByRole("menuitem", { name: "Backend" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Frontend" })).toBeNull();
+    const tagDot = screen.getByRole("menuitem", { name: "Backend" }).querySelector("[data-tag-filter-dot]");
+    expect(getComputedStyle(tagDot as Element).marginRight).not.toBe("0px");
+  });
+
+  it("virtualizes large Project and Tag filter catalogs", () => {
+    localTaskStore.setState({
+      tagCatalog: Array.from({ length: 100 }, (_, index) => ({
+        id: `tag-${index}`,
+        key: `tag-${index}`,
+        name: `Tag ${index}`,
+        aliases: [],
+        color: null,
+      })),
+    });
+    render(<TaskHubView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.project" }));
+    expect(screen.getAllByRole("menuitem").length).toBeLessThan(20);
+
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.tags" }));
+    expect(screen.getAllByRole("menuitem").length).toBeLessThan(20);
+  });
+
+  it("applies a selected filter value through the Local Task command", () => {
+    render(<TaskHubView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.paused" }));
+
+    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: "paused" });
+  });
+
+  it("renders active filters as removable grouped chips", () => {
+    localTaskStore.setState({ hubFilters: { status: "active" } });
+    render(<TaskHubView />);
+
+    expect(screen.getByLabelText("localTask.fields.status localTask.status.active")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "localTask.filters.addFilter" })).toBeNull();
+    expect(screen.getByRole("button", { name: "localTask.filters.clearAll" })).toBeTruthy();
+  });
+
+  it("removes an active filter with its keyboard-accessible button", async () => {
+    localTaskStore.setState({ hubFilters: { priority: "high" } });
+    render(<TaskHubView />);
+
+    const removeFilterButton = screen.getByRole("button", {
+      name: "localTask.filters.remove localTask.fields.priority",
+    });
+    removeFilterButton.focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({});
+  });
+
+  it("uses catalog IDs for filters and task creation", async () => {
+    localTaskStore.setState({
+      tagCatalog: [{ id: "tag-alpha", key: "alpha", name: "alpha", aliases: ["alpha"], color: "#3B82F6" }],
+    });
+    render(<TaskHubView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.tags" }));
+    const tagFilterDot = screen.getByRole("menuitem", { name: "alpha" }).querySelector("[data-tag-filter-dot]");
+    expect(tagFilterDot).toBeTruthy();
+    expect(getComputedStyle(tagFilterDot as Element).backgroundColor).toBe("rgb(59, 130, 246)");
+    fireEvent.click(screen.getByRole("menuitem", { name: "alpha" }));
     await waitFor(() => expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ tagIds: ["tag-alpha"] }));
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "localTask.filters.searchTags" }), { key: "Escape" });
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.create" }));
     const createTagsInput = screen.getAllByRole("combobox", { name: "localTask.fields.tags" }).at(-1);
@@ -162,11 +340,42 @@ describe("TaskHubView", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "localTask.actions.create" }).at(-1) as HTMLButtonElement);
     expect(commands.createLocalTask).toHaveBeenCalledWith({
       projectId: undefined,
+      organizationId: undefined,
       title: "Tagged",
       description: "",
       priority: "medium",
       tagIds: ["tag-Café"],
     });
+  });
+
+  it("renders daemon project metadata when renderer project state differs and omits global task chips", () => {
+    localTaskStore.setState({
+      hubTasks: [task, { ...task, id: "global-task", projectId: null, title: "Global task" }],
+      hubProjectDisplayById: {
+        "project-1": { id: "project-1", name: "Daemon Project", icon: "rocket", color: "#3B82F6" },
+      },
+    });
+    render(<TaskHubView />);
+
+    const daemonProjectChip = screen.getByText("Daemon Project").closest(".MuiChip-root");
+    expect(daemonProjectChip).toBeTruthy();
+    expect(screen.queryByText("Renderer Project")).toBeNull();
+    expect(daemonProjectChip?.querySelector(".MuiChip-icon")?.textContent).toBe("project-icon-rocket");
+    expect(daemonProjectChip?.querySelector("[style*='background']")).toBeNull();
+    expect(screen.getByText("Global task").closest("button")?.querySelector(".MuiChip-root")).toBeNull();
+  });
+
+  it("falls back to the project ID when legacy task project metadata is unresolved", () => {
+    localTaskStore.setState({
+      hubTasks: [{ ...task, id: "legacy-task", projectId: "legacy-project", title: "Historical task" }],
+      hubProjectDisplayById: {},
+    });
+    render(<TaskHubView />);
+
+    const projectChip = screen.getByText("legacy-project").closest(".MuiChip-root");
+    expect(projectChip).toBeTruthy();
+    expect(projectChip?.querySelector(".MuiChip-icon")).toBeNull();
+    expect(screen.queryByText("localTask.states.noValue")).toBeNull();
   });
 
   it("propagates catalog color tokens to Task Hub row tag chips", () => {
@@ -222,26 +431,41 @@ describe("TaskHubView", () => {
   it("opens a task detail view and returns to the task list", () => {
     render(<TaskHubView />);
 
-    expect(screen.getByText("Project One")).toBeTruthy();
+    expect(screen.getByText("Daemon Project")).toBeTruthy();
+    expect(screen.queryByText("Renderer Project")).toBeNull();
     expect(screen.queryByText("Desktop UX")).toBeNull();
     const taskTitle = screen.getByText("Ship Task Hub");
+    const statusIcon = screen.getByLabelText("localTask.status.active");
     const priorityIcon = screen.getByLabelText("localTask.fields.priority: localTask.priority.high");
-    expect(priorityIcon.compareDocumentPosition(taskTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(statusIcon.compareDocumentPosition(taskTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(priorityIcon.compareDocumentPosition(statusIcon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("localTask.status.active")).toBeNull();
     expect(screen.queryByText("localTask.priority.high")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Ship Task Hub/ }));
     expect(screen.getByText("Desktop UX")).toBeTruthy();
-    expect(screen.getAllByText("Ship Task Hub")).toHaveLength(1);
+    expect(screen.getAllByText("Ship Task Hub")).toHaveLength(2);
     expect(screen.queryByRole("textbox", { name: "localTask.search.label" })).toBeNull();
     expect(screen.queryByRole("button", { name: "localTask.actions.create" })).toBeNull();
     const detailTitleBar = screen.getByTestId("local-task-hub-title");
     expect(screen.getByRole("button", { name: "common.actions.back" }).closest("[data-testid]")).toBe(detailTitleBar);
-    expect(screen.getByRole("button", { name: "localTask.context.openFolder" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.pauseTask" }));
-    expect(commands.updateLocalTask).toHaveBeenCalledWith("task-1", { status: "paused" });
-    expect(screen.getByRole("button", { name: "localTask.actions.completeTask" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "localTask.context.openFolder" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "localTask.actions.pauseTask" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "localTask.actions.completeTask" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
     expect(screen.getByRole("textbox", { name: "localTask.search.label" })).toBeTruthy();
+  });
+
+  it("renders daemon projection display metadata without renderer workspace state", () => {
+    render(<TaskHubView />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Ship Task Hub/ }));
+
+    expect(commands.loadLocalTaskDetails).not.toHaveBeenCalled();
+    expect(screen.getByText("Project One")).toBeTruthy();
+    expect(screen.getByTestId("local-task-project-icon").textContent).toBe("project-icon-rocket");
+    expect(screen.getByText("Workspace One")).toBeTruthy();
+    expect(screen.getByText("Workspace Two")).toBeTruthy();
   });
 
   it("groups the header icon and title, keeps create in the header, and puts filter and refresh after search", () => {

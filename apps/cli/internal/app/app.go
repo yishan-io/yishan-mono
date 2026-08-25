@@ -203,12 +203,17 @@ func Bootstrap(cfg Config) (*App, error) {
 
 	// Build the rpc service layer and the transport server, then the relay
 	// client (it needs the rpc server and the service as its message handler).
+	projectSvc := nodeproject.NewService(nodeproject.Deps{
+		Session:  cfg.Session,
+		Database: cfg.Database,
+	})
 	var localTaskSvc *nodelocaltask.Service
 	localTaskSvc = nodelocaltask.NewService(nodelocaltask.Deps{
-		Repository:     sqlite.NewLocalTaskStore(cfg.Database),
-		Registry:       registry,
-		WorkspaceStore: store,
-		Events:         events,
+		Repository:      sqlite.NewLocalTaskStore(cfg.Database),
+		Registry:        registry,
+		WorkspaceStore:  store,
+		ProjectResolver: projectSvc,
+		Events:          events,
 		TaskContextsChanged: func() {
 			refreshTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc)
 		},
@@ -341,10 +346,6 @@ func Bootstrap(cfg Config) (*App, error) {
 	// Background tasks (and the lifecycle contexts that bound them).
 	app.Start()
 
-	projectSvc := nodeproject.NewService(nodeproject.Deps{
-		Session:  cfg.Session,
-		Database: cfg.Database,
-	})
 	systemSvc := nodesystem.NewService(nodesystem.Deps{
 		Session:      cfg.Session,
 		Events:       events,

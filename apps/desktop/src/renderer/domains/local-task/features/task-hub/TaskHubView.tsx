@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Collapse,
   IconButton,
   InputAdornment,
   Pagination,
@@ -12,39 +11,53 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { projectStore } from "@renderer/domains/project";
+import { type WorkspaceProjectRecord, projectStore } from "@renderer/domains/project";
 import { PaneHeader, PaneToggleButton, useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LuArrowLeft, LuListFilter, LuListTodo, LuPanelLeft, LuPlus, LuRefreshCw, LuSearch } from "react-icons/lu";
 import {
-  LuArrowLeft,
-  LuCheck,
-  LuFolderOpen,
-  LuListFilter,
-  LuListTodo,
-  LuPanelLeft,
-  LuPause,
-  LuPlay,
-  LuPlus,
-  LuRefreshCw,
-  LuSearch,
-} from "react-icons/lu";
-import {
-  createLocalTaskTag,
-  loadLocalTaskContext,
   loadLocalTaskTagSuggestions,
-  openLocalTaskContextInFileTree,
   refreshLocalTaskHub,
   setLocalTaskHubSearchQuery,
-  updateLocalTask,
 } from "../../commands/localTaskCommands";
 import { localTaskStore } from "../../state/localTaskStore";
-import { WorkspaceTaskDetails } from "../workspace-tasks/WorkspaceTaskDetails";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
-import { LocalTaskHubFilters } from "./LocalTaskHubFilters";
+import { LocalTaskHubFilterChips } from "./LocalTaskHubFilterChips";
+import { LocalTaskHubFilterMenu } from "./LocalTaskHubFilterMenu";
 import { LocalTaskList } from "./LocalTaskList";
+import { TaskHubTaskDetails } from "./TaskHubTaskDetails";
+import { useTaskHubDetailProjection } from "./useTaskHubDetailProjection";
 
 const TASK_HUB_PAGE_SIZE = 20;
+
+type TaskHubProjectFilterOption = Pick<WorkspaceProjectRecord, "id" | "name" | "icon">;
+
+/** Merges the renderer catalog with all daemon-resolved Hub project displays by stable project ID. */
+export function getTaskHubProjectFilterOptions(
+  projects: WorkspaceProjectRecord[],
+  projectDisplayById: Record<string, TaskHubProjectFilterOption>,
+): TaskHubProjectFilterOption[] {
+  const projectsById = new Map(
+    projects.map((project) => [
+      project.id,
+      project.icon
+        ? { id: project.id, name: project.name, icon: project.icon }
+        : { id: project.id, name: project.name },
+    ]),
+  );
+  for (const project of Object.values(projectDisplayById)) {
+    projectsById.set(
+      project.id,
+      project.icon
+        ? { id: project.id, name: project.name, icon: project.icon }
+        : { id: project.id, name: project.name },
+    );
+  }
+  return [...projectsById.values()].sort((firstProject, secondProject) =>
+    firstProject.name.localeCompare(secondProject.name),
+  );
+}
 
 /** Renders the global Local Task Hub with creation, search, filters, and list states. */
 export function TaskHubView() {
@@ -55,16 +68,11 @@ export function TaskHubView() {
   const searchQuery = localTaskStore((state) => state.hubSearchQuery);
   const loadState = localTaskStore((state) => state.hubLoadState);
   const error = localTaskStore((state) => state.hubError);
-  const mutationError = localTaskStore((state) => state.mutationError);
-  const isMutationLoading = localTaskStore((state) => state.isMutationLoading);
   const taskById = localTaskStore((state) => state.taskById);
-  const contextByTaskId = localTaskStore((state) => state.contextByTaskId);
-  const contextLoadStateByTaskId = localTaskStore((state) => state.contextLoadStateByTaskId);
-  const contextErrorByTaskId = localTaskStore((state) => state.contextErrorByTaskId);
+  const projectDisplayById = localTaskStore((state) => state.hubProjectDisplayById);
   const projects = projectStore((state) => state.projects);
-  const tagCatalog = localTaskStore((state) => state.tagCatalog);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
+  const [filterMenuAnchor, setFilterMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const previousHubQueryRef = useRef({ filters, searchQuery });
@@ -77,9 +85,10 @@ export function TaskHubView() {
   const selectedTask = selectedTaskId
     ? (taskById[selectedTaskId] ?? tasks.find((task) => task.id === selectedTaskId))
     : undefined;
-  const projectNameById = useMemo(
-    () => Object.fromEntries(projects.map((project) => [project.id, project.name])),
-    [projects],
+  const detailProjection = useTaskHubDetailProjection(selectedTask);
+  const filterProjects = useMemo(
+    () => getTaskHubProjectFilterOptions(projects, projectDisplayById),
+    [projectDisplayById, projects],
   );
 
   useEffect(() => {
@@ -99,19 +108,12 @@ export function TaskHubView() {
     setCurrentPage(resolvedCurrentPage);
   }, [resolvedCurrentPage]);
 
-  useEffect(() => {
-    if (!selectedTask) return;
-    const contextLoadState = contextLoadStateByTaskId[selectedTask.id];
-    if (!contextByTaskId[selectedTask.id] && (!contextLoadState || contextLoadState === "idle")) {
-      void loadLocalTaskContext(selectedTask.id);
-    }
-  }, [contextByTaskId, contextLoadStateByTaskId, selectedTask]);
-
   const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     void setLocalTaskHubSearchQuery(event.target.value);
   }, []);
   const handleRetry = useCallback(() => void refreshLocalTaskHub(), []);
-  const handleToggleFilters = useCallback(() => setAreFiltersOpen((isOpen) => !isOpen), []);
+  const handleOpenFilterMenu = useCallback((anchor: HTMLElement) => setFilterMenuAnchor(anchor), []);
+  const handleCloseFilterMenu = useCallback(() => setFilterMenuAnchor(null), []);
   const handleOpenCreate = useCallback(() => setIsCreateOpen(true), []);
   const handleCloseCreate = useCallback(() => setIsCreateOpen(false), []);
   const handleSelectTask = useCallback((taskId: string) => setSelectedTaskId(taskId), []);
@@ -125,28 +127,6 @@ export function TaskHubView() {
     [t],
   );
   const handleBackToList = useCallback(() => setSelectedTaskId(null), []);
-  const handleOpenContextFolder = useCallback(() => {
-    if (!selectedTask) return;
-    if (contextByTaskId[selectedTask.id]) {
-      openLocalTaskContextInFileTree(selectedTask.id);
-      return;
-    }
-    void loadLocalTaskContext(selectedTask.id);
-  }, [contextByTaskId, selectedTask]);
-  const handleDetailStatus = useCallback(
-    (status: "active" | "paused" | "completed") => {
-      if (selectedTask) {
-        void updateLocalTask(selectedTask.id, { status }).catch((statusError) =>
-          console.error("Failed to update Local Task status", statusError),
-        );
-      }
-    },
-    [selectedTask],
-  );
-  const handleToggleDetailStatus = useCallback(() => {
-    if (selectedTask) handleDetailStatus(selectedTask.status === "active" ? "paused" : "active");
-  }, [handleDetailStatus, selectedTask]);
-  const handleCompleteDetail = useCallback(() => handleDetailStatus("completed"), [handleDetailStatus]);
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
@@ -177,56 +157,7 @@ export function TaskHubView() {
         </Box>
         <Box sx={{ flex: 1 }} />
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {selectedTask ? (
-            <>
-              <Tooltip title={t("localTask.context.openFolder")}>
-                <Box component="span">
-                  <IconButton
-                    size="small"
-                    disabled={contextLoadStateByTaskId[selectedTask.id] === "loading"}
-                    aria-label={t("localTask.context.openFolder")}
-                    onClick={handleOpenContextFolder}
-                  >
-                    <LuFolderOpen size={16} />
-                  </IconButton>
-                </Box>
-              </Tooltip>
-              <Tooltip
-                title={t(
-                  selectedTask.status === "active" ? "localTask.actions.pauseTask" : "localTask.actions.reactivateTask",
-                )}
-              >
-                <Box component="span">
-                  <IconButton
-                    size="small"
-                    disabled={isMutationLoading}
-                    aria-label={t(
-                      selectedTask.status === "active"
-                        ? "localTask.actions.pauseTask"
-                        : "localTask.actions.reactivateTask",
-                    )}
-                    onClick={handleToggleDetailStatus}
-                  >
-                    {selectedTask.status === "active" ? <LuPause size={16} /> : <LuPlay size={16} />}
-                  </IconButton>
-                </Box>
-              </Tooltip>
-              {selectedTask.status !== "completed" ? (
-                <Tooltip title={t("localTask.actions.completeTask")}>
-                  <Box component="span">
-                    <IconButton
-                      size="small"
-                      disabled={isMutationLoading}
-                      aria-label={t("localTask.actions.completeTask")}
-                      onClick={handleCompleteDetail}
-                    >
-                      <LuCheck size={16} />
-                    </IconButton>
-                  </Box>
-                </Tooltip>
-              ) : null}
-            </>
-          ) : (
+          {selectedTask ? null : (
             <Button size="small" variant="text" color="inherit" startIcon={<LuPlus />} onClick={handleOpenCreate}>
               {t("localTask.actions.create")}
             </Button>
@@ -234,23 +165,7 @@ export function TaskHubView() {
         </Box>
       </PaneHeader>
       {selectedTask ? (
-        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", p: 2 }}>
-          {mutationError ? (
-            <Alert severity="error" sx={{ mb: 1 }}>
-              {mutationError}
-            </Alert>
-          ) : null}
-          <WorkspaceTaskDetails
-            task={selectedTask}
-            showTitle={false}
-            contextLoadState={contextLoadStateByTaskId[selectedTask.id] ?? "idle"}
-            contextError={contextErrorByTaskId[selectedTask.id] ?? null}
-            isMutationLoading={isMutationLoading}
-            onTagIdsChange={(tagIds) => updateLocalTask(selectedTask.id, { tagIds })}
-            onCreateTag={createLocalTaskTag}
-            tagCatalog={tagCatalog}
-          />
-        </Box>
+        <TaskHubTaskDetails task={selectedTask} detailProjection={detailProjection} />
       ) : (
         <>
           <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1 }}>
@@ -270,16 +185,21 @@ export function TaskHubView() {
                   },
                   htmlInput: { "aria-label": t("localTask.search.label") },
                 }}
-                sx={{ minWidth: 240, flex: 1 }}
+                sx={{
+                  minWidth: 0,
+                  flex: 1,
+                  "& .MuiInputBase-root": { minHeight: 32 },
+                  "& .MuiInputBase-input": { py: 0.5, fontSize: "0.8125rem" },
+                }}
               />
               <Tooltip title={t("localTask.actions.filter")}>
                 <IconButton
                   size="small"
-                  color={areFiltersOpen ? "primary" : "default"}
+                  color={filterMenuAnchor ? "primary" : "default"}
                   aria-label={t("localTask.actions.filter")}
-                  aria-expanded={areFiltersOpen}
-                  aria-controls="local-task-hub-filters"
-                  onClick={handleToggleFilters}
+                  aria-expanded={Boolean(filterMenuAnchor)}
+                  aria-controls="local-task-hub-filter-menu"
+                  onClick={(event) => handleOpenFilterMenu(event.currentTarget)}
                 >
                   <LuListFilter size={17} />
                 </IconButton>
@@ -290,15 +210,22 @@ export function TaskHubView() {
                 </IconButton>
               </Tooltip>
             </Box>
-            <Collapse in={areFiltersOpen}>
-              <Box id="local-task-hub-filters" sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                <LocalTaskHubFilters filters={filters} projects={projects} tagCatalog={tagCatalog} />
-              </Box>
-            </Collapse>
+            <LocalTaskHubFilterChips
+              filters={filters}
+              projects={filterProjects}
+              tagCatalog={detailProjection.tagCatalog}
+            />
+            <LocalTaskHubFilterMenu
+              anchorEl={filterMenuAnchor}
+              filters={filters}
+              projects={filterProjects}
+              tagCatalog={detailProjection.tagCatalog}
+              onClose={handleCloseFilterMenu}
+            />
           </Box>
-          {mutationError ? (
+          {detailProjection.mutationError ? (
             <Alert severity="error" sx={{ mx: 2, mb: 1 }}>
-              {mutationError}
+              {detailProjection.mutationError}
             </Alert>
           ) : null}
           {loadState === "loading" || loadState === "idle" ? (
@@ -327,8 +254,8 @@ export function TaskHubView() {
               <LocalTaskList
                 tasks={paginatedTasks}
                 onSelect={handleSelectTask}
-                projectNameById={projectNameById}
-                tagCatalog={tagCatalog}
+                projectDisplayById={projectDisplayById}
+                tagCatalog={detailProjection.tagCatalog}
               />
               {pageCount > 1 ? (
                 <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>

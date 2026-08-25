@@ -4,12 +4,17 @@ import type {
   CreateLocalTaskInput,
   LocalTask,
   LocalTaskContextDetails,
+  LocalTaskDetails,
   LocalTaskFilters,
+  LocalTaskListProjection,
   LocalTaskPriority,
+  LocalTaskProjectDisplay,
   LocalTaskSearchResult,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
   LocalTaskTagRenameResult,
+  LocalTaskWorkspaceDisplay,
+  LocalTaskWorkspaceDisplayStatus,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../localTaskTypes";
@@ -116,6 +121,38 @@ function parseTaskArray(payload: unknown): LocalTask[] {
   return payload.map(parseTask);
 }
 
+function parseListProjection(payload: unknown): LocalTaskListProjection {
+  if (Array.isArray(payload)) throw new TypeError("invalid Local Task list projection payload");
+  const record = requireRecord(payload, "Local Task list projection");
+  const total = record.total;
+  const projectsById = asRecord(record.projectsById);
+  if (
+    !Array.isArray(record.tasks) ||
+    !projectsById ||
+    Array.isArray(projectsById) ||
+    typeof total !== "number" ||
+    !Number.isInteger(total) ||
+    total < 0
+  ) {
+    throw new TypeError("invalid Local Task list projection payload");
+  }
+  try {
+    return {
+      tasks: record.tasks.map(parseTask),
+      projectsById: Object.fromEntries(
+        Object.entries(projectsById).map(([projectId, project]) => {
+          const parsedProject = parseProjectDisplay(project);
+          if (parsedProject.id !== projectId) throw new TypeError("invalid Local Task list projection payload");
+          return [projectId, parsedProject];
+        }),
+      ),
+      total,
+    };
+  } catch {
+    throw new TypeError("invalid Local Task list projection payload");
+  }
+}
+
 function parseSearchResult(payload: unknown): LocalTaskSearchResult {
   const record = requireRecord(payload, "Local Task search");
   const rank = readOptionalNumber(record.rank);
@@ -141,6 +178,52 @@ function parseLink(payload: unknown): LocalTaskWorkspaceLink {
 function parseLinks(payload: unknown): LocalTaskWorkspaceLink[] {
   if (!Array.isArray(payload)) throw new TypeError("invalid Local Task workspace link list payload");
   return payload.map(parseLink);
+}
+
+function parseProjectDisplay(payload: unknown): LocalTaskProjectDisplay {
+  const record = requireRecord(payload, "Local Task project display");
+  return {
+    id: requireString(record, "id", "Local Task project display"),
+    name: requireString(record, "name", "Local Task project display"),
+    icon: requireString(record, "icon", "Local Task project display"),
+    color: requireString(record, "color", "Local Task project display"),
+  };
+}
+
+function parseWorkspaceDisplay(payload: unknown): LocalTaskWorkspaceDisplay {
+  const record = requireRecord(payload, "Local Task workspace display");
+  const kind = record.kind;
+  const status = record.status;
+  if (
+    (kind !== "managed" && kind !== "local" && kind !== "folder") ||
+    (status !== "provisioning" && status !== "active" && status !== "closing" && status !== "closed")
+  ) {
+    throw new TypeError("invalid Local Task details payload");
+  }
+  return {
+    id: requireString(record, "id", "Local Task workspace display"),
+    projectId: requireString(record, "projectId", "Local Task workspace display"),
+    name: requireString(record, "name", "Local Task workspace display"),
+    kind,
+    status: status as LocalTaskWorkspaceDisplayStatus,
+  };
+}
+
+function parseDetails(payload: unknown): LocalTaskDetails {
+  const record = requireRecord(payload, "Local Task details");
+  if (!Array.isArray(record.workspaces)) throw new TypeError("invalid Local Task details payload");
+  if (record.project !== null && asRecord(record.project) === null) {
+    throw new TypeError("invalid Local Task details payload");
+  }
+  try {
+    return {
+      task: parseTask(record.task),
+      project: record.project === null ? null : parseProjectDisplay(record.project),
+      workspaces: record.workspaces.map(parseWorkspaceDisplay),
+    };
+  } catch {
+    throw new TypeError("invalid Local Task details payload");
+  }
 }
 
 function parseContext(payload: unknown): LocalTaskContextDetails {
@@ -175,9 +258,21 @@ export class DaemonLocalTaskClient {
     return parseTask(await this.invoke("localTask.get", { id: taskId }));
   }
 
+  /** Loads a Local Task with daemon-resolved project and workspace display metadata. */
+  async getDetails(taskId: string): Promise<LocalTaskDetails> {
+    return parseDetails(await this.invoke("localTask.getDetails", { id: taskId }));
+  }
+
   /** Lists Local Tasks matching optional hub or workspace filters. */
   async list(filters: LocalTaskFilters = {}): Promise<LocalTask[]> {
     return parseTaskArray(await this.invoke("localTask.list", filters));
+  }
+
+  /** Lists Task Hub rows with daemon-resolved project display metadata. */
+  async listProjection(filters: LocalTaskFilters = {}, query = ""): Promise<LocalTaskListProjection> {
+    return parseListProjection(
+      await this.invoke("localTask.listProjection", { ...filters, ...(query ? { query } : {}) }),
+    );
   }
 
   /** Searches Local Task title and description metadata. */

@@ -11,6 +11,7 @@ vi.mock("../../daemon/localTaskDaemonClient", () => ({
   localTaskClient: {
     create: vi.fn(),
     get: vi.fn(),
+    getDetails: vi.fn(),
     list: vi.fn(),
     listTags: vi.fn(async () => []),
     search: vi.fn(),
@@ -28,7 +29,9 @@ vi.mock("../../daemon/localTaskDaemonClient", () => ({
     listTaskLinks: vi.fn(),
   },
 }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en-US" } }),
+}));
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
     getTotalSize: () => count * 128,
@@ -44,9 +47,9 @@ const historicalTask: LocalTask = {
   description: "",
   status: "completed",
   priority: "medium",
-  createdAt: "created",
-  updatedAt: "updated",
-  completedAt: "completed",
+  createdAt: "2026-01-01T12:00:00.000Z",
+  updatedAt: "2026-01-02T12:00:00.000Z",
+  completedAt: "2026-01-03T12:00:00.000Z",
   tags: [],
   tagRefs: [],
 };
@@ -77,6 +80,11 @@ describe("WorkspaceTasksView detail loading", () => {
   it("issues at most one delayed detail request per task while mounted visibility and store state change", async () => {
     const delayed = deferredTask();
     vi.mocked(daemon.localTaskClient.get).mockReturnValue(delayed.promise);
+    vi.mocked(daemon.localTaskClient.getDetails).mockResolvedValue({
+      task: historicalTask,
+      project: null,
+      workspaces: [],
+    });
     vi.mocked(daemon.localTaskClient.getContext).mockResolvedValue({
       directory: "/context/historical-task",
       planPath: "/context/historical-task/plan.md",
@@ -121,6 +129,11 @@ describe("WorkspaceTasksView detail loading", () => {
     vi.mocked(daemon.localTaskClient.get)
       .mockRejectedValueOnce(new Error("transient detail failure"))
       .mockResolvedValueOnce(historicalTask);
+    vi.mocked(daemon.localTaskClient.getDetails).mockResolvedValue({
+      task: historicalTask,
+      project: null,
+      workspaces: [],
+    });
     vi.mocked(daemon.localTaskClient.getContext).mockResolvedValue({
       directory: "/context/historical-task",
       planPath: "/context/historical-task/plan.md",

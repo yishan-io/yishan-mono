@@ -24,12 +24,52 @@ export type LocalTaskSearchResult = LocalTask & {
   rank: number;
 };
 
+/** Task Hub list response with daemon-resolved project display metadata. */
+export type LocalTaskListProjection = {
+  tasks: LocalTask[];
+  projectsById: Record<string, LocalTaskProjectDisplay>;
+  total: number;
+};
+
 /** Derived filesystem locations for one Local Task's context documents. */
 export type LocalTaskContextDetails = {
   directory: string;
   planPath: string;
   notesPath: string;
   outcomePath: string;
+};
+
+/** Daemon-resolved project display metadata for a Local Task detail view. */
+export type LocalTaskProjectDisplay = {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+};
+
+/**
+ * Workspace kind emitted by `localTask.getDetails`: managed daemon worktrees,
+ * local primary checkouts, and non-git folders.
+ */
+export type LocalTaskWorkspaceDisplayKind = "managed" | "local" | "folder";
+
+/** Persisted workspace lifecycle status emitted by `localTask.getDetails`. */
+export type LocalTaskWorkspaceDisplayStatus = "provisioning" | "active" | "closing" | "closed";
+
+/** Daemon-resolved workspace display metadata for a Local Task detail view. */
+export type LocalTaskWorkspaceDisplay = {
+  id: string;
+  projectId: string;
+  name: string;
+  kind: LocalTaskWorkspaceDisplayKind;
+  status: LocalTaskWorkspaceDisplayStatus;
+};
+
+/** Detail projection containing a task and daemon-resolved display relationships. */
+export type LocalTaskDetails = {
+  task: LocalTask;
+  project: LocalTaskProjectDisplay | null;
+  workspaces: LocalTaskWorkspaceDisplay[];
 };
 
 /** One historical relationship between a Local Task and a local workspace. */
@@ -67,6 +107,7 @@ export type LocalTaskTagRenameResult = {
 /** Metadata accepted when creating a Local Task. */
 export type CreateLocalTaskInput = {
   projectId?: string;
+  organizationId?: string;
   title: string;
   description?: string;
   priority?: LocalTaskPriority;

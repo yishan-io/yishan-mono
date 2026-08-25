@@ -28,7 +28,7 @@ describe("getLocalTaskTagChipSx", () => {
     const style = getLocalTaskTagChipSx(true)(createAppTheme("light"));
 
     expect(style).toMatchObject({ height: "auto", minHeight: 18 });
-    expect(style).not.toHaveProperty("borderColor");
+    expect(style).toHaveProperty("borderColor", "divider");
     expect(style).not.toHaveProperty("bgcolor");
     expect(style).not.toHaveProperty("color");
     expect(style["& .MuiChip-label"]).toMatchObject({

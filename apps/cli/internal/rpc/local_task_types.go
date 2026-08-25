@@ -4,17 +4,26 @@ import "yishan/apps/cli/internal/localtask"
 
 // LocalTaskCreateParams contains Local Task creation metadata.
 type LocalTaskCreateParams struct {
-	ProjectID   *string            `json:"projectId,omitempty"`
-	Title       string             `json:"title"`
-	Description string             `json:"description,omitempty"`
-	Priority    localtask.Priority `json:"priority,omitempty"`
-	Tags        []string           `json:"tags,omitempty"`
-	TagRefs     []localtask.TagRef `json:"tagRefs,omitempty"`
+	ProjectID      *string            `json:"projectId,omitempty"`
+	OrganizationID *string            `json:"organizationId,omitempty"`
+	Title          string             `json:"title"`
+	Description    string             `json:"description,omitempty"`
+	Priority       localtask.Priority `json:"priority,omitempty"`
+	Tags           []string           `json:"tags,omitempty"`
+	TagRefs        []localtask.TagRef `json:"tagRefs,omitempty"`
 }
 
 // LocalTaskIDParams identifies one Local Task.
 type LocalTaskIDParams struct {
 	ID string `json:"id"`
+}
+
+// LocalTaskListProjectionParams contains Task Hub filters for the display-ready list projection.
+type LocalTaskListProjectionParams struct {
+	LocalTaskListParams
+	Query  string `json:"query,omitempty"`
+	Offset int    `json:"offset,omitempty"`
+	Limit  int    `json:"limit,omitempty"`
 }
 
 // LocalTaskListParams contains optional Local Task filters.

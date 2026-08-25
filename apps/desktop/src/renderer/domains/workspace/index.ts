@@ -49,7 +49,11 @@ export {
   warmupWorkspacesForProjects,
 } from "./commands/workspaceWarmupCommand";
 export { syncTabStoreWithWorkspace } from "./commands/workspaceTabSync";
-export { resolveWorkspaceIdForProject, resolveWorkspaceProjectId } from "./workspaceTypes";
+export {
+  resolveLocalWorkspaceIdForProject,
+  resolveWorkspaceIdForProject,
+  resolveWorkspaceProjectId,
+} from "./workspaceTypes";
 export {
   workspaceCreateProgressStore,
   type WorkspaceCreateProgressEntry,

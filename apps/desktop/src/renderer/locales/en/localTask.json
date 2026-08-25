@@ -12,7 +12,8 @@
       "status": "Status",
       "project": "Project",
       "workspace": "Workspace",
-      "tags": "Tags"
+      "tags": "Tags",
+      "updatedAt": "Updated"
     },
     "search": {
       "label": "Search tasks"
@@ -28,7 +29,12 @@
       "allProjects": "All projects",
       "allStatuses": "All statuses",
       "allPriorities": "All priorities",
-      "allWorkspaces": "All workspaces"
+      "allWorkspaces": "All workspaces",
+      "addFilter": "Add filter…",
+      "searchTags": "Search tags",
+      "is": "is",
+      "remove": "Remove {{field}} filter",
+      "clearAll": "Clear all"
     },
     "status": {
       "active": "Active",
@@ -63,7 +69,9 @@
       "loading": "Loading tasks",
       "empty": "No tasks match the current search and filters.",
       "noDescription": "No description.",
-      "globalTask": "Global task"
+      "globalTask": "Global task",
+      "noValue": "—",
+      "unknownDate": "Unknown date"
     },
     "workspace": {
       "title": "Workspace tasks",
@@ -75,7 +83,9 @@
       "title": "Task Context",
       "openFolder": "Open context folder",
       "loading": "Loading Task Context",
-      "error": "Task Context could not be loaded."
+      "error": "Task Context could not be loaded.",
+      "directory": "Directory",
+      "files": "Files"
     },
     "link": {
       "title": "Link task to workspace",
@@ -133,6 +143,12 @@
       },
       "customColorPlane": "Saturation and value",
       "customColorHue": "Hue"
+    },
+    "workspaceStatus": {
+      "provisioning": "Provisioning",
+      "active": "Active",
+      "closing": "Closing",
+      "closed": "Closed"
     }
   }
 }
