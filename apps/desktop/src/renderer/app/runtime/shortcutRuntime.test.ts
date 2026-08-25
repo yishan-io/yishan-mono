@@ -84,6 +84,23 @@ describe("startShortcutRuntime", () => {
     renameInput.remove();
   });
 
+  it("processes Cmd+W from an inline rename input", () => {
+    const renameInput = document.createElement("input");
+    document.body.append(renameInput);
+    const definitions = [] as never[];
+    const stop = startRuntime({
+      getCompiledDefinitions: () => definitions,
+      getContext: () => CONTEXT,
+      isCaptureActive: () => false,
+    });
+
+    renameInput.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "w", metaKey: true }));
+
+    expect(mocked.processShortcuts).toHaveBeenCalledWith(definitions, CONTEXT, expect.any(KeyboardEvent));
+    stop();
+    renameInput.remove();
+  });
+
   it("skips Escape from a descendant of a contenteditable element", () => {
     const editable = document.createElement("div");
     editable.setAttribute("contenteditable", "true");
