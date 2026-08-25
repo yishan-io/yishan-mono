@@ -93,8 +93,9 @@ vi.mock("vditor/dist/js/lute/lute.min.js?url", () => ({
 // SUT — imported AFTER mocks
 // ---------------------------------------------------------------------------
 
-import { createVditorEditor, resolveVditorLang } from "./vditorEditor";
-import type { VditorEditorOptions } from "./vditorEditor";
+import { createVditorEditor } from "./vditorEditor";
+import { resolveVditorLang } from "./vditorEditorFacade";
+import type { VditorEditorOptions } from "./vditorEditorTypes";
 
 // ---------------------------------------------------------------------------
 // Helpers

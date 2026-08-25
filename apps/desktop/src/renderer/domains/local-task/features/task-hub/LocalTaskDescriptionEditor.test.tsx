@@ -35,19 +35,28 @@ let creationOptions: {
   onMarkdownChange: (markdown: string) => void;
 } | null = null;
 
-vi.mock("../../../files/features/file-editor/vditor/vditorEditor", () => ({
-  resolveVditorLang: vi.fn(() => "en_US"),
-  createVditorEditor: vi.fn((root: HTMLElement, options) => {
-    creationOptions = options;
-    onMarkdownChange = options.onMarkdownChange;
+const mockAcquireEditor = vi.fn(
+  (root: HTMLElement, options: Omit<NonNullable<typeof creationOptions>, "onMarkdownChange">, emitContent) => {
+    creationOptions = { ...options, onMarkdownChange: emitContent };
+    onMarkdownChange = emitContent;
     root.innerHTML = '<div class="vditor-ir"><pre class="vditor-reset" contenteditable="true"></pre></div>';
-    if (delayHandleCreation) {
-      return new Promise<ReturnType<typeof createFakeHandle>>((resolve) => {
-        handleResolver = resolve;
-      });
-    }
-    return Promise.resolve(createFakeHandle());
-  }),
+    const promise = delayHandleCreation
+      ? new Promise<ReturnType<typeof createFakeHandle>>((resolve) => {
+          handleResolver = resolve;
+        })
+      : Promise.resolve(createFakeHandle());
+    return {
+      promise,
+      release: () => {
+        void promise.then((handle) => handle.destroy());
+      },
+    };
+  },
+);
+
+vi.mock("@renderer/domains/files", () => ({
+  resolveVditorLang: vi.fn(() => "en_US"),
+  loadVditorEditor: vi.fn(async () => ({ acquireEditor: mockAcquireEditor })),
 }));
 
 function renderEditor(overrides: Partial<ComponentProps<typeof LocalTaskDescriptionEditor>> = {}) {
@@ -72,6 +81,7 @@ describe("LocalTaskDescriptionEditor", () => {
     onMarkdownChange = null;
     delayHandleCreation = false;
     handleResolver = null;
+    mockAcquireEditor.mockClear();
   });
 
   afterEach(() => {
@@ -200,10 +210,8 @@ describe("LocalTaskDescriptionEditor", () => {
       </StrictMode>,
     );
 
-    const editorModule = await import("../../../files/features/file-editor/vditor/vditorEditor");
-    const mockCreate = editorModule.createVditorEditor as ReturnType<typeof vi.fn>;
     await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalledTimes(1);
+      expect(mockAcquireEditor).toHaveBeenCalledTimes(1);
       expect(handleResolver).not.toBeNull();
     });
 

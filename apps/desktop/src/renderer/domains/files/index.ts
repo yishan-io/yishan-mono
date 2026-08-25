@@ -1,6 +1,12 @@
 /**
  * Files feature public API.
  */
+
+export {
+  loadVditorEditor,
+  resolveVditorLang,
+  type VditorEditorHandle,
+} from "./features/file-editor/vditor/vditorEditorFacade";
 export {
   createFile,
   createFolder,

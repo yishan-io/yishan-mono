@@ -5,7 +5,7 @@
  * Split from the main test file to keep both under the 500-line limit.
  */
 import { render, waitFor } from "@testing-library/react";
-import { StrictMode, act } from "react";
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { VditorFileEditor } from "./VditorFileEditor";
 // Mock handle (duplicated from main test file — test-specific state)
@@ -251,6 +251,10 @@ describe("VditorFileEditor lifecycle", () => {
         focusRequestKey={0}
       />,
     );
+
+    await waitFor(() => {
+      expect(handleResolver).not.toBeNull();
+    });
 
     // Request focus before handle is ready
     rerender(

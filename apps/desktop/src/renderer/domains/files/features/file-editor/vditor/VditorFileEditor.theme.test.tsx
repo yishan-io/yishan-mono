@@ -229,9 +229,9 @@ describe("VditorFileEditor theme", () => {
 
     const rootDiv = container.firstChild as HTMLElement;
     expect(rootDiv.getAttribute("data-theme")).toBe("dark");
-    expect(capturedCreationOptions?.isDark).toBe(true);
 
     await waitFor(() => {
+      expect(capturedCreationOptions?.isDark).toBe(true);
       expect(mockSetTheme).toHaveBeenCalledWith("dark", undefined, "github-dark");
     });
   });
@@ -247,9 +247,9 @@ describe("VditorFileEditor theme", () => {
 
     const rootDiv = container.firstChild as HTMLElement;
     expect(rootDiv.getAttribute("data-theme")).toBe("light");
-    expect(capturedCreationOptions?.isDark).toBe(false);
 
     await waitFor(() => {
+      expect(capturedCreationOptions?.isDark).toBe(false);
       expect(mockSetTheme).toHaveBeenCalledWith("classic", undefined, "github");
     });
   });

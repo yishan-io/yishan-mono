@@ -6,13 +6,10 @@
  */
 
 import { Box, useTheme } from "@mui/material";
+import { type VditorEditorHandle, loadVditorEditor, resolveVditorLang } from "@renderer/domains/files";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { type VditorEditorHandle, resolveVditorLang } from "../../../files/features/file-editor/vditor/vditorEditor";
-import "vditor/dist/index.css";
-import "../../../files/features/file-editor/vditor/vditorTheme.css";
-import { acquireVditorEditor } from "../../../files/features/file-editor/vditor/vditorEditorRegistry";
 
 const editorRootSx = {
   height: { xs: 280, sm: 360 },
@@ -103,24 +100,32 @@ export function LocalTaskDescriptionEditor({
     if (!root) return;
 
     let isUnmounted = false;
-    const { promise, release } = acquireVditorEditor(
-      root,
-      {
-        defaultValue: lastEmittedValueRef.current,
-        isDark: isDarkRef.current,
-        lang: vditorLang,
-        placeholder,
-      },
-      (markdown) => {
-        if (isUnmounted || isDisabledRef.current) return;
+    let release: (() => void) | null = null;
 
-        lastEmittedValueRef.current = markdown;
-        onChangeRef.current(markdown);
-      },
-    );
+    loadVditorEditor()
+      .then((editor) => {
+        if (isUnmounted) return null;
 
-    promise
+        const acquired = editor.acquireEditor(
+          root,
+          {
+            defaultValue: lastEmittedValueRef.current,
+            isDark: isDarkRef.current,
+            lang: vditorLang,
+            placeholder,
+          },
+          (markdown) => {
+            if (isUnmounted || isDisabledRef.current) return;
+
+            lastEmittedValueRef.current = markdown;
+            onChangeRef.current(markdown);
+          },
+        );
+        release = acquired.release;
+        return acquired.promise;
+      })
       .then((handle) => {
+        if (!handle) return;
         if (isUnmounted) return;
 
         handleRef.current = handle;
@@ -140,7 +145,7 @@ export function LocalTaskDescriptionEditor({
       if (handleRef.current) {
         handleRef.current = null;
       }
-      release();
+      release?.();
     };
   }, [placeholder, vditorLang]);
 

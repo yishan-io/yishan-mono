@@ -1,6 +1,6 @@
 import { type RefObject, useEffect } from "react";
 import { shouldApplyExternalContent } from "./editorContentSync";
-import type { VditorEditorHandle } from "./vditorEditor";
+import type { VditorEditorHandle } from "./vditorEditorTypes";
 
 type UseVditorContentSyncInput = {
   content: string;

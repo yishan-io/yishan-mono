@@ -21,10 +21,7 @@ import { useVditorContentSync } from "./useVditorContentSync";
 import { useVditorFocusRequest } from "./useVditorFocusRequest";
 import { useVditorTheme } from "./useVditorTheme";
 import { useVditorWindowInteractions } from "./useVditorWindowInteractions";
-import { type VditorEditorHandle, resolveVditorLang } from "./vditorEditor";
-import { acquireVditorEditor } from "./vditorEditorRegistry";
-import "vditor/dist/index.css";
-import "./vditorTheme.css";
+import { type VditorEditorHandle, loadVditorEditor, resolveVditorLang } from "./vditorEditorFacade";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -225,20 +222,31 @@ export const VditorFileEditor = forwardRef<VditorFileEditorHandle, VditorFileEdi
       onContentChange(emitted);
     };
 
-    const { promise, release } = acquireVditorEditor(
-      root,
-      { defaultValue: content, isDark: resolvedIsDark, lang: vditorLang },
-      emitContent,
-    );
+    let release: (() => void) | null = null;
 
-    promise.then((handle) => {
-      if (destroyed) return;
-      onHandleReady(handle);
-    });
+    loadVditorEditor()
+      .then((editor) => {
+        if (destroyed) return null;
+
+        const acquired = editor.acquireEditor(
+          root,
+          { defaultValue: content, isDark: resolvedIsDark, lang: vditorLang },
+          emitContent,
+        );
+        release = acquired.release;
+        return acquired.promise;
+      })
+      .then((handle) => {
+        if (!handle || destroyed) return;
+        onHandleReady(handle);
+      })
+      .catch((error: unknown) => {
+        console.error("[VditorFileEditor] editor creation failed:", getErrorMessage(error));
+      });
 
     return () => {
       destroyed = true;
-      release();
+      release?.();
     };
   }, []);
 
