@@ -298,7 +298,8 @@ describe("TaskHubView", () => {
     render(<TaskHubView />);
 
     expect(screen.getByLabelText("localTask.fields.status localTask.status.active")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "localTask.filters.addFilter" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "localTask.filters.addFilter" })).toBeNull();
+    expect(screen.getByRole("button", { name: "localTask.filters.clearAll" })).toBeTruthy();
   });
 
   it("removes an active filter with its keyboard-accessible button", async () => {
@@ -327,6 +328,7 @@ describe("TaskHubView", () => {
     expect(getComputedStyle(tagFilterDot as Element).backgroundColor).toBe("rgb(59, 130, 246)");
     fireEvent.click(screen.getByRole("menuitem", { name: "alpha" }));
     await waitFor(() => expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ tagIds: ["tag-alpha"] }));
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "localTask.filters.searchTags" }), { key: "Escape" });
 
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.create" }));
     const createTagsInput = screen.getAllByRole("combobox", { name: "localTask.fields.tags" }).at(-1);
