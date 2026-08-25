@@ -152,7 +152,12 @@ export function TaskHubView() {
                   },
                   htmlInput: { "aria-label": t("localTask.search.label") },
                 }}
-                sx={{ minWidth: 240, flex: 1 }}
+                sx={{
+                  minWidth: 240,
+                  flex: 1,
+                  "& .MuiInputBase-root": { minHeight: 32 },
+                  "& .MuiInputBase-input": { py: 0.5, fontSize: "0.8125rem" },
+                }}
               />
               <Tooltip title={t("localTask.actions.filter")}>
                 <IconButton

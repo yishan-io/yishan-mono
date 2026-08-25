@@ -3,18 +3,12 @@ import { renderProjectIcon } from "@renderer/domains/project";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { LuArrowDown, LuArrowUp, LuMinus } from "react-icons/lu";
 import type { LocalTask, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
+import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
 
 const TASK_ROW_ESTIMATE = 44;
-
-const PRIORITY_ICONS = {
-  low: LuArrowDown,
-  medium: LuMinus,
-  high: LuArrowUp,
-} as const;
 
 type ProjectDisplay = { name: string; icon: string; color: string };
 
@@ -43,7 +37,6 @@ export function LocalTaskList({ tasks, onSelect, projectDisplayById, tagCatalog 
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const task = tasks[virtualRow.index];
           if (!task) return null;
-          const PriorityIcon = PRIORITY_ICONS[task.priority];
           const project = task.projectId ? projectDisplayById[task.projectId] : undefined;
           return (
             <Box
@@ -77,25 +70,13 @@ export function LocalTaskList({ tasks, onSelect, projectDisplayById, tagCatalog 
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                    <LocalTaskStatusIcon status={task.status} label={t(`localTask.status.${task.status}`)} />
                     <Tooltip title={t(`localTask.priority.${task.priority}`)}>
-                      <Box
-                        component="span"
+                      <LocalTaskPriorityIcon
+                        priority={task.priority}
                         aria-label={`${t("localTask.fields.priority")}: ${t(`localTask.priority.${task.priority}`)}`}
-                        sx={{
-                          display: "inline-flex",
-                          flexShrink: 0,
-                          color:
-                            task.priority === "high"
-                              ? "error.main"
-                              : task.priority === "medium"
-                                ? "warning.main"
-                                : "text.secondary",
-                        }}
-                      >
-                        <PriorityIcon size={15} />
-                      </Box>
+                      />
                     </Tooltip>
+                    <LocalTaskStatusIcon status={task.status} label={t(`localTask.status.${task.status}`)} />
                     <Typography sx={{ fontSize: "0.8125rem" }} noWrap>
                       {task.title}
                     </Typography>

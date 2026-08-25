@@ -11,7 +11,7 @@ import {
 import { renderProjectIcon } from "@renderer/domains/project";
 import { useCallback } from "react";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
-import { LuArrowDown, LuArrowUp, LuFolder, LuMinus } from "react-icons/lu";
+import { LuFolder } from "react-icons/lu";
 import type {
   LocalTask,
   LocalTaskContextDetails,
@@ -20,10 +20,10 @@ import type {
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
 } from "../../localTaskTypes";
+import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsInlineEditor } from "../tags/LocalTaskTagsInlineEditor";
 
-const PRIORITY_ICONS = { low: LuArrowDown, medium: LuMinus, high: LuArrowUp } as const;
 const STATUS_OPTIONS: LocalTaskStatus[] = ["active", "paused", "completed"];
 const PRIORITY_OPTIONS: LocalTaskPriority[] = ["low", "medium", "high"];
 const COMPACT_METADATA_SELECT_SX = { typography: "caption", "& .MuiSelect-select": { py: 0.5, pl: 1, pr: 4 } };
@@ -79,7 +79,6 @@ export function WorkspaceTaskMetadataSidebar({
     (event: SelectChangeEvent<LocalTaskPriority>) => onPriorityChange(event.target.value),
     [onPriorityChange],
   );
-  const PriorityIcon = PRIORITY_ICONS[task.priority];
   const project = details?.project;
 
   return (
@@ -134,16 +133,15 @@ export function WorkspaceTaskMetadataSidebar({
             inputProps={{ "aria-label": t("localTask.fields.priority") }}
             renderValue={() => (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                <PriorityIcon data-testid="local-task-priority-icon" size={15} />
+                <LocalTaskPriorityIcon priority={task.priority} />
                 {t(`localTask.priority.${task.priority}`)}
               </Box>
             )}
           >
             {PRIORITY_OPTIONS.map((priority) => {
-              const Icon = PRIORITY_ICONS[priority];
               return (
                 <MenuItem key={priority} value={priority}>
-                  <Icon size={15} />
+                  <LocalTaskPriorityIcon priority={priority} />
                   <Box component="span" sx={{ ml: 0.75 }}>
                     {t(`localTask.priority.${priority}`)}
                   </Box>

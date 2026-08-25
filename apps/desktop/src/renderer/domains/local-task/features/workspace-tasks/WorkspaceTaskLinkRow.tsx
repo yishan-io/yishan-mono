@@ -1,18 +1,13 @@
-import { Box, ButtonBase, Chip, IconButton, Menu, MenuItem, Paper, Typography } from "@mui/material";
+import { Box, ButtonBase, IconButton, Menu, MenuItem, Paper, Tooltip, Typography } from "@mui/material";
 import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuEllipsis } from "react-icons/lu";
 import { unlinkLocalTaskWorkspace, updateLocalTaskLinkStatus } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskWorkspaceLink } from "../../localTaskTypes";
+import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
-
-const DENSE_CHIP_SX = {
-  height: 18,
-  fontSize: "0.6875rem",
-  "& .MuiChip-label": { px: 0.625 },
-} as const;
 
 type WorkspaceTaskLinkRowProps = {
   link: LocalTaskWorkspaceLink;
@@ -94,15 +89,15 @@ export function WorkspaceTaskLinkRow({
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flex: 1, minWidth: 0 }}>
-          <LocalTaskStatusIcon status={linkStatus} label={linkStatusLabel} />
           {task ? (
-            <Chip
-              size="small"
-              variant="outlined"
-              label={t(`localTask.priority.${task.priority}`)}
-              sx={DENSE_CHIP_SX}
-            />
+            <Tooltip title={t(`localTask.priority.${task.priority}`)}>
+              <LocalTaskPriorityIcon
+                priority={task.priority}
+                aria-label={`${t("localTask.fields.priority")}: ${t(`localTask.priority.${task.priority}`)}`}
+              />
+            </Tooltip>
           ) : null}
+          <LocalTaskStatusIcon status={linkStatus} label={linkStatusLabel} />
           <Typography variant="body2" sx={{ fontSize: "0.8125rem" }} noWrap>
             {task?.title ?? link.localTaskId}
           </Typography>

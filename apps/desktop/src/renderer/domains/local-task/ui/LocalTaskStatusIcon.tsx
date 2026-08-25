@@ -1,16 +1,17 @@
 import { Box, Tooltip } from "@mui/material";
-import { LuCircleCheck, LuCirclePause, LuCirclePlay, LuLink2Off } from "react-icons/lu";
+import { LuCircleCheck, LuCirclePause, LuLink2Off } from "react-icons/lu";
+import { RiProgress4Line } from "react-icons/ri";
 import type { LocalTaskStatus } from "../localTaskTypes";
 
 const STATUS_ICONS = {
-  active: LuCirclePlay,
+  active: RiProgress4Line,
   paused: LuCirclePause,
   completed: LuCircleCheck,
   unlinked: LuLink2Off,
 } as const;
 
 const STATUS_COLORS = {
-  active: "warning.main",
+  active: "warning.light",
   paused: "text.secondary",
   completed: "success.main",
   unlinked: "text.disabled",
