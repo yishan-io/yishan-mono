@@ -64,22 +64,26 @@ type Supervisor struct {
 	isStarting      bool
 	isClosing       bool
 	health          Health
+	nextID          uint64
 }
 
 type runtimeProcess struct {
-	command          *exec.Cmd
-	stdin            io.WriteCloser
-	output           *bufio.Scanner
-	done             chan struct{}
-	shutdownResponse chan error
-	exitErr          error
+	command     *exec.Cmd
+	stdin       io.WriteCloser
+	output      *bufio.Scanner
+	done        chan struct{}
+	exitErr     error
+	writeMu     sync.Mutex
+	pendingMu   sync.Mutex
+	pending     map[uint64]chan rpcResponse
+	terminalErr error
 }
 
 // NewSupervisor constructs a stopped supervisor with safe lifecycle defaults.
 func NewSupervisor(config Config) *Supervisor {
 	config = normalizeConfig(config)
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Supervisor{config: config, ctx: ctx, cancel: cancel}
+	return &Supervisor{config: config, ctx: ctx, cancel: cancel, nextID: 1}
 }
 
 func normalizeConfig(config Config) Config {
@@ -211,7 +215,7 @@ func (s *Supervisor) createProcess(ctx context.Context) (*runtimeProcess, error)
 	}
 	process := &runtimeProcess{
 		command: command, stdin: stdin, output: newScanner(stdout),
-		done: make(chan struct{}), shutdownResponse: make(chan error, 1),
+		done: make(chan struct{}), pending: make(map[uint64]chan rpcResponse),
 	}
 	go s.scanDiagnostics(stderr)
 	go s.waitForProcess(command, process)
@@ -265,14 +269,6 @@ func (s *Supervisor) markReady(process *runtimeProcess, serverVersion string) er
 	return nil
 }
 
-func (s *Supervisor) drainOutput(process *runtimeProcess) {
-	for process.output.Scan() {
-		if response, ok := parseShutdownResponse(process.output.Bytes()); ok {
-			process.shutdownResponse <- response
-		}
-	}
-}
-
 func (s *Supervisor) scanDiagnostics(stderr io.Reader) {
 	scanner := newScanner(stderr)
 	for scanner.Scan() {
@@ -290,11 +286,12 @@ func (s *Supervisor) waitForProcess(command *exec.Cmd, process *runtimeProcess) 
 
 func (s *Supervisor) awaitExit(process *runtimeProcess) {
 	<-process.done
-	err := process.exitErr
+	err := exitError(process.exitErr)
+	process.failPending(err)
 	if s.clearExitedProcess(process) {
 		return
 	}
-	s.recordFailure(exitError(err))
+	s.recordFailure(err)
 	s.scheduleRestart()
 }
 
@@ -363,14 +360,20 @@ func (s *Supervisor) Close() error {
 	}
 	s.isClosing = true
 	process := s.process
-	if process == nil {
+	isStartingProcess := process == nil
+	if isStartingProcess {
 		process = s.startingProcess
 	}
 	startDone := s.startDone
 	s.mu.Unlock()
 	s.cancel()
-	var err error
 	if process != nil {
+		process.interruptPending(ErrRuntimeUnavailable)
+	}
+	var err error
+	if isStartingProcess && process != nil {
+		s.stopFailedProcess(process)
+	} else if process != nil {
 		err = s.stopProcess(process)
 	}
 	if startDone != nil {
@@ -382,18 +385,42 @@ func (s *Supervisor) Close() error {
 func (s *Supervisor) stopProcess(process *runtimeProcess) error {
 	deadline := time.NewTimer(s.config.ShutdownTimeout)
 	defer deadline.Stop()
-	if err := sendShutdown(process.stdin); err != nil {
-		return s.killProcess(process, err)
-	}
+	response, remove := s.sendShutdown(process)
+	defer remove()
 	select {
-	case responseErr := <-process.shutdownResponse:
-		_ = process.stdin.Close()
-		return s.waitForShutdown(process, deadline.C, responseErr)
+	case frame := <-response:
+		_ = process.stdin.Close() // graceful shutdown has completed
+		return s.waitForShutdown(process, deadline.C, shutdownError(frame))
 	case <-process.done:
 		return nil
 	case <-deadline.C:
 		return s.killProcess(process, nil)
 	}
+}
+
+func (s *Supervisor) sendShutdown(process *runtimeProcess) (<-chan rpcResponse, func()) {
+	s.mu.Lock()
+	s.nextID++
+	id := s.nextID
+	s.mu.Unlock()
+	response, remove := process.registerPending(id)
+	if err := writeRequest(process, id, "shutdown", nil); err != nil {
+		remove()
+		failed := make(chan rpcResponse, 1)
+		failed <- rpcResponse{err: err}
+		return failed, func() {}
+	}
+	return response, remove
+}
+
+func shutdownError(frame rpcResponse) error {
+	if frame.err != nil {
+		return frame.err
+	}
+	if frame.rpcError != nil {
+		return &RequestError{Method: "shutdown", Code: frame.rpcError.Code, Message: frame.rpcError.Message, Data: frame.rpcError.Data}
+	}
+	return nil
 }
 
 func (s *Supervisor) waitForShutdown(process *runtimeProcess, deadline <-chan time.Time, responseErr error) error {

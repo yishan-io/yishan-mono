@@ -179,6 +179,8 @@ func runHelperMode(mode string, input *bufio.Reader) {
 	case "stderr":
 		_, _ = os.Stderr.WriteString("runtime diagnostic\n")
 		writeShutdownResponse(input)
+	case "rpc", "rpc-notify", "rpc-exit":
+		handleRPCRequests(mode, input)
 	case "exit":
 		return
 	case "ignore-interrupt":
@@ -193,4 +195,58 @@ func writeShutdownResponse(input *bufio.Reader) {
 		return
 	}
 	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","id":2,"result":{}}` + "\n")
+}
+
+func handleRPCRequests(mode string, input *bufio.Reader) {
+	if mode == "rpc-notify" {
+		_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"event","params":{}}` + "\n")
+	}
+	for {
+		line, err := input.ReadBytes('\n')
+		if err != nil {
+			return
+		}
+		var request struct {
+			ID     uint64 `json:"id"`
+			Method string `json:"method"`
+			Params struct {
+				CWD       string `json:"cwd"`
+				SessionID string `json:"sessionId"`
+			} `json:"params"`
+		}
+		if json.Unmarshal(line, &request) != nil {
+			return
+		}
+		if request.Method == "shutdown" {
+			_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{}}`+"\n", request.ID)
+			return
+		}
+		if mode == "rpc-exit" {
+			return
+		}
+		writeRPCResponse(request)
+	}
+}
+
+func writeRPCResponse(request struct {
+	ID     uint64 `json:"id"`
+	Method string `json:"method"`
+	Params struct {
+		CWD       string `json:"cwd"`
+		SessionID string `json:"sessionId"`
+	} `json:"params"`
+}) {
+	if request.Params.SessionID == "wait" {
+		_, _ = os.Stderr.WriteString("waiting request\n")
+		return
+	}
+	if request.Params.SessionID == "server-error" {
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"error":{"code":9,"message":"denied"}}`+"\n", request.ID)
+		return
+	}
+	if request.Method == yishanSessionListMethod {
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessions":[{"sessionId":"%s","createdAt":1,"live":false,"persisted":true}]}}`+"\n", request.ID, request.Params.CWD)
+		return
+	}
+	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s"}}`+"\n", request.ID, request.Params.SessionID)
 }

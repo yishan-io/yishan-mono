@@ -56,37 +56,32 @@ func scanInitializeResponse(output *bufio.Scanner) (string, error) {
 	return "", errors.New("DSH runtime closed before initialize response")
 }
 
-func sendShutdown(stdin io.Writer) error {
-	frame := []byte(`{"jsonrpc":"2.0","id":2,"method":"shutdown"}` + "\n")
-	if _, err := stdin.Write(frame); err != nil {
-		return fmt.Errorf("write DSH shutdown: %w", err)
-	}
-	return nil
-}
-
 func parseInitializeResponse(line []byte) (string, error) {
 	var response struct {
 		JSONRPC string `json:"jsonrpc"`
-		ID      int    `json:"id"`
-		Result  struct {
+		ID      *int   `json:"id"`
+		Result  *struct {
 			ServerInfo struct {
 				Name    string `json:"name"`
 				Version string `json:"version"`
 			} `json:"serverInfo"`
 		} `json:"result"`
 		Error *struct {
-			Code    int    `json:"code"`
+			Code    *int   `json:"code"`
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-	if err := json.Unmarshal(line, &response); err != nil {
+	if err := decodeStrictJSON(line, &response); err != nil {
 		return "", fmt.Errorf("decode DSH initialize response: %w", err)
 	}
-	if response.JSONRPC != "2.0" || response.ID != 1 {
+	if response.JSONRPC != "2.0" || response.ID == nil || *response.ID != 1 || (response.Result == nil) == (response.Error == nil) {
 		return "", errors.New("invalid DSH initialize response")
 	}
 	if response.Error != nil {
-		return "", fmt.Errorf("DSH initialize error %d: %s", response.Error.Code, response.Error.Message)
+		if response.Error.Code == nil || response.Error.Message == "" {
+			return "", errors.New("invalid DSH initialize error")
+		}
+		return "", fmt.Errorf("DSH initialize error %d: %s", *response.Error.Code, response.Error.Message)
 	}
 	if response.Result.ServerInfo.Name != expectedServerName {
 		return "", fmt.Errorf("DSH server name = %q, want %q", response.Result.ServerInfo.Name, expectedServerName)
@@ -95,22 +90,4 @@ func parseInitializeResponse(line []byte) (string, error) {
 		return "", errors.New("DSH server version is missing")
 	}
 	return response.Result.ServerInfo.Version, nil
-}
-
-func parseShutdownResponse(line []byte) (error, bool) {
-	var response struct {
-		JSONRPC string `json:"jsonrpc"`
-		ID      int    `json:"id"`
-		Error   *struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-		} `json:"error"`
-	}
-	if json.Unmarshal(line, &response) != nil || response.JSONRPC != "2.0" || response.ID != 2 {
-		return nil, false
-	}
-	if response.Error != nil {
-		return fmt.Errorf("DSH shutdown error %d: %s", response.Error.Code, response.Error.Message), true
-	}
-	return nil, true
 }

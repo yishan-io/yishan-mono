@@ -5,7 +5,6 @@ const YISHAN_METHOD_PREFIX = `yishan.v${YISHAN_PROTOCOL_VERSION}.`;
 
 /** Versioned session methods that extend DSH's stock SDK JSON-RPC surface. */
 export const YISHAN_METHODS = {
-  bind: yishanMethod("session.bind"),
   cancel: yishanMethod("session.cancel"),
   dispose: yishanMethod("session.dispose"),
   flush: yishanMethod("session.flush"),
