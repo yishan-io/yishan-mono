@@ -1,3 +1,5 @@
+import { basename, dirname, isAbsolute, join, normalize, resolve } from "node:path";
+
 /** Local Task lifecycle states accepted by the daemon. */
 export type LocalTaskStatus = "active" | "paused" | "completed";
 /** Local Task priority values accepted by the daemon. */
@@ -29,8 +31,10 @@ export type LocalTaskWorkspaceLink = {
   linkedAt: string;
   unlinkedAt: string | null;
 };
-/** Derived paths for Local Task context documents. */
-export type LocalTaskContextDetails = { directory: string; planPath: string; notesPath: string; outcomePath: string };
+/** A Local Task context file advertised by the daemon when it exists. */
+export type LocalTaskContextFile = { name: "plan.md" | "notes.md" | "outcome.md"; path: string };
+/** Daemon-owned Local Task context location and its currently existing files. */
+export type LocalTaskContextDetails = { directory: string; files: LocalTaskContextFile[] };
 /** Filters supported by list and search RPCs. */
 export type LocalTaskFilters = {
   projectId?: string;
@@ -191,15 +195,39 @@ export function parseLocalTaskSearchResults(payload: unknown): LocalTaskSearchRe
     return { ...parseLocalTask(taskPayload), rank: record.rank };
   });
 }
-/** Strictly parses daemon-derived context paths. */
+const CONTEXT_FILE_NAMES = ["plan.md", "notes.md", "outcome.md"] as const;
+
+/** Strictly parses daemon-derived context locations and existing context files. */
 export function parseLocalTaskContextDetails(payload: unknown): LocalTaskContextDetails {
-  const record = requireRecord(payload, "Local Task context", ["directory", "planPath", "notesPath", "outcomePath"]);
-  if (Object.values(record).some((value) => typeof value !== "string" || value.length === 0))
+  const record = requireRecord(payload, "Local Task context", ["directory", "files"]);
+  if (typeof record.directory !== "string" || record.directory.length === 0 || !Array.isArray(record.files))
     throw new TypeError("invalid Local Task context payload");
-  return {
-    directory: record.directory as string,
-    planPath: record.planPath as string,
-    notesPath: record.notesPath as string,
-    outcomePath: record.outcomePath as string,
-  };
+
+  const directory = record.directory;
+  const files = record.files.map((entry): LocalTaskContextFile => {
+    const file = requireRecord(entry, "Local Task context", ["name", "path"]);
+    if (
+      !CONTEXT_FILE_NAMES.includes(file.name as LocalTaskContextFile["name"]) ||
+      typeof file.path !== "string" ||
+      file.path.length === 0 ||
+      !isDirectContextFilePath(directory, file.path, file.name)
+    )
+      throw new TypeError("invalid Local Task context payload");
+    return { name: file.name as LocalTaskContextFile["name"], path: file.path };
+  });
+
+  return { directory, files };
+}
+
+function isDirectContextFilePath(directory: string, path: string, name: unknown): boolean {
+  return (
+    typeof name === "string" &&
+    isAbsolute(directory) &&
+    isAbsolute(path) &&
+    normalize(directory) === directory &&
+    normalize(path) === path &&
+    dirname(path) === directory &&
+    basename(path) === name &&
+    resolve(path) === join(directory, name)
+  );
 }

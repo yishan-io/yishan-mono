@@ -15,25 +15,16 @@ beforeEach(async () => {
 afterEach(async () => rm(contextDirectory, { recursive: true, force: true }));
 
 describe("validateContextDocumentPath", () => {
-  it("accepts only normalized absolute direct children with their required basenames", () => {
+  it("derives normalized absolute direct children from the daemon context directory", () => {
     expect(validateContextDocumentPath(contextDetails(), "plan")).toEqual({
       directory: contextDirectory,
       path: join(contextDirectory, "plan.md"),
     });
-    expect(() =>
-      validateContextDocumentPath(
-        { ...contextDetails(), planPath: join(contextDirectory, "nested", "plan.md") },
-        "plan",
-      ),
-    ).toThrow("Invalid Local Task context document path");
-    expect(() =>
-      validateContextDocumentPath({ ...contextDetails(), planPath: join(contextDirectory, "notes.md") }, "plan"),
-    ).toThrow("Invalid Local Task context document path");
     expect(() => validateContextDocumentPath({ ...contextDetails(), directory: "relative" }, "plan")).toThrow(
       "Invalid Local Task context document path",
     );
     expect(() =>
-      validateContextDocumentPath({ ...contextDetails(), planPath: `${join(contextDirectory, "plan.md")}\0` }, "plan"),
+      validateContextDocumentPath({ ...contextDetails(), directory: `${contextDirectory}\0` }, "plan"),
     ).toThrow("Invalid Local Task context document path");
   });
 });
@@ -163,12 +154,7 @@ function backendFor(details: LocalTaskContextDetails, backend: ReturnType<typeof
   return { ...backend, getContextDetails: vi.fn().mockResolvedValue(details) };
 }
 function contextDetails(directory = contextDirectory): LocalTaskContextDetails {
-  return {
-    directory,
-    planPath: join(directory, "plan.md"),
-    notesPath: join(directory, "notes.md"),
-    outcomePath: join(directory, "outcome.md"),
-  };
+  return { directory, files: [] };
 }
 function task(status: LocalTask["status"] = "active"): LocalTask {
   return {
