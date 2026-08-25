@@ -33,7 +33,8 @@
       "addFilter": "Add filter…",
       "searchTags": "Search tags",
       "is": "is",
-      "remove": "Remove {{field}} filter"
+      "remove": "Remove {{field}} filter",
+      "clearAll": "Clear all"
     },
     "status": {
       "active": "Active",

@@ -33,7 +33,8 @@
       "addFilter": "添加筛选…",
       "searchTags": "搜索标签",
       "is": "为",
-      "remove": "移除 {{field}} 筛选"
+      "remove": "移除 {{field}} 筛选",
+      "clearAll": "清除全部"
     },
     "status": {
       "active": "进行中",

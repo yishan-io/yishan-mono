@@ -2,7 +2,7 @@ import { Box, Checkbox, IconButton, MenuItem, MenuList, Popover, TextField, Typo
 import { type WorkspaceProjectRecord, renderProjectIcon } from "@renderer/domains/project";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuArrowLeft, LuChevronRight } from "react-icons/lu";
+import { LuArrowLeft, LuBox, LuChartNoAxesColumnIncreasing, LuChevronRight, LuCircleDot, LuTag } from "react-icons/lu";
 import { setLocalTaskHubFilters } from "../../commands/localTaskCommands";
 import type {
   LocalTaskFilters,
@@ -198,6 +198,17 @@ export function LocalTaskHubFilterMenu({
           <MenuList>
             {filterFields.map(({ field, labelKey }) => (
               <MenuItem key={field} onClick={() => handleSelectField(field)}>
+                <Box component="span" sx={{ display: "inline-flex", mr: 1 }}>
+                  {field === "projectId" ? (
+                    <LuBox aria-hidden="true" size={16} />
+                  ) : field === "status" ? (
+                    <LuCircleDot aria-hidden="true" size={16} />
+                  ) : field === "priority" ? (
+                    <LuChartNoAxesColumnIncreasing aria-hidden="true" size={16} />
+                  ) : (
+                    <LuTag aria-hidden="true" size={16} />
+                  )}
+                </Box>
                 <Typography component="span" variant="body2" sx={{ flex: 1 }}>
                   {t(labelKey)}
                 </Typography>
