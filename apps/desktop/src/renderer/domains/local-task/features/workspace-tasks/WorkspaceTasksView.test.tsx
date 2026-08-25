@@ -454,8 +454,8 @@ describe("WorkspaceTasksView", () => {
     const cardQueries = within(primaryCard as HTMLElement);
     const statusIcon = cardQueries.getByLabelText("localTask.status.active");
     const priorityChip = cardQueries.getByText("localTask.priority.high").closest(".MuiChip-root");
-    expect(statusIcon.nextElementSibling?.textContent).toBe("Primary task");
-    expect(priorityChip).toBeTruthy();
+    expect(statusIcon.nextElementSibling?.textContent).toBe("localTask.priority.high");
+    expect(priorityChip.nextElementSibling?.textContent).toBe("Primary task");
     expect(cardQueries.queryByText("localTask.status.active")).toBeNull();
     const taskMenu = cardQueries.getByRole("button", { name: "localTask.actions.taskMenu" });
     expect(getComputedStyle(taskMenu).position).toBe("absolute");

@@ -68,10 +68,12 @@ export function WorkspaceTaskLinkRow({
 
   return (
     <Paper
-      variant="outlined"
+      elevation={0}
       sx={{
         overflow: "visible",
-        borderColor: "divider",
+        border: 0,
+        boxShadow: "none",
+        bgcolor: "transparent",
         transition: (theme) =>
           theme.transitions.create("background-color", { duration: theme.transitions.duration.shortest }),
         position: "relative",
@@ -81,35 +83,41 @@ export function WorkspaceTaskLinkRow({
       <ButtonBase
         onClick={handleSelect}
         aria-pressed={selected}
-        sx={{ width: "100%", p: 1.25, pr: isUnlinked ? 1.25 : 4.5, display: "block", textAlign: "left" }}
+        sx={{
+          width: "100%",
+          p: 0.5,
+          pr: isUnlinked ? 0.5 : 4.5,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          textAlign: "left",
+        }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flex: 1, minWidth: 0 }}>
           <LocalTaskStatusIcon status={linkStatus} label={linkStatusLabel} />
-          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+          {task ? (
+            <Chip
+              size="small"
+              variant="outlined"
+              label={t(`localTask.priority.${task.priority}`)}
+              sx={DENSE_CHIP_SX}
+            />
+          ) : null}
+          <Typography variant="body2" sx={{ fontSize: "0.8125rem" }} noWrap>
             {task?.title ?? link.localTaskId}
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, mt: 0.5, minWidth: 0 }}>
-          {task ? (
-            <>
-              <Chip
-                size="small"
-                variant="outlined"
-                label={t(`localTask.priority.${task.priority}`)}
-                sx={DENSE_CHIP_SX}
-              />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <LocalTaskTagsDisplay
-                  tagRefs={task.tagRefs}
-                  tags={task.tagRefs.length === 0 ? task.tags : undefined}
-                  maxVisible={2}
-                  dense
-                  tagCatalog={tagCatalog}
-                />
-              </Box>
-            </>
-          ) : null}
-        </Box>
+        {task ? (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: "auto", minWidth: 0 }}>
+            <LocalTaskTagsDisplay
+              tagRefs={task.tagRefs}
+              tags={task.tagRefs.length === 0 ? task.tags : undefined}
+              maxVisible={2}
+              dense
+              tagCatalog={tagCatalog}
+            />
+          </Box>
+        ) : null}
       </ButtonBase>
       {!isUnlinked ? (
         <>

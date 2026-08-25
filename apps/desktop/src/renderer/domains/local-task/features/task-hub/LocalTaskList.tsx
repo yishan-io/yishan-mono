@@ -8,7 +8,7 @@ import type { LocalTask, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
 
-const TASK_ROW_ESTIMATE = 112;
+const TASK_ROW_ESTIMATE = 44;
 
 const PRIORITY_ICONS = {
   low: LuArrowDown,
@@ -51,23 +51,26 @@ export function LocalTaskList({ tasks, onSelect, projectDisplayById, tagCatalog 
               ref={virtualizer.measureElement}
               data-index={virtualRow.index}
               style={{ transform: `translateY(${virtualRow.start}px)` }}
-              sx={{ position: "absolute", top: 0, left: 0, width: "100%", px: 2, py: 0.5 }}
+              sx={{ position: "absolute", top: 0, left: 0, width: "100%" }}
             >
               <Paper
                 component="button"
                 type="button"
-                variant="outlined"
+                elevation={0}
                 onClick={() => onSelect(task.id)}
                 sx={{
                   width: "100%",
-                  minHeight: TASK_ROW_ESTIMATE - 8,
+                  minHeight: TASK_ROW_ESTIMATE,
                   px: 1.5,
-                  py: 1,
+                  py: 0.5,
                   display: "flex",
+                  alignItems: "center",
                   gap: 1.5,
                   textAlign: "left",
                   color: "inherit",
-                  bgcolor: "background.paper",
+                  bgcolor: "transparent",
+                  border: 0,
+                  boxShadow: "none",
                   cursor: "pointer",
                   "&:hover": { bgcolor: "action.hover" },
                 }}
@@ -93,7 +96,7 @@ export function LocalTaskList({ tasks, onSelect, projectDisplayById, tagCatalog 
                         <PriorityIcon size={15} />
                       </Box>
                     </Tooltip>
-                    <Typography sx={{ fontWeight: 600 }} noWrap>
+                    <Typography sx={{ fontSize: "0.8125rem" }} noWrap>
                       {task.title}
                     </Typography>
                   </Box>

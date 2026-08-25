@@ -48,6 +48,7 @@ export function LocalTaskTagsDisplay({
           label={`+${remainingCount}`}
           sx={{
             flexShrink: 0,
+            borderColor: "divider",
             ...(dense ? { height: 18, fontSize: "0.6875rem", "& .MuiChip-label": { px: 0.625 } } : {}),
           }}
         />

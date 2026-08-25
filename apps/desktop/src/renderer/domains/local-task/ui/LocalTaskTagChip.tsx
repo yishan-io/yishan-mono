@@ -18,6 +18,7 @@ const tagChipLabelSx = {
 export function getLocalTaskTagChipSx(dense: boolean) {
   return (_theme: Theme) => ({
     flexShrink: 0,
+    borderColor: "divider",
     height: "auto",
     maxWidth: "100%",
     "& .MuiChip-label": tagChipLabelSx,
