@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, FormControl, IconButton, MenuItem, Select, TextField, Tooltip } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, FormControl, MenuItem, Select, TextField, Tooltip } from "@mui/material";
 import { generateId } from "@shared/ids/generateId";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -138,29 +138,42 @@ export function LocalTaskTemplateControls({ description, onDescriptionChange, di
                       <Box
                         component="span"
                         aria-label={t("localTask.templates.agentDefault")}
-                        sx={{ flexShrink: 0, lineHeight: 1 }}
+                        sx={{ flexShrink: 0, fontSize: "0.875rem", lineHeight: 1 }}
                       >
                         ★
                       </Box>
                     </Tooltip>
-                  ) : null}
-                  {!isBuiltIn ? (
+                  ) : (
                     <Tooltip title={t("localTask.templates.setAgentDefault")}>
-                      <IconButton
-                        size="small"
-                        disabled={isDisabled}
+                      <Box
+                        component="span"
+                        role="button"
+                        tabIndex={isDisabled ? -1 : 0}
                         aria-label={t("localTask.templates.setAgentDefault")}
-                        sx={{ flexShrink: 0, p: 0.25 }}
+                        sx={{
+                          flexShrink: 0,
+                          fontSize: "0.875rem",
+                          lineHeight: 1,
+                          cursor: isDisabled ? "default" : "pointer",
+                          opacity: isDisabled ? 0.38 : 1,
+                        }}
                         onClick={(event) => {
+                          if (isDisabled) return;
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void handleSetAgentDefault(template.id);
+                        }}
+                        onKeyDown={(event) => {
+                          if (isDisabled || event.key !== "Enter") return;
                           event.preventDefault();
                           event.stopPropagation();
                           void handleSetAgentDefault(template.id);
                         }}
                       >
                         ☆
-                      </IconButton>
+                      </Box>
                     </Tooltip>
-                  ) : null}
+                  )}
                 </MenuItem>
               );
             })}
