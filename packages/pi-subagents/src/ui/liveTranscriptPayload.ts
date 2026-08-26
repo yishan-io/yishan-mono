@@ -165,24 +165,80 @@ function countChildBytes(messages: readonly LiveTranscriptMessage[]): number {
 
 /** Trims a child's messages to a byte budget, keeping the newest messages. */
 function trimChildMessages(messages: LiveTranscriptMessage[], budgetBytes: number): LiveTranscriptMessage[] {
-  if (messages.length <= 1 || countChildBytes(messages) <= budgetBytes) {
+  if (countChildBytes(messages) <= budgetBytes) {
     return messages;
   }
 
-  const kept: LiveTranscriptMessage[] = [];
+  const associationGroups = buildToolAssociationGroups(messages);
+  const keptIndexes = new Set<number>();
+  const processedIndexes = new Set<number>();
   let totalBytes = 0;
+
   for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i];
-    if (!message) {
+    if (processedIndexes.has(i)) {
       continue;
     }
-    const messageBytes = countLiveMessageUtf8Bytes(message);
-    if (totalBytes + messageBytes <= budgetBytes || kept.length === 0) {
-      kept.unshift(message);
-      totalBytes += messageBytes;
-    } else {
+
+    const group = associationGroups.get(i) ?? [i];
+    const groupBytes = group.reduce((sum, index) => {
+      const message = messages[index];
+      return sum + (keptIndexes.has(index) || !message ? 0 : countLiveMessageUtf8Bytes(message));
+    }, 0);
+    if (totalBytes + groupBytes <= budgetBytes) {
+      for (const index of group) {
+        keptIndexes.add(index);
+        processedIndexes.add(index);
+      }
+      totalBytes += groupBytes;
+      continue;
+    }
+
+    for (const index of group) {
+      processedIndexes.add(index);
+    }
+    if (group.length === 1) {
       break;
     }
   }
-  return kept;
+
+  return messages.filter((_, index) => keptIndexes.has(index));
+}
+
+/**
+ * Groups an assistant tool-call message with every emitted result for its calls.
+ * A tool result cannot be retained without the assistant message that describes
+ * its call; parallel results from one assistant are therefore trimmed together.
+ */
+function buildToolAssociationGroups(messages: readonly LiveTranscriptMessage[]): Map<number, number[]> {
+  const assistantIndexByCallId = new Map<string, number>();
+  const resultIndexesByAssistant = new Map<number, number[]>();
+
+  for (const [index, message] of messages.entries()) {
+    if (message.role === "assistant" && Array.isArray(message.content)) {
+      for (const block of message.content) {
+        if (block.type === "toolCall") {
+          assistantIndexByCallId.set(block.id, index);
+        }
+      }
+      continue;
+    }
+
+    if (message.role === "toolResult" && message.toolCallId) {
+      const assistantIndex = assistantIndexByCallId.get(message.toolCallId);
+      if (assistantIndex !== undefined) {
+        const resultIndexes = resultIndexesByAssistant.get(assistantIndex) ?? [];
+        resultIndexes.push(index);
+        resultIndexesByAssistant.set(assistantIndex, resultIndexes);
+      }
+    }
+  }
+
+  const groups = new Map<number, number[]>();
+  for (const [assistantIndex, resultIndexes] of resultIndexesByAssistant) {
+    const group = [assistantIndex, ...resultIndexes];
+    for (const index of group) {
+      groups.set(index, group);
+    }
+  }
+  return groups;
 }

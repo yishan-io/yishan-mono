@@ -238,9 +238,32 @@ describe("buildLiveTranscriptPayload", () => {
     expect(stats.totalMessagesAfter).toBe(MAX_LIVE_MESSAGES_PER_CHILD);
   });
 
+  it("keeps a delayed tool result with its call across the count boundary", () => {
+    const assistantCall = {
+      role: "assistant",
+      content: [{ type: "toolCall", id: "call-1", name: "bash", arguments: {} }],
+    };
+    const unrelatedMessages = Array.from({ length: MAX_LIVE_MESSAGES_PER_CHILD - 1 }, (_, index) =>
+      textMessage("assistant", `unrelated-${index}`),
+    );
+    const delayedResult = textMessage("toolResult", "done");
+    const { payload } = buildLiveTranscriptPayload([
+      runningRecord([assistantCall, ...unrelatedMessages, delayedResult]),
+    ]);
+
+    const messages = payload?.agents[0]?.messages ?? [];
+    expect(messages).toHaveLength(MAX_LIVE_MESSAGES_PER_CHILD);
+    expect(messages[0]).toMatchObject({ role: "assistant", content: [{ type: "toolCall", id: "call-1" }] });
+    expect((messages[1]?.content as { text: string }[])[0]?.text).toBe("unrelated-1");
+    expect((messages.at(-2)?.content as { text: string }[])[0]?.text).toBe(
+      `unrelated-${MAX_LIVE_MESSAGES_PER_CHILD - 2}`,
+    );
+    expect(messages.at(-1)).toMatchObject({ role: "toolResult", toolCallId: "call-1" });
+  });
+
   it("trims a child's oldest messages when the per-child byte budget is exceeded", () => {
     // 200 messages x ~1 KiB = 200 KiB fits; make each message 4 KiB -> 800 KiB.
-    const messages = Array.from({ length: 200 }, (_, i) => textMessage("assistant", "A".repeat(4096)));
+    const messages = Array.from({ length: 200 }, () => textMessage("assistant", "A".repeat(4096)));
     const { payload, stats } = buildLiveTranscriptPayload([runningRecord(messages)]);
 
     const kept = payload?.agents[0]?.messages ?? [];
@@ -250,6 +273,63 @@ describe("buildLiveTranscriptPayload", () => {
     expect(stats.droppedMessages).toBeGreaterThan(0);
     // Newest message kept, oldest dropped.
     expect((kept[kept.length - 1]?.content as { text: string }[])[0]?.text).toBe("A".repeat(4096));
+  });
+
+  it("drops a tool result when byte trimming evicts its matching tool call", () => {
+    const assistantCall = {
+      role: "assistant",
+      content: [
+        {
+          type: "toolCall",
+          id: "call-1",
+          name: "bash",
+          arguments: {
+            command: "x".repeat(MAX_LIVE_DETAILS_STRING_UTF8_BYTES),
+            cwd: "x".repeat(MAX_LIVE_DETAILS_STRING_UTF8_BYTES),
+            env: "x".repeat(MAX_LIVE_DETAILS_STRING_UTF8_BYTES),
+            shell: "x".repeat(MAX_LIVE_DETAILS_STRING_UTF8_BYTES),
+          },
+        },
+      ],
+    };
+    const matchingResult = textMessage("toolResult", "R".repeat(MAX_LIVE_PER_MESSAGE_UTF8_BYTES));
+    const newerUnrelatedMessages = Array.from({ length: 3 }, () => textMessage("assistant", "U".repeat(60 * 1024)));
+
+    const { payload } = buildLiveTranscriptPayload([
+      runningRecord([assistantCall, matchingResult, ...newerUnrelatedMessages]),
+    ]);
+
+    const messages = payload?.agents[0]?.messages ?? [];
+    expect(messages).toHaveLength(3);
+    expect(messages.every((message) => message.role === "assistant")).toBe(true);
+    expect(messages.some((message) => message.role === "toolResult" && message.toolCallId === "call-1")).toBe(false);
+  });
+
+  it("drops all parallel results when their multi-call assistant is evicted", () => {
+    const assistantCalls = {
+      role: "assistant",
+      content: [
+        { type: "toolCall", id: "call-1", name: "bash", arguments: {} },
+        { type: "toolCall", id: "call-2", name: "read", arguments: {} },
+      ],
+    };
+    const resultForSecondCall = {
+      role: "toolResult",
+      toolCallId: "call-2",
+      toolName: "read",
+      content: [{ type: "text", text: "R".repeat(MAX_LIVE_PER_MESSAGE_UTF8_BYTES) }],
+    };
+    const resultForFirstCall = textMessage("toolResult", "R".repeat(MAX_LIVE_PER_MESSAGE_UTF8_BYTES));
+    const newerUnrelatedMessages = Array.from({ length: 3 }, () => textMessage("assistant", "U".repeat(60 * 1024)));
+
+    const { payload } = buildLiveTranscriptPayload([
+      runningRecord([assistantCalls, resultForSecondCall, resultForFirstCall, ...newerUnrelatedMessages]),
+    ]);
+
+    const messages = payload?.agents[0]?.messages ?? [];
+    expect(messages).toHaveLength(3);
+    expect(messages.every((message) => message.role === "assistant")).toBe(true);
+    expect(messages.some((message) => message.role === "toolResult")).toBe(false);
   });
 
   it("drops oldest children to fit the aggregate budget, keeping at least one", () => {
@@ -387,6 +467,8 @@ describe("buildLiveTranscriptPayload", () => {
     const content = payload?.agents[0]?.messages[0]?.content;
     const text = Array.isArray(content) ? (content[0] as { text: string }).text : (content as string);
     expect(text).toBe("你".repeat(10));
-    expect(countLiveMessageUtf8Bytes(payload?.agents[0]?.messages[0] as never)).toBe(30);
+    expect(countLiveMessageUtf8Bytes(payload?.agents[0]?.messages[0] as never)).toBe(
+      countUtf8Bytes(JSON.stringify(payload?.agents[0]?.messages[0])),
+    );
   });
 });
