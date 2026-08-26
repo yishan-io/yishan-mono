@@ -28,6 +28,7 @@ func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspa
 	router.Register("project", &rpc.ProjectHandler{Services: projectSvc})
 	router.Register("localTask", &rpc.LocalTaskHandler{Services: localTaskSvc})
 	router.Register("system", &rpc.SystemHandler{Services: systemSvc})
+	router.Register("agent", &rpc.AgentHandler{Agent: agentSvc, Catalog: systemSvc})
 	router.Register("pi", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
 	router.Register("skill", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
 	router.Register("customize", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})

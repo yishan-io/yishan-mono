@@ -26,12 +26,14 @@ describe("SessionHistoryMenu", () => {
     anchorEl.remove();
   });
 
-  it("returns the selected session summary including its original cwd", async () => {
+  it("returns the selected session summary including its authoritative workspace path", async () => {
     const session = {
       sessionId: "session-1",
-      timestamp: "2026-07-13T10:00:00.000Z",
+      createdAt: Date.parse("2026-07-13T10:00:00.000Z"),
       previewText: "Recover this chat",
-      cwd: "/tmp/original-project",
+      cwd: "/tmp/listing-project",
+      live: false,
+      persisted: true,
     };
     const onSelectSession = vi.fn();
     const onClose = vi.fn();

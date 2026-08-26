@@ -22,36 +22,45 @@ import { delay } from "@shared/async/delay";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import {
-  attachPiSession as attachPiSessionProcedure,
-  sendPiCommand as sendPiCommandProcedure,
-  startPiSession as startPiSessionProcedure,
-  stopPiSession as stopPiSessionProcedure,
+  abortAgentSession as abortAgentSessionProcedure,
+  attachAgentSession as attachAgentSessionProcedure,
+  disposeAgentSession as disposeAgentSessionProcedure,
+  promptAgentSession as promptAgentSessionProcedure,
+  sendPiCompatibilityCommand as sendPiCompatibilityCommandProcedure,
+  startAgentSession as startAgentSessionProcedure,
 } from "../daemon/daemonAgentProcedures";
 import { agentChatStore } from "../state/agentChatStore";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
 import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
-import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
+import {
+  clearAgentChatSessionStatsSequence,
+  refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility,
+} from "../subscriptions/agentChatPiEventShared";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 
-type PiSessionHandle = {
+type AgentRuntimeSessionRecord = {
   sessionId: string;
+  workspaceId: string;
+  cwd: string;
+  ownsSessionOnClose: boolean;
+};
+
+type PiSessionHandle = AgentRuntimeSessionRecord & {
   unsubscribe: (() => void) | null;
   state: "starting" | "running" | "closing";
   closeRequested: boolean;
-  ownsSessionOnClose: boolean;
   startPromise: Promise<void> | null;
 };
-
 const activePiSessions = new Map<string, PiSessionHandle>();
-// closingSessions tracks in-flight pi.stop teardowns by session id so a fast
+const runtimeSessionRecords = new Map<string, AgentRuntimeSessionRecord>();
+// closingSessions tracks in-flight agent.dispose teardowns by session id so a fast
 // reopen of the same history session waits for the teardown instead of racing
-// it (pi.start would hit ErrSessionExists and attach to a process being killed).
+// it (agent.start would hit ErrSessionExists and attach to a process being killed).
 const closingSessions = new Map<string, Promise<void>>();
 const PI_SESSION_EXISTS_RPC_CODE = -32003;
 // CLOSING_SESSION_WAIT_TIMEOUT_MS bounds how long a reopen waits for an
 // in-flight pi.stop of the same session id before proceeding anyway.
 const CLOSING_SESSION_WAIT_TIMEOUT_MS = 6_000;
-
 /**
  * Ensures a Pi RPC session exists for a tab. Idempotent — subsequent calls
  * for the same tabId return the existing session.
@@ -93,12 +102,18 @@ export async function ensurePiSession(opts: {
       onEvent: (payload) => handleAgentPiEvent(payload),
     });
     // Set the handle before awaiting so concurrent calls find it immediately.
-    activePiSessions.set(opts.tabId, {
+    const runtimeRecord: AgentRuntimeSessionRecord = {
       sessionId: chatSession.sessionId,
+      workspaceId: opts.workspaceId,
+      cwd: opts.cwd,
+      ownsSessionOnClose: true,
+    };
+    runtimeSessionRecords.set(opts.tabId, runtimeRecord);
+    activePiSessions.set(opts.tabId, {
+      ...runtimeRecord,
       unsubscribe: routerDispose,
       state: "running",
       closeRequested: false,
-      ownsSessionOnClose: true,
       startPromise: null,
     });
     await ensureAgentChatEventRouterReady();
@@ -119,41 +134,49 @@ export async function ensurePiSession(opts: {
   const deferredStartPromise = new Promise<void>((resolve) => {
     resolveDeferredStart = resolve;
   });
-  const handle: PiSessionHandle = {
+  const runtimeRecord: AgentRuntimeSessionRecord = {
     sessionId,
+    workspaceId: opts.workspaceId,
+    cwd: opts.cwd,
+    ownsSessionOnClose: opts.sessionView !== "subagent-detail",
+  };
+  runtimeSessionRecords.set(opts.tabId, runtimeRecord);
+  const handle: PiSessionHandle = {
+    ...runtimeRecord,
     unsubscribe: routerDispose,
     state: "starting",
     closeRequested: false,
-    ownsSessionOnClose: opts.sessionView !== "subagent-detail",
     startPromise: deferredStartPromise,
   };
   activePiSessions.set(opts.tabId, handle);
   await ensureAgentChatEventRouterReady();
   // A previous tab may have just been closed for this session id; wait for its
-  // teardown to finish so pi.start spawns a fresh process instead of falling
+  // teardown to finish so agent.start spawns a fresh process instead of falling
   // back to attaching to a process that is being killed.
   await closingSessions.get(sessionId)?.catch(() => undefined);
-  const startPiSession = async (): Promise<{ sessionId: string } | { ok: boolean }> => {
-    return await startPiSessionProcedure({
+  const startAgentSession = async (): Promise<{ sessionId: string }> => {
+    return await startAgentSessionProcedure({
+      runtime: "pi",
       sessionId,
       tabId: opts.tabId,
       paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
-      workspaceId: opts.workspaceId,
-      cwd: opts.cwd,
+      workspaceId: runtimeRecord.workspaceId,
+      cwd: runtimeRecord.cwd,
     });
   };
 
-  const startPromise = startPiSession()
+  const startPromise = startAgentSession()
     .catch(async (error) => {
       if (!requestedSessionId || !isPiSessionAlreadyRunningError(error)) {
         throw error;
       }
       didAttach = true;
-      return await attachPiSessionProcedure({
+      return await attachAgentSessionProcedure({
+        runtime: "pi",
         sessionId,
         tabId: opts.tabId,
-        workspaceId: opts.workspaceId,
-        cwd: opts.cwd,
+        workspaceId: runtimeRecord.workspaceId,
+        cwd: runtimeRecord.cwd,
       });
     })
     .then(async () => {
@@ -179,6 +202,7 @@ export async function ensurePiSession(opts: {
       if (activePiSessions.get(opts.tabId) === handle) {
         activePiSessions.delete(opts.tabId);
       }
+      runtimeSessionRecords.delete(opts.tabId);
       throw error;
     });
 
@@ -190,7 +214,6 @@ export async function ensurePiSession(opts: {
   await startPromise;
   return { sessionId, attached: didAttach };
 }
-
 /** Returns the tabId that currently owns the given agent-chat session, if any. */
 export function findTabWithSession(sessionId: string): string | undefined {
   const openTabIds = new Set(tabStore.getState().tabs.map((tab) => tab.id));
@@ -209,14 +232,12 @@ export function findTabWithSession(sessionId: string): string | undefined {
   }
   return undefined;
 }
-
 /** Drops one local Pi-session handle so future startup can recreate or reattach it. */
 export function clearPiSessionHandle(tabId: string): void {
   const session = activePiSessions.get(tabId);
   session?.unsubscribe?.();
   activePiSessions.delete(tabId);
 }
-
 /** Rebinds one live Pi session to the current daemon WebSocket connection. */
 export async function reattachPiSession(tabId: string): Promise<void> {
   const session = activePiSessions.get(tabId);
@@ -224,16 +245,44 @@ export async function reattachPiSession(tabId: string): Promise<void> {
     return;
   }
 
-  const tab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
-  await attachPiSessionProcedure({
+  await attachAgentSessionProcedure({
+    runtime: "pi",
     sessionId: session.sessionId,
     tabId,
-    workspaceId: tab?.workspaceId,
-    cwd: tab?.kind === "agent-chat" ? tab.data.cwd : undefined,
+    workspaceId: session.workspaceId,
+    cwd: session.cwd,
   });
   // Events can be missed while disconnected. Let the immediately following
   // get_state response establish the current idle/running/compacting phase.
   agentChatStore.getState().setSessionState(tabId, "starting");
+}
+/** Sends one semantic prompt through the neutral Pi runtime façade. */
+export async function promptAgentSession(opts: {
+  tabId: string;
+  sessionId: string;
+  message: string;
+  streamingBehavior?: string;
+}): Promise<void> {
+  const runtimeRecord = requireRuntimeSessionRecord(opts.tabId, opts.sessionId);
+  await promptAgentSessionProcedure({
+    runtime: "pi",
+    sessionId: opts.sessionId,
+    workspaceId: runtimeRecord.workspaceId,
+    cwd: runtimeRecord.cwd,
+    message: opts.message,
+    streamingBehavior: opts.streamingBehavior,
+  });
+}
+
+/** Aborts the active turn through the neutral Pi runtime façade without disposing it. */
+export async function abortAgentSession(tabId: string, sessionId: string): Promise<void> {
+  const runtimeRecord = requireRuntimeSessionRecord(tabId, sessionId);
+  await abortAgentSessionProcedure({
+    runtime: "pi",
+    sessionId,
+    workspaceId: runtimeRecord.workspaceId,
+    cwd: runtimeRecord.cwd,
+  });
 }
 
 /** Stops the Pi RPC session for a tab. Called when the tab is closed. */
@@ -250,13 +299,22 @@ export async function stopPiSession(tabId: string): Promise<void> {
       agentChatStore.getState().sessionsByTabId[tabId]?.sessionId ??
       (fallbackTab?.kind === "agent-chat" ? fallbackTab.data.sessionId : undefined);
 
-    if (fallbackSessionId && !isReadOnlySubagentDetail) {
-      const stopPromise = Promise.resolve(stopPiSessionProcedure({ sessionId: fallbackSessionId })).catch(() => {});
-      trackClosingSession(fallbackSessionId, stopPromise);
-      await stopPromise;
+    const runtimeRecord = runtimeSessionRecords.get(tabId);
+    if (fallbackSessionId && runtimeRecord?.sessionId === fallbackSessionId && !isReadOnlySubagentDetail) {
+      const disposePromise = Promise.resolve(
+        disposeAgentSessionProcedure({
+          runtime: "pi",
+          sessionId: fallbackSessionId,
+          workspaceId: runtimeRecord.workspaceId,
+          cwd: runtimeRecord.cwd,
+        }),
+      ).catch(() => {});
+      trackClosingSession(fallbackSessionId, disposePromise);
+      await disposePromise;
     }
 
     agentChatStore.getState().removeSession(tabId);
+    runtimeSessionRecords.delete(tabId);
     if (fallbackSessionId) {
       clearAgentChatSessionStatsSequence(fallbackSessionId);
     }
@@ -286,33 +344,33 @@ export async function stopPiSession(tabId: string): Promise<void> {
 }
 
 /** Fetches available models from the pi session. Result arrives via agent.pi.event. */
-export async function fetchAgentModels(opts: {
+export async function fetchPiAgentModelsCompatibility(opts: {
   tabId: string;
   sessionId: string;
 }): Promise<void> {
-  await sendPiCommandProcedure({
+  await sendPiCompatibilityCommandProcedure({
     sessionId: opts.sessionId,
     command: { type: "get_available_models" },
   });
 }
 
 /** Fetches session state (model, thinkingLevel) from the pi session. */
-export async function fetchAgentState(opts: {
+export async function fetchPiAgentStateCompatibility(opts: {
   tabId: string;
   sessionId: string;
 }): Promise<void> {
-  await sendPiCommandProcedure({
+  await sendPiCompatibilityCommandProcedure({
     sessionId: opts.sessionId,
     command: { type: "get_state" },
   });
 }
 
 /** Fetches all conversation messages from the pi session. */
-export async function fetchAgentMessages(opts: {
+export async function fetchPiAgentMessagesCompatibility(opts: {
   tabId: string;
   sessionId: string;
 }): Promise<void> {
-  await sendPiCommandProcedure({
+  await sendPiCompatibilityCommandProcedure({
     sessionId: opts.sessionId,
     command: { type: "get_messages" },
   });
@@ -336,10 +394,10 @@ export async function recoverAgentSessionAfterReconnect(opts: {
     await reattachPiSession(opts.tabId);
     // The process survived the connection drop; rows stay live.
     agentChatStore.getState().setSubagentSessionEndedAt(opts.tabId, null);
-    await fetchAgentState({ tabId: opts.tabId, sessionId: opts.sessionId });
-    await fetchAgentMessages({ tabId: opts.tabId, sessionId: opts.sessionId });
-    await fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
-    await refreshAgentSessionStats(opts.sessionId);
+    await fetchPiAgentStateCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
+    await fetchPiAgentMessagesCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
+    await fetchPiAgentModelsCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
+    await refreshPiAgentSessionStatsCompatibility(opts.sessionId);
   } catch {
     // The daemon no longer holds the session (e.g. it was re-run and started
     // fresh). Drop the stale handle and re-start the session so the tab heals
@@ -357,10 +415,10 @@ export async function recoverAgentSessionAfterReconnect(opts: {
       // Fresh start resets the session; classify pre-existing rows as
       // interrupted when the previous process is gone.
       agentChatStore.getState().setSubagentSessionEndedAt(opts.tabId, attached ? null : Date.now());
-      await fetchAgentState({ tabId: opts.tabId, sessionId: opts.sessionId });
-      await fetchAgentMessages({ tabId: opts.tabId, sessionId: opts.sessionId });
-      await fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
-      await refreshAgentSessionStats(opts.sessionId);
+      await fetchPiAgentStateCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
+      await fetchPiAgentMessagesCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
+      await fetchPiAgentModelsCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
+      await refreshPiAgentSessionStatsCompatibility(opts.sessionId);
     } catch (recoveryError) {
       agentChatStore.getState().setSessionError(opts.tabId, getErrorMessage(recoveryError));
     }
@@ -368,7 +426,6 @@ export async function recoverAgentSessionAfterReconnect(opts: {
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
-
 function isPiSessionAlreadyRunningError(error: unknown): boolean {
   if (typeof error === "object" && error !== null && "code" in error && error.code === PI_SESSION_EXISTS_RPC_CODE) {
     return true;
@@ -376,7 +433,6 @@ function isPiSessionAlreadyRunningError(error: unknown): boolean {
 
   return getErrorMessage(error).includes("agent session already exists");
 }
-
 function resolveAgentChatPaneId(tabId: string, paneId: string | undefined): string {
   const normalizedPaneId = paneId?.trim();
   if (normalizedPaneId) {
@@ -385,10 +441,9 @@ function resolveAgentChatPaneId(tabId: string, paneId: string | undefined): stri
 
   return `pane-${tabId}`;
 }
-
-/** Records an in-flight pi.stop so a concurrent reopen can await it. */
+/** Records an in-flight agent.dispose so a concurrent reopen can await it. */
 function trackClosingSession(sessionId: string, stopPromise: Promise<unknown>): void {
-  // Bound the wait: a hung stop RPC (transport timeout is 30s) must not stall
+  // Bound the wait: a hung dispose RPC (transport timeout is 30s) must not stall
   // reopens of the same session id; the daemon serializes start-during-stop
   // itself, so the frontend only needs a responsive fast path.
   const tracked = Promise.race([stopPromise.then(() => undefined), delay(CLOSING_SESSION_WAIT_TIMEOUT_MS)]).catch(
@@ -402,11 +457,20 @@ function trackClosingSession(sessionId: string, stopPromise: Promise<unknown>): 
   });
 }
 
+function requireRuntimeSessionRecord(tabId: string, sessionId: string): AgentRuntimeSessionRecord {
+  const runtimeRecord = runtimeSessionRecords.get(tabId);
+  if (runtimeRecord?.sessionId === sessionId) {
+    return runtimeRecord;
+  }
+  throw new Error(`No runtime session record for agent-chat tab ${tabId}`);
+}
+
 function releasePiSessionHandle(tabId: string, session: PiSessionHandle): void {
   if (activePiSessions.get(tabId) === session) {
     activePiSessions.delete(tabId);
   }
   agentChatStore.getState().removeSession(tabId);
+  runtimeSessionRecords.delete(tabId);
   clearAgentChatSessionStatsSequence(session.sessionId);
 }
 
@@ -414,16 +478,23 @@ async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Pr
   if (session.state === "closing") {
     return;
   }
-
   session.state = "closing";
 
-  const stopPromise = Promise.resolve(stopPiSessionProcedure({ sessionId: session.sessionId })).catch(() => {});
+  const stopPromise = Promise.resolve(
+    disposeAgentSessionProcedure({
+      runtime: "pi",
+      sessionId: session.sessionId,
+      workspaceId: session.workspaceId,
+      cwd: session.cwd,
+    }),
+  ).catch(() => {});
   trackClosingSession(session.sessionId, stopPromise);
   await stopPromise;
 
   if (activePiSessions.get(tabId) === session) {
     activePiSessions.delete(tabId);
   }
+  runtimeSessionRecords.delete(tabId);
   agentChatStore.getState().removeSession(tabId);
   clearAgentChatSessionStatsSequence(session.sessionId);
 }

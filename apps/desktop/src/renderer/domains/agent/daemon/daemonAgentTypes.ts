@@ -180,3 +180,129 @@ export type ComputerPermissionStatus = {
   prompted?: boolean;
   remediation?: string[];
 };
+
+/** Identifies the execution runtime selected by runtime-neutral agent procedures. */
+export type AgentRuntime = "pi" | "dsh";
+
+/** Starts a runtime-neutral agent session. */
+export type AgentStartRequest = {
+  runtime: AgentRuntime;
+  sessionId: string;
+  tabId: string;
+  paneId?: string;
+  workspaceId: string;
+  cwd: string;
+  resume?: boolean;
+};
+
+/** Attaches the current daemon connection to an existing agent session. */
+export type AgentAttachRequest = {
+  runtime: AgentRuntime;
+  sessionId: string;
+  tabId?: string;
+  workspaceId: string;
+  cwd: string;
+};
+
+/** Sends one runtime-neutral prompt to an agent session. */
+export type AgentPromptRequest = {
+  runtime: AgentRuntime;
+  sessionId: string;
+  workspaceId: string;
+  cwd: string;
+  message: unknown;
+  streamingBehavior?: string;
+};
+
+/** Aborts a running agent session without disposing its resources. */
+export type AgentAbortRequest = {
+  runtime: AgentRuntime;
+  sessionId: string;
+  workspaceId: string;
+  cwd: string;
+};
+
+/** Disposes an agent session and its runtime resources. */
+export type AgentDisposeRequest = AgentAbortRequest;
+
+/** Lists durable sessions for one runtime and workspace. */
+export type AgentListSessionsRequest = {
+  runtime: AgentRuntime;
+  workspaceId: string;
+  cwd: string;
+};
+
+/** Reads durable history for one runtime session. */
+export type AgentReadHistoryRequest = {
+  runtime: AgentRuntime;
+  sessionId: string;
+  workspaceId: string;
+  cwd: string;
+};
+
+/** Returns the runtime and session identity after a successful start. */
+export type AgentStartResult = {
+  runtime: AgentRuntime;
+  sessionId: string;
+};
+
+/** Acknowledges a runtime-neutral session mutation. */
+export type AgentAckResult = {
+  runtime: AgentRuntime;
+  ok: boolean;
+};
+
+/** Summarizes one durable session across agent runtimes. */
+export type AgentSessionSummary = {
+  sessionId: string;
+  /** Authoritative workspace path resolved by the daemon. */
+  cwd: string;
+  createdAt: number;
+  model?: string;
+  previewText?: string;
+  sessionName?: string;
+  parentSession?: string;
+  agentPreset?: string;
+  live: boolean;
+  persisted: boolean;
+};
+
+/** Returns durable sessions tagged with their selected runtime. */
+export type AgentSessionsResult = {
+  runtime: AgentRuntime;
+  sessions: AgentSessionSummary[];
+};
+
+/** Identifies Pi's durable transcript file. */
+export type AgentPiHistory = {
+  filePath: string;
+};
+
+/** Identifies a durable DSH session. */
+export type AgentDSHSessionMetadata = {
+  sessionId: string;
+  createdAt: number;
+  parentSession?: string;
+  agentPreset?: string;
+};
+
+/** Contains DSH durable history without interpreting individual event payloads. */
+export type AgentDSHHistory = {
+  session: AgentDSHSessionMetadata;
+  events: unknown[];
+};
+
+/** Returns Pi durable history for a Pi runtime request. */
+export type AgentPiHistoryResult = {
+  runtime: "pi";
+  pi: AgentPiHistory;
+};
+
+/** Returns DSH durable history for a DSH runtime request. */
+export type AgentDSHHistoryResult = {
+  runtime: "dsh";
+  dsh: AgentDSHHistory;
+};
+
+/** Returns the runtime-tagged durable history for one agent session. */
+export type AgentHistoryResult = AgentPiHistoryResult | AgentDSHHistoryResult;

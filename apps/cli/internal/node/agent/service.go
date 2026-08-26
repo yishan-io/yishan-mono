@@ -85,6 +85,8 @@ type Service struct {
 	// afterAttachWaitForStart is a focused-test barrier before attach waits for
 	// registry metadata after observing a manager-visible process.
 	afterAttachWaitForStart func()
+	// afterOwnedProcess is a focused-test barrier after agent.* binds a process.
+	afterOwnedProcess func()
 	// afterStopClaim is a focused-test barrier after pi.stop publishes its claim.
 	afterStopClaim func()
 	// afterStartStopConflict is a focused-test barrier after pi.start observes

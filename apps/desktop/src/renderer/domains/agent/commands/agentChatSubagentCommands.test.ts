@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../commands/agentChatSubagentCommands";
+import { ensurePiSession } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
 import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
 
@@ -12,9 +13,8 @@ const initialTabStoreState = tabStore.getState();
 const initialSplitPaneStoreState = splitPaneStore.getState();
 
 const mocks = vi.hoisted(() => ({
-  start: vi.fn(),
-  attach: vi.fn(),
-  stop: vi.fn(),
+  startAgent: vi.fn(),
+  promptAgent: vi.fn(),
   send: vi.fn(),
   listSessions: vi.fn(),
   listActiveSessions: vi.fn(),
@@ -41,33 +41,37 @@ vi.mock("../subscriptions/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
-  attachPiSession: mocks.attach,
+  startAgentSession: mocks.startAgent,
+  promptAgentSession: mocks.promptAgent,
   closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
   ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),
-  getPiSessionFile: mocks.getSessionFile ?? vi.fn(),
-  listActivePiSessions: mocks.listActiveSessions ?? vi.fn(),
+  listActivePiCompatibilitySessions: mocks.listActiveSessions ?? vi.fn(),
   listAgentDetectionStatuses: mocks.listDetectionStatuses ?? vi.fn(),
   listAgentModels: mocks.listModels ?? vi.fn(),
   listPiProviders: mocks.listProviders ?? vi.fn(),
-  listPiSessions: mocks.listSessions ?? vi.fn(),
   removePiProvider: mocks.removeProvider ?? vi.fn(),
-  renamePiSession: mocks.rename ?? vi.fn(),
+  renamePiCompatibilitySession: mocks.rename ?? vi.fn(),
   runWorkspaceChatPrompt: mocks.runChatPrompt ?? vi.fn(),
   savePiProvider: mocks.saveProvider ?? vi.fn(),
-  sendPiCommand: mocks.send ?? vi.fn(),
-  startPiSession: mocks.start ?? vi.fn(),
-  stopPiSession: mocks.stop ?? vi.fn(),
+  sendPiCompatibilityCommand: mocks.send ?? vi.fn(),
 }));
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   splitPaneStore.setState(initialSplitPaneStoreState, true);
-  // The reopen test leaves a deferred pi.stop implementation behind; reset it so
-  // later tests never hang on an unresolved stop.
-  mocks.stop.mockReset();
   vi.clearAllMocks();
 });
+async function ensureParentRuntime(tabId: string, sessionId: string): Promise<void> {
+  mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId });
+  await ensurePiSession({
+    tabId,
+    sessionId,
+    workspaceId: "workspace-canonical",
+    cwd: "/canonical/workspace",
+  });
+}
+
 describe("agentChatSubagentCommands subagent helpers", () => {
   it("opens a child session in a new right split pane beside the parent tab", async () => {
     tabStore.setState(
@@ -308,6 +312,7 @@ describe("agentChatSubagentCommands subagent helpers", () => {
 
   it("sends a direct /agent-stop prompt without optimistic streaming state updates", async () => {
     agentChatStore.getState().initSession("parent-tab", "parent-session");
+    await ensureParentRuntime("parent-tab", "parent-session");
 
     await cancelSubagentRun({
       tabId: "parent-tab",
@@ -316,15 +321,16 @@ describe("agentChatSubagentCommands subagent helpers", () => {
       agentId: "agent-1",
     });
 
-    expect(mocks.send).toHaveBeenCalledTimes(1);
-    expect(mocks.send).toHaveBeenCalledWith({
+    expect(mocks.promptAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.promptAgent).toHaveBeenCalledWith({
+      runtime: "pi",
       sessionId: "parent-session",
-      command: {
-        type: "prompt",
-        message: "/agent-stop agent-1",
-        streamingBehavior: undefined,
-      },
+      workspaceId: "workspace-canonical",
+      cwd: "/canonical/workspace",
+      message: "/agent-stop agent-1",
+      streamingBehavior: undefined,
     });
+    expect(mocks.send).not.toHaveBeenCalled();
     expect(agentChatStore.getState().sessionsByTabId["parent-tab"]?.streamingMessage).toBeNull();
     // No running row existed, so the cancel state is cleared immediately.
     expect(agentChatStore.getState().sessionsByTabId["parent-tab"]?.subagentCancelStates).toEqual({});
@@ -332,6 +338,7 @@ describe("agentChatSubagentCommands subagent helpers", () => {
 
   it("uses steer behavior when cancelling while the parent session is running", async () => {
     agentChatStore.getState().initSession("parent-tab-running", "parent-session-running");
+    await ensureParentRuntime("parent-tab-running", "parent-session-running");
     agentChatStore.getState().setSessionState("parent-tab-running", "running");
 
     await cancelSubagentRun({
@@ -342,27 +349,29 @@ describe("agentChatSubagentCommands subagent helpers", () => {
       agentName: "Builder",
     });
 
-    expect(mocks.send).toHaveBeenNthCalledWith(1, {
+    expect(mocks.promptAgent).toHaveBeenNthCalledWith(1, {
+      runtime: "pi",
       sessionId: "parent-session-running",
-      command: {
-        type: "prompt",
-        message: "/agent-stop agent-running",
-        streamingBehavior: "steer",
-      },
+      workspaceId: "workspace-canonical",
+      cwd: "/canonical/workspace",
+      message: "/agent-stop agent-running",
+      streamingBehavior: "steer",
     });
-    expect(mocks.send).toHaveBeenNthCalledWith(2, {
+    expect(mocks.promptAgent).toHaveBeenNthCalledWith(2, {
+      runtime: "pi",
       sessionId: "parent-session-running",
-      command: {
-        type: "prompt",
-        message:
-          "The user cancelled sub-agent Builder. Do not retry that sub-agent. Continue without it and explain any missing work if needed.",
-        streamingBehavior: "steer",
-      },
+      workspaceId: "workspace-canonical",
+      cwd: "/canonical/workspace",
+      message:
+        "The user cancelled sub-agent Builder. Do not retry that sub-agent. Continue without it and explain any missing work if needed.",
+      streamingBehavior: "steer",
     });
+    expect(mocks.send).not.toHaveBeenCalled();
   });
 
   it("prefers child session ids as the stop target when available", async () => {
     agentChatStore.getState().initSession("parent-tab-child", "parent-session-child");
+    await ensureParentRuntime("parent-tab-child", "parent-session-child");
 
     await cancelSubagentRun({
       tabId: "parent-tab-child",
@@ -372,13 +381,13 @@ describe("agentChatSubagentCommands subagent helpers", () => {
       childSessionId: "child-session-1",
     });
 
-    expect(mocks.send).toHaveBeenCalledWith({
+    expect(mocks.promptAgent).toHaveBeenCalledWith({
+      runtime: "pi",
       sessionId: "parent-session-child",
-      command: {
-        type: "prompt",
-        message: "/agent-stop child-session-1",
-        streamingBehavior: undefined,
-      },
+      workspaceId: "workspace-canonical",
+      cwd: "/canonical/workspace",
+      message: "/agent-stop child-session-1",
+      streamingBehavior: undefined,
     });
   });
 
@@ -391,7 +400,7 @@ describe("agentChatSubagentCommands subagent helpers", () => {
       rowKey: "tool-call-1",
     });
 
-    expect(mocks.send).not.toHaveBeenCalled();
+    expect(mocks.promptAgent).not.toHaveBeenCalled();
     expect(agentChatStore.getState().sessionsByTabId["parent-tab-missing"]?.subagentCancelStates).toEqual({
       "tool-call-1": { status: "failed", reason: "missing" },
     });
@@ -400,6 +409,7 @@ describe("agentChatSubagentCommands subagent helpers", () => {
   it("marks the cancel failed when the run does not end within the confirmation bound", async () => {
     vi.useFakeTimers();
     agentChatStore.getState().initSession("parent-tab-stuck", "parent-session-stuck");
+    await ensureParentRuntime("parent-tab-stuck", "parent-session-stuck");
     agentChatStore.getState().replaceMessages("parent-tab-stuck", [
       {
         id: "started-entry",
@@ -437,6 +447,7 @@ describe("agentChatSubagentCommands subagent helpers", () => {
   it("clears the cancel state once the terminal entry removes the running row", async () => {
     vi.useFakeTimers();
     agentChatStore.getState().initSession("parent-tab-confirmed", "parent-session-confirmed");
+    await ensureParentRuntime("parent-tab-confirmed", "parent-session-confirmed");
     agentChatStore.getState().replaceMessages("parent-tab-confirmed", [
       {
         id: "started-entry",
@@ -494,6 +505,7 @@ describe("agentChatSubagentCommands subagent helpers", () => {
   it("does not confirm cancel while a pending row has been replaced by its lifecycle row", async () => {
     vi.useFakeTimers();
     agentChatStore.getState().initSession("tab-cancel-replace", "session-cancel-replace");
+    await ensureParentRuntime("tab-cancel-replace", "session-cancel-replace");
     agentChatStore.getState().appendMessage("tab-cancel-replace", {
       id: "assistant-agent",
       role: "assistant",

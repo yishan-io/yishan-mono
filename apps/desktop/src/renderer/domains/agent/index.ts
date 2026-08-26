@@ -82,7 +82,12 @@ export {
 export { ProviderMark } from "./ui/ProviderMark";
 
 export { findTabWithSession, renameAgentChatSessionByTab, stopPiSession } from "./commands/agentChatCommands";
-export { fetchAgentSessionFilePath, listActivePiSessions } from "./commands/agentChatSessionHistory";
+export {
+  fetchAgentSessionFilePath,
+  listActivePiSessions,
+  listAgentSessionHistory,
+  readAgentSessionHistory,
+} from "./commands/agentChatSessionHistory";
 
 // Agent enablement preferences owned by Agent, consumed by the Settings CLI
 // feature through the public API (desktop7 Phase 21 — moved from Settings so

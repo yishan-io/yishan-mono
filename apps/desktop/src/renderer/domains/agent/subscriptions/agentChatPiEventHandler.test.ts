@@ -5,18 +5,14 @@ import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore"
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { compactAgent, respondToAgentExtensionUiRequest } from "../commands/agentChatCommands";
 import { agentChatStore } from "../state/agentChatStore";
-import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
 import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
-import { refreshAgentSessionStats, registerAgentSession } from "../subscriptions/agentChatPiEventShared";
+import { refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialSplitPaneStoreState = splitPaneStore.getState();
 
 const mocks = vi.hoisted(() => ({
-  start: vi.fn(),
-  attach: vi.fn(),
-  stop: vi.fn(),
   send: vi.fn(),
   listSessions: vi.fn(),
   listActiveSessions: vi.fn(),
@@ -43,31 +39,23 @@ vi.mock("../subscriptions/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
-  attachPiSession: mocks.attach,
   closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
   ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),
-  getPiSessionFile: mocks.getSessionFile ?? vi.fn(),
-  listActivePiSessions: mocks.listActiveSessions ?? vi.fn(),
+  listActivePiCompatibilitySessions: mocks.listActiveSessions ?? vi.fn(),
   listAgentDetectionStatuses: mocks.listDetectionStatuses ?? vi.fn(),
   listAgentModels: mocks.listModels ?? vi.fn(),
   listPiProviders: mocks.listProviders ?? vi.fn(),
-  listPiSessions: mocks.listSessions ?? vi.fn(),
   removePiProvider: mocks.removeProvider ?? vi.fn(),
-  renamePiSession: mocks.rename ?? vi.fn(),
+  renamePiCompatibilitySession: mocks.rename ?? vi.fn(),
   runWorkspaceChatPrompt: mocks.runChatPrompt ?? vi.fn(),
   savePiProvider: mocks.saveProvider ?? vi.fn(),
-  sendPiCommand: mocks.send ?? vi.fn(),
-  startPiSession: mocks.start ?? vi.fn(),
-  stopPiSession: mocks.stop ?? vi.fn(),
+  sendPiCompatibilityCommand: mocks.send ?? vi.fn(),
 }));
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   splitPaneStore.setState(initialSplitPaneStoreState, true);
-  // The reopen test leaves a deferred pi.stop implementation behind; reset it so
-  // later tests never hang on an unresolved stop.
-  mocks.stop.mockReset();
   vi.clearAllMocks();
 });
 describe("agentChatPiEventHandler.manual compaction", () => {

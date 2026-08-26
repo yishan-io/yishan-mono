@@ -4,21 +4,23 @@ import { delay } from "@shared/async/delay";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import { isAgentSessionBusy } from "../chat/agentChatTypes";
-import { renamePiSession, sendPiCommand } from "../daemon/daemonAgentProcedures";
+import { renamePiCompatibilitySession, sendPiCompatibilityCommand } from "../daemon/daemonAgentProcedures";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import {
+  abortAgentSession,
   clearPiSessionHandle,
   ensurePiSession,
-  fetchAgentMessages,
-  fetchAgentModels,
-  fetchAgentState,
+  fetchPiAgentMessagesCompatibility,
+  fetchPiAgentModelsCompatibility,
+  fetchPiAgentStateCompatibility,
   findTabWithSession,
+  promptAgentSession,
   reattachPiSession,
   recoverAgentSessionAfterReconnect,
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
-import { refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
+import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } from "../subscriptions/agentChatPiEventShared";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the
@@ -26,7 +28,12 @@ import { refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShare
 // stable for UI callers and the AgentCommands contract.
 
 export { ensurePiSession, findTabWithSession, clearPiSessionHandle, reattachPiSession, stopPiSession };
-export { fetchAgentState, fetchAgentMessages, fetchAgentModels, recoverAgentSessionAfterReconnect };
+export {
+  fetchPiAgentStateCompatibility,
+  fetchPiAgentMessagesCompatibility,
+  fetchPiAgentModelsCompatibility,
+  recoverAgentSessionAfterReconnect,
+};
 
 /**
  * Starts one agent-chat session for a tab and hydrates its state. Handles the
@@ -83,10 +90,10 @@ export async function startAgentChatSession(opts: {
     // An attach means the process is still alive, so rows stay live.
     agentChatStore.getState().setSubagentSessionEndedAt(opts.tabId, attached ? null : Date.now());
 
-    await fetchAgentState({ tabId: opts.tabId, sessionId: startedSessionId });
-    await fetchAgentMessages({ tabId: opts.tabId, sessionId: startedSessionId });
-    await fetchAgentModels({ tabId: opts.tabId, sessionId: startedSessionId });
-    await refreshAgentSessionStats(startedSessionId);
+    await fetchPiAgentStateCompatibility({ tabId: opts.tabId, sessionId: startedSessionId });
+    await fetchPiAgentMessagesCompatibility({ tabId: opts.tabId, sessionId: startedSessionId });
+    await fetchPiAgentModelsCompatibility({ tabId: opts.tabId, sessionId: startedSessionId });
+    await refreshPiAgentSessionStatsCompatibility(startedSessionId);
   } catch (error) {
     agentChatStore.getState().initSession(opts.tabId, opts.tabId);
     agentChatStore.getState().setSessionError(opts.tabId, getErrorMessage(error));
@@ -102,13 +109,11 @@ export async function sendAgentPrompt(opts: {
   const tabSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
 
   const isBusy = isAgentSessionBusy(tabSession?.state);
-  await sendPiCommand({
+  await promptAgentSession({
+    tabId: opts.tabId,
     sessionId: opts.sessionId,
-    command: {
-      type: "prompt",
-      message: opts.message,
-      streamingBehavior: isBusy ? "steer" : undefined,
-    },
+    message: opts.message,
+    streamingBehavior: isBusy ? "steer" : undefined,
   });
 
   agentChatStore.getState().clearTurnError(opts.tabId);
@@ -131,15 +136,12 @@ export async function sendAgentPrompt(opts: {
 export async function abortAgent(opts: { tabId: string; sessionId: string }): Promise<void> {
   flushAgentChatStreamBuffer(opts.tabId);
 
-  await sendPiCommand({
-    sessionId: opts.sessionId,
-    command: { type: "abort" },
-  });
+  await abortAgentSession(opts.tabId, opts.sessionId);
 }
 
 /** Manually compacts the current Pi session context. */
 export async function compactAgent(opts: { sessionId: string }): Promise<void> {
-  await sendPiCommand({
+  await sendPiCompatibilityCommand({
     sessionId: opts.sessionId,
     command: { type: "compact" },
   });
@@ -167,7 +169,7 @@ export async function respondToAgentExtensionUiRequest(opts: {
     command.value = opts.value ?? "";
   }
 
-  await sendPiCommand({
+  await sendPiCompatibilityCommand({
     sessionId: opts.sessionId,
     command,
   });
@@ -195,7 +197,7 @@ export async function restartAgentSessionForProvider(opts: {
   const { tabId, workspaceId, cwd, paneId, sessionId, providerId } = opts;
   let restartAttempted = false;
   try {
-    await fetchAgentModels({ tabId, sessionId });
+    await fetchPiAgentModelsCompatibility({ tabId, sessionId });
 
     // fetchAgentModels resolves on the pi.send ack, before the
     // get_available_models response event populates the store, so poll the
@@ -234,10 +236,10 @@ export async function restartAgentSessionForProvider(opts: {
       sessionId: previousSessionId,
       paneId,
     });
-    await fetchAgentState({ tabId, sessionId: restartedSessionId });
-    await fetchAgentMessages({ tabId, sessionId: restartedSessionId });
-    await fetchAgentModels({ tabId, sessionId: restartedSessionId });
-    await refreshAgentSessionStats(restartedSessionId);
+    await fetchPiAgentStateCompatibility({ tabId, sessionId: restartedSessionId });
+    await fetchPiAgentMessagesCompatibility({ tabId, sessionId: restartedSessionId });
+    await fetchPiAgentModelsCompatibility({ tabId, sessionId: restartedSessionId });
+    await refreshPiAgentSessionStatsCompatibility(restartedSessionId);
   } catch (error) {
     const message = getErrorMessage(error);
     const sessionExists = Boolean(agentChatStore.getState().sessionsByTabId[tabId]);
@@ -253,7 +255,13 @@ export async function restartAgentSessionForProvider(opts: {
 
 // ─── Session history ─────────────────────────────────────────────────────────
 // Moved to agentChatSessionHistory.ts; re-exported to preserve the public API.
-export { fetchAgentSessionFilePath, fetchSessionHistory, listActivePiSessions } from "./agentChatSessionHistory";
+export {
+  fetchAgentSessionFilePath,
+  fetchSessionHistory,
+  listActivePiSessions,
+  listAgentSessionHistory,
+  readAgentSessionHistory,
+} from "./agentChatSessionHistory";
 
 import { resolveChatFilePath } from "@renderer/domains/files";
 // ─── Chat-to-file tab bridge (desktop6-adjust.md W5) ───────────────────────
@@ -315,5 +323,5 @@ export async function renameAgentChatSessionByTab(tabId: string, title: string):
   if (!sessionId) {
     return;
   }
-  await renamePiSession({ sessionId, title });
+  await renamePiCompatibilitySession({ sessionId, title });
 }

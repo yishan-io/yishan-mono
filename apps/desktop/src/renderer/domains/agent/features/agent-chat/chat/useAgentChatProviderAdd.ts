@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { isAgentSessionBusy } from "../../../chat/agentChatTypes";
 import type { AgentSessionState } from "../../../chat/agentChatTypes";
-import { fetchAgentModels, restartAgentSessionForProvider } from "../../../commands/agentChatCommands";
+import { fetchPiAgentModelsCompatibility, restartAgentSessionForProvider } from "../../../commands/agentChatCommands";
 
 type UseAgentChatProviderAddParams = {
   tabId: string;
@@ -36,7 +36,7 @@ export function useAgentChatProviderAdd({
       // The credential is saved; a busy session is left running and the
       // provider applies to new sessions.
       if (!providerId || isAgentSessionBusy(sessionState)) {
-        await fetchAgentModels({ tabId, sessionId });
+        await fetchPiAgentModelsCompatibility({ tabId, sessionId });
         return;
       }
       await restartAgentSessionForProvider({

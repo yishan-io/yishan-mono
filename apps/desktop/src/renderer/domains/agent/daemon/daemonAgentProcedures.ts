@@ -1,21 +1,28 @@
 import { subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport } from "@renderer/events/desktopRpcEventBus";
 import { request } from "@renderer/rpc";
 import type {
+  AgentAbortRequest,
+  AgentAckResult,
+  AgentAttachRequest,
   AgentDefinitionCreateInput,
   AgentDefinitionDetail,
   AgentDefinitionInfo,
   AgentDefinitionUpdateInput,
+  AgentDisposeRequest,
+  AgentHistoryResult,
+  AgentListSessionsRequest,
+  AgentPromptRequest,
+  AgentReadHistoryRequest,
+  AgentSessionsResult,
+  AgentStartRequest,
+  AgentStartResult,
   ComputerPermissionStatus,
   ComputerUseFeatureConfig,
   MemoryConfig,
   MemoryUpdateConfigInput,
   PiActiveSessionSummary,
   PiExtensionInfo,
-  PiGetSessionFileInput,
-  PiGetSessionFileResult,
   PiListActiveSessionsInput,
-  PiListSessionsInput,
-  PiSessionSummary,
   SkillDetail,
   SkillInfo,
 } from "./daemonAgentTypes";
@@ -55,47 +62,32 @@ export async function closeAgentSession(input: { sessionId: string; deleteRecord
 
 // ─── pi ──────────────────────────────────────────────────────────────────────
 
-export async function startPiSession(input: {
-  sessionId: string;
-  tabId: string;
-  paneId?: string;
-  workspaceId: string;
-  cwd: string;
-  resume?: boolean;
-}): Promise<{ sessionId: string }> {
-  return (await request("pi.start", input)) as { sessionId: string };
-}
-
-export async function attachPiSession(input: {
-  sessionId: string;
-  tabId?: string;
-  workspaceId?: string;
-  cwd?: string;
-}): Promise<{ ok: boolean }> {
-  return (await request("pi.attach", input)) as { ok: boolean };
-}
-
-export async function stopPiSession(input: { sessionId: string }): Promise<{ ok: boolean }> {
-  return (await request("pi.stop", input)) as { ok: boolean };
-}
-
-export async function sendPiCommand(input: { sessionId: string; command: unknown }): Promise<unknown> {
+/**
+ * Sends a Pi-specific control command. Use only for runtime-specific controls
+ * such as state, messages, models, stats, compact, and extension UI requests.
+ * Semantic prompts must use promptAgentSession instead.
+ */
+export async function sendPiCompatibilityCommand(input: { sessionId: string; command: unknown }): Promise<unknown> {
   return request("pi.send", input);
 }
 
-export async function renamePiSession(input: { sessionId: string; title: string }): Promise<{ ok: boolean }> {
+/**
+ * Renames a Pi transcript through the legacy Pi-specific RPC namespace.
+ * Use only until runtime-neutral session metadata supports renaming.
+ */
+export async function renamePiCompatibilitySession(input: { sessionId: string; title: string }): Promise<{
+  ok: boolean;
+}> {
   return (await request("pi.rename", input)) as { ok: boolean };
 }
 
-export async function listPiSessions(input?: PiListSessionsInput): Promise<PiSessionSummary[]> {
-  return (await request("pi.listSessions", input ?? {})) as PiSessionSummary[];
-}
-
-export async function getPiSessionFile(input: PiGetSessionFileInput): Promise<PiGetSessionFileResult> {
-  return (await request("pi.getSessionFile", input)) as PiGetSessionFileResult;
-}
-
-export async function listActivePiSessions(input?: PiListActiveSessionsInput): Promise<PiActiveSessionSummary[]> {
+/**
+ * Lists live Pi processes through the legacy Pi-specific RPC namespace.
+ * Use only where runtime-neutral live-session discovery is unavailable.
+ */
+export async function listActivePiCompatibilitySessions(
+  input?: PiListActiveSessionsInput,
+): Promise<PiActiveSessionSummary[]> {
   return (await request("pi.listActiveSessions", input ?? {})) as PiActiveSessionSummary[];
 }
 
@@ -117,6 +109,43 @@ export async function savePiProvider(input: {
 
 export async function removePiProvider(input: { provider: string }): Promise<{ ok: boolean }> {
   return (await request("pi.removeProvider", input)) as { ok: boolean };
+}
+
+// ─── runtime-neutral agent ───────────────────────────────────────────────────
+
+/** Starts one session in the runtime selected by the request. */
+export async function startAgentSession(input: AgentStartRequest): Promise<AgentStartResult> {
+  return (await request("agent.start", input)) as AgentStartResult;
+}
+
+/** Attaches the current daemon connection to one existing agent session. */
+export async function attachAgentSession(input: AgentAttachRequest): Promise<AgentAckResult> {
+  return (await request("agent.attach", input)) as AgentAckResult;
+}
+
+/** Sends one semantic prompt to an agent session. */
+export async function promptAgentSession(input: AgentPromptRequest): Promise<AgentAckResult> {
+  return (await request("agent.prompt", input)) as AgentAckResult;
+}
+
+/** Aborts the current turn while preserving the agent session. */
+export async function abortAgentSession(input: AgentAbortRequest): Promise<AgentAckResult> {
+  return (await request("agent.abort", input)) as AgentAckResult;
+}
+
+/** Disposes an agent session and releases its runtime resources. */
+export async function disposeAgentSession(input: AgentDisposeRequest): Promise<AgentAckResult> {
+  return (await request("agent.dispose", input)) as AgentAckResult;
+}
+
+/** Lists durable agent sessions for one runtime and workspace. */
+export async function listAgentRuntimeSessions(input: AgentListSessionsRequest): Promise<AgentSessionsResult> {
+  return (await request("agent.listSessions", input)) as AgentSessionsResult;
+}
+
+/** Reads durable history without interpreting runtime-specific event payloads. */
+export async function readAgentRuntimeHistory(input: AgentReadHistoryRequest): Promise<AgentHistoryResult> {
+  return (await request("agent.readHistory", input)) as AgentHistoryResult;
 }
 
 // ─── agent ───────────────────────────────────────────────────────────────────

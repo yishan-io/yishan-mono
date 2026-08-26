@@ -1,21 +1,17 @@
 import { splitPaneStore, tabStore } from "@renderer/domains/workbench";
-import {} from "@renderer/domains/workbench";
 import {
   createAdjacentPaneWithTab,
-  moveTabToPane,
   openTab,
   paneSelectTab,
   registerTabInPane,
-  reorderPaneTab,
   setActivePane,
   setAgentChatTabSubagentControl,
   setSelectedTab,
   splitWorkspacePane,
-  unregisterTabFromPane,
 } from "@renderer/domains/workbench";
 import { findOppositePaneId } from "@renderer/domains/workbench";
 import { isAgentSessionBusy } from "../chat/agentChatTypes";
-import { sendPiCommand } from "../daemon/daemonAgentProcedures";
+import { promptAgentSession } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
 import { findTabWithSession } from "./agentChatCommands";
 
@@ -29,7 +25,6 @@ const SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX = "The user cancelled sub-agent";
  * covers the round trip with margin.
  */
 const SUBAGENT_CANCEL_CONFIRM_TIMEOUT_MS = 5_000;
-const SUBAGENT_CANCEL_POLL_INTERVAL_MS = 250;
 
 /** Opens one sub-agent child session in a right split pane when possible. */
 export async function openSubagentSessionInRightSplitPane(opts: {
@@ -233,25 +228,21 @@ export async function cancelSubagentRun(opts: {
   try {
     const sessionState = agentChatStore.getState().sessionsByTabId[opts.tabId]?.state;
     const streamingBehavior = isAgentSessionBusy(sessionState) ? "steer" : undefined;
-    await sendPiCommand({
+    await promptAgentSession({
+      tabId: opts.tabId,
       sessionId: opts.sessionId,
-      command: {
-        type: "prompt",
-        message: `/agent-stop ${stopTarget}`,
-        streamingBehavior,
-      },
+      message: `/agent-stop ${stopTarget}`,
+      streamingBehavior,
     });
 
     if (streamingBehavior === "steer") {
       const cancelledAgentLabel =
         opts.agentName?.trim() || opts.childSessionId?.trim() || opts.agentId?.trim() || stopTarget;
-      await sendPiCommand({
+      await promptAgentSession({
+        tabId: opts.tabId,
         sessionId: opts.sessionId,
-        command: {
-          type: "prompt",
-          message: `${SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX} ${cancelledAgentLabel}. Do not retry that sub-agent. Continue without it and explain any missing work if needed.`,
-          streamingBehavior: "steer",
-        },
+        message: `${SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX} ${cancelledAgentLabel}. Do not retry that sub-agent. Continue without it and explain any missing work if needed.`,
+        streamingBehavior: "steer",
       });
     }
   } catch (error) {

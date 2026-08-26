@@ -27,6 +27,24 @@ type PiService interface {
 	RemoveProvider(ctx context.Context, req PiRemoveProviderParams) (any, error)
 }
 
+// AgentService backs the runtime-neutral agent.* facade.
+type AgentService interface {
+	AgentStart(ctx context.Context, connection *Connection, req AgentStartParams) (any, error)
+	AgentAttach(ctx context.Context, connection *Connection, req AgentAttachParams) (any, error)
+	AgentPrompt(ctx context.Context, req AgentPromptParams) (any, error)
+	AgentAbort(ctx context.Context, req AgentAbortParams) (any, error)
+	AgentDispose(ctx context.Context, req AgentDisposeParams) (any, error)
+	AgentListSessions(ctx context.Context, req AgentListSessionsParams) (any, error)
+	AgentReadHistory(ctx context.Context, req AgentReadHistoryParams) (any, error)
+}
+
+// AgentCatalogService preserves the existing agent catalog routes while the
+// agent namespace is owned by AgentHandler.
+type AgentCatalogService interface {
+	AgentListDetectionStatuses(ctx context.Context, params json.RawMessage) (any, error)
+	AgentListModels(ctx context.Context, req SystemAgentListModelsParams) (any, error)
+}
+
 // SkillService backs the skill.* RPC methods.
 type SkillService interface {
 	List(ctx context.Context) (any, error)
@@ -54,10 +72,12 @@ type CustomizeService interface {
 	AgentsRestore(ctx context.Context, req CustomizeAgentNameParams) (any, error)
 }
 
-// AgentHandler owns the pi.*, skill.*, and customize.* namespace decoding.
+// AgentHandler owns the agent.*, pi.*, skill.*, and customize.* namespace decoding.
 // It routes by namespace prefix and each method calls exactly one typed
 // service method. It holds no state and constructs no services.
 type AgentHandler struct {
+	Agent     AgentService
+	Catalog   AgentCatalogService
 	Pi        PiService
 	Skill     SkillService
 	Customize CustomizeService
@@ -66,12 +86,71 @@ type AgentHandler struct {
 // Call implements Handler.
 func (h *AgentHandler) Call(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error) {
 	switch {
+	case strings.HasPrefix(method, "agent."):
+		return h.callAgent(ctx, connection, method, params)
 	case strings.HasPrefix(method, "pi."):
 		return h.callPi(ctx, connection, method, params)
 	case strings.HasPrefix(method, "skill."):
 		return h.callSkill(ctx, method, params)
 	case strings.HasPrefix(method, "customize."):
 		return h.callCustomize(ctx, method, params)
+	default:
+		return nil, NewRPCError(CodeMethodNotFound, "unknown agent method: "+method)
+	}
+}
+
+func (h *AgentHandler) callAgent(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error) {
+	switch method {
+	case MethodAgentListDetectionStatuses:
+		return h.Catalog.AgentListDetectionStatuses(ctx, params)
+	case MethodAgentListModels:
+		var req SystemAgentListModelsParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Catalog.AgentListModels(ctx, req)
+	case MethodAgentStart:
+		var req AgentStartParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentStart(ctx, connection, req)
+	case MethodAgentAttach:
+		var req AgentAttachParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentAttach(ctx, connection, req)
+	case MethodAgentPrompt:
+		var req AgentPromptParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentPrompt(ctx, req)
+	case MethodAgentAbort:
+		var req AgentAbortParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentAbort(ctx, req)
+	case MethodAgentDispose:
+		var req AgentDisposeParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentDispose(ctx, req)
+	case MethodAgentListSessions:
+		var req AgentListSessionsParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentListSessions(ctx, req)
+	case MethodAgentReadHistory:
+		var req AgentReadHistoryParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentReadHistory(ctx, req)
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "unknown agent method: "+method)
 	}

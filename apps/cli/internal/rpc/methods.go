@@ -76,6 +76,13 @@ const (
 
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
 	MethodAgentListModels            = "agent.listModels"
+	MethodAgentStart                 = "agent.start"
+	MethodAgentAttach                = "agent.attach"
+	MethodAgentPrompt                = "agent.prompt"
+	MethodAgentAbort                 = "agent.abort"
+	MethodAgentDispose               = "agent.dispose"
+	MethodAgentListSessions          = "agent.listSessions"
+	MethodAgentReadHistory           = "agent.readHistory"
 	MethodPiStart                    = "pi.start"
 	MethodPiAttach                   = "pi.attach"
 	MethodPiStop                     = "pi.stop"

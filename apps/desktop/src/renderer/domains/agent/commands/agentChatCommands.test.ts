@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renamePiSession } from "../../../domains/agent/daemon/daemonAgentProcedures";
+import { renamePiCompatibilitySession } from "../../../domains/agent/daemon/daemonAgentProcedures";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
@@ -12,9 +12,11 @@ const initialTabStoreState = tabStore.getState();
 const initialSplitPaneStoreState = splitPaneStore.getState();
 
 const mocks = vi.hoisted(() => ({
-  start: vi.fn(),
-  attach: vi.fn(),
-  stop: vi.fn(),
+  startAgent: vi.fn(),
+  attachAgent: vi.fn(),
+  promptAgent: vi.fn(),
+  abortAgent: vi.fn(),
+  disposeAgent: vi.fn(),
   send: vi.fn(),
   listSessions: vi.fn(),
   listActiveSessions: vi.fn(),
@@ -41,31 +43,28 @@ vi.mock("../subscriptions/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
-  attachPiSession: mocks.attach,
+  attachAgentSession: mocks.attachAgent,
+  abortAgentSession: mocks.abortAgent,
+  disposeAgentSession: mocks.disposeAgent,
+  promptAgentSession: mocks.promptAgent,
+  startAgentSession: mocks.startAgent,
   closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
   ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),
-  getPiSessionFile: mocks.getSessionFile ?? vi.fn(),
-  listActivePiSessions: mocks.listActiveSessions ?? vi.fn(),
+  listActivePiCompatibilitySessions: mocks.listActiveSessions ?? vi.fn(),
   listAgentDetectionStatuses: mocks.listDetectionStatuses ?? vi.fn(),
   listAgentModels: mocks.listModels ?? vi.fn(),
   listPiProviders: mocks.listProviders ?? vi.fn(),
-  listPiSessions: mocks.listSessions ?? vi.fn(),
   removePiProvider: mocks.removeProvider ?? vi.fn(),
-  renamePiSession: mocks.rename ?? vi.fn(),
+  renamePiCompatibilitySession: mocks.rename ?? vi.fn(),
   runWorkspaceChatPrompt: mocks.runChatPrompt ?? vi.fn(),
   savePiProvider: mocks.saveProvider ?? vi.fn(),
-  sendPiCommand: mocks.send ?? vi.fn(),
-  startPiSession: mocks.start ?? vi.fn(),
-  stopPiSession: mocks.stop ?? vi.fn(),
+  sendPiCompatibilityCommand: mocks.send ?? vi.fn(),
 }));
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   splitPaneStore.setState(initialSplitPaneStoreState, true);
-  // The reopen test leaves a deferred pi.stop implementation behind; reset it so
-  // later tests never hang on an unresolved stop.
-  mocks.stop.mockReset();
   vi.clearAllMocks();
 });
 
@@ -93,7 +92,7 @@ vi.mock("../../workspace/state/workspaceActions", () => ({
 }));
 describe("agentChatCommands.startAgentChatSession", () => {
   it("classifies pre-existing history as interrupted after a fresh start", async () => {
-    mocks.start.mockResolvedValue({ sessionId: "session-1" });
+    mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "session-1" });
 
     await startAgentChatSession({
       tabId: "tab-fresh",
@@ -107,11 +106,11 @@ describe("agentChatCommands.startAgentChatSession", () => {
   });
 
   it("keeps rows live after an attach to a still-alive process", async () => {
-    mocks.start.mockRejectedValueOnce({
+    mocks.startAgent.mockRejectedValueOnce({
       code: -32003,
       message: "agent session already exists",
     });
-    mocks.attach.mockResolvedValue({ ok: true });
+    mocks.attachAgent.mockResolvedValue({ runtime: "pi", ok: true });
 
     await startAgentChatSession({
       tabId: "tab-attach",
@@ -178,7 +177,7 @@ describe("agentChatCommands.startAgentChatSession", () => {
 
 describe("renameAgentChatSessionByTab", () => {
   it("renames the pi session that backs an agent-chat tab", async () => {
-    vi.mocked(renamePiSession).mockResolvedValue({ ok: true });
+    vi.mocked(renamePiCompatibilitySession).mockResolvedValue({ ok: true });
     tabStore.setState({
       tabs: [
         {
@@ -194,11 +193,11 @@ describe("renameAgentChatSessionByTab", () => {
 
     await renameAgentChatSessionByTab("tab-chat", "New Chat Name");
 
-    expect(renamePiSession).toHaveBeenCalledWith({ sessionId: "sess-123", title: "New Chat Name" });
+    expect(renamePiCompatibilitySession).toHaveBeenCalledWith({ sessionId: "sess-123", title: "New Chat Name" });
   });
 
   it("does nothing for non-agent-chat tabs", async () => {
-    vi.mocked(renamePiSession).mockResolvedValue({ ok: true });
+    vi.mocked(renamePiCompatibilitySession).mockResolvedValue({ ok: true });
     tabStore.setState({
       tabs: [
         {
@@ -214,11 +213,11 @@ describe("renameAgentChatSessionByTab", () => {
 
     await renameAgentChatSessionByTab("tab-term", "New Terminal");
 
-    expect(renamePiSession).not.toHaveBeenCalled();
+    expect(renamePiCompatibilitySession).not.toHaveBeenCalled();
   });
 
   it("does nothing when the agent-chat tab has no session id", async () => {
-    vi.mocked(renamePiSession).mockResolvedValue({ ok: true });
+    vi.mocked(renamePiCompatibilitySession).mockResolvedValue({ ok: true });
     tabStore.setState({
       tabs: [
         {
@@ -234,6 +233,6 @@ describe("renameAgentChatSessionByTab", () => {
 
     await renameAgentChatSessionByTab("tab-chat", "New Name");
 
-    expect(renamePiSession).not.toHaveBeenCalled();
+    expect(renamePiCompatibilitySession).not.toHaveBeenCalled();
   });
 });

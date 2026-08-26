@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../chat/agentChatSubagents";
-import { fetchAgentMessages } from "../../../commands/agentChatCommands";
+import { fetchPiAgentMessagesCompatibility } from "../../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
 import { agentChatStore } from "../../../state/agentChatStore";
 
@@ -43,7 +43,7 @@ export function useAgentChatSubagentActions({
       let childSessionId = subagent.childSessionId;
       let title = subagent.title;
       if (!childSessionId && sessionId) {
-        await fetchAgentMessages({ tabId, sessionId });
+        await fetchPiAgentMessagesCompatibility({ tabId, sessionId });
         const refreshedRunningSubagents = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
         const refreshedSubagent = findMatchingRunningSubagent(refreshedRunningSubagents, subagent);
         childSessionId = refreshedSubagent?.childSessionId;

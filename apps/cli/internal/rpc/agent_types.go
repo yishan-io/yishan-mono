@@ -2,6 +2,129 @@ package rpc
 
 import "encoding/json"
 
+// AgentRuntime identifies the execution runtime selected by agent.* callers.
+type AgentRuntime string
+
+const (
+	AgentRuntimePi  AgentRuntime = "pi"
+	AgentRuntimeDSH AgentRuntime = "dsh"
+)
+
+// AgentStartParams starts a runtime-neutral agent session.
+type AgentStartParams struct {
+	Runtime     AgentRuntime `json:"runtime"`
+	SessionID   string       `json:"sessionId"`
+	TabID       string       `json:"tabId"`
+	PaneID      string       `json:"paneId,omitempty"`
+	WorkspaceID string       `json:"workspaceId"`
+	CWD         string       `json:"cwd"`
+	Resume      bool         `json:"resume,omitempty"`
+}
+
+// AgentAttachParams attaches a client connection to an existing session.
+type AgentAttachParams struct {
+	Runtime     AgentRuntime `json:"runtime"`
+	SessionID   string       `json:"sessionId"`
+	TabID       string       `json:"tabId,omitempty"`
+	WorkspaceID string       `json:"workspaceId"`
+	CWD         string       `json:"cwd"`
+}
+
+// AgentPromptParams sends one runtime-neutral prompt to a session.
+type AgentPromptParams struct {
+	Runtime           AgentRuntime    `json:"runtime"`
+	SessionID         string          `json:"sessionId"`
+	WorkspaceID       string          `json:"workspaceId"`
+	CWD               string          `json:"cwd"`
+	Message           json.RawMessage `json:"message"`
+	StreamingBehavior string          `json:"streamingBehavior,omitempty"`
+}
+
+// AgentAbortParams aborts a running agent session.
+type AgentAbortParams struct {
+	Runtime     AgentRuntime `json:"runtime"`
+	SessionID   string       `json:"sessionId"`
+	WorkspaceID string       `json:"workspaceId"`
+	CWD         string       `json:"cwd"`
+}
+
+// AgentDisposeParams disposes an agent session and its runtime resources.
+type AgentDisposeParams AgentAbortParams
+
+// AgentListSessionsParams lists durable sessions for one runtime and workspace.
+type AgentListSessionsParams struct {
+	Runtime     AgentRuntime `json:"runtime"`
+	WorkspaceID string       `json:"workspaceId"`
+	CWD         string       `json:"cwd"`
+}
+
+// AgentReadHistoryParams reads the durable history for one session.
+type AgentReadHistoryParams struct {
+	Runtime     AgentRuntime `json:"runtime"`
+	SessionID   string       `json:"sessionId"`
+	WorkspaceID string       `json:"workspaceId"`
+	CWD         string       `json:"cwd"`
+}
+
+// AgentStartResult is the stable start response shared by agent runtimes.
+type AgentStartResult struct {
+	Runtime   AgentRuntime `json:"runtime"`
+	SessionID string       `json:"sessionId"`
+}
+
+// AgentAckResult is the stable acknowledgement for session mutations.
+type AgentAckResult struct {
+	Runtime AgentRuntime `json:"runtime"`
+	OK      bool         `json:"ok"`
+}
+
+// AgentSessionSummary is the stable cross-runtime representation of a durable session.
+type AgentSessionSummary struct {
+	SessionID     string `json:"sessionId"`
+	CWD           string `json:"cwd"`
+	CreatedAt     int64  `json:"createdAt"`
+	Model         string `json:"model,omitempty"`
+	PreviewText   string `json:"previewText,omitempty"`
+	SessionName   string `json:"sessionName,omitempty"`
+	ParentSession string `json:"parentSession,omitempty"`
+	AgentPreset   string `json:"agentPreset,omitempty"`
+	Live          bool   `json:"live"`
+	Persisted     bool   `json:"persisted"`
+}
+
+// AgentSessionsResult is a runtime-tagged durable-session response.
+type AgentSessionsResult struct {
+	Runtime  AgentRuntime          `json:"runtime"`
+	Sessions []AgentSessionSummary `json:"sessions"`
+}
+
+// AgentPiHistory is the Pi-specific durable history representation.
+type AgentPiHistory struct {
+	FilePath string `json:"filePath"`
+}
+
+// AgentDSHSessionMetadata identifies a durable DSH session.
+type AgentDSHSessionMetadata struct {
+	SessionID     string `json:"sessionId"`
+	CreatedAt     int64  `json:"createdAt"`
+	ParentSession string `json:"parentSession,omitempty"`
+	AgentPreset   string `json:"agentPreset,omitempty"`
+}
+
+// AgentDSHHistory is the DSH-specific durable history representation.
+type AgentDSHHistory struct {
+	Session AgentDSHSessionMetadata `json:"session"`
+	Events  []json.RawMessage       `json:"events"`
+}
+
+// AgentHistoryResult is a runtime-tagged session-history response. Exactly one
+// runtime-specific field is present.
+type AgentHistoryResult struct {
+	Runtime AgentRuntime     `json:"runtime"`
+	Pi      *AgentPiHistory  `json:"pi,omitempty"`
+	DSH     *AgentDSHHistory `json:"dsh,omitempty"`
+}
+
 // Wire types for the pi.*, skill.*, and customize.* namespaces. These structs
 // are the JSON-RPC payload contract for the agent RPC methods; field names and
 // shapes must stay compatible with the desktop and CLI clients.

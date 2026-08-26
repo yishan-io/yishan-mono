@@ -233,6 +233,10 @@ func (s *Service) stopRegisteredSession(ctx context.Context, sessionID string) e
 	if !exists {
 		return nil
 	}
+	return s.stopClaim(ctx, claim)
+}
+
+func (s *Service) stopClaim(ctx context.Context, claim *session.StopClaim) error {
 	if !claim.IsOwner() {
 		return claim.Wait(ctx)
 	}

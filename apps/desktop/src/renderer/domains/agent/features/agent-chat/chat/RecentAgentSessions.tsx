@@ -15,8 +15,8 @@ type RecentAgentSessionsProps = {
   cwd?: string;
 };
 
-function formatRelativeTime(timestamp: string, t: (key: string, options?: { count: number }) => string): string {
-  const date = new Date(timestamp);
+function formatRelativeTime(createdAt: number, t: (key: string, options?: { count: number }) => string): string {
+  const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return "";
 
   const elapsedMinutes = Math.floor((Date.now() - date.getTime()) / 60_000);
@@ -31,7 +31,7 @@ function formatRelativeTime(timestamp: string, t: (key: string, options?: { coun
 /** Lists recent Pi sessions for a workspace when no tabs are open. */
 export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsProps) {
   const { t } = useTranslation();
-  const [sessions, setSessions] = useState<Rpc.PiSessionSummary[]>([]);
+  const [sessions, setSessions] = useState<Rpc.AgentSessionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(cwd));
   const [error, setError] = useState<string | null>(null);
 
@@ -122,7 +122,7 @@ export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsPro
                     flexShrink: 0,
                   }}
                 >
-                  {formatRelativeTime(session.timestamp, t)}
+                  {formatRelativeTime(session.createdAt, t)}
                 </Typography>
               </Button>
             );
