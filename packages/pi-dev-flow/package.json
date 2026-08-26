@@ -1,6 +1,6 @@
 {
   "name": "@yishan-io/pi-dev-flow",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "typecheck": "echo 'No TypeScript sources to typecheck'",
