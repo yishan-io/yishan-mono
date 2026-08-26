@@ -3,12 +3,17 @@ import type {
   LocalTask,
   LocalTaskFilters,
   LocalTaskSearchResult,
+  LocalTaskTemplatesResult,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../backend/localTaskTypes";
 
 /** Cancellation options for Local Task metadata operations. */
 export type LocalTaskOperationOptions = { signal?: AbortSignal };
+/** The Local Task RPC method used to read task templates. */
+export type LocalTaskTemplateClient = {
+  getTemplates(options?: LocalTaskOperationOptions): Promise<LocalTaskTemplatesResult>;
+};
 /** The Local Task RPC methods used by metadata operations. */
 export type LocalTaskMetadataClient = {
   create(input: CreateLocalTaskInput, options?: LocalTaskOperationOptions): Promise<LocalTask>;
@@ -32,6 +37,7 @@ export type StartTaskInput = {
   title: string;
   description?: string;
   goal?: string;
+  context?: string;
   acceptanceCriteria?: string[];
   priority?: CreateLocalTaskInput["priority"];
   tags?: string[];
@@ -172,17 +178,23 @@ export function createLocalTaskOperations(client: LocalTaskMetadataClient, proje
 }
 
 /** Builds the daemon description from exactly one supported task-brief input style. */
-export function buildDescription(input: Pick<StartTaskInput, "description" | "goal" | "acceptanceCriteria">): string {
+export function buildDescription(
+  input: Pick<StartTaskInput, "description" | "goal" | "context" | "acceptanceCriteria">,
+): string {
   const description = input.description?.trim();
   const goal = input.goal?.trim();
+  const context = input.context?.trim();
   const criteria = input.acceptanceCriteria?.map((criterion) => requireText(criterion, "Acceptance criterion")) ?? [];
-  if (description !== undefined && (goal !== undefined || input.acceptanceCriteria !== undefined)) {
-    throw new Error("Provide description or goal/acceptanceCriteria, not both.");
+  if (
+    description !== undefined &&
+    (goal !== undefined || context !== undefined || input.acceptanceCriteria !== undefined)
+  ) {
+    throw new Error("Provide description or goal/context/acceptanceCriteria, not both.");
   }
   if (description !== undefined) return description;
-  if (goal === undefined && criteria.length === 0) return "";
   return [
-    ...(goal === undefined ? [] : [goal]),
+    ...(goal === undefined ? [] : [`## Goal\n\n${goal}`]),
+    ...(context === undefined ? [] : [`## Context\n\n${context}`]),
     ...(criteria.length === 0
       ? []
       : [`## Acceptance Criteria\n\n${criteria.map((criterion) => `- ${criterion}`).join("\n")}`]),

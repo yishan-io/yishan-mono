@@ -4,7 +4,11 @@ import { Type } from "typebox";
 
 import { LocalTaskRpcClient } from "../backend/localTaskRpcClient";
 import { type LocalTaskDocumentBackend, createLocalTaskDocuments } from "./taskDocuments";
-import { type LocalTaskMetadataClient, createLocalTaskOperations } from "./taskOperations";
+import {
+  type LocalTaskMetadataClient,
+  type LocalTaskTemplateClient,
+  createLocalTaskOperations,
+} from "./taskOperations";
 
 const taskIdSchema = Type.String({ minLength: 1 });
 const contentSchema = Type.String({ minLength: 1, maxLength: 50_000 });
@@ -20,10 +24,10 @@ const updateStatusSchema = StringEnum(["new", "progressing", "cancelled"] as con
 const readDocumentSchema = StringEnum(["task", "notes", "plan", "outcome"] as const);
 const writeDocumentSchema = StringEnum(["notes", "plan", "outcome"] as const);
 
-/** The complete daemon surface needed by the eight Pi task tools. */
-export type LocalTaskToolBackend = LocalTaskMetadataClient & LocalTaskDocumentBackend;
+/** The complete daemon surface needed by the nine Pi task tools. */
+export type LocalTaskToolBackend = LocalTaskMetadataClient & LocalTaskDocumentBackend & LocalTaskTemplateClient;
 type BackendResolver = () => LocalTaskToolBackend;
-/** Registers the eight daemon-backed Local Task tools for a Pi session. */
+/** Registers the nine daemon-backed Local Task tools for a Pi session. */
 export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBackend): void {
   const getBackend = createBackendResolver(backend);
 
@@ -36,6 +40,7 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
         title: titleSchema,
         description: Type.Optional(descriptionSchema),
         goal: Type.Optional(descriptionSchema),
+        context: Type.Optional(descriptionSchema),
         acceptanceCriteria: Type.Optional(
           Type.Array(Type.String({ minLength: 1, maxLength: 2_000 }), { maxItems: 50 }),
         ),
@@ -182,6 +187,25 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
         signal,
       });
       return result(`Finished task ${params.id}.`, { id: params.id, status: task.status });
+    },
+  });
+
+  pi.registerTool({
+    name: "task_template_read",
+    label: "Read Task Template",
+    description: "Read the Agent default task description template structure.",
+    parameters: Type.Object({}, { additionalProperties: false }),
+    async execute(_toolCallId, _params, signal, _onUpdate, _ctx) {
+      const templatesResult = await getBackend().getTemplates({ signal });
+      const agentTemplate =
+        templatesResult.templates.find((template) => template.id === templatesResult.agentDefaultId) ??
+        templatesResult.templates[0];
+      if (!agentTemplate)
+        return result("No task templates available.", { agentDefaultId: templatesResult.agentDefaultId });
+      return result(`Agent default template: ${agentTemplate.name}\n\n${agentTemplate.content}`, {
+        agentDefaultId: templatesResult.agentDefaultId,
+        template: agentTemplate,
+      });
     },
   });
 }

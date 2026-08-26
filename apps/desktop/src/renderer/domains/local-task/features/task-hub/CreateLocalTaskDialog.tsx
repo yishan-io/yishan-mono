@@ -27,12 +27,15 @@ import {
   createLocalTaskTag,
   linkLocalTaskWorkspace,
   loadLocalTaskTagSuggestions,
+  loadLocalTaskTemplates,
 } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskPriority } from "../../localTaskTypes";
+import { localTaskTemplateStore } from "../../state/localTaskTemplateStore";
 import { localTaskStore } from "../../state/localTaskStore";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskTagsInput } from "../tags/LocalTaskTagsInput";
 import { LocalTaskDescriptionEditor } from "./LocalTaskDescriptionEditor";
+import { LocalTaskTemplateControls } from "./LocalTaskTemplateControls";
 
 type CreateLocalTaskDialogProps = {
   open: boolean;
@@ -74,6 +77,22 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
   const [partialLinkError, setPartialLinkError] = useState<string | null>(null);
   useEffect(() => {
     if (open) void loadLocalTaskTagSuggestions();
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    let isCancelled = false;
+    const loadTemplateDescription = async () => {
+      await loadLocalTaskTemplates();
+      if (isCancelled) return;
+      const { agentDefaultId, selectedTemplateId, templates } = localTaskTemplateStore.getState();
+      const templateId = selectedTemplateId || agentDefaultId;
+      const template = templates?.find((candidate) => candidate.id === templateId);
+      setDescription(template?.content ?? "");
+    };
+    void loadTemplateDescription();
+    return () => {
+      isCancelled = true;
+    };
   }, [open]);
   const handleProjectChange = useCallback(
     (_event: React.SyntheticEvent, nextProject: WorkspaceProjectRecord | null) => setProject(nextProject),
@@ -223,6 +242,11 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
             slotProps={{ htmlInput: { "aria-label": t("localTask.fields.title") } }}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
+          />
+          <LocalTaskTemplateControls
+            description={description}
+            onDescriptionChange={setDescription}
+            disabled={isMutationLoading || Boolean(createdTask)}
           />
           <LocalTaskDescriptionEditor
             value={description}

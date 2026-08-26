@@ -172,6 +172,33 @@ describe("DaemonLocalTaskClient", () => {
     ]);
   });
 
+  it("gets and sets daemon-backed templates", async () => {
+    const templatesResult = {
+      templates: [
+        { id: "default", name: "Standard task", content: "## Goal" },
+        { id: "bug", name: "Bug", content: "## Reproduction" },
+      ],
+      agentDefaultId: "bug",
+    };
+    const invoke = vi.fn(async () => templatesResult);
+    const client = new DaemonLocalTaskClient(invoke);
+
+    await expect(client.getTemplates()).resolves.toEqual(templatesResult);
+    await expect(client.setTemplates(templatesResult)).resolves.toEqual(templatesResult);
+    expect(invoke.mock.calls).toEqual([
+      ["localTask.getTemplates", {}],
+      ["localTask.setTemplates", templatesResult],
+    ]);
+  });
+
+  it("rejects malformed template responses", async () => {
+    const client = new DaemonLocalTaskClient(
+      vi.fn(async () => ({ templates: [{ id: "default", name: "Standard task", content: 1 }], agentDefaultId: "default" })),
+    );
+
+    await expect(client.getTemplates()).rejects.toThrow("invalid Local Task template payload");
+  });
+
   it.each([
     ["array projection", []],
     ["project display array", { tasks: [], projectsById: [], total: 0 }],

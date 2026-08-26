@@ -15,6 +15,9 @@ import type {
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
   LocalTaskTagRenameResult,
+  LocalTaskTemplate,
+  LocalTaskTemplatesResult,
+  LocalTaskSetTemplatesInput,
   LocalTaskWorkspaceDisplay,
   LocalTaskWorkspaceDisplayStatus,
   LocalTaskWorkspaceLink,
@@ -121,6 +124,24 @@ function parseTask(payload: unknown): LocalTask {
 function parseTaskArray(payload: unknown): LocalTask[] {
   if (!Array.isArray(payload)) throw new TypeError("invalid Local Task list payload");
   return payload.map(parseTask);
+}
+
+function parseTemplate(payload: unknown): LocalTaskTemplate {
+  const record = requireRecord(payload, "Local Task template");
+  return {
+    id: requireString(record, "id", "Local Task template"),
+    name: requireString(record, "name", "Local Task template"),
+    content: requireString(record, "content", "Local Task template"),
+  };
+}
+
+function parseTemplatesResult(payload: unknown): LocalTaskTemplatesResult {
+  const record = requireRecord(payload, "Local Task templates");
+  if (!Array.isArray(record.templates)) throw new TypeError("invalid Local Task templates payload");
+  return {
+    templates: record.templates.map(parseTemplate),
+    agentDefaultId: requireString(record, "agentDefaultId", "Local Task templates"),
+  };
 }
 
 function parseListProjection(payload: unknown): LocalTaskListProjection {
@@ -257,6 +278,16 @@ function mapTagIDsToRefs<Input extends { tagIds?: string[] }>(
 /** Typed adapter for the daemon's complete `localTask.*` RPC namespace. */
 export class DaemonLocalTaskClient {
   constructor(private readonly invoke: InvokeFn) {}
+
+  /** Loads the user's personal task templates and agent default. */
+  async getTemplates(): Promise<LocalTaskTemplatesResult> {
+    return parseTemplatesResult(await this.invoke("localTask.getTemplates", {}));
+  }
+
+  /** Replaces the full custom task template collection and agent default. */
+  async setTemplates(input: LocalTaskSetTemplatesInput): Promise<LocalTaskTemplatesResult> {
+    return parseTemplatesResult(await this.invoke("localTask.setTemplates", input));
+  }
 
   /** Creates one Local Task. */
   async create(input: CreateLocalTaskInput): Promise<LocalTask> {

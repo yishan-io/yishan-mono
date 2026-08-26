@@ -20,7 +20,7 @@ If `YISHAN_PROJECT_ID` is set, work only with that project. Without it, work onl
 1. Read the plan before you edit.
 2. Perform one plan task at a time.
 3. Run its focused verification.
-4. Record material discoveries in `notes`.
+4. Record material discoveries in `notes` as dated, factual entries under `## Evidence and Progress`. Keep the document readable with `## Summary`, `## Decisions`, and `## Open Questions`; use `task_write` to reorganize it when needed.
 
 When a new issue appears during a workspace task, decide whether it is related. Incorporate related work into the current task. Otherwise, ask the user whether to create a separate task.
 

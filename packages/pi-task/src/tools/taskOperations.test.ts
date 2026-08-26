@@ -16,23 +16,29 @@ beforeEach(() => vi.stubEnv("YISHAN_PROJECT_ID", ""));
 afterEach(() => vi.unstubAllEnvs());
 
 describe("LocalTaskOperations", () => {
-  it("starts a new task and maps description or goal/criteria exactly", async () => {
+  it("starts a new task with separate goal, context, and acceptance-criteria sections", async () => {
     const client = createClient({ create: projectTask });
     const operations = createLocalTaskOperations(client, "project-a");
 
     await expect(
-      operations.start({ title: "Task", goal: "Ship it", acceptanceCriteria: ["Tests pass", "Lint passes"] }),
+      operations.start({
+        title: "Task",
+        goal: "Ship it",
+        context: "The release blocks customer onboarding.",
+        acceptanceCriteria: ["Tests pass", "Lint passes"],
+      }),
     ).resolves.toMatchObject({ status: "new" });
     expect(client.create).toHaveBeenCalledWith({
       title: "Task",
-      description: "Ship it\n\n## Acceptance Criteria\n\n- Tests pass\n- Lint passes",
+      description:
+        "## Goal\n\nShip it\n\n## Context\n\nThe release blocks customer onboarding.\n\n## Acceptance Criteria\n\n- Tests pass\n- Lint passes",
       priority: undefined,
       tags: undefined,
       projectId: "project-a",
     });
 
     await expect(operations.start({ title: "Task", description: "Direct", goal: "Ambiguous" })).rejects.toThrow(
-      "Provide description or goal/acceptanceCriteria",
+      "Provide description or goal/context/acceptanceCriteria",
     );
   });
 

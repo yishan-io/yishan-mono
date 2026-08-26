@@ -4,7 +4,12 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { LocalTask, LocalTaskContextDetails, LocalTaskSearchResult } from "../backend/localTaskTypes";
+import type {
+  LocalTask,
+  LocalTaskContextDetails,
+  LocalTaskSearchResult,
+  LocalTaskTemplatesResult,
+} from "../backend/localTaskTypes";
 import { type LocalTaskToolBackend, registerTaskTools } from "./registerTaskTools";
 
 type ToolResult = { content: Array<{ type: "text"; text: string }>; details: Record<string, unknown> };
@@ -23,6 +28,7 @@ const TOOL_NAMES = [
   "task_write",
   "task_append_note",
   "task_finish",
+  "task_template_read",
 ];
 let contextDirectory = "";
 let projectDirectory = "";
@@ -39,7 +45,7 @@ afterEach(async () => {
 });
 
 describe("registerTaskTools", () => {
-  it("registers exactly eight strict daemon-backed tools with the locked schemas", () => {
+  it("registers exactly nine strict daemon-backed tools with the locked schemas", () => {
     const tools = collectTools(createBackend());
 
     expect(tools.map((tool) => tool.name)).toEqual(TOOL_NAMES);
@@ -48,6 +54,7 @@ describe("registerTaskTools", () => {
     expect(properties(tools, "task_start")).not.toHaveProperty("ticket");
     expect(properties(tools, "task_start")).not.toHaveProperty("date");
     expect(properties(tools, "task_start").workspaceId).toMatchObject({ minLength: 1 });
+    expect(properties(tools, "task_start").context).toMatchObject({ minLength: 1, maxLength: 10_000 });
     expect(properties(tools, "task_finish")).not.toHaveProperty("date");
     expect(properties(tools, "task_append_note")).not.toHaveProperty("date");
     expect(properties(tools, "task_update").status).toMatchObject({ enum: ["new", "progressing", "cancelled"] });
@@ -60,6 +67,22 @@ describe("registerTaskTools", () => {
     }
     expect(properties(tools, "task_write").document).toMatchObject({ enum: ["notes", "plan", "outcome"] });
     expect(properties(tools, "task_read").id).not.toHaveProperty("pattern");
+  });
+
+  it("returns the agent default task template content", async () => {
+    const backend = createBackend();
+    const tools = collectTools(backend);
+
+    const response = await execute(tools, "task_template_read", {});
+
+    expect(response.content).toEqual([
+      { type: "text", text: "Agent default template: Agent default\n\n## Goal\n\n## Context" },
+    ]);
+    expect(response.details).toMatchObject({
+      agentDefaultId: "agent-default",
+      template: { id: "agent-default", name: "Agent default", content: "## Goal\n\n## Context" },
+    });
+    expect(backend.getTemplates).toHaveBeenCalledWith({ signal: undefined });
   });
 
   it("defers production daemon environment lookup until a tool executes", async () => {
@@ -83,6 +106,7 @@ describe("registerTaskTools", () => {
     await execute(tools, "task_start", {
       title: "New task",
       goal: "Ship",
+      context: "Customer onboarding is blocked.",
       acceptanceCriteria: ["Verify"],
       workspaceId: "workspace-1",
     });
@@ -93,8 +117,16 @@ describe("registerTaskTools", () => {
     await execute(tools, "task_write", { id: "imported/task-id", document: "plan", content: "# Plan\n" });
     await execute(tools, "task_append_note", { id: "imported/task-id", content: "Note\n" });
     await execute(tools, "task_finish", { id: "imported/task-id", outcome: "Done" });
+    await execute(tools, "task_template_read", {});
 
-    expect(backend.create).toHaveBeenCalledWith(expect.objectContaining({ title: "New task", projectId: "project-a" }));
+    expect(backend.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "New task",
+        projectId: "project-a",
+        description:
+          "## Goal\n\nShip\n\n## Context\n\nCustomer onboarding is blocked.\n\n## Acceptance Criteria\n\n- Verify",
+      }),
+    );
     expect(backend.linkWorkspace).toHaveBeenCalledWith("imported/task-id", "workspace-1");
     expect(backend.list).toHaveBeenCalledWith({ projectId: "project-a", status: "progressing" });
     expect(backend.search).toHaveBeenCalledWith("task", { projectId: "project-a", tags: ["tag"] });
@@ -166,7 +198,17 @@ function createBackend(overrides: { getResult?: LocalTask } = {}): LocalTaskTool
     update: vi.fn().mockResolvedValue({ ...localTask, status: "done" }),
     linkWorkspace: vi.fn(),
     getContextDetails: vi.fn().mockResolvedValue(details),
+    getTemplates: vi.fn().mockResolvedValue(templates()),
   } as LocalTaskToolBackend;
+}
+function templates(): LocalTaskTemplatesResult {
+  return {
+    templates: [
+      { id: "personal", name: "Personal", content: "## Personal" },
+      { id: "agent-default", name: "Agent default", content: "## Goal\n\n## Context" },
+    ],
+    agentDefaultId: "agent-default",
+  };
 }
 function task(overrides: Partial<LocalTask> = {}): LocalTask {
   return {

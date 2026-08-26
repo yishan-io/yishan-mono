@@ -197,6 +197,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	agentMgr := agentmanager.NewManager()
 	piAuth := nodeagent.NewManagedPiAuthStore()
 	contextStore := contextstore.NewStore(cfg.SettingsPath)
+	templateStore := nodelocaltask.NewTemplateStore(cfg.DataDir)
 	memorySvc := initMemoryService(cfg.DataDir, cfg.MemorySummarizer, cfg.DaemonWSEndpoint)
 
 	usage := hook.NewUsageTracker()
@@ -214,6 +215,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		WorkspaceStore:  store,
 		ProjectResolver: projectSvc,
 		Events:          events,
+		TemplateStore:   templateStore,
 		TaskContextsChanged: func() {
 			refreshTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc)
 		},

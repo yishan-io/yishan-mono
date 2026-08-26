@@ -1,16 +1,28 @@
 package rpc
 
-import "yishan/apps/cli/internal/localtask"
+import localtasktemplates "yishan/apps/cli/internal/localtask"
+
+// LocalTaskTemplatesResult is the response payload for localTask.getTemplates.
+type LocalTaskTemplatesResult struct {
+	Templates      []localtasktemplates.Template `json:"templates"`
+	AgentDefaultID string                        `json:"agentDefaultId"`
+}
+
+// LocalTaskSetTemplatesParams replaces the full custom template collection.
+type LocalTaskSetTemplatesParams struct {
+	Templates      []localtasktemplates.Template `json:"templates"`
+	AgentDefaultID string                        `json:"agentDefaultId"`
+}
 
 // LocalTaskCreateParams contains Local Task creation metadata.
 type LocalTaskCreateParams struct {
-	ProjectID      *string            `json:"projectId,omitempty"`
-	OrganizationID *string            `json:"organizationId,omitempty"`
-	Title          string             `json:"title"`
-	Description    string             `json:"description,omitempty"`
-	Priority       localtask.Priority `json:"priority,omitempty"`
-	Tags           []string           `json:"tags,omitempty"`
-	TagRefs        []localtask.TagRef `json:"tagRefs,omitempty"`
+	ProjectID      *string                     `json:"projectId,omitempty"`
+	OrganizationID *string                     `json:"organizationId,omitempty"`
+	Title          string                      `json:"title"`
+	Description    string                      `json:"description,omitempty"`
+	Priority       localtasktemplates.Priority `json:"priority,omitempty"`
+	Tags           []string                    `json:"tags,omitempty"`
+	TagRefs        []localtasktemplates.TagRef `json:"tagRefs,omitempty"`
 }
 
 // LocalTaskIDParams identifies one Local Task.
@@ -28,12 +40,12 @@ type LocalTaskListProjectionParams struct {
 
 // LocalTaskListParams contains optional Local Task filters.
 type LocalTaskListParams struct {
-	ProjectID   *string             `json:"projectId,omitempty"`
-	Status      *localtask.Status   `json:"status,omitempty"`
-	Priority    *localtask.Priority `json:"priority,omitempty"`
-	WorkspaceID *string             `json:"workspaceId,omitempty"`
-	Tags        []string            `json:"tags,omitempty"`
-	TagIDs      []string            `json:"tagIds,omitempty"`
+	ProjectID   *string                      `json:"projectId,omitempty"`
+	Status      *localtasktemplates.Status   `json:"status,omitempty"`
+	Priority    *localtasktemplates.Priority `json:"priority,omitempty"`
+	WorkspaceID *string                      `json:"workspaceId,omitempty"`
+	Tags        []string                     `json:"tags,omitempty"`
+	TagIDs      []string                     `json:"tagIds,omitempty"`
 }
 
 // LocalTaskUpdateTagColorParams changes a global Local Task tag catalog color.
@@ -63,8 +75,8 @@ type LocalTaskDeleteTagParams struct {
 
 // LocalTaskRenameTagResult reports the canonical tag and a source ID removed by a merge.
 type LocalTaskRenameTagResult struct {
-	Tag          localtask.Tag `json:"tag"`
-	RemovedTagID *string       `json:"removedTagId,omitempty"`
+	Tag          localtasktemplates.Tag `json:"tag"`
+	RemovedTagID *string                `json:"removedTagId,omitempty"`
 }
 
 // LocalTaskDeleteTagResult identifies the stable Local Task tag ID that was deleted.
@@ -74,13 +86,13 @@ type LocalTaskDeleteTagResult struct {
 
 // LocalTaskUpdateParams contains mutable Local Task metadata.
 type LocalTaskUpdateParams struct {
-	ID          string              `json:"id"`
-	Title       *string             `json:"title,omitempty"`
-	Description *string             `json:"description,omitempty"`
-	Status      *localtask.Status   `json:"status,omitempty"`
-	Priority    *localtask.Priority `json:"priority,omitempty"`
-	Tags        *[]string           `json:"tags,omitempty"`
-	TagRefs     *[]localtask.TagRef `json:"tagRefs,omitempty"`
+	ID          string                       `json:"id"`
+	Title       *string                      `json:"title,omitempty"`
+	Description *string                      `json:"description,omitempty"`
+	Status      *localtasktemplates.Status   `json:"status,omitempty"`
+	Priority    *localtasktemplates.Priority `json:"priority,omitempty"`
+	Tags        *[]string                    `json:"tags,omitempty"`
+	TagRefs     *[]localtasktemplates.TagRef `json:"tagRefs,omitempty"`
 }
 
 // LocalTaskSearchParams contains a metadata search and optional filters.
@@ -102,8 +114,8 @@ type LocalTaskLinkIDParams struct {
 
 // LocalTaskUpdateLinkStatusParams changes a workspace link lifecycle status.
 type LocalTaskUpdateLinkStatusParams struct {
-	LinkID string           `json:"linkId"`
-	Status localtask.Status `json:"status"`
+	LinkID string                    `json:"linkId"`
+	Status localtasktemplates.Status `json:"status"`
 }
 
 // LocalTaskWorkspaceIDParams identifies one local workspace.

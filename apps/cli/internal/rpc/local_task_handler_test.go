@@ -28,6 +28,12 @@ func (s *recordingLocalTaskService) GetDetails(context.Context, LocalTaskIDParam
 func (s *recordingLocalTaskService) GetContextDetails(context.Context, LocalTaskIDParams) (any, error) {
 	return s.called(MethodLocalTaskGetContextDetails)
 }
+func (s *recordingLocalTaskService) GetTaskTemplates(context.Context, struct{}) (any, error) {
+	return s.called(MethodLocalTaskGetTemplates)
+}
+func (s *recordingLocalTaskService) SetTaskTemplates(context.Context, LocalTaskSetTemplatesParams) (any, error) {
+	return s.called(MethodLocalTaskSetTemplates)
+}
 func (s *recordingLocalTaskService) List(context.Context, LocalTaskListParams) (any, error) {
 	return s.called(MethodLocalTaskList)
 }
@@ -83,6 +89,8 @@ func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 		{MethodLocalTaskGet, `{"id":"task-1"}`},
 		{MethodLocalTaskGetDetails, `{"id":"task-1"}`},
 		{MethodLocalTaskGetContextDetails, `{"id":"task-1"}`},
+		{MethodLocalTaskGetTemplates, `{}`},
+		{MethodLocalTaskSetTemplates, `{"templates":[],"agentDefaultId":"default"}`},
 		{MethodLocalTaskList, `{}`},
 		{MethodLocalTaskListProjection, `{}`},
 		{MethodLocalTaskListTags, `{}`},

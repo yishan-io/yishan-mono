@@ -13,6 +13,7 @@ const TOOL_NAMES = [
   "task_write",
   "task_append_note",
   "task_finish",
+  "task_template_read",
 ];
 const SKILL_NAMES = ["context-task", "starting-task", "executing-plans", "finishing-task"];
 const STALE_CALLER_PROVIDED_CREATION_ID =
@@ -65,7 +66,7 @@ describe("pi-task package contract", () => {
     await Promise.all(SKILL_NAMES.map((name) => access(resolve(PACKAGE_ROOT, "skills", name, "SKILL.md"))));
   });
 
-  it("documents exactly eight tools and four consistent daemon-backed skills", async () => {
+  it("documents exactly nine tools and four consistent daemon-backed skills", async () => {
     const readme = await readFile(resolve(PACKAGE_ROOT, "README.md"), "utf8");
     const skillDirectory = resolve(PACKAGE_ROOT, "skills");
     const skillFiles = await readdir(skillDirectory, { withFileTypes: true });
