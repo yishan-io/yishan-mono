@@ -715,7 +715,7 @@ describe("AgentToolCallCard", () => {
     expect(screen.getByTestId("tool-chevron-down")).toBeTruthy();
   });
 
-  describe("TaskToolCard", () => {
+  describe("task tool cards", () => {
     it("renders task_start with title and start badge", () => {
       const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
         type: "toolCall",
@@ -791,6 +791,33 @@ describe("AgentToolCallCard", () => {
       expect(screen.getByText("List tasks")).toBeTruthy();
       expect(screen.queryByText("active")).toBeNull();
       expect(screen.queryByText("completed")).toBeNull();
+    });
+
+    it("renders task_template_read with the default card's tool name, arguments, and result", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-template-read",
+        name: "task_template_read",
+        arguments: { format: "markdown" },
+      };
+      const result = {
+        id: "result-task-template-read",
+        role: "toolResult",
+        toolCallId: "tool-task-template-read",
+        toolName: "task_template_read",
+        content: "## Goal\nDescribe the expected outcome.",
+      } as AgentMessage;
+
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+      expect(screen.getByText("task_template_read")).toBeTruthy();
+      expect(screen.queryByTestId("task-tool-summary")).toBeNull();
+      expect(screen.getByText(/"format": "markdown"/)).toBeTruthy();
+      expect(screen.queryByText("## Goal")).toBeNull();
+
+      fireEvent.click(screen.getByText("task_template_read"));
+
+      expect(screen.getByText(/## Goal/)).toBeTruthy();
     });
 
     it("renders task_read with id and document badge", () => {
@@ -884,6 +911,36 @@ describe("AgentToolCallCard", () => {
 
       // Result text visible
       expect(screen.getByText(/# Add dark mode support/)).toBeTruthy();
+    });
+
+    it("renders task_update with the default card's tool name, flattened arguments, and result", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-update",
+        name: "task_update",
+        arguments: {
+          id: "dark-mode",
+          title: "Add dark mode support",
+          status: "progressing",
+        },
+      };
+      const result = {
+        id: "result-task-update",
+        role: "toolResult",
+        toolCallId: "tool-task-update",
+        toolName: "task_update",
+        content: "Task updated successfully.",
+      } as AgentMessage;
+
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+      expect(screen.getByText("task_update")).toBeTruthy();
+      expect(screen.queryByTestId("task-tool-summary")).toBeNull();
+      expect(screen.getByText(/"id": "dark-mode"/)).toBeTruthy();
+      expect(screen.getByText(/"title": "Add dark mode support"/)).toBeTruthy();
+      fireEvent.click(screen.getByText("task_update"));
+
+      expect(screen.getByText("Task updated successfully.")).toBeTruthy();
     });
 
     it("truncates long content fields in arguments grid", () => {

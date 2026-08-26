@@ -15,6 +15,8 @@ import { LocalTaskTagsInlineEditor } from "../tags/LocalTaskTagsInlineEditor";
 import { TaskDescriptionMarkdown } from "./TaskDescriptionMarkdown";
 import { WorkspaceTaskMetadataSidebar } from "./WorkspaceTaskMetadataSidebar";
 
+type WorkspaceTaskDetailsLayout = "side-by-side" | "stacked";
+
 type WorkspaceTaskDetailsProps = {
   task: LocalTask;
   context?: LocalTaskContextDetails;
@@ -27,6 +29,7 @@ type WorkspaceTaskDetailsProps = {
   showLocationMetadata?: boolean;
   showStatusAndPriority?: boolean;
   showTagsAboveDescription?: boolean;
+  layout?: WorkspaceTaskDetailsLayout;
   isMutationLoading: boolean;
   onStatusChange: (status: LocalTaskStatus) => void;
   onPriorityChange: (priority: LocalTaskPriority) => void;
@@ -52,6 +55,7 @@ export function WorkspaceTaskDetails({
   showLocationMetadata = true,
   showStatusAndPriority = true,
   showTagsAboveDescription = false,
+  layout = "side-by-side",
   isMutationLoading,
   onStatusChange,
   onPriorityChange,
@@ -77,7 +81,7 @@ export function WorkspaceTaskDetails({
         sx={{
           display: "grid",
           gap: 2,
-          gridTemplateColumns: "minmax(0, 1fr) 350px",
+          gridTemplateColumns: layout === "stacked" ? "minmax(0, 1fr)" : "minmax(0, 1fr) 350px",
           "@container (max-width: 400px)": { gridTemplateColumns: "minmax(0, 1fr)" },
         }}
       >
@@ -131,6 +135,7 @@ export function WorkspaceTaskDetails({
           showLocationMetadata={showLocationMetadata}
           showStatusAndPriority={showStatusAndPriority}
           showTags={!showTagsAboveDescription}
+          isSticky={layout === "side-by-side"}
           isMutationLoading={isMutationLoading}
           tagCatalog={tagCatalog}
           onStatusChange={onStatusChange}

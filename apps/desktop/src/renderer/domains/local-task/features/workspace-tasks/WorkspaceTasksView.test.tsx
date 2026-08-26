@@ -439,10 +439,18 @@ describe("WorkspaceTasksView", () => {
     expect(list.querySelector(":scope > div")).toBeNull();
   });
 
-  it("renders Task Context metadata in the workspace detail", () => {
+  it("stacks task content above metadata and its FileTree in the workspace detail", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
     fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
 
+    const layout = screen.getByTestId("local-task-detail-layout");
+    const metadata = screen.getByTestId("local-task-details-sidebar");
+    const taskDescription = screen.getByText("Primary details");
+    const fileTree = screen.getByTestId("task-context-file-tree");
+    expect(getComputedStyle(layout).gridTemplateColumns).toBe("minmax(0, 1fr)");
+    expect(getComputedStyle(metadata).position).toBe("static");
+    expect(taskDescription.compareDocumentPosition(metadata) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(taskDescription.compareDocumentPosition(fileTree) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText("plan.md")).toBeTruthy();
     expect(screen.getByText("notes.md")).toBeTruthy();
     expect(screen.getByText("outcome.md")).toBeTruthy();
