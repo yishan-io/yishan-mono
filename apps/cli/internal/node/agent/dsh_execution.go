@@ -30,6 +30,9 @@ func (s *Service) AgentGetCapabilities(context.Context) (any, error) {
 	}
 	health := s.deps.DSH.Health()
 	result.DSH.Configured, result.DSH.Ready = true, health.IsReady
+	if health.IsReady {
+		result.DSH.Incarnation = health.Incarnation
+	}
 	return result, nil
 }
 
@@ -298,11 +301,13 @@ func dshSessionConflict(sessionID string) error {
 }
 
 func mapDSHExecutionError(err error) error {
-	if errors.Is(err, dsh.ErrRuntimeUnavailable) || errors.Is(err, dsh.ErrSessionReplayReset) {
-		return rpc.NewRPCError(rpc.CodeServerError, "dsh runtime unavailable")
+	if errors.Is(err, context.Canceled) {
+		return err
 	}
-	if errors.Is(err, dsh.ErrRequestInterrupted) || errors.Is(err, context.Canceled) {
-		return rpc.NewRPCError(rpc.CodeServerError, "dsh request interrupted")
+	if errors.Is(err, dsh.ErrRuntimeUnavailable) || errors.Is(err, dsh.ErrRequestInterrupted) || errors.Is(err, dsh.ErrSessionReplayReset) {
+		return rpc.NewRPCErrorWithData(rpc.CodeServerError, "dsh runtime unavailable", map[string]any{
+			"code": rpc.ErrorDataCodeDSHRuntimeUnavailable,
+		})
 	}
 	var requestErr *dsh.RequestError
 	if errors.As(err, &requestErr) {
@@ -314,7 +319,9 @@ func mapDSHExecutionError(err error) error {
 		case "YISHAN_SESSION_NOT_PERSISTED":
 			return rpc.NewRPCError(rpc.CodeNotFound, "dsh session not found")
 		case "YISHAN_DURABILITY_UNAVAILABLE":
-			return rpc.NewRPCError(rpc.CodeServerError, "dsh runtime unavailable")
+			return rpc.NewRPCErrorWithData(rpc.CodeServerError, "dsh runtime unavailable", map[string]any{
+				"code": rpc.ErrorDataCodeDSHRuntimeUnavailable,
+			})
 		}
 	}
 	return rpc.NewRPCError(rpc.CodeServerError, "dsh request failed")

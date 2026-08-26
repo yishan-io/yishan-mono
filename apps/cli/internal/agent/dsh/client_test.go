@@ -258,7 +258,24 @@ func TestSupervisor_MalformedKnownNotificationKillsOnlyItsGeneration(t *testing.
 	if !errors.Is(err, ErrRequestInterrupted) {
 		t.Fatalf("ReadSession error = %v", err)
 	}
+	if health := supervisor.Health(); health.IsReady || health.Incarnation != "" {
+		t.Fatalf("health after invalid notification = %#v, want unavailable without incarnation", health)
+	}
 	waitFor(t, func() bool { return supervisor.Health().RestartCount == 1 })
+}
+
+func TestSupervisor_MalformedKnownNotificationPreservesNewerGenerationHealth(t *testing.T) {
+	supervisor := NewSupervisor(Config{})
+	stale := &runtimeProcess{pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(1)}
+	current := &runtimeProcess{pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(1)}
+	supervisor.process = current
+	supervisor.health = Health{IsReady: true, Incarnation: "dsh-2"}
+
+	supervisor.invalidateProcess(stale, errors.New("invalid notification"))
+
+	if health := supervisor.Health(); !health.IsReady || health.Incarnation != "dsh-2" {
+		t.Fatalf("health after stale invalidation = %#v, want current generation health", health)
+	}
 }
 
 func TestSequenceValidation_RejectsUnsafeValues(t *testing.T) {

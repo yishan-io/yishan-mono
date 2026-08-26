@@ -25,6 +25,23 @@ func TestSupervisor_Start_ReportsReadyAfterCompatibleInitialize(t *testing.T) {
 	}
 }
 
+func TestSupervisor_HealthClearsRuntimeIncarnationAfterExit(t *testing.T) {
+	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc-exit"), RestartLimit: 1, RestartBackoff: time.Second})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	readyIncarnation := supervisor.Health().Incarnation
+	if readyIncarnation == "" {
+		t.Fatal("ready runtime incarnation is empty")
+	}
+	_, _ = supervisor.ListSessions(context.Background(), SessionListRequest{CWD: "/workspace"})
+	waitFor(t, func() bool { return !supervisor.Health().IsReady })
+	if got := supervisor.Health().Incarnation; got != "" {
+		t.Fatalf("unavailable runtime incarnation = %q, want empty", got)
+	}
+}
+
 func TestSupervisor_Start_AcceptsReportedServerVersion(t *testing.T) {
 	supervisor := newTestSupervisor(Config{Command: helperCommand("other-version")})
 	defer supervisor.Close()
@@ -78,6 +95,10 @@ func TestSupervisor_RestartInvalidatesAndTerminatesSubscriptions(t *testing.T) {
 	if err := supervisor.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
+	initialIncarnation := supervisor.Health().Incarnation
+	if initialIncarnation == "" {
+		t.Fatal("initial runtime incarnation is empty")
+	}
 	subscription, err := supervisor.SubscribeSession(context.Background(), SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if err != nil {
 		t.Fatalf("SubscribeSession: %v", err)
@@ -87,6 +108,9 @@ func TestSupervisor_RestartInvalidatesAndTerminatesSubscriptions(t *testing.T) {
 	})
 	assertSubscriptionResetAndClosed(t, subscription.Updates)
 	waitFor(t, func() bool { return supervisor.Health().RestartCount == 1 && supervisor.Health().IsReady })
+	if restartedIncarnation := supervisor.Health().Incarnation; restartedIncarnation == "" || restartedIncarnation == initialIncarnation {
+		t.Fatalf("restarted runtime incarnation = %q, initial = %q", restartedIncarnation, initialIncarnation)
+	}
 }
 
 func assertSubscriptionResetAndClosed(t *testing.T, updates <-chan SessionUpdate) {

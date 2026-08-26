@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -41,6 +42,7 @@ type executionDSH struct {
 	promptBarrier, cancelBarrier, disposeBarrier                        *dshExecutionBarrier
 	isUndisposable                                                      bool
 	listResult                                                          dsh.SessionListResult
+	health                                                              dsh.Health
 }
 
 func (f *executionDSH) StartSession(_ context.Context, req dsh.SessionStartRequest) (dsh.SessionStartResult, error) {
@@ -125,7 +127,12 @@ func (f *executionDSH) ListSessions(context.Context, dsh.SessionListRequest) (ds
 func (f *executionDSH) ReadSession(context.Context, dsh.SessionReadRequest) (dsh.SessionReadResult, error) {
 	return dsh.SessionReadResult{}, nil
 }
-func (f *executionDSH) Health() dsh.Health { return dsh.Health{IsReady: true} }
+func (f *executionDSH) Health() dsh.Health {
+	if f.health != (dsh.Health{}) {
+		return f.health
+	}
+	return dsh.Health{IsReady: true}
+}
 
 func TestDSHExecution_RestoredSessionResumesAndRegistersSubscription(t *testing.T) {
 	runtime := &executionDSH{}
@@ -254,10 +261,28 @@ func TestAgentGetCapabilities_ReportsConfiguredAndReady(t *testing.T) {
 	if err != nil || result.(rpc.AgentCapabilitiesResult).DSH.Configured {
 		t.Fatalf("without runtime = %#v, %v", result, err)
 	}
-	with := newDSHExecutionService(&executionDSH{})
+	with := newDSHExecutionService(&executionDSH{health: dsh.Health{IsReady: true, Incarnation: "runtime-2"}})
 	result, err = with.AgentGetCapabilities(context.Background())
-	if err != nil || !result.(rpc.AgentCapabilitiesResult).DSH.Ready {
+	capabilities := result.(rpc.AgentCapabilitiesResult).DSH
+	if err != nil || !capabilities.Ready || capabilities.Incarnation != "runtime-2" {
 		t.Fatalf("with runtime = %#v, %v", result, err)
+	}
+	with.deps.DSH.(*executionDSH).health = dsh.Health{IsReady: false}
+	result, err = with.AgentGetCapabilities(context.Background())
+	if err != nil || result.(rpc.AgentCapabilitiesResult).DSH.Incarnation != "" {
+		t.Fatalf("unavailable runtime = %#v, %v", result, err)
+	}
+}
+
+func TestMapDSHExecutionError_UsesStableUnavailableContract(t *testing.T) {
+	for _, runtimeErr := range []error{dsh.ErrRuntimeUnavailable, dsh.ErrRequestInterrupted, dsh.ErrSessionReplayReset} {
+		rpcErr, ok := mapDSHExecutionError(runtimeErr).(*rpc.Error)
+		if !ok || rpcErr.Code != rpc.CodeServerError || rpcErr.Data["code"] != "DSH_RUNTIME_UNAVAILABLE" {
+			t.Fatalf("runtime error %v mapped to %#v", runtimeErr, rpcErr)
+		}
+	}
+	if got := mapDSHExecutionError(errors.Join(dsh.ErrRuntimeUnavailable, fmt.Errorf("caller stopped: %w", context.Canceled))); !errors.Is(got, context.Canceled) {
+		t.Fatalf("caller cancellation = %v, want context canceled", got)
 	}
 }
 

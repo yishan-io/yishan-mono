@@ -66,7 +66,7 @@ func asJSONID(raw json.RawMessage) any {
 func MapRPCError(err error) *RPCError {
 	var e *Error
 	if errors.As(err, &e) {
-		return &RPCError{Code: e.Code, Message: e.Message}
+		return &RPCError{Code: e.Code, Message: e.Message, Data: e.Data}
 	}
 	var computerErr *computer.Error
 	if errors.As(err, &computerErr) {

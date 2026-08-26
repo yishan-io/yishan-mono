@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/agent/dsh"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -16,16 +17,18 @@ type recordingDSHSessions struct {
 	resumeCWD  string
 	disposeCWD string
 	listResult dsh.SessionListResult
+	listErr    error
+	readErr    error
 }
 
 func (r *recordingDSHSessions) ListSessions(_ context.Context, request dsh.SessionListRequest) (dsh.SessionListResult, error) {
 	r.listCWD = request.CWD
-	return r.listResult, nil
+	return r.listResult, r.listErr
 }
 
 func (r *recordingDSHSessions) ReadSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionReadResult, error) {
 	r.readCWD = request.CWD
-	return dsh.SessionReadResult{}, nil
+	return dsh.SessionReadResult{}, r.readErr
 }
 
 func (r *recordingDSHSessions) ResumeSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionResumeResult, error) {
@@ -192,3 +195,28 @@ func (r *recordingDSHSessions) FlushSession(_ context.Context, request dsh.Sessi
 	return dsh.DurableCursor{SessionID: request.SessionID}, nil
 }
 func (r *recordingDSHSessions) Health() dsh.Health { return dsh.Health{IsReady: true} }
+
+func TestAgentInspectionRPC_MapsDSHRuntimeErrorsToStableUnavailableCode(t *testing.T) {
+	for _, operation := range []struct {
+		name    string
+		method  string
+		params  map[string]any
+		runtime *recordingDSHSessions
+	}{
+		{"list", rpc.MethodAgentListSessions, map[string]any{"runtime": "dsh", "workspaceId": "workspace", "cwd": "/workspace"}, &recordingDSHSessions{listErr: dsh.ErrRuntimeUnavailable}},
+		{"read", rpc.MethodAgentReadHistory, map[string]any{"runtime": "dsh", "sessionId": "session", "workspaceId": "workspace", "cwd": "/workspace"}, &recordingDSHSessions{readErr: dsh.ErrRuntimeUnavailable}},
+	} {
+		t.Run(operation.name, func(t *testing.T) {
+			service := newTestHandler(t)
+			service.deps.Workspace = testWorkspaceResolver(func(string) (workspace.Workspace, error) {
+				return workspace.Workspace{ID: "workspace", Path: "/workspace"}, nil
+			})
+			service.deps.DSH = operation.runtime
+			_, err := service.callAgentRPCForTest(context.Background(), nil, operation.method, mustMarshalJSON(t, operation.params))
+			var rpcErr *rpc.Error
+			if !errors.As(err, &rpcErr) || rpcErr.Data["code"] != rpc.ErrorDataCodeDSHRuntimeUnavailable {
+				t.Fatalf("RPC error = %#v, want stable DSH runtime-unavailable code", err)
+			}
+		})
+	}
+}

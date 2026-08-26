@@ -117,7 +117,27 @@ export async function removePiProvider(input: { provider: string }): Promise<{ o
 
 /** Gets daemon-owned runtime availability for new top-level agent tabs. */
 export async function getAgentCapabilities(): Promise<AgentCapabilities> {
-  return (await request("agent.getCapabilities", {})) as AgentCapabilities;
+  return parseAgentCapabilities(await request("agent.getCapabilities", {}));
+}
+
+function parseAgentCapabilities(payload: unknown): AgentCapabilities {
+  if (typeof payload !== "object" || payload === null || !("dsh" in payload)) {
+    throw new TypeError("invalid agent capabilities");
+  }
+  const { dsh } = payload as { dsh: unknown };
+  if (typeof dsh !== "object" || dsh === null) throw new TypeError("invalid agent capabilities");
+  const { configured, ready, incarnation } = dsh as {
+    configured: unknown;
+    ready: unknown;
+    incarnation?: unknown;
+  };
+  if (typeof configured !== "boolean" || typeof ready !== "boolean") {
+    throw new TypeError("invalid agent capabilities");
+  }
+  if (incarnation !== undefined && (typeof incarnation !== "string" || incarnation.trim() === "")) {
+    throw new TypeError("invalid DSH runtime incarnation");
+  }
+  return { dsh: { configured, ready, ...(incarnation === undefined ? {} : { incarnation }) } };
 }
 
 /** Starts one session in the runtime selected by the request. */

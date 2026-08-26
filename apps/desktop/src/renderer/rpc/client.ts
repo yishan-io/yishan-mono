@@ -245,8 +245,10 @@ export class DaemonRpcClient {
     if (message.error) {
       const error = new Error(message.error.message || `daemon RPC error ${message.error.code}`) as Error & {
         code?: number;
+        data?: unknown;
       };
       error.code = message.error.code;
+      error.data = message.error.data;
       pending.reject(error);
       return;
     }

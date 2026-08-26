@@ -26,6 +26,12 @@ describe("runtime-neutral agent daemon procedures", () => {
     expect(mocks.request).toHaveBeenCalledWith("agent.getCapabilities", {});
   });
 
+  it("rejects an invalid optional DSH runtime incarnation", async () => {
+    mocks.request.mockResolvedValue({ dsh: { configured: true, ready: true, incarnation: 7 } });
+
+    await expect(getAgentCapabilities()).rejects.toThrow("invalid DSH runtime incarnation");
+  });
+
   beforeEach(() => {
     mocks.request.mockReset();
   });

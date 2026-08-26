@@ -48,6 +48,7 @@ type Health struct {
 	IsReady       bool
 	RestartCount  int
 	ServerVersion string
+	Incarnation   string
 	LastError     string
 }
 
@@ -57,27 +58,29 @@ type Supervisor struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mu              sync.RWMutex
-	process         *runtimeProcess
-	startingProcess *runtimeProcess
-	startDone       chan struct{}
-	isStarting      bool
-	isClosing       bool
-	health          Health
-	nextID          uint64
+	mu                 sync.RWMutex
+	process            *runtimeProcess
+	startingProcess    *runtimeProcess
+	startDone          chan struct{}
+	isStarting         bool
+	isClosing          bool
+	health             Health
+	nextID             uint64
+	runtimeIncarnation uint64
 }
 
 type runtimeProcess struct {
-	command     *exec.Cmd
-	stdin       io.WriteCloser
-	output      *bufio.Scanner
-	done        chan struct{}
-	exitErr     error
-	writeMu     sync.Mutex
-	pendingMu   sync.Mutex
-	pending     map[uint64]chan rpcResponse
-	terminalErr error
-	replay      *replayCoordinator
+	command       *exec.Cmd
+	stdin         io.WriteCloser
+	output        *bufio.Scanner
+	done          chan struct{}
+	exitErr       error
+	writeMu       sync.Mutex
+	pendingMu     sync.Mutex
+	pending       map[uint64]chan rpcResponse
+	terminalErr   error
+	replay        *replayCoordinator
+	isInvalidated bool
 }
 
 // NewSupervisor constructs a stopped supervisor with safe lifecycle defaults.
@@ -261,8 +264,10 @@ func (s *Supervisor) markReady(process *runtimeProcess, serverVersion string) er
 	}
 	s.startingProcess = nil
 	s.process = process
+	s.runtimeIncarnation++
 	s.health.IsReady = true
 	s.health.ServerVersion = serverVersion
+	s.health.Incarnation = fmt.Sprintf("dsh-%d", s.runtimeIncarnation)
 	s.health.LastError = ""
 	s.mu.Unlock()
 	go s.drainOutput(process)
@@ -290,21 +295,26 @@ func (s *Supervisor) awaitExit(process *runtimeProcess) {
 	err := exitError(process.exitErr)
 	process.replay.invalidate()
 	process.failPending(err)
-	if s.clearExitedProcess(process) {
+	isClosing, shouldRestart := s.clearExitedProcess(process, err)
+	if isClosing || !shouldRestart {
 		return
 	}
-	s.recordFailure(err)
+	s.diagnose(err.Error())
 	s.scheduleRestart()
 }
 
-func (s *Supervisor) clearExitedProcess(process *runtimeProcess) bool {
+func (s *Supervisor) clearExitedProcess(process *runtimeProcess, err error) (bool, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	shouldRestart := process.isInvalidated
 	if s.process == process {
 		s.process = nil
 		s.health.IsReady = false
+		s.health.Incarnation = ""
+		s.health.LastError = err.Error()
+		shouldRestart = true
 	}
-	return s.isClosing
+	return s.isClosing, shouldRestart
 }
 
 func exitError(err error) error {
@@ -446,6 +456,7 @@ func (s *Supervisor) killProcess(process *runtimeProcess, prior error) error {
 func (s *Supervisor) recordFailure(err error) {
 	s.mu.Lock()
 	s.health.IsReady = false
+	s.health.Incarnation = ""
 	s.health.LastError = err.Error()
 	s.mu.Unlock()
 	s.diagnose(err.Error())

@@ -112,9 +112,23 @@ func parseExactNotification(raw json.RawMessage, target any, keys ...string) err
 	return parseNotificationParams(raw, target)
 }
 func (s *Supervisor) invalidateProcess(process *runtimeProcess, cause error) {
+	s.markProcessUnavailable(process, cause)
 	process.replay.invalidate()
 	process.failPending(cause)
 	if process.command != nil && process.command.Process != nil {
 		_ = process.command.Process.Kill()
 	}
+}
+
+func (s *Supervisor) markProcessUnavailable(process *runtimeProcess, cause error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.process != process {
+		return
+	}
+	process.isInvalidated = true
+	s.process = nil
+	s.health.IsReady = false
+	s.health.Incarnation = ""
+	s.health.LastError = cause.Error()
 }

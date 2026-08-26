@@ -304,8 +304,12 @@ describe("agentSessionRuntime.DSH", () => {
   it("recovers a restarted DSH incarnation after an unavailable durable read without Pi calls", async () => {
     mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-restarted" });
     mocks.readHistory
-      .mockRejectedValueOnce(new Error("dsh runtime unavailable"))
-      .mockRejectedValueOnce(new Error("dsh runtime unavailable"))
+      .mockRejectedValueOnce(
+        Object.assign(new Error("runtime request failed"), { data: { code: "DSH_RUNTIME_UNAVAILABLE" } }),
+      )
+      .mockRejectedValueOnce(
+        Object.assign(new Error("runtime request failed"), { data: { code: "DSH_RUNTIME_UNAVAILABLE" } }),
+      )
       .mockResolvedValueOnce({
         runtime: "dsh",
         dsh: {
@@ -353,7 +357,8 @@ describe("agentSessionRuntime.DSH", () => {
       let historyAttempts = 0;
       mocks.readHistory.mockImplementation(async () => {
         historyAttempts++;
-        if (historyAttempts <= 11) throw new Error("dsh runtime unavailable");
+        if (historyAttempts <= 11)
+          throw Object.assign(new Error("runtime request failed"), { data: { code: "DSH_RUNTIME_UNAVAILABLE" } });
         return {
           runtime: "dsh",
           dsh: {

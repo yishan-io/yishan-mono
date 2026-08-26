@@ -353,8 +353,13 @@ async function loadDSHDurableHistory(input: {
   throw lastUnavailableError;
 }
 
+const DSH_RUNTIME_UNAVAILABLE_CODE = "DSH_RUNTIME_UNAVAILABLE";
+
 function isDSHRuntimeUnavailable(error: unknown): boolean {
-  return getErrorMessage(error).toLowerCase().includes("dsh runtime unavailable");
+  if (typeof error !== "object" || error === null || !("data" in error)) return false;
+  const { data } = error as { data: unknown };
+  if (typeof data !== "object" || data === null || !("code" in data)) return false;
+  return data.code === DSH_RUNTIME_UNAVAILABLE_CODE;
 }
 
 async function adoptExistingChatSession(

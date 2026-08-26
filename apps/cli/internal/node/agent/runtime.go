@@ -140,7 +140,7 @@ func (s *Service) AgentListSessions(ctx context.Context, req rpc.AgentListSessio
 	if req.Runtime == rpc.AgentRuntimeDSH {
 		listed, err := s.ListDSHSessions(ctx, req.WorkspaceID)
 		if err != nil {
-			return nil, err
+			return nil, mapDSHExecutionError(err)
 		}
 		return rpc.AgentSessionsResult{Runtime: req.Runtime, Sessions: mapDSHSessions(listed.Sessions, workspaceInstance.Path)}, nil
 	}
@@ -164,7 +164,7 @@ func (s *Service) AgentReadHistory(ctx context.Context, req rpc.AgentReadHistory
 	if req.Runtime == rpc.AgentRuntimeDSH {
 		history, err := s.ReadDSHSession(ctx, req.WorkspaceID, req.SessionID)
 		if err != nil {
-			return nil, err
+			return nil, mapDSHExecutionError(err)
 		}
 		return rpc.AgentHistoryResult{Runtime: req.Runtime, DSH: &rpc.AgentDSHHistory{
 			Session: rpc.AgentDSHSessionMetadata{SessionID: history.Session.SessionID, CreatedAt: history.Session.CreatedAt, ParentSession: history.Session.ParentSession, AgentPreset: history.Session.AgentPreset},
