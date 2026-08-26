@@ -44,6 +44,8 @@ type executionDSH struct {
 	listResult                                                          dsh.SessionListResult
 	health                                                              dsh.Health
 	subscribeSnapshot                                                   dsh.SessionSubscribeResult
+	readResult                                                          dsh.SessionReadResult
+	reads                                                               int
 }
 
 func (f *executionDSH) StartSession(_ context.Context, req dsh.SessionStartRequest) (dsh.SessionStartResult, error) {
@@ -130,7 +132,10 @@ func (f *executionDSH) ListSessions(context.Context, dsh.SessionListRequest) (ds
 	return f.listResult, nil
 }
 func (f *executionDSH) ReadSession(context.Context, dsh.SessionReadRequest) (dsh.SessionReadResult, error) {
-	return dsh.SessionReadResult{}, nil
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.reads++
+	return f.readResult, nil
 }
 func (f *executionDSH) Health() dsh.Health {
 	if f.health != (dsh.Health{}) {
@@ -142,7 +147,7 @@ func (f *executionDSH) Health() dsh.Health {
 func TestDSHExecution_RestoredSessionResumesAndRegistersSubscription(t *testing.T) {
 	runtime := &executionDSH{}
 	service := newDSHExecutionService(runtime)
-	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "restored", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative", Resume: true}
+	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "restored", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative", Resume: true}
 	if _, err := service.AgentStart(context.Background(), nil, req); err != nil {
 		t.Fatalf("resume start: %v", err)
 	}
@@ -161,7 +166,7 @@ func TestDSHExecution_RestoredSessionResumesAndRegistersSubscription(t *testing.
 func TestDSHExecution_NewSessionStartsWithoutResume(t *testing.T) {
 	runtime := &executionDSH{}
 	service := newDSHExecutionService(runtime)
-	if _, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "new", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"}); err != nil {
+	if _, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "new", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"}); err != nil {
 		t.Fatalf("new start: %v", err)
 	}
 	runtime.mu.Lock()
@@ -175,7 +180,7 @@ func TestDSHExecution_NewSessionStartsWithoutResume(t *testing.T) {
 func TestDSHExecution_ResumeSubscriptionFailureDisposesAndReleasesIdentity(t *testing.T) {
 	runtime := &executionDSH{subscribeErr: errors.New("subscribe failed")}
 	service := newDSHExecutionService(runtime)
-	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "restored", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative", Resume: true}
+	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "restored", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative", Resume: true}
 	if _, err := service.AgentStart(context.Background(), nil, req); err == nil {
 		t.Fatal("resume succeeded despite subscribe failure")
 	}
@@ -216,7 +221,7 @@ func TestDSHExecution_NotifyFailureDetachesOnlyFailedConnectionGeneration(t *tes
 	service := newDSHExecutionService(runtime)
 	service.publishDSHUpdateError = errors.New("frontend notification failed")
 	connection, _ := newTestWSConnState(t)
-	_, err := service.AgentStart(context.Background(), connection, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"})
+	_, err := service.AgentStart(context.Background(), connection, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
@@ -251,7 +256,7 @@ func TestDSHExecution_AttachRebindsAfterClosedSubscription(t *testing.T) {
 	entry.subscription.Unsubscribe()
 	for service.dshSessions.requiresResume(entry) == false {
 	}
-	_, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: 9})
+	_, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: 9})
 	if err != nil {
 		t.Fatalf("attach: %v", err)
 	}
@@ -263,7 +268,8 @@ func TestDSHExecution_AttachRebindsAfterClosedSubscription(t *testing.T) {
 func TestAgentGetCapabilities_ReportsConfiguredAndReady(t *testing.T) {
 	without := newDSHExecutionService(nil)
 	result, err := without.AgentGetCapabilities(context.Background())
-	if err != nil || result.(rpc.AgentCapabilitiesResult).DSH.Configured {
+	withoutCapabilities := result.(rpc.AgentCapabilitiesResult).DSH
+	if err != nil || withoutCapabilities.Configured || withoutCapabilities.TranscriptProtocolVersion != rpc.DSHTranscriptProtocolVersion {
 		t.Fatalf("without runtime = %#v, %v", result, err)
 	}
 	with := newDSHExecutionService(&executionDSH{health: dsh.Health{IsReady: true, Incarnation: "runtime-2"}})
@@ -292,13 +298,13 @@ func TestMapDSHExecutionError_UsesStableUnavailableContract(t *testing.T) {
 }
 
 func newDSHExecutionService(runtime DSHSessions) *Service {
-	return NewService(Deps{DSH: runtime, Workspace: testWorkspaceResolver(func(string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: "w", Path: "/authoritative"}, nil
+	return NewService(Deps{DSH: runtime, OwnerNodeID: "node", Workspace: testWorkspaceResolver(func(string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: "w", ProjectID: "project", OrgID: "organization", Path: "/authoritative"}, nil
 	})})
 }
 func startDSHExecution(t *testing.T, service *Service) {
 	t.Helper()
-	_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"})
+	_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
@@ -309,7 +315,7 @@ func TestDSHExecution_AttachRejectsUnsafeExplicitAfterSeqBeforeDSH(t *testing.T)
 	service := newDSHExecutionService(runtime)
 	startDSHExecution(t, service)
 	for _, afterSeq := range []int64{-2, maxDSHAfterSeq} {
-		_, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: afterSeq, AfterSeqProvided: true})
+		_, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: afterSeq, AfterSeqProvided: true})
 		if rpcErr, ok := err.(*rpc.Error); !ok || rpcErr.Code != rpc.CodeInvalidParams {
 			t.Fatalf("afterSeq %d error = %v", afterSeq, err)
 		}
@@ -356,7 +362,7 @@ func TestDSHExecution_RunningSessionAcceptsSecondSteerPrompt(t *testing.T) {
 func startDSHExecutionOnConnection(t *testing.T, service *Service, connection *rpc.Connection) {
 	t.Helper()
 	_, err := service.AgentStart(context.Background(), connection, rpc.AgentStartParams{
-		Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative",
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative",
 	})
 	if err != nil {
 		t.Fatalf("start DSH: %v", err)
@@ -373,7 +379,7 @@ func TestDSHExecution_AttachReturnsMergedReplaySnapshot(t *testing.T) {
 	service := newDSHExecutionService(runtime)
 	startDSHExecution(t, service)
 	result, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{
-		Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: -1,
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: -1,
 	})
 	if err != nil {
 		t.Fatalf("attach: %v", err)
@@ -385,5 +391,13 @@ func TestDSHExecution_AttachReturnsMergedReplaySnapshot(t *testing.T) {
 	if attach.Runtime != rpc.AgentRuntimeDSH || attach.SessionID != "s" || attach.Incarnation != "inc-2" ||
 		attach.AsOfSeq != 0 || attach.DurableThroughSeq != 0 || attach.HeadSeq != 1 || len(attach.Events) != 1 {
 		t.Fatalf("attach result = %#v", attach)
+	}
+}
+
+func TestMapDSHExecutionError_MapsBindingConflictToSessionExists(t *testing.T) {
+	err := mapDSHExecutionError(&dsh.RequestError{Data: json.RawMessage(`{"code":"YISHAN_SESSION_BINDING_CONFLICT"}`)})
+	rpcErr, ok := err.(*rpc.Error)
+	if !ok || rpcErr.Code != rpc.CodeSessionExists || rpcErr.Message != "dsh session conflict" {
+		t.Fatalf("binding conflict = %#v", err)
 	}
 }

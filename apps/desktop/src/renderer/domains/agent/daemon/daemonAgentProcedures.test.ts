@@ -18,18 +18,30 @@ import {
 
 describe("runtime-neutral agent daemon procedures", () => {
   it("gets the daemon-owned DSH capability without a renderer flag", async () => {
-    mocks.request.mockResolvedValue({ dsh: { configured: true, ready: true, incarnation: "run-1" } });
+    mocks.request.mockResolvedValue({
+      dsh: { configured: true, ready: true, incarnation: "run-1", transcriptProtocolVersion: 2 },
+    });
 
     await expect(getAgentCapabilities()).resolves.toEqual({
-      dsh: { configured: true, ready: true, incarnation: "run-1" },
+      dsh: { configured: true, ready: true, incarnation: "run-1", transcriptProtocolVersion: 2 },
     });
     expect(mocks.request).toHaveBeenCalledWith("agent.getCapabilities", {});
   });
 
   it("rejects an invalid optional DSH runtime incarnation", async () => {
-    mocks.request.mockResolvedValue({ dsh: { configured: true, ready: true, incarnation: 7 } });
+    mocks.request.mockResolvedValue({
+      dsh: { configured: true, ready: true, incarnation: 7, transcriptProtocolVersion: 2 },
+    });
 
     await expect(getAgentCapabilities()).rejects.toThrow("invalid DSH runtime incarnation");
+  });
+
+  it("rejects an unsupported DSH transcript protocol", async () => {
+    mocks.request.mockResolvedValue({
+      dsh: { configured: true, ready: true, incarnation: "run-1", transcriptProtocolVersion: 1 },
+    });
+
+    await expect(getAgentCapabilities()).rejects.toThrow("unsupported DSH transcript protocol");
   });
 
   beforeEach(() => {
@@ -66,6 +78,38 @@ describe("runtime-neutral agent daemon procedures", () => {
       ["agent.prompt", expect.objectContaining({ message: { text: "Hello" }, streamingBehavior: "steer" })],
       ["agent.abort", { runtime: "pi", sessionId: "session-1", workspaceId: "workspace-1", cwd: "/workspace" }],
       ["agent.dispose", { runtime: "pi", sessionId: "session-1", workspaceId: "workspace-1", cwd: "/workspace" }],
+    ]);
+  });
+
+  it("adds the negotiated transcript version to DSH transcript requests", async () => {
+    mocks.request.mockResolvedValueOnce({ runtime: "dsh", sessionId: "session-1" }).mockResolvedValueOnce({
+      runtime: "dsh",
+      sessionId: "session-1",
+      incarnation: "run-1",
+      events: [],
+      asOfSeq: -1,
+      durableThroughSeq: -1,
+      headSeq: -1,
+    });
+
+    await startAgentSession({
+      runtime: "dsh",
+      sessionId: "session-1",
+      tabId: "tab-1",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+    });
+    await attachAgentSession({
+      runtime: "dsh",
+      sessionId: "session-1",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      afterSeq: -1,
+    });
+
+    expect(mocks.request.mock.calls).toEqual([
+      ["agent.start", expect.objectContaining({ runtime: "dsh", transcriptProtocolVersion: 2 })],
+      ["agent.attach", expect.objectContaining({ runtime: "dsh", transcriptProtocolVersion: 2 })],
     ]);
   });
 
@@ -107,7 +151,16 @@ describe("runtime-neutral agent daemon procedures", () => {
 
     expect(mocks.request.mock.calls).toEqual([
       ["agent.listSessions", { runtime: "dsh", workspaceId: "workspace-1", cwd: "/workspace" }],
-      ["agent.readHistory", { runtime: "dsh", sessionId: "session-1", workspaceId: "workspace-1", cwd: "/workspace" }],
+      [
+        "agent.readHistory",
+        {
+          runtime: "dsh",
+          sessionId: "session-1",
+          workspaceId: "workspace-1",
+          cwd: "/workspace",
+          transcriptProtocolVersion: 2,
+        },
+      ],
     ]);
   });
 

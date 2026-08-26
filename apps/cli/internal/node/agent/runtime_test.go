@@ -18,15 +18,19 @@ func TestService_AgentStartDispatchesToDSHRuntime(t *testing.T) {
 	runtime := &recordingDSHSessions{}
 	service := NewService(Deps{
 		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-			return workspace.Workspace{ID: workspaceID, Path: "/workspace"}, nil
+			return workspace.Workspace{ID: workspaceID, ProjectID: "project", OrgID: "organization", Path: "/workspace"}, nil
 		}),
-		DSH: runtime,
+		DSH:         runtime,
+		OwnerNodeID: "node",
 	})
 	_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{
-		Runtime: rpc.AgentRuntimeDSH, SessionID: "session-1", TabID: "tab-1", WorkspaceID: "workspace-1", CWD: "/workspace",
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "session-1", TabID: "tab-1", WorkspaceID: "workspace-1", CWD: "/workspace",
 	})
 	if err != nil {
 		t.Fatalf("AgentStart: %v", err)
+	}
+	if got := runtime.startRequest.Binding; got != (dsh.SessionBinding{Version: 1, WorkspaceID: "workspace-1", ProjectID: "project", OrganizationID: "organization", OwnerNodeID: "node", CWD: "/workspace"}) {
+		t.Fatalf("start binding = %#v", got)
 	}
 }
 
@@ -49,7 +53,7 @@ func TestService_AgentInspectionDispatchesToAuthorizedRuntime(t *testing.T) {
 		t.Fatalf("response = %#v, runtime cwd = %q", response, runtime.listCWD)
 	}
 	historyResult, err := service.AgentReadHistory(context.Background(), rpc.AgentReadHistoryParams{
-		Runtime: rpc.AgentRuntimeDSH, SessionID: "dsh-1", WorkspaceID: "workspace-1", CWD: "/authorized/workspace",
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "dsh-1", WorkspaceID: "workspace-1", CWD: "/authorized/workspace",
 	})
 	if err != nil {
 		t.Fatalf("AgentReadHistory: %v", err)
@@ -71,7 +75,7 @@ func TestService_AgentExecutionMethodsRequireDSHRegistryOwnership(t *testing.T) 
 		call func() error
 	}{
 		{"attach", func() error {
-			_, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/w"})
+			_, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", WorkspaceID: "w", CWD: "/w"})
 			return err
 		}},
 		{"prompt", func() error {

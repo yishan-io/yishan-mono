@@ -8,40 +8,46 @@ type AgentRuntime string
 const (
 	AgentRuntimePi  AgentRuntime = "pi"
 	AgentRuntimeDSH AgentRuntime = "dsh"
+
+	// DSHTranscriptProtocolVersion is the only transcript projection supported at the renderer boundary.
+	DSHTranscriptProtocolVersion = 2
 )
 
 // AgentStartParams starts a runtime-neutral agent session.
 type AgentStartParams struct {
-	Runtime     AgentRuntime `json:"runtime"`
-	SessionID   string       `json:"sessionId"`
-	TabID       string       `json:"tabId"`
-	PaneID      string       `json:"paneId,omitempty"`
-	WorkspaceID string       `json:"workspaceId"`
-	CWD         string       `json:"cwd"`
-	Resume      bool         `json:"resume,omitempty"`
+	Runtime                   AgentRuntime `json:"runtime"`
+	SessionID                 string       `json:"sessionId"`
+	TabID                     string       `json:"tabId"`
+	PaneID                    string       `json:"paneId,omitempty"`
+	WorkspaceID               string       `json:"workspaceId"`
+	CWD                       string       `json:"cwd"`
+	Resume                    bool         `json:"resume,omitempty"`
+	TranscriptProtocolVersion int          `json:"transcriptProtocolVersion,omitempty"`
 }
 
 // AgentAttachParams attaches a client connection to an existing session.
 type AgentAttachParams struct {
-	Runtime          AgentRuntime `json:"runtime"`
-	SessionID        string       `json:"sessionId"`
-	TabID            string       `json:"tabId,omitempty"`
-	WorkspaceID      string       `json:"workspaceId"`
-	CWD              string       `json:"cwd"`
-	AfterSeq         int64        `json:"afterSeq,omitempty"`
-	AfterSeqProvided bool         `json:"-"`
+	Runtime                   AgentRuntime `json:"runtime"`
+	SessionID                 string       `json:"sessionId"`
+	TabID                     string       `json:"tabId,omitempty"`
+	WorkspaceID               string       `json:"workspaceId"`
+	CWD                       string       `json:"cwd"`
+	AfterSeq                  int64        `json:"afterSeq,omitempty"`
+	AfterSeqProvided          bool         `json:"-"`
+	TranscriptProtocolVersion int          `json:"transcriptProtocolVersion,omitempty"`
 }
 
 // UnmarshalJSON distinguishes an omitted DSH replay cursor from an explicit
 // zero cursor. Omitted cursors begin before the transcript at -1.
 func (p *AgentAttachParams) UnmarshalJSON(raw []byte) error {
 	var wire struct {
-		Runtime     AgentRuntime `json:"runtime"`
-		SessionID   string       `json:"sessionId"`
-		TabID       string       `json:"tabId"`
-		WorkspaceID string       `json:"workspaceId"`
-		CWD         string       `json:"cwd"`
-		AfterSeq    *int64       `json:"afterSeq"`
+		Runtime                   AgentRuntime `json:"runtime"`
+		SessionID                 string       `json:"sessionId"`
+		TabID                     string       `json:"tabId"`
+		WorkspaceID               string       `json:"workspaceId"`
+		CWD                       string       `json:"cwd"`
+		AfterSeq                  *int64       `json:"afterSeq"`
+		TranscriptProtocolVersion int          `json:"transcriptProtocolVersion"`
 	}
 	if err := json.Unmarshal(raw, &wire); err != nil {
 		return err
@@ -49,6 +55,7 @@ func (p *AgentAttachParams) UnmarshalJSON(raw []byte) error {
 	p.Runtime, p.SessionID, p.TabID = wire.Runtime, wire.SessionID, wire.TabID
 	p.WorkspaceID, p.CWD = wire.WorkspaceID, wire.CWD
 	p.AfterSeqProvided = wire.AfterSeq != nil
+	p.TranscriptProtocolVersion = wire.TranscriptProtocolVersion
 	p.AfterSeq = 0
 	if wire.AfterSeq != nil {
 		p.AfterSeq = *wire.AfterSeq
@@ -86,10 +93,11 @@ type AgentListSessionsParams struct {
 
 // AgentReadHistoryParams reads the durable history for one session.
 type AgentReadHistoryParams struct {
-	Runtime     AgentRuntime `json:"runtime"`
-	SessionID   string       `json:"sessionId"`
-	WorkspaceID string       `json:"workspaceId"`
-	CWD         string       `json:"cwd"`
+	Runtime                   AgentRuntime `json:"runtime"`
+	SessionID                 string       `json:"sessionId"`
+	WorkspaceID               string       `json:"workspaceId"`
+	CWD                       string       `json:"cwd"`
+	TranscriptProtocolVersion int          `json:"transcriptProtocolVersion,omitempty"`
 }
 
 // AgentStartResult is the stable start response shared by agent runtimes.
@@ -103,9 +111,10 @@ type AgentCapabilitiesResult struct {
 	DSH AgentDSHCapabilities `json:"dsh"`
 }
 type AgentDSHCapabilities struct {
-	Configured  bool   `json:"configured"`
-	Ready       bool   `json:"ready"`
-	Incarnation string `json:"incarnation,omitempty"`
+	Configured                bool   `json:"configured"`
+	Ready                     bool   `json:"ready"`
+	Incarnation               string `json:"incarnation,omitempty"`
+	TranscriptProtocolVersion int    `json:"transcriptProtocolVersion"`
 }
 
 // AgentAckResult is the stable acknowledgement for session mutations.

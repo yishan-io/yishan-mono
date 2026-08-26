@@ -17,9 +17,18 @@ import {
 
 describe("Yishan DSH execution contracts", () => {
   it("accepts exact cwd-scoped start, text-only prompt, cancel, and flush contracts", () => {
-    expect(parseSessionStartRequest({ cwd: "/workspace", sessionId: "session-1" })).toEqual({
+    const binding = {
+      version: 1,
+      workspaceId: "workspace-1",
+      projectId: "",
+      organizationId: "",
+      ownerNodeId: "node-1",
+      cwd: "/workspace",
+    };
+    expect(parseSessionStartRequest({ cwd: "/workspace", sessionId: "session-1", binding })).toEqual({
       cwd: "/workspace",
       sessionId: "session-1",
+      binding,
     });
     expect(parseSessionStartResult({ sessionId: "session-1", incarnation: "run-1" }, "session-1")).toEqual({
       sessionId: "session-1",
@@ -219,6 +228,20 @@ describe("Yishan DSH execution contracts", () => {
   it("requires exact nonempty cwd for every execution request", () => {
     expect(() => parseSessionStartRequest({ sessionId: "session-1" })).toThrow("unsupported fields");
     expect(() =>
+      parseSessionStartRequest({
+        cwd: "/workspace",
+        sessionId: "session-1",
+        binding: {
+          version: 1,
+          workspaceId: "workspace-1",
+          projectId: "",
+          organizationId: "",
+          ownerNodeId: "node-1",
+          cwd: "/other",
+        },
+      }),
+    ).toThrow("binding.cwd must equal cwd");
+    expect(() =>
       parseSessionPromptRequest({ sessionId: "session-1", contentBlocks: [{ type: "text", text: "Hello" }] }),
     ).toThrow("unsupported fields");
     expect(() => parseSessionCancelRequest({ sessionId: "session-1" })).toThrow("unsupported fields");
@@ -227,7 +250,20 @@ describe("Yishan DSH execution contracts", () => {
       "unsupported fields",
     );
     expect(() => parseSessionFlushRequest({ sessionId: "session-1" })).toThrow("unsupported fields");
-    expect(() => parseSessionStartRequest({ cwd: "", sessionId: "session-1" })).toThrow("cwd is required");
+    expect(() =>
+      parseSessionStartRequest({
+        cwd: "",
+        sessionId: "session-1",
+        binding: {
+          version: 1,
+          workspaceId: "workspace-1",
+          projectId: "",
+          organizationId: "",
+          ownerNodeId: "node-1",
+          cwd: "",
+        },
+      }),
+    ).toThrow("cwd is required");
   });
 
   it("rejects sequence values below the empty-session sentinel in isolation", () => {

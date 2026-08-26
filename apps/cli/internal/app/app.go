@@ -265,6 +265,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	agentSvc = nodeagent.NewService(nodeagent.Deps{
 		Workspace:         workspaceSvc,
 		DSH:               dshSessionsFor(dshSupervisor),
+		OwnerNodeID:       cfg.NodeID,
 		AgentMgr:          agentMgr,
 		PIAuth:            piAuth,
 		ModelList:         modelList,

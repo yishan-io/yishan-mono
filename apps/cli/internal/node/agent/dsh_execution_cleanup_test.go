@@ -68,7 +68,7 @@ func TestDSHExecution_PromptAbortDisposeAdmissionsBlockWorkspaceCleanup(t *testi
 func TestDSHExecution_RetryStartCollisionRetainsQuarantinedIdentity(t *testing.T) {
 	runtime := &executionDSH{subscribeErr: errors.New("subscribe failed"), isUndisposable: true}
 	service := newDSHExecutionService(runtime)
-	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"}
+	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"}
 	if _, err := service.AgentStart(context.Background(), nil, req); err == nil {
 		t.Fatal("initial start succeeded despite subscribe failure")
 	}
@@ -89,7 +89,7 @@ func TestDSHExecution_RetryStartCollisionRetainsQuarantinedIdentity(t *testing.T
 func TestDSHExecution_QuarantinedRetrySerializesOnlyDSHStart(t *testing.T) {
 	runtime := &executionDSH{subscribeErr: errors.New("subscribe failed"), isUndisposable: true}
 	service := newDSHExecutionService(runtime)
-	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"}
+	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"}
 	if _, err := service.AgentStart(context.Background(), nil, req); err == nil {
 		t.Fatal("initial start succeeded despite subscribe failure")
 	}
@@ -138,7 +138,7 @@ func TestDSHExecution_WorkspaceCleanupRetainsRegisteredUndisposedSession(t *test
 func TestDSHExecution_ListedCleanupReleasesQuarantinedIdentityOnlyAfterDisposal(t *testing.T) {
 	runtime := &executionDSH{subscribeErr: errors.New("subscribe failed"), isUndisposable: true}
 	service := newDSHExecutionService(runtime)
-	_, _ = service.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"})
+	_, _ = service.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"})
 	runtime.subscribeErr, runtime.isUndisposable = nil, false
 	runtime.listResult = dsh.SessionListResult{Sessions: []dsh.SessionListEntry{{SessionID: "s", Live: true}}}
 	if err := service.stopDSHWorkspaceSessions(context.Background(), "w"); err != nil {
@@ -152,7 +152,7 @@ func TestDSHExecution_ListedCleanupReleasesQuarantinedIdentityOnlyAfterDisposal(
 func TestDSHExecution_ConcurrentQuarantinedRetriesStartOnlyOneSession(t *testing.T) {
 	runtime := &executionDSH{subscribeErr: errors.New("subscribe failed"), isUndisposable: true}
 	service := newDSHExecutionService(runtime)
-	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"}
+	req := rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative"}
 	if _, err := service.AgentStart(context.Background(), nil, req); err == nil {
 		t.Fatal("initial start succeeded despite subscribe failure")
 	}
@@ -221,7 +221,7 @@ func TestDSHExecution_ResetPublicationMakesRacingAttachResumeBeforeSubscribe(t *
 	attachDone := make(chan error, 1)
 	go func() {
 		_, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{
-			Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: 1,
+			Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: 1,
 		})
 		attachDone <- err
 	}()
@@ -265,7 +265,7 @@ func TestDSHExecution_ConcurrentSameIDPiAndDSHExecutionDisposeIndependently(t *t
 	go func() {
 		<-start
 		_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{
-			Runtime: rpc.AgentRuntimeDSH, SessionID: "same", TabID: "dsh-tab", WorkspaceID: "w", CWD: workspacePath,
+			Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "same", TabID: "dsh-tab", WorkspaceID: "w", CWD: workspacePath,
 		})
 		results <- err
 	}()

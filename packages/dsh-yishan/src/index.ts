@@ -18,6 +18,19 @@ export {
 } from "./capabilityRequest";
 export { parseDurableCursor, type DurableCursor } from "./durableCursor";
 export {
+  isYishanSessionBoundEvent,
+  isYishanSessionSummaryEvent,
+  isYishanSessionTitleEvent,
+  parseSessionBoundData,
+  registerYishanSessionEventTypes,
+  parseSessionSummaryData,
+  parseSessionTitleData,
+  type SessionBoundData,
+  type SessionGenerationUsage,
+  type SessionSummaryData,
+  type SessionTitleData,
+} from "./sessionBindingContracts";
+export {
   parseSessionCancelRequest,
   parseSessionCancelResult,
   parseSessionFlushRequest,

@@ -190,6 +190,7 @@ export type AgentCapabilities = {
     configured: boolean;
     ready: boolean;
     incarnation?: string;
+    transcriptProtocolVersion: number;
   };
 };
 

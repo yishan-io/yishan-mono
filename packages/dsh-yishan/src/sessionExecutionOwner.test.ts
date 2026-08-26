@@ -1,15 +1,54 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { type FakeSession, createDeferred, createHarness } from "./sessionExecutionOwner.testSupport";
+import { BINDING, type FakeSession, createDeferred, createHarness } from "./sessionExecutionOwner.testSupport";
 
 const CWD = "/workspace";
 
 describe("YishanSessionExecutionOwner", () => {
+  it("appends and flushes the exact bound event before reporting start success", async () => {
+    const harness = createHarness();
+
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+
+    expect(harness.sessions.get("one")?.events).toEqual([{ seq: 0, type: "yishan/session-bound.v1", data: BINDING }]);
+    expect(harness.flush).toHaveBeenCalledOnce();
+  });
+  it("retries an exact binding without appending a duplicate", async () => {
+    const harness = createHarness();
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+
+    expect(harness.sessions.get("one")?.events).toHaveLength(1);
+  });
+
+  it("rejects a mismatched or missing binding on a retry", async () => {
+    const harness = createHarness();
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+
+    await expect(
+      harness.owner.start({ cwd: CWD, sessionId: "one", binding: { ...BINDING, ownerNodeId: "other-node" } }),
+    ).rejects.toMatchObject({ code: "YISHAN_SESSION_BINDING_CONFLICT" });
+    harness.sessions.get("one")?.events.shift();
+    await expect(harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING })).rejects.toMatchObject({
+      code: "YISHAN_SESSION_BINDING_CONFLICT",
+    });
+  });
+
+  it("rejects start when the required initial binding flush is unavailable", async () => {
+    const harness = createHarness();
+    harness.flush.mockResolvedValueOnce(false);
+
+    await expect(harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING })).rejects.toMatchObject({
+      code: "YISHAN_DURABILITY_UNAVAILABLE",
+    });
+    expect(harness.handles.get("one")?.dispose).toHaveBeenCalledOnce();
+  });
+
   it("coalesces same-id starts and creates with the exact requested cwd", async () => {
     const harness = createHarness();
     await Promise.all([
-      harness.owner.start({ cwd: CWD, sessionId: "one" }),
-      harness.owner.start({ cwd: CWD, sessionId: "one" }),
+      harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING }),
+      harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING }),
     ]);
     expect(harness.create).toHaveBeenCalledOnce();
     expect(harness.create.mock.calls[0]?.[0]).toMatchObject({ sessionId: "one", meta: { cwd: CWD } });
@@ -18,18 +57,27 @@ describe("YishanSessionExecutionOwner", () => {
   it("rejects a stock-owned collision instead of taking it over", async () => {
     const harness = createHarness();
     harness.agents.set("one", {
-      session: { id: "one", header: { id: "one", version: 0, createdAt: 1, cwd: CWD }, seq: 0, events: [] },
+      session: {
+        id: "one",
+        header: { id: "one", version: 0, createdAt: 1, cwd: CWD },
+        seq: 0,
+        events: [],
+        append(type: string, data: unknown) {
+          this.events.push({ seq: this.seq, type, data });
+          this.seq += 1;
+        },
+      },
       followup: vi.fn(),
       cancel: vi.fn(),
     });
-    await expect(harness.owner.start({ cwd: CWD, sessionId: "one" })).rejects.toMatchObject({
+    await expect(harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING })).rejects.toMatchObject({
       code: "YISHAN_SESSION_COLLISION",
     });
   });
 
   it("cancels an owned agent without disposing it", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     await expect(harness.owner.cancel({ cwd: CWD, sessionId: "one" })).resolves.toEqual({
       sessionId: "one",
       cancelled: true,
@@ -40,23 +88,23 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("captures a conservative watermark before a flush that appends another event", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     const session = harness.sessions.get("one") as FakeSession;
-    session.events.push({ seq: 0, type: "turn/end" });
-    session.seq = 1;
+    session.events.push({ seq: 1, type: "turn/end" });
+    session.seq = 2;
     harness.flush.mockImplementationOnce(async () => {
       session.events.push({ seq: 1, type: "turn/end" });
       session.seq = 2;
       return true;
     });
     await expect(harness.owner.flushSession({ cwd: CWD, sessionId: "one" })).resolves.toMatchObject({
-      durableThroughSeq: 0,
+      durableThroughSeq: 1,
     });
   });
 
   it("rejects a flush without a durability listener", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     harness.flush.mockResolvedValueOnce(false);
     await expect(harness.owner.flushSession({ cwd: CWD, sessionId: "one" })).rejects.toMatchObject({
       code: "YISHAN_DURABILITY_UNAVAILABLE",
@@ -65,10 +113,10 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("reads only the physical durable snapshot and excludes a speculative live event", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     const session = harness.sessions.get("one") as FakeSession;
-    session.events.push({ seq: 0, type: "turn/end" });
-    session.seq = 1;
+    session.events.push({ seq: 1, type: "turn/end" });
+    session.seq = 2;
     harness.readFrom.mockResolvedValueOnce({
       meta: { id: "one", cwd: CWD, createdAt: 1 },
       events: [],
@@ -86,10 +134,10 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("returns a previously speculative event after its separate flush persists it", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     const session = harness.sessions.get("one") as FakeSession;
-    session.events.push({ seq: 0, type: "turn/end" });
-    session.seq = 1;
+    session.events.push({ seq: 1, type: "turn/end" });
+    session.seq = 2;
     harness.readFrom.mockResolvedValueOnce({ meta: { id: "one", cwd: CWD, createdAt: 1 }, events: [] } as never);
     await harness.owner.readDurableSession({ cwd: CWD, sessionId: "one" });
 
@@ -115,18 +163,19 @@ describe("YishanSessionExecutionOwner", () => {
     });
   });
 
-  it("returns an owned empty live session's native header without materializing persistence", async () => {
+  it("reads the durable bound event after a live session is created", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+    harness.readFrom.mockResolvedValueOnce({
+      meta: { id: "one", cwd: CWD, createdAt: 1 },
+      events: [{ seq: 0, type: "yishan/session-bound.v1", data: BINDING }],
+    } as never);
 
     await expect(harness.owner.readDurableSession({ cwd: CWD, sessionId: "one" })).resolves.toMatchObject({
-      session: { id: "one", cwd: CWD },
-      events: [],
-      incarnation: "test-run",
-      asOfSeq: -1,
-      durableThroughSeq: -1,
+      events: [{ seq: 0, type: "yishan/session-bound.v1", data: BINDING }],
+      asOfSeq: 0,
+      durableThroughSeq: 0,
     });
-    expect(harness.readFrom).not.toHaveBeenCalled();
   });
 
   it("rejects a durable snapshot whose persisted workspace differs", async () => {
@@ -152,10 +201,10 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("rejects an owned live subscription whose durable baseline misses the pre-flush target", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     const session = harness.sessions.get("one") as FakeSession;
-    session.events.push({ seq: 0, type: "turn/end" });
-    session.seq = 1;
+    session.events.push({ seq: 1, type: "turn/end" });
+    session.seq = 2;
     harness.readFrom.mockResolvedValueOnce({ meta: { cwd: CWD }, events: [] });
 
     await expect(harness.owner.subscribe({ cwd: CWD, sessionId: "one", afterSeq: -1 })).rejects.toMatchObject({
@@ -190,7 +239,7 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("rejects workspace mismatches before a prompt reaches the agent", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     await expect(
       harness.owner.prompt({ cwd: "/other", sessionId: "one", contentBlocks: [{ type: "text", text: "no" }] }),
     ).rejects.toMatchObject({ code: "YISHAN_SESSION_WORKSPACE_MISMATCH" });
@@ -204,11 +253,15 @@ describe("YishanSessionExecutionOwner", () => {
       async ({ sessionId, meta }) =>
         await new Promise((resolveCreate) => {
           releaseCreate = () => {
-            const session = {
+            const session: FakeSession = {
               id: sessionId,
               header: { id: sessionId, version: 0, createdAt: 1, cwd: meta.cwd },
               seq: 0,
               events: [],
+              append(type: string, data: unknown) {
+                this.events.push({ seq: this.seq, type, data });
+                this.seq += 1;
+              },
             };
             const agent = { session, followup: vi.fn(), cancel: vi.fn() };
             const handle = { agent, dispose: vi.fn(async () => undefined) };
@@ -219,7 +272,7 @@ describe("YishanSessionExecutionOwner", () => {
           };
         }),
     );
-    const start = harness.owner.start({ cwd: CWD, sessionId: "one" });
+    const start = harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     const dispose = harness.owner.disposeSession({ cwd: CWD, sessionId: "one" });
     releaseCreate?.();
     await start;
@@ -229,15 +282,21 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("uses the persisted durable tail when an event arrives while subscribe reads", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     const session = harness.sessions.get("one") as FakeSession;
-    session.events.push({ seq: 0, type: "turn/end" });
-    session.seq = 1;
-    harness.readFrom.mockResolvedValueOnce({ meta: { cwd: CWD }, events: [{ seq: 0, type: "turn/end" }] as never });
+    session.events.push({ seq: 1, type: "turn/end" });
+    session.seq = 2;
+    harness.readFrom.mockResolvedValueOnce({
+      meta: { cwd: CWD },
+      events: [
+        { seq: 0, type: "yishan/session-bound.v1", data: BINDING },
+        { seq: 1, type: "turn/end" },
+      ] as never,
+    });
     await expect(harness.owner.subscribe({ cwd: CWD, sessionId: "one", afterSeq: -1 })).resolves.toMatchObject({
-      asOfSeq: 0,
-      durableThroughSeq: 0,
-      headSeq: 0,
+      asOfSeq: 1,
+      durableThroughSeq: 1,
+      headSeq: 1,
     });
   });
 
@@ -245,13 +304,24 @@ describe("YishanSessionExecutionOwner", () => {
     const harness = createHarness();
     const deferred = createDeferred<Awaited<ReturnType<typeof harness.create>>>();
     harness.create.mockImplementationOnce(async () => await deferred.promise);
-    const start = harness.owner.start({ cwd: CWD, sessionId: "one" });
-    await expect(harness.owner.start({ cwd: "/other", sessionId: "one" })).rejects.toMatchObject({
+    const start = harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+    await expect(
+      harness.owner.start({ cwd: "/other", sessionId: "one", binding: { ...BINDING, cwd: "/other" } }),
+    ).rejects.toMatchObject({
       code: "YISHAN_SESSION_WORKSPACE_MISMATCH",
     });
     deferred.resolve({
       agent: {
-        session: { id: "one", header: { id: "one", version: 0, createdAt: 1, cwd: CWD }, seq: 0, events: [] },
+        session: {
+          id: "one",
+          header: { id: "one", version: 0, createdAt: 1, cwd: CWD },
+          seq: 0,
+          events: [],
+          append(type: string, data: unknown) {
+            this.events.push({ seq: this.seq, type, data });
+            this.seq += 1;
+          },
+        },
         followup: vi.fn(),
         cancel: vi.fn(),
       },
@@ -262,7 +332,7 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("uses the owned handle cwd for a stock prompt without comparing an undefined caller cwd", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     await expect(harness.owner.stockPrompt("one", [{ type: "text", text: "hello" }])).resolves.toMatchObject({
       messageId: expect.any(String),
     });
@@ -271,7 +341,8 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("flushes the exact owned handle before disposal and coalesces concurrent disposal", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+    harness.flush.mockClear();
     const flushDeferred = createDeferred<boolean>();
     harness.flush.mockImplementationOnce(async () => await flushDeferred.promise);
 
@@ -287,7 +358,8 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("serializes an active flush, final disposal flush, and handle disposal", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+    harness.flush.mockClear();
     const activeFlush = createDeferred<boolean>();
     const flushOrder: string[] = [];
     let concurrentFlushes = 0;
@@ -326,7 +398,7 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("keeps ownership claimed and rejects operations until disposal settles", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     const deferred = createDeferred<void>();
     harness.handles.get("one")?.dispose.mockImplementationOnce(async () => await deferred.promise);
     const disposing = harness.owner.disposeSession({ cwd: CWD, sessionId: "one" });
@@ -343,7 +415,7 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("rejects a conflicting cwd while a flush is coalescing behind a barrier", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     const deferred = createDeferred<boolean>();
     harness.flush.mockImplementationOnce(async () => await deferred.promise);
     const flushing = harness.owner.flushSession({ cwd: CWD, sessionId: "one" });
@@ -356,8 +428,9 @@ describe("YishanSessionExecutionOwner", () => {
 
   it("waits for a pre-admitted disposal before shutting down remaining owned handles", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
-    await harness.owner.start({ cwd: CWD, sessionId: "two" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+    await harness.owner.start({ cwd: CWD, sessionId: "two", binding: BINDING });
+    harness.flush.mockClear();
     const firstFlush = createDeferred<boolean>();
     harness.flush.mockImplementationOnce(async () => await firstFlush.promise);
 
@@ -378,14 +451,22 @@ describe("YishanSessionExecutionOwner", () => {
     const harness = createHarness();
     const mismatchedHandle = {
       agent: {
-        session: { id: "other", header: { id: "one", version: 0, createdAt: 1, cwd: CWD }, seq: 0, events: [] },
+        session: {
+          id: "other",
+          header: { id: "one", version: 0, createdAt: 1, cwd: CWD },
+          seq: 0,
+          events: [],
+          append() {
+            throw new Error("append must not be called for an identity mismatch");
+          },
+        },
         followup: vi.fn(),
         cancel: vi.fn(),
       },
       dispose: vi.fn(async () => undefined),
     };
     harness.create.mockResolvedValueOnce(mismatchedHandle);
-    await expect(harness.owner.start({ cwd: CWD, sessionId: "one" })).rejects.toMatchObject({
+    await expect(harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING })).rejects.toMatchObject({
       code: "YISHAN_SESSION_COLLISION",
     });
     expect(mismatchedHandle.dispose).toHaveBeenCalledOnce();

@@ -56,6 +56,8 @@ type Deps struct {
 
 	// DSH serves account-scoped DSH session operations when the feature is enabled.
 	DSH DSHSessions
+	// OwnerNodeID identifies this daemon in authoritative DSH session bindings.
+	OwnerNodeID string
 
 	// AgentLifecycleCtx bounds pi agent process lifetimes.
 	AgentLifecycleCtx context.Context

@@ -19,6 +19,17 @@ import type {
   TextPromptContentBlock,
 } from "./executionContracts";
 import { YISHAN_NOTIFICATIONS } from "./protocol";
+import { type SessionBoundData, registerYishanSessionEventTypes } from "./sessionBindingContracts";
+import { appendSessionBinding, hasMatchingSessionBinding, hasSameSessionBinding } from "./sessionBindingOwner";
+import type {
+  AgentHandle,
+  CwdTask,
+  DurableSessionSnapshot,
+  InitializeOptions,
+  LiveSession,
+  YishanSessionExecutionDependencies,
+} from "./sessionExecutionOwnerContracts";
+export type { DurableSessionSnapshot, YishanSessionExecutionDependencies } from "./sessionExecutionOwnerContracts";
 
 /** Failures raised while operating on a Yishan-owned live DSH session. */
 export class YishanSessionExecutionError extends Error {
@@ -28,7 +39,8 @@ export class YishanSessionExecutionError extends Error {
     | "YISHAN_SESSION_COLLISION"
     | "YISHAN_SESSION_DISPOSING"
     | "YISHAN_SESSION_WORKSPACE_MISMATCH"
-    | "YISHAN_SESSION_REPLAY_RESET_REQUIRED";
+    | "YISHAN_SESSION_REPLAY_RESET_REQUIRED"
+    | "YISHAN_SESSION_BINDING_CONFLICT";
 
   /** Creates one typed execution failure. */
   constructor(message: string, code: YishanSessionExecutionError["code"]) {
@@ -37,46 +49,6 @@ export class YishanSessionExecutionError extends Error {
     this.code = code;
   }
 }
-
-type LiveSession = { id: string; header: SessionHeader; seq: number; events: readonly SequencedSessionEvent[] };
-type LiveAgent = {
-  session: LiveSession;
-  options?: { provider?: string; model?: string; maxTokens?: number };
-  followup(message: ReturnType<typeof createUserMessage>): void;
-  cancel(cause: { kind: "user" }, options: { keepInbox: true }): void;
-};
-type AgentHandle = { agent: LiveAgent; dispose(): Promise<void> };
-type CwdTask<T> = { cwd: string; task: Promise<T> };
-
-/** Immutable physical persistence snapshot used for transcript reset recovery. */
-export type DurableSessionSnapshot = {
-  session: SessionHeader;
-  events: readonly SessionEvent[];
-  incarnation: string;
-  asOfSeq: number;
-  durableThroughSeq: number;
-};
-
-/** DSH services and output required by the Yishan session execution owner. */
-export type YishanSessionExecutionDependencies = {
-  agents: {
-    get(sessionId: string): LiveAgent | undefined;
-    create(options: {
-      sessionId: string;
-      meta: { cwd: string };
-      agentOptions?: InitializeOptions;
-    }): Promise<AgentHandle>;
-    resume(options: { resumeSessionId: string; agentOptions?: InitializeOptions }): Promise<AgentHandle>;
-  };
-  sessions: { get(sessionId: string): LiveSession | undefined; flush(session: LiveSession): Promise<boolean> };
-  sessionPersistence: {
-    readFrom(sessionId: string, fromSeq: number): Promise<{ meta: SessionHeader; events: SessionEvent[] }>;
-  };
-  notify(method: string, params: DurableCursor): void;
-  incarnation?: string;
-};
-
-type InitializeOptions = { provider?: string; model?: string; maxTokens?: number };
 
 /** Owns all Yishan-created or resumed DSH agent handles for one runtime incarnation. */
 export class YishanSessionExecutionOwner {
@@ -90,6 +62,7 @@ export class YishanSessionExecutionOwner {
 
   /** Creates the owner and mints its opaque process-local incarnation. */
   constructor(private readonly dependencies: YishanSessionExecutionDependencies) {
+    registerYishanSessionEventTypes();
     this.incarnation = dependencies.incarnation ?? `yishan-${randomBytes(24).toString("hex")}`;
   }
 
@@ -131,7 +104,7 @@ export class YishanSessionExecutionOwner {
   /** Creates one Yishan-owned session with the caller's exact workspace cwd. */
   async start(request: SessionStartRequest): Promise<SessionStartResult> {
     this.requireAdmitted();
-    await this.getOrCreate(request.sessionId, request.cwd, "start");
+    await this.getOrCreate(request.sessionId, request.cwd, "start", request.binding);
     return { sessionId: request.sessionId, incarnation: this.incarnation };
   }
 
@@ -255,15 +228,22 @@ export class YishanSessionExecutionOwner {
     return this.handles.has(sessionId) || this.creations.has(sessionId) || this.disposals.has(sessionId);
   }
 
-  private async getOrCreate(sessionId: string, cwd: string, operation: "start" | "resume"): Promise<AgentHandle> {
+  private async getOrCreate(
+    sessionId: string,
+    cwd: string,
+    operation: "start" | "resume",
+    binding?: SessionBoundData,
+  ): Promise<AgentHandle> {
     const owned = this.handles.get(sessionId);
     if (owned !== undefined) {
       this.requireCwd(owned.agent.session, { sessionId, cwd });
+      if (operation === "start") this.requireMatchingBinding(owned.agent.session, binding);
       return owned;
     }
     const creating = this.creations.get(sessionId);
     if (creating !== undefined) {
       this.requireTaskCwd(creating, cwd);
+      if (operation === "start") this.requireMatchingBindingData(creating.binding, binding);
       return await creating.task;
     }
     if (this.disposals.has(sessionId)) throw this.disposingError();
@@ -273,8 +253,8 @@ export class YishanSessionExecutionOwner {
     ) {
       throw new YishanSessionExecutionError("session is owned by stock DSH", "YISHAN_SESSION_COLLISION");
     }
-    const task = this.createAndRetain(sessionId, cwd, operation);
-    this.creations.set(sessionId, { cwd, task });
+    const task = this.createAndRetain(sessionId, cwd, operation, binding);
+    this.creations.set(sessionId, { cwd, binding, task });
     try {
       return await task;
     } finally {
@@ -282,7 +262,12 @@ export class YishanSessionExecutionOwner {
     }
   }
 
-  private async createAndRetain(sessionId: string, cwd: string, operation: "start" | "resume"): Promise<AgentHandle> {
+  private async createAndRetain(
+    sessionId: string,
+    cwd: string,
+    operation: "start" | "resume",
+    binding?: SessionBoundData,
+  ): Promise<AgentHandle> {
     if (operation === "resume") {
       const persisted = await this.dependencies.sessionPersistence.readFrom(sessionId, 0);
       this.requirePersistedCwd(persisted.meta.cwd, { sessionId, cwd });
@@ -299,12 +284,39 @@ export class YishanSessionExecutionOwner {
         );
       }
       this.requireCwd(handle.agent.session, { sessionId, cwd });
+      if (operation === "start") await this.appendAndFlushBinding(handle.agent.session, binding);
       this.handles.set(sessionId, handle);
       return handle;
     } catch (error) {
       await handle.dispose();
       throw error;
     }
+  }
+
+  private async appendAndFlushBinding(session: LiveSession, binding: SessionBoundData | undefined): Promise<void> {
+    const result = await appendSessionBinding(
+      session,
+      binding,
+      async (boundSession) => await this.dependencies.sessions.flush(boundSession as LiveSession),
+    );
+    if (result === "conflict") throw this.bindingConflictError();
+    if (result === "unavailable") {
+      throw new YishanSessionExecutionError(
+        "no session durability listener is installed",
+        "YISHAN_DURABILITY_UNAVAILABLE",
+      );
+    }
+  }
+
+  private requireMatchingBinding(session: LiveSession, binding: SessionBoundData | undefined): void {
+    if (!hasMatchingSessionBinding(session, binding)) throw this.bindingConflictError();
+  }
+
+  private requireMatchingBindingData(
+    existing: SessionBoundData | undefined,
+    binding: SessionBoundData | undefined,
+  ): void {
+    if (!hasSameSessionBinding(existing, binding)) throw this.bindingConflictError();
   }
 
   private async getOrStartFlush(request: SessionFlushRequest): Promise<DurableCursor> {
@@ -468,6 +480,13 @@ export class YishanSessionExecutionOwner {
     return new YishanSessionExecutionError(
       "session replay cursor is no longer available; reset the transcript",
       "YISHAN_SESSION_REPLAY_RESET_REQUIRED",
+    );
+  }
+
+  private bindingConflictError(): YishanSessionExecutionError {
+    return new YishanSessionExecutionError(
+      "session binding conflicts with existing session",
+      "YISHAN_SESSION_BINDING_CONFLICT",
     );
   }
 

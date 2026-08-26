@@ -4,6 +4,19 @@ import { YishanSessionExecutionOwner } from "./sessionExecutionOwner";
 
 export const CWD = "/workspace";
 
+export const BINDING = {
+  version: 1 as const,
+  workspaceId: "workspace-1",
+  projectId: "",
+  organizationId: "",
+  ownerNodeId: "node-1",
+  cwd: CWD,
+};
+
+export function createStartRequest(sessionId: string, cwd = CWD) {
+  return { ...BINDING, cwd, sessionId, binding: { ...BINDING, cwd } };
+}
+
 export function createDeferred<T>() {
   let resolve: (value: T) => void;
   const promise = new Promise<T>((resolvePromise) => {
@@ -16,7 +29,8 @@ export type FakeSession = {
   id: string;
   header: { id: string; version: number; createdAt: number; cwd?: string };
   seq: number;
-  events: { seq: number; type: string }[];
+  events: { seq: number; type: string; data?: unknown }[];
+  append(type: string, data: unknown): void;
 };
 
 export function createHarness() {
@@ -31,11 +45,15 @@ export function createHarness() {
   >();
   const create = vi.fn(
     async ({ sessionId, meta }: { sessionId: string; meta: { cwd: string }; agentOptions?: unknown }) => {
-      const session = {
+      const session: FakeSession = {
         id: sessionId,
         header: { id: sessionId, version: 0, createdAt: 1, cwd: meta.cwd },
         seq: 0,
         events: [],
+        append(type: string, data: unknown) {
+          this.events.push({ seq: this.seq, type, data });
+          this.seq += 1;
+        },
       };
       const agent = { session, followup: vi.fn(), cancel: vi.fn() };
       const handle = { agent, dispose: vi.fn(async () => undefined) };

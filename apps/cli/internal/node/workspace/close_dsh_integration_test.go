@@ -27,7 +27,7 @@ func TestCloseLifecycle_DSHOperationBarrierDisposesOnlyClosedWorkspace(t *testin
 		t.Fatalf("start supervisor: %v", err)
 	}
 	t.Cleanup(func() { _ = supervisor.Close() })
-	agents := nodeagent.NewService(nodeagent.Deps{Workspace: svc, DSH: supervisor, AgentMgr: agentmanager.NewManager()})
+	agents := nodeagent.NewService(nodeagent.Deps{Workspace: svc, DSH: supervisor, OwnerNodeID: "node-1", AgentMgr: agentmanager.NewManager()})
 	t.Cleanup(agents.Shutdown)
 	wireRealAgentCleanup(svc, agents)
 	startCloseDSHSession(t, svc, agents, "unrelated-session", "unrelated", unrelatedPath)
@@ -94,7 +94,7 @@ func startCloseDSHSession(t *testing.T, svc *Service, agents *nodeagent.Service,
 	if workspaceEntry.Path != cwd {
 		t.Fatalf("workspace cwd = %q, request cwd = %q", workspaceEntry.Path, cwd)
 	}
-	_, err := agents.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, SessionID: sessionID, TabID: sessionID, WorkspaceID: workspaceID, CWD: cwd})
+	_, err := agents.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: sessionID, TabID: sessionID, WorkspaceID: workspaceID, CWD: cwd})
 	if err != nil {
 		t.Fatalf("start %s: %v", sessionID, err)
 	}
@@ -133,7 +133,7 @@ func startWorkspaceClose(svc *Service) <-chan error {
 func assertLateDSHStartRejectedForWorkspaceClosing(t *testing.T, agents *nodeagent.Service, cwd string) {
 	t.Helper()
 	_, err := agents.AgentStart(context.Background(), nil, rpc.AgentStartParams{
-		Runtime: rpc.AgentRuntimeDSH, SessionID: "late-session", TabID: "late-session", WorkspaceID: "matching", CWD: cwd,
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "late-session", TabID: "late-session", WorkspaceID: "matching", CWD: cwd,
 	})
 	rpcErr, ok := err.(*rpc.Error)
 	if !ok || rpcErr.Code != rpc.CodeNotFound || rpcErr.Message != "workspace is closing: matching" {
@@ -163,7 +163,7 @@ func assertCloseDSHResults(t *testing.T, agents *nodeagent.Service, matchingPath
 
 func assertClosedDSHSessionRejected(t *testing.T, agents *nodeagent.Service, cwd string) {
 	t.Helper()
-	_, err := agents.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "matching-session", WorkspaceID: "matching", CWD: cwd, AfterSeq: -1})
+	_, err := agents.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "matching-session", WorkspaceID: "matching", CWD: cwd, AfterSeq: -1})
 	if err == nil {
 		t.Fatal("post-close attach succeeded")
 	}
@@ -172,7 +172,7 @@ func assertClosedDSHSessionRejected(t *testing.T, agents *nodeagent.Service, cwd
 func assertLiveDSHSessionAttachable(t *testing.T, agents *nodeagent.Service, sessionID, workspaceID, cwd string) {
 	t.Helper()
 	_, err := agents.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{
-		Runtime: rpc.AgentRuntimeDSH, SessionID: sessionID, WorkspaceID: workspaceID, CWD: cwd, AfterSeq: -1,
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: sessionID, WorkspaceID: workspaceID, CWD: cwd, AfterSeq: -1,
 	})
 	if err != nil {
 		t.Fatalf("unrelated DSH session %q was stopped: %v", sessionID, err)

@@ -24,6 +24,9 @@ func (s *Service) AgentStart(ctx context.Context, connection *rpc.Connection, re
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId and tabId are required")
 	}
 	if req.Runtime == rpc.AgentRuntimeDSH {
+		if err := validateDSHTranscriptProtocol(req.TranscriptProtocolVersion); err != nil {
+			return nil, err
+		}
 		return s.startDSH(ctx, connection, req)
 	}
 	_, err = s.Start(ctx, connection, rpc.PiStartParams{
@@ -46,6 +49,9 @@ func (s *Service) AgentAttach(ctx context.Context, connection *rpc.Connection, r
 		return nil, err
 	}
 	if req.Runtime == rpc.AgentRuntimeDSH {
+		if err := validateDSHTranscriptProtocol(req.TranscriptProtocolVersion); err != nil {
+			return nil, err
+		}
 		return s.attachDSH(ctx, connection, req)
 	}
 	if err := s.waitForPiStart(ctx, req.SessionID); err != nil {
@@ -162,13 +168,20 @@ func (s *Service) AgentReadHistory(ctx context.Context, req rpc.AgentReadHistory
 		return nil, err
 	}
 	if req.Runtime == rpc.AgentRuntimeDSH {
+		if err := validateDSHTranscriptProtocol(req.TranscriptProtocolVersion); err != nil {
+			return nil, err
+		}
 		history, err := s.ReadDSHSession(ctx, req.WorkspaceID, req.SessionID)
 		if err != nil {
 			return nil, mapDSHExecutionError(err)
 		}
+		projectedEvents, err := projectDSHHistoryEvents(history.Events)
+		if err != nil {
+			return nil, mapDSHTranscriptProtocolError(err)
+		}
 		return rpc.AgentHistoryResult{Runtime: req.Runtime, DSH: &rpc.AgentDSHHistory{
 			Session: rpc.AgentDSHSessionMetadata{SessionID: history.Session.SessionID, CreatedAt: history.Session.CreatedAt, ParentSession: history.Session.ParentSession, AgentPreset: history.Session.AgentPreset},
-			Events:  history.Events, Incarnation: history.Incarnation, AsOfSeq: history.AsOfSeq,
+			Events:  projectedEvents, Incarnation: history.Incarnation, AsOfSeq: history.AsOfSeq,
 			DurableThroughSeq: history.DurableThroughSeq,
 		}}, nil
 	}
@@ -322,4 +335,17 @@ func validateAgentRuntime(runtime rpc.AgentRuntime) error {
 		return rpc.NewRPCError(rpc.CodeInvalidParams, "runtime must be pi or dsh")
 	}
 	return nil
+}
+
+func validateDSHTranscriptProtocol(version int) error {
+	if version != rpc.DSHTranscriptProtocolVersion {
+		return mapDSHTranscriptProtocolError(errDSHTranscriptProtocolUnavailable)
+	}
+	return nil
+}
+
+func mapDSHTranscriptProtocolError(error) error {
+	return rpc.NewRPCErrorWithData(rpc.CodeServerError, "dsh transcript protocol unavailable", map[string]any{
+		"code": rpc.ErrorDataCodeDSHTranscriptProtocolUnavailable,
+	})
 }

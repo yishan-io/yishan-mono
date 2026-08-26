@@ -1,26 +1,28 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { YISHAN_NOTIFICATIONS } from "./protocol";
-import { CWD, type FakeSession, createDeferred, createHarness } from "./sessionExecutionOwner.testSupport";
+import { BINDING, CWD, type FakeSession, createDeferred, createHarness } from "./sessionExecutionOwner.testSupport";
 
 describe("YishanSessionExecutionOwner subscribe", () => {
   it("returns an empty live baseline before lazy persistence materializes", async () => {
     const harness = createHarness();
-    harness.readFrom.mockRejectedValueOnce(new Error("session not found"));
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
+    harness.readFrom.mockResolvedValueOnce({
+      meta: { id: "one", cwd: CWD },
+      events: [{ seq: 0, type: "yishan/session-bound.v1", data: BINDING }],
+    } as never);
 
     await expect(harness.owner.subscribe({ cwd: CWD, sessionId: "one", afterSeq: -1 })).resolves.toMatchObject({
-      events: [],
-      asOfSeq: -1,
-      durableThroughSeq: -1,
-      headSeq: -1,
+      events: [{ seq: 0, type: "yishan/session-bound.v1", data: BINDING }],
+      asOfSeq: 0,
+      durableThroughSeq: 0,
+      headSeq: 0,
     });
-    expect(harness.readFrom).not.toHaveBeenCalled();
   });
 
   it("rejects cursor zero for an empty durable session instead of echoing it", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
 
     await expect(harness.owner.subscribe({ cwd: CWD, sessionId: "one", afterSeq: 0 })).rejects.toMatchObject({
       code: "YISHAN_SESSION_REPLAY_RESET_REQUIRED",
@@ -61,10 +63,10 @@ describe("YishanSessionExecutionOwner subscribe", () => {
 
   it("reports physical durable cursors while live events append during and after the read", async () => {
     const harness = createHarness();
-    await harness.owner.start({ cwd: CWD, sessionId: "one" });
+    await harness.owner.start({ cwd: CWD, sessionId: "one", binding: BINDING });
     const session = harness.sessions.get("one") as FakeSession;
-    session.events.push({ seq: 0, type: "turn/end" });
-    session.seq = 1;
+    session.events.push({ seq: 1, type: "turn/end" });
+    session.seq = 2;
     const persistedSnapshot = createDeferred<{ meta: { cwd: string }; events: FakeSession["events"] }>();
     harness.readFrom.mockImplementationOnce(async () => await persistedSnapshot.promise);
 
@@ -72,13 +74,22 @@ describe("YishanSessionExecutionOwner subscribe", () => {
     await vi.waitFor(() => expect(harness.readFrom).toHaveBeenCalledWith("one", 0));
     session.events.push({ seq: 1, type: "turn/end" });
     session.seq = 2;
-    persistedSnapshot.resolve({ meta: { cwd: CWD }, events: [{ seq: 0, type: "turn/end" }] });
+    persistedSnapshot.resolve({
+      meta: { cwd: CWD },
+      events: [
+        { seq: 0, type: "yishan/session-bound.v1", data: BINDING },
+        { seq: 1, type: "turn/end" },
+      ],
+    });
 
     await expect(subscribing).resolves.toMatchObject({
-      events: [{ seq: 0, type: "turn/end" }],
-      asOfSeq: 0,
-      durableThroughSeq: 0,
-      headSeq: 0,
+      events: [
+        { seq: 0, type: "yishan/session-bound.v1", data: BINDING },
+        { seq: 1, type: "turn/end" },
+      ],
+      asOfSeq: 1,
+      durableThroughSeq: 1,
+      headSeq: 1,
     });
 
     session.events.push({ seq: 2, type: "turn/end" });

@@ -148,10 +148,34 @@ describe("Yishan execution routing", () => {
       disposeSession: vi.fn(),
     };
     const handle = createSessionHandler({ ...dependencies, execution });
-    await expect(handle("yishan.v1.session.start", { cwd: WORKSPACE_CWD, sessionId: "session-1" })).resolves.toEqual({
+    await expect(
+      handle("yishan.v1.session.start", {
+        cwd: WORKSPACE_CWD,
+        sessionId: "session-1",
+        binding: {
+          version: 1,
+          workspaceId: "workspace-1",
+          projectId: "",
+          organizationId: "",
+          ownerNodeId: "node-1",
+          cwd: WORKSPACE_CWD,
+        },
+      }),
+    ).resolves.toEqual({
       sessionId: "session-1",
       incarnation: "run-1",
     });
-    expect(execution.start).toHaveBeenCalledWith({ cwd: WORKSPACE_CWD, sessionId: "session-1" });
+    expect(execution.start).toHaveBeenCalledWith({
+      cwd: WORKSPACE_CWD,
+      sessionId: "session-1",
+      binding: {
+        version: 1,
+        workspaceId: "workspace-1",
+        projectId: "",
+        organizationId: "",
+        ownerNodeId: "node-1",
+        cwd: WORKSPACE_CWD,
+      },
+    });
   });
 });

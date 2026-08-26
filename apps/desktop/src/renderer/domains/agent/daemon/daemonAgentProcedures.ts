@@ -17,6 +17,7 @@ import type {
   AgentListSessionsRequest,
   AgentPromptRequest,
   AgentReadHistoryRequest,
+  AgentRuntime,
   AgentSessionsResult,
   AgentStartRequest,
   AgentStartResult,
@@ -117,6 +118,8 @@ export async function removePiProvider(input: { provider: string }): Promise<{ o
 
 // ─── runtime-neutral agent ───────────────────────────────────────────────────
 
+const DSH_TRANSCRIPT_PROTOCOL_VERSION = 2;
+
 /** Gets daemon-owned runtime availability for new top-level agent tabs. */
 export async function getAgentCapabilities(): Promise<AgentCapabilities> {
   return parseAgentCapabilities(await request("agent.getCapabilities", {}));
@@ -128,10 +131,11 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
   }
   const { dsh } = payload as { dsh: unknown };
   if (typeof dsh !== "object" || dsh === null) throw new TypeError("invalid agent capabilities");
-  const { configured, ready, incarnation } = dsh as {
+  const { configured, ready, incarnation, transcriptProtocolVersion } = dsh as {
     configured: unknown;
     ready: unknown;
     incarnation?: unknown;
+    transcriptProtocolVersion?: unknown;
   };
   if (typeof configured !== "boolean" || typeof ready !== "boolean") {
     throw new TypeError("invalid agent capabilities");
@@ -139,17 +143,27 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
   if (incarnation !== undefined && (typeof incarnation !== "string" || incarnation.trim() === "")) {
     throw new TypeError("invalid DSH runtime incarnation");
   }
-  return { dsh: { configured, ready, ...(incarnation === undefined ? {} : { incarnation }) } };
+  if (transcriptProtocolVersion !== DSH_TRANSCRIPT_PROTOCOL_VERSION) {
+    throw new TypeError("unsupported DSH transcript protocol");
+  }
+  return {
+    dsh: {
+      configured,
+      ready,
+      ...(incarnation === undefined ? {} : { incarnation }),
+      transcriptProtocolVersion,
+    },
+  };
 }
 
 /** Starts one session in the runtime selected by the request. */
 export async function startAgentSession(input: AgentStartRequest): Promise<AgentStartResult> {
-  return (await request("agent.start", input)) as AgentStartResult;
+  return (await request("agent.start", withDSHTranscriptProtocol(input))) as AgentStartResult;
 }
 
 /** Attaches the current daemon connection to one existing agent session. */
 export async function attachAgentSession(input: AgentAttachRequest): Promise<AgentAttachResult> {
-  return parseAgentAttachResult(await request("agent.attach", input), input);
+  return parseAgentAttachResult(await request("agent.attach", withDSHTranscriptProtocol(input)), input);
 }
 
 /** Sends one semantic prompt to an agent session. */
@@ -174,7 +188,17 @@ export async function listAgentRuntimeSessions(input: AgentListSessionsRequest):
 
 /** Reads durable history without interpreting runtime-specific event payloads. */
 export async function readAgentRuntimeHistory(input: AgentReadHistoryRequest): Promise<AgentHistoryResult> {
-  return parseAgentHistoryResult(await request("agent.readHistory", input), input);
+  return parseAgentHistoryResult(await request("agent.readHistory", withDSHTranscriptProtocol(input)), input);
+}
+
+function withDSHTranscriptProtocol<T extends { runtime: AgentRuntime }>(
+  input: T,
+):
+  | T
+  | (T & {
+      transcriptProtocolVersion: number;
+    }) {
+  return input.runtime === "dsh" ? { ...input, transcriptProtocolVersion: DSH_TRANSCRIPT_PROTOCOL_VERSION } : input;
 }
 
 // ─── agent ───────────────────────────────────────────────────────────────────

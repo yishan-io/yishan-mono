@@ -1,4 +1,5 @@
 import { type DurableCursor, parseDurableCursor } from "./durableCursor";
+import { type SessionBoundData, parseSessionBoundData } from "./sessionBindingContracts";
 import {
   type WireRecord,
   requireExactRecord,
@@ -13,7 +14,9 @@ export type SessionExecutionRequest = {
 };
 
 /** Exact request to start one identified DSH session. */
-export type SessionStartRequest = SessionExecutionRequest;
+export type SessionStartRequest = SessionExecutionRequest & {
+  binding: SessionBoundData;
+};
 
 /** Exact request to cancel one identified DSH session. */
 export type SessionCancelRequest = SessionExecutionRequest;
@@ -78,7 +81,11 @@ export type TranscriptResetNotification = {
 
 /** Parses the exact workspace-scoped request shape shared by start, cancel, and flush. */
 export function parseSessionStartRequest(payload: unknown): SessionStartRequest {
-  return parseSessionExecutionRequest(payload, "session start request");
+  const request = requireExactRecord(payload, "session start request", ["cwd", "sessionId", "binding"]);
+  const cwd = requireNonEmptyString(request, "cwd");
+  const binding = parseSessionBoundData(request.binding);
+  if (binding.cwd !== cwd) throw new TypeError("binding.cwd must equal cwd");
+  return { cwd, sessionId: requireNonEmptyString(request, "sessionId"), binding };
 }
 
 /** Parses the exact session-start receipt and checks its requested identity. */

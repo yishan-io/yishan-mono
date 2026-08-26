@@ -36,6 +36,17 @@ func validateExecutionRequest(request SessionExecutionRequest) error {
 	}
 	return nil
 }
+
+func validateStartRequest(request SessionStartRequest) error {
+	if err := validateExecutionRequest(SessionExecutionRequest{CWD: request.CWD, SessionID: request.SessionID}); err != nil {
+		return err
+	}
+	binding := request.Binding
+	if binding.Version != 1 || binding.WorkspaceID == "" || binding.OwnerNodeID == "" || binding.CWD != request.CWD {
+		return errors.New("DSH session start requires an authoritative binding")
+	}
+	return nil
+}
 func validatePromptRequest(request SessionPromptRequest) error {
 	if err := validateExecutionRequest(SessionExecutionRequest{CWD: request.CWD, SessionID: request.SessionID}); err != nil {
 		return err

@@ -12,6 +12,14 @@ const desktopDirectory = resolve(scriptDirectory, "..");
 const runtimePath = resolve(desktopDirectory, ".dsh-smoke", "dsh-runtime-smoke.mjs");
 const cwd = "/dsh-runtime-smoke";
 const sessionId = "smoke-session";
+const binding = {
+  version: 1,
+  workspaceId: "smoke-workspace",
+  projectId: "",
+  organizationId: "",
+  ownerNodeId: "smoke-node",
+  cwd,
+};
 const rpcDeadlineMilliseconds = 10_000;
 const terminationGraceMilliseconds = 2_000;
 const terminationKillDeadlineMilliseconds = 2_000;
@@ -223,11 +231,15 @@ async function startAndPersist(dataDirectory) {
   const client = new JsonRpcChild(dataDirectory);
   try {
     await initialize(client);
-    const started = await client.request("yishan.v1.session.start", { cwd, sessionId });
+    const started = await client.request("yishan.v1.session.start", { cwd, sessionId, binding });
     assert.equal(started.sessionId, sessionId);
 
-    const empty = await client.request("yishan.v1.session.subscribe", { cwd, sessionId, afterSeq: -1 });
-    assert.deepEqual(getEvents(empty), []);
+    const bound = await client.request("yishan.v1.session.subscribe", { cwd, sessionId, afterSeq: -1 });
+    const boundEvents = getEvents(bound);
+    assert.equal(boundEvents.length, 1);
+    assert.equal(boundEvents[0]?.seq, 0);
+    assert.equal(boundEvents[0]?.type, "yishan/session-bound.v1");
+    assert.deepEqual(boundEvents[0]?.data, binding);
 
     const prompt = await client.request("yishan.v1.session.prompt", {
       cwd,

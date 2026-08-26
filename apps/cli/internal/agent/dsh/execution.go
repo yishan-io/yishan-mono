@@ -20,7 +20,24 @@ type SessionExecutionRequest struct {
 	CWD       string `json:"cwd"`
 	SessionID string `json:"sessionId"`
 }
-type SessionStartRequest = SessionExecutionRequest
+
+// SessionBinding is the authoritative workspace ownership record persisted as
+// sequence zero for newly created Yishan sessions.
+type SessionBinding struct {
+	Version        int    `json:"version"`
+	WorkspaceID    string `json:"workspaceId"`
+	ProjectID      string `json:"projectId"`
+	OrganizationID string `json:"organizationId"`
+	OwnerNodeID    string `json:"ownerNodeId"`
+	CWD            string `json:"cwd"`
+}
+
+// SessionStartRequest creates a session with its authoritative ownership binding.
+type SessionStartRequest struct {
+	CWD       string         `json:"cwd"`
+	SessionID string         `json:"sessionId"`
+	Binding   SessionBinding `json:"binding"`
+}
 type SessionCancelRequest = SessionExecutionRequest
 type SessionFlushRequest = SessionExecutionRequest
 
@@ -95,7 +112,7 @@ type SessionSubscription struct {
 }
 
 func (s *Supervisor) StartSession(ctx context.Context, request SessionStartRequest) (SessionStartResult, error) {
-	if err := validateExecutionRequest(request); err != nil {
+	if err := validateStartRequest(request); err != nil {
 		return SessionStartResult{}, err
 	}
 	var response sessionStartWireResult

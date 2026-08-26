@@ -12,13 +12,14 @@ import (
 )
 
 type recordingDSHSessions struct {
-	listCWD    string
-	readCWD    string
-	resumeCWD  string
-	disposeCWD string
-	listResult dsh.SessionListResult
-	listErr    error
-	readErr    error
+	listCWD      string
+	readCWD      string
+	resumeCWD    string
+	disposeCWD   string
+	startRequest dsh.SessionStartRequest
+	listResult   dsh.SessionListResult
+	listErr      error
+	readErr      error
 }
 
 func (r *recordingDSHSessions) ListSessions(_ context.Context, request dsh.SessionListRequest) (dsh.SessionListResult, error) {
@@ -180,6 +181,7 @@ func TestService_DSHSessionMethodsRejectClosedWorkspaceBeforeRuntimeCall(t *test
 }
 
 func (r *recordingDSHSessions) StartSession(_ context.Context, request dsh.SessionStartRequest) (dsh.SessionStartResult, error) {
+	r.startRequest = request
 	return dsh.SessionStartResult{SessionID: request.SessionID, Incarnation: "test-incarnation"}, nil
 }
 func (r *recordingDSHSessions) PromptSession(context.Context, dsh.SessionPromptRequest) (dsh.SessionPromptResult, error) {
@@ -204,7 +206,7 @@ func TestAgentInspectionRPC_MapsDSHRuntimeErrorsToStableUnavailableCode(t *testi
 		runtime *recordingDSHSessions
 	}{
 		{"list", rpc.MethodAgentListSessions, map[string]any{"runtime": "dsh", "workspaceId": "workspace", "cwd": "/workspace"}, &recordingDSHSessions{listErr: dsh.ErrRuntimeUnavailable}},
-		{"read", rpc.MethodAgentReadHistory, map[string]any{"runtime": "dsh", "sessionId": "session", "workspaceId": "workspace", "cwd": "/workspace"}, &recordingDSHSessions{readErr: dsh.ErrRuntimeUnavailable}},
+		{"read", rpc.MethodAgentReadHistory, map[string]any{"runtime": "dsh", "transcriptProtocolVersion": 2, "sessionId": "session", "workspaceId": "workspace", "cwd": "/workspace"}, &recordingDSHSessions{readErr: dsh.ErrRuntimeUnavailable}},
 	} {
 		t.Run(operation.name, func(t *testing.T) {
 			service := newTestHandler(t)

@@ -8,6 +8,7 @@ import (
 	"yishan/apps/cli/internal/agent/dsh"
 	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/rpc"
+	"yishan/apps/cli/internal/workspace"
 )
 
 const (
@@ -25,6 +26,7 @@ type dshFrontendEvent struct {
 
 func (s *Service) AgentGetCapabilities(context.Context) (any, error) {
 	result := rpc.AgentCapabilitiesResult{}
+	result.DSH.TranscriptProtocolVersion = rpc.DSHTranscriptProtocolVersion
 	if s.deps.DSH == nil {
 		return result, nil
 	}
@@ -46,10 +48,11 @@ func (s *Service) startDSH(ctx context.Context, connection *rpc.Connection, req 
 	if err != nil {
 		return nil, err
 	}
-	return s.startDSHSession(ctx, connection, req, workspaceInstance.Path)
+	return s.startDSHSession(ctx, connection, req, workspaceInstance)
 }
 
-func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connection, req rpc.AgentStartParams, cwd string) (any, error) {
+func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connection, req rpc.AgentStartParams, workspaceInstance workspace.Workspace) (any, error) {
+	cwd := workspaceInstance.Path
 	claim, err := s.runtimeIdentities.acquireDSHStart(req.SessionID)
 	if err != nil {
 		return nil, err
@@ -67,7 +70,7 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionReadRequest{SessionID: req.SessionID, CWD: cwd}); err != nil {
 			return nil, mapDSHExecutionError(err)
 		}
-	} else if _, err := s.dshRuntime().StartSession(ctx, dsh.SessionStartRequest{SessionID: req.SessionID, CWD: cwd}); err != nil {
+	} else if _, err := s.dshRuntime().StartSession(ctx, dsh.SessionStartRequest{SessionID: req.SessionID, CWD: cwd, Binding: dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd}}); err != nil {
 		return nil, mapDSHExecutionError(err)
 	}
 	subscription, err := s.dshRuntime().SubscribeSession(ctx, dsh.SessionSubscribeRequest{SessionID: req.SessionID, CWD: cwd, AfterSeq: -1})
@@ -149,19 +152,24 @@ func (s *Service) rebindDSHSession(connection *rpc.Connection, sessionID string,
 		}
 	}
 	s.pumpDSHSubscription(entry)
-	return mapDSHAttachResult(subscription), nil
+	result, err := mapDSHAttachResult(subscription)
+	if err != nil {
+		subscription.Unsubscribe()
+		return nil, mapDSHTranscriptProtocolError(err)
+	}
+	return result, nil
 }
 
-func mapDSHAttachResult(subscription dsh.SessionSubscription) rpc.AgentDSHAttachResult {
+func mapDSHAttachResult(subscription dsh.SessionSubscription) (rpc.AgentDSHAttachResult, error) {
 	snapshot := subscription.Snapshot
-	events := make([]json.RawMessage, len(snapshot.Events))
-	for index, event := range snapshot.Events {
-		events[index] = event.Event
+	events, err := projectDSHEvents(snapshot.Events)
+	if err != nil {
+		return rpc.AgentDSHAttachResult{}, err
 	}
 	return rpc.AgentDSHAttachResult{
 		Runtime: rpc.AgentRuntimeDSH, SessionID: snapshot.SessionID, Incarnation: snapshot.Incarnation,
 		Events: events, AsOfSeq: snapshot.AsOfSeq, DurableThroughSeq: snapshot.DurableThroughSeq, HeadSeq: snapshot.HeadSeq,
-	}
+	}, nil
 }
 
 func (s *Service) promptDSH(ctx context.Context, req rpc.AgentPromptParams) (any, error) {
@@ -298,10 +306,14 @@ func (s *Service) forwardDSHUpdates(entry *dshLiveSession, generation uint64, up
 }
 
 func (s *Service) publishDSHUpdate(route dshRoute, update dsh.SessionUpdate) error {
+	projected, err := projectDSHUpdate(update)
+	if err != nil {
+		return err
+	}
 	if s.publishDSHUpdateError != nil {
 		return s.publishDSHUpdateError
 	}
-	payload := dshFrontendEvent{SessionID: route.sessionID, TabID: route.tabID, WorkspaceID: route.workspaceID, Incarnation: route.incarnation, Update: update}
+	payload := dshFrontendEvent{SessionID: route.sessionID, TabID: route.tabID, WorkspaceID: route.workspaceID, Incarnation: route.incarnation, Update: projected}
 	return route.connection.Notify(rpc.MethodFrontendEventsStream, map[string]any{"topic": dshEventTopic, "payload": payload})
 }
 
@@ -324,7 +336,7 @@ func mapDSHExecutionError(err error) error {
 	var requestErr *dsh.RequestError
 	if errors.As(err, &requestErr) {
 		switch dshRequestErrorCode(requestErr.Data) {
-		case "YISHAN_SESSION_COLLISION", "YISHAN_SESSION_DISPOSING":
+		case "YISHAN_SESSION_COLLISION", "YISHAN_SESSION_DISPOSING", "YISHAN_SESSION_BINDING_CONFLICT":
 			return rpc.NewRPCError(rpc.CodeSessionExists, "dsh session conflict")
 		case "YISHAN_SESSION_WORKSPACE_MISMATCH", "YISHAN_SESSION_ID_MISMATCH":
 			return rpc.NewRPCError(rpc.CodeInvalidParams, "dsh session workspace mismatch")

@@ -18,6 +18,8 @@ const (
 
 	// ErrorDataCodeDSHRuntimeUnavailable identifies DSH lifecycle failures.
 	ErrorDataCodeDSHRuntimeUnavailable = "DSH_RUNTIME_UNAVAILABLE"
+	// ErrorDataCodeDSHTranscriptProtocolUnavailable identifies unsupported renderer transcript contracts.
+	ErrorDataCodeDSHTranscriptProtocolUnavailable = "DSH_TRANSCRIPT_PROTOCOL_UNAVAILABLE"
 )
 
 // Error is a structured RPC error that carries a wire error code. Handlers

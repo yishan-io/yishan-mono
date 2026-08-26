@@ -161,7 +161,7 @@ func waitForCrashFlowRestart(t *testing.T, supervisor *dsh.Supervisor) {
 
 func attachCrashFlowSession(t *testing.T, service *Service, operationsPath string) rpc.AgentDSHAttachResult {
 	t.Helper()
-	result, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: -1})
+	result, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: -1})
 	if err != nil {
 		operations, _ := os.ReadFile(operationsPath)
 		t.Fatalf("attach after restart: %v; operations=%q", err, operations)

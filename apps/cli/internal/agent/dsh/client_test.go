@@ -215,7 +215,7 @@ func TestSupervisor_ExecutionCallsValidateExactResults(t *testing.T) {
 		t.Fatalf("Start: %v", err)
 	}
 	request := SessionExecutionRequest{CWD: "/workspace", SessionID: "session"}
-	if response, err := supervisor.StartSession(context.Background(), request); err != nil || response.Incarnation != "run" {
+	if response, err := supervisor.StartSession(context.Background(), SessionStartRequest{CWD: request.CWD, SessionID: request.SessionID, Binding: testSessionBinding(request.CWD)}); err != nil || response.Incarnation != "run" {
 		t.Fatalf("StartSession = %#v, %v", response, err)
 	}
 	if response, err := supervisor.PromptSession(context.Background(), SessionPromptRequest{CWD: request.CWD, SessionID: request.SessionID, ContentBlocks: []TextPromptContentBlock{{Type: "text", Text: "hello"}}}); err != nil || response.MessageID != "message" {
@@ -292,4 +292,20 @@ func TestSequenceValidation_RejectsUnsafeValues(t *testing.T) {
 	if _, err := parseTranscriptResetNotification([]byte(`{"sessionId":"session","incarnation":"run","headSeq":9007199254740992}`)); err == nil {
 		t.Fatal("accepted unsafe reset head")
 	}
+}
+
+func TestSupervisor_StartSession_RejectsMissingAuthoritativeBinding(t *testing.T) {
+	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc")})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	_, err := supervisor.StartSession(context.Background(), SessionStartRequest{CWD: "/workspace", SessionID: "session"})
+	if err == nil {
+		t.Fatal("accepted start without binding")
+	}
+}
+
+func testSessionBinding(cwd string) SessionBinding {
+	return SessionBinding{Version: 1, WorkspaceID: "workspace", OwnerNodeID: "node", CWD: cwd}
 }
