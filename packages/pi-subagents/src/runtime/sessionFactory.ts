@@ -5,6 +5,7 @@ import {
   SessionManager,
   createAgentSessionFromServices,
   createAgentSessionServices,
+  getAgentDir,
 } from "@earendil-works/pi-coding-agent";
 
 import type { AgentDefinition, AgentRunMode } from "../agents/types";
@@ -47,6 +48,7 @@ export async function createChildAgentSession(
   const extensionFactories = await resolveChildExtensionFactories();
   const services = await createAgentSessionServices({
     cwd: options.cwd,
+    agentDir: getAgentDir(),
     resourceLoaderOptions: {
       noExtensions: true,
       noPromptTemplates: true,
