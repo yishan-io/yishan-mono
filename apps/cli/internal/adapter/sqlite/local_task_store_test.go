@@ -199,3 +199,74 @@ func hasUnlinkedWorkspaceLink(links []localtask.WorkspaceLink) bool {
 	}
 	return false
 }
+
+func TestLocalTaskStore_ListAndSearchMatchAnyRequestedStatus(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	newTask, err := store.Create(ctx, localtask.Task{Title: "New matching task", Status: localtask.StatusNew, Priority: localtask.PriorityMedium})
+	if err != nil {
+		t.Fatal(err)
+	}
+	doneTask, err := store.Create(ctx, localtask.Task{Title: "Done matching task", Status: localtask.StatusDone, Priority: localtask.PriorityMedium})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Create(ctx, localtask.Task{Title: "Cancelled matching task", Status: localtask.StatusCancelled, Priority: localtask.PriorityMedium}); err != nil {
+		t.Fatal(err)
+	}
+	filter := localtask.TaskFilter{Statuses: []localtask.Status{localtask.StatusNew, localtask.StatusDone}}
+	assertTaskIDs(t, mustListLocalTasks(t, store, ctx, filter), []string{doneTask.ID, newTask.ID})
+	assertSearchTaskIDs(t, mustSearchLocalTasks(t, store, ctx, "matching", filter), []string{doneTask.ID, newTask.ID})
+}
+
+func mustListLocalTasks(t *testing.T, store *LocalTaskStore, ctx context.Context, filter localtask.TaskFilter) []localtask.Task {
+	t.Helper()
+	tasks, err := store.List(ctx, filter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tasks
+}
+
+func mustSearchLocalTasks(t *testing.T, store *LocalTaskStore, ctx context.Context, query string, filter localtask.TaskFilter) []localtask.SearchResult {
+	t.Helper()
+	results, err := store.Search(ctx, query, filter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return results
+}
+
+func assertTaskIDs(t *testing.T, tasks []localtask.Task, want []string) {
+	t.Helper()
+	got := make([]string, len(tasks))
+	for index, task := range tasks {
+		got[index] = task.ID
+	}
+	assertMatchingTaskIDs(t, got, want)
+}
+
+func assertSearchTaskIDs(t *testing.T, results []localtask.SearchResult, want []string) {
+	t.Helper()
+	got := make([]string, len(results))
+	for index, result := range results {
+		got[index] = result.ID
+	}
+	assertMatchingTaskIDs(t, got, want)
+}
+
+func assertMatchingTaskIDs(t *testing.T, got, want []string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("task IDs = %v, want %v", got, want)
+	}
+	wantSet := make(map[string]struct{}, len(want))
+	for _, taskID := range want {
+		wantSet[taskID] = struct{}{}
+	}
+	for _, taskID := range got {
+		if _, exists := wantSet[taskID]; !exists {
+			t.Fatalf("task IDs = %v, want %v", got, want)
+		}
+	}
+}

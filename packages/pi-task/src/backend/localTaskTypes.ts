@@ -42,7 +42,7 @@ export type LocalTaskContextDetails = { directory: string; files: LocalTaskConte
 /** Filters supported by list and search RPCs. */
 export type LocalTaskFilters = {
   projectId?: string;
-  status?: LocalTaskStatus;
+  status?: LocalTaskStatus | LocalTaskStatus[];
   priority?: LocalTaskPriority;
   workspaceId?: string;
   tags?: string[];

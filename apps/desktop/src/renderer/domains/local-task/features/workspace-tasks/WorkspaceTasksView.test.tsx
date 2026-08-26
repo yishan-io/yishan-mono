@@ -304,7 +304,7 @@ describe("WorkspaceTasksView", () => {
 
   it("opens the link dialog immediately, preserves Task Hub state, and supports candidate retry", async () => {
     localTaskStore.setState({
-      hubFilters: { status: "new" },
+      hubFilters: { status: ["new"] },
       hubSearchQuery: "keep me",
       linkCandidateWorkspaceId: null,
       linkCandidateTasks: [],
@@ -316,7 +316,7 @@ describe("WorkspaceTasksView", () => {
 
     expect(screen.getByText("localTask.link.title")).toBeTruthy();
     expect(screen.getByText("localTask.link.loadingCandidates")).toBeTruthy();
-    expect(localTaskStore.getState()).toMatchObject({ hubFilters: { status: "new" }, hubSearchQuery: "keep me" });
+    expect(localTaskStore.getState()).toMatchObject({ hubFilters: { status: ["new"] }, hubSearchQuery: "keep me" });
     expect(commands.loadLocalTaskLinkCandidates).toHaveBeenCalledWith("workspace-1");
 
     act(() =>

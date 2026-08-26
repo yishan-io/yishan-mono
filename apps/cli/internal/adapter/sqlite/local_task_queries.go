@@ -47,7 +47,13 @@ func buildLocalTaskFilter(filter localtask.TaskFilter, table string) ([]string, 
 	if filter.ProjectID != nil {
 		where, arguments = appendTaskFilter(where, arguments, table+".project_id = ?", *filter.ProjectID)
 	}
-	if filter.Status != nil {
+	if len(filter.Statuses) > 0 {
+		placeholders := strings.TrimRight(strings.Repeat("?,", len(filter.Statuses)), ",")
+		where = append(where, table+".status IN ("+placeholders+")")
+		for _, status := range filter.Statuses {
+			arguments = append(arguments, status)
+		}
+	} else if filter.Status != nil {
 		where, arguments = appendTaskFilter(where, arguments, table+".status = ?", *filter.Status)
 	}
 	if filter.Priority != nil {
