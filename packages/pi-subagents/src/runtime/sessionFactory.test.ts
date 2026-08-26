@@ -4,11 +4,13 @@ import type { Api, Model } from "@earendil-works/pi-ai";
 
 const {
   createAgentSessionFromServicesMock,
+  getAgentDirMock,
   createAgentSessionServicesMock,
   createSessionManagerMock,
   sessionManagerAppendCustomEntryMock,
 } = vi.hoisted(() => ({
   createAgentSessionFromServicesMock: vi.fn(),
+  getAgentDirMock: vi.fn(),
   createAgentSessionServicesMock: vi.fn(),
   createSessionManagerMock: vi.fn(),
   sessionManagerAppendCustomEntryMock: vi.fn(),
@@ -20,6 +22,7 @@ vi.mock("@earendil-works/pi-coding-agent", () => ({
   },
   createAgentSessionServices: createAgentSessionServicesMock,
   createAgentSessionFromServices: createAgentSessionFromServicesMock,
+  getAgentDir: getAgentDirMock,
 }));
 
 vi.mock("@yishan-io/pi-lsp", () => ({ createPiLspExtension: () => {} }));
@@ -63,6 +66,7 @@ function createLegacyModelRegistry(models: ReturnType<typeof createModel>[], con
 describe("createChildAgentSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getAgentDirMock.mockReturnValue("/tmp/yishan/pi/agent");
     sessionManagerAppendCustomEntryMock.mockReset();
     createSessionManagerMock.mockReturnValue({
       kind: "session-manager",
@@ -107,6 +111,7 @@ describe("createChildAgentSession", () => {
 
     expect(createAgentSessionServicesMock).toHaveBeenCalledWith({
       cwd: "/tmp/project",
+      agentDir: "/tmp/yishan/pi/agent",
       resourceLoaderOptions: {
         noExtensions: true,
         noPromptTemplates: true,
