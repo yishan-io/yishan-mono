@@ -44,8 +44,8 @@
         "decline": "\u62d2\u7edd"
       },
       "card": {
-        "question": "\u95ee\u9898",
-        "answer": "\u56de\u7b54",
+        "question": "\u95ee\u9898\uff1a",
+        "answer": "\u56de\u7b54\uff1a",
         "pending": "\u5f85\u5904\u7406",
         "cancelled": "\u5df2\u53d6\u6d88",
         "answered": "\u5df2\u56de\u7b54",

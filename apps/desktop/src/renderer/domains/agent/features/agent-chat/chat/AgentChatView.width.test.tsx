@@ -91,7 +91,7 @@ describe("AgentChatView content width", () => {
   });
 
   it.each(["fixed", "full"] as const)(
-    "keeps pending UI, turn errors, composer, and the subagent footer in the %s content column",
+    "keeps pending UI, turn errors, and the subagent footer in the %s content column",
     (agentChatWidth) => {
       displaySettingsStore.setState({ agentChatWidth });
       seedEmptySession();
@@ -107,7 +107,8 @@ describe("AgentChatView content width", () => {
 
       expect(within(contentColumn).getByTestId("agent-pending-ui-prompt")).toBeTruthy();
       expect(within(contentColumn).getByText("The turn failed")).toBeTruthy();
-      expect(within(contentColumn).getByTestId("agent-chat-composer")).toBeTruthy();
+      // composer is replaced by the question prompt when a pending request is active
+      expect(within(contentColumn).queryByTestId("agent-chat-composer")).toBeNull();
 
       unmount();
       agentChatStore.getState().removeSession("tab-1");

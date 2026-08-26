@@ -232,14 +232,6 @@ function AgentChatViewComponent({
         emptyHelpLines={isReadOnlySubagentDetail ? undefined : emptyHelpLines}
         emptyHelpPrefix={isReadOnlySubagentDetail ? undefined : emptyHelpPrefix}
       />
-      {!isReadOnlySubagentDetail && pendingUiRequest ? (
-        <AgentPendingUiPrompt
-          request={pendingUiRequest}
-          onCancel={handlePendingUiCancel}
-          onConfirm={handlePendingUiConfirm}
-          onSelectCustomResponse={handlePendingUiSelectCustomResponse}
-        />
-      ) : null}
       {turnError ? (
         <Box sx={{ px: 2, pb: 1 }}>
           <Alert severity="error" variant="outlined">
@@ -248,14 +240,23 @@ function AgentChatViewComponent({
         </Box>
       ) : null}
       {!isReadOnlySubagentDetail ? (
-        <AgentChatComposerPane
-          tabId={tabId}
-          workspaceId={workspaceId}
-          cwd={cwd}
-          paneId={paneId}
-          isActive={isActive}
-          isReadyForAutoFocus={isReadyForAutoFocus}
-        />
+        pendingUiRequest ? (
+          <AgentPendingUiPrompt
+            request={pendingUiRequest}
+            onCancel={handlePendingUiCancel}
+            onConfirm={handlePendingUiConfirm}
+            onSelectCustomResponse={handlePendingUiSelectCustomResponse}
+          />
+        ) : (
+          <AgentChatComposerPane
+            tabId={tabId}
+            workspaceId={workspaceId}
+            cwd={cwd}
+            paneId={paneId}
+            isActive={isActive}
+            isReadyForAutoFocus={isReadyForAutoFocus}
+          />
+        )
       ) : null}
     </AgentChatContentLayout>
   );
