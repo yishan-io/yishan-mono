@@ -37,6 +37,7 @@ export type DSHUpdate = {
   reset?: { sessionId: string; incarnation: string; headSeq: number };
   unavailable?: true;
 };
+export type DSHFrontendRouteIdentity = { sessionId: string; tabId: string };
 export type DSHFrontendPayload = {
   sessionId: string;
   tabId: string;
@@ -57,6 +58,19 @@ export function parseDSHFrontendPayload(input: unknown): DSHFrontendPayload | nu
   return sessionId && tabId && workspaceId && incarnation && update
     ? { sessionId, tabId, workspaceId, incarnation, update }
     : null;
+}
+
+/** Recovers the tab/session route only when both outer identifiers are present. */
+export function parseDSHFrontendRouteIdentity(input: unknown): DSHFrontendRouteIdentity | null {
+  const payload = asRecord(input);
+  const sessionId = payload && requiredString(payload, "sessionId");
+  const tabId = payload && requiredString(payload, "tabId");
+  return sessionId && tabId ? { sessionId, tabId } : null;
+}
+
+/** Returns whether an event is unknown and must cause durable transcript recovery. */
+export function isUnknownRequiredDSHEvent(event: DSHEvent): boolean {
+  return !KNOWN_TYPES.has(event.type) && event.ignorable !== true;
 }
 
 /** Projects complete DSH log records into the visible, ordered transcript surface. */
@@ -125,7 +139,6 @@ function parseEvent(input: unknown): DSHEvent | null {
   if (!type || seq === null || time === null || !data || (event.ignorable !== undefined && event.ignorable !== true))
     return null;
   const isKnown = KNOWN_TYPES.has(type);
-  if (!isKnown && event.ignorable !== true) return null;
   const surfaceOp = event.surfaceOp === undefined ? undefined : parseSurfaceOp(event.surfaceOp);
   const sourceEventSeqs =
     event.sourceEventSeqs === undefined

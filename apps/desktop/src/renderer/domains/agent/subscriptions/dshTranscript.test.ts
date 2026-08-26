@@ -95,6 +95,19 @@ describe("DSH transcript", () => {
     );
     expect(projectDSHTranscript([{ type: "future/event", seq: 0, time: 1, data: {}, ignorable: true }])).toEqual([]);
   });
+  it("preserves unknown required wire events so the controller can reload", () => {
+    const payload = parseDSHFrontendPayload({
+      sessionId: "session",
+      tabId: "tab",
+      workspaceId: "workspace",
+      incarnation: "inc",
+      update: {
+        event: { sessionId: "session", seq: 0, event: { type: "future/event", seq: 0, time: 0, data: {} } },
+      },
+    });
+    expect(payload?.update.event?.type).toBe("future/event");
+    expect(payload?.update.event).not.toHaveProperty("ignorable");
+  });
   it("accepts the daemon session-update event envelope fixture", () => {
     const fixture: unknown = JSON.parse(
       readFileSync(new URL("./fixtures/dshFrontendEvent.json", import.meta.url), "utf8"),

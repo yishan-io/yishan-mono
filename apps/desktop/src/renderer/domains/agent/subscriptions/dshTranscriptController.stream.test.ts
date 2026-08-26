@@ -112,6 +112,54 @@ describe("DSHTranscriptController stream handling", () => {
     expect(actions.replaceMessages).toHaveBeenLastCalledWith("tab", []);
     expect(actions.setSessionState).toHaveBeenLastCalledWith("tab", "starting");
   });
+  it("reloads when it receives an unknown required event", async () => {
+    const loader = vi.fn().mockResolvedValue({
+      session: { sessionId: "session", createdAt: 0 },
+      events: [],
+      incarnation: "inc",
+      asOfSeq: -1,
+      durableThroughSeq: -1,
+    });
+    const { actions } = setup();
+    const controller = new DSHTranscriptController("tab", "session", actions, loader, () => {});
+
+    controller.handle({
+      sessionId: "session",
+      tabId: "tab",
+      workspaceId: "workspace",
+      incarnation: "inc",
+      update: { event: { type: "future/event", seq: 0, time: 0, data: {} } },
+    });
+
+    await vi.waitFor(() => expect(loader).toHaveBeenCalledTimes(1));
+    expect(actions.setSessionState).toHaveBeenLastCalledWith("tab", "starting");
+  });
+  it("does not reload for an explicitly ignorable unknown frontend event", async () => {
+    const loader = vi.fn();
+    const { actions } = setup();
+    const controller = new DSHTranscriptController("tab", "session", actions, loader, () => {});
+    const payload = parseDSHFrontendPayload({
+      sessionId: "session",
+      tabId: "tab",
+      workspaceId: "workspace",
+      incarnation: "inc",
+      update: {
+        event: {
+          sessionId: "session",
+          seq: 0,
+          event: { type: "future/event", seq: 0, time: 0, data: {}, ignorable: true },
+        },
+      },
+    });
+
+    expect(payload).not.toBeNull();
+    if (payload) controller.handle(payload);
+    await Promise.resolve();
+
+    expect(loader).not.toHaveBeenCalled();
+    expect(actions.setSessionState).not.toHaveBeenCalledWith("tab", "starting");
+  });
+
   it("only advances cursor monotonically and removes speculative events on reset", () => {
     const { controller, actions } = setup();
     controller.handle(event(0));

@@ -137,6 +137,21 @@ describe("DSHTranscriptController durable reload", () => {
     expect(loader).toHaveBeenCalledTimes(2);
   });
 
+  it("does not restart a failed reload for duplicate malformed notifications", async () => {
+    const loader = vi.fn().mockRejectedValue(new Error("offline"));
+    const { actions } = setup();
+    const controller = new DSHTranscriptController("tab", "session", actions, loader, () => {});
+
+    controller.handleMalformedPayload();
+    await vi.waitFor(() =>
+      expect(actions.setSessionError).toHaveBeenLastCalledWith("tab", "DSH durable reload failed: offline"),
+    );
+    controller.handleMalformedPayload();
+    controller.handleMalformedPayload();
+
+    expect(loader).toHaveBeenCalledTimes(1);
+  });
+
   it("makes retry available only for a failed durable reload", async () => {
     const loader = vi
       .fn()

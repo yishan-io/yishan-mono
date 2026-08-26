@@ -291,7 +291,12 @@ function registerRuntimeRouter(
 ): () => void {
   if (runtime === "pi") return registerPiRouter(tabId, sessionId);
   if (!controller) throw new Error("DSH transcript controller is required");
-  return registerAgentChatDSHEventRouter({ tabId, sessionId, onEvent: (payload) => controller.handle(payload) });
+  return registerAgentChatDSHEventRouter({
+    tabId,
+    sessionId,
+    onEvent: (payload) => controller.handle(payload),
+    onMalformedPayload: () => controller.handleMalformedPayload(),
+  });
 }
 function createDSHTranscriptController(
   record: AgentRuntimeSessionRecord,

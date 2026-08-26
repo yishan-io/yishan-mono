@@ -5,6 +5,7 @@ import {
   type DSHEvent,
   type DSHFrontendPayload,
   type DSHUpdate,
+  isUnknownRequiredDSHEvent,
   parseDSHFrontendPayload,
   projectDSHTranscript,
 } from "./dshTranscript";
@@ -61,6 +62,11 @@ export class DSHTranscriptController {
     await this.recoveryPromise;
   }
 
+  /** Starts a durable reload after the router identifies a malformed notification for this tab/session. */
+  public handleMalformedPayload(): void {
+    if (!this.isBlocked && this.controllerState !== "failed") this.startRecovery(this.incarnation);
+  }
+
   /** Applies a validated notification. */
   public handle(payload: DSHFrontendPayload): void {
     if (payload.tabId !== this.tabId || payload.sessionId !== this.sessionId || this.isBlocked) return;
@@ -113,6 +119,10 @@ export class DSHTranscriptController {
   }
 
   private applyEvent(event: DSHEvent): void {
+    if (isUnknownRequiredDSHEvent(event)) {
+      this.startRecovery(this.incarnation);
+      return;
+    }
     if (event.seq < this.nextSeq) {
       const prior = this.events[event.seq];
       if (prior && JSON.stringify(prior) === JSON.stringify(event)) return;
