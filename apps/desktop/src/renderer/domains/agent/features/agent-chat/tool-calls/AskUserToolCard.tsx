@@ -45,30 +45,18 @@ export function AskUserToolCard({ toolCall, result = null }: AgentToolCallCardPr
   return (
     <ToolCardShell isError={result?.isError === true} outlined>
       <ToolSummaryPanel>
-        <Typography
-          variant="caption"
-          sx={{
-            color: "text.secondary",
-            display: "block",
-            mb: 0.5,
-          }}
-        >
-          {t("agentChat.askUser.card.question")}
-        </Typography>
         <Typography variant="body2" sx={{ mb: 1 }}>
+          <Typography component="span" variant="caption" sx={{ color: "text.secondary", mr: 0.75 }}>
+            {t("agentChat.askUser.card.question")}
+          </Typography>
           {question}
         </Typography>
-        <Typography
-          variant="caption"
-          sx={{
-            color: "text.secondary",
-            display: "block",
-            mb: 0.5,
-          }}
-        >
-          {t("agentChat.askUser.card.answer")}
+        <Typography variant="body2">
+          <Typography component="span" variant="caption" sx={{ color: "text.secondary", mr: 0.75 }}>
+            {t("agentChat.askUser.card.answer")}
+          </Typography>
+          {answer}
         </Typography>
-        <Typography variant="body2">{answer}</Typography>
       </ToolSummaryPanel>
     </ToolCardShell>
   );

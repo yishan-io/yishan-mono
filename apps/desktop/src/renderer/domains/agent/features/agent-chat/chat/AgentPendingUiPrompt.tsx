@@ -10,9 +10,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { displaySettingsStore } from "@renderer/domains/settings";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentPendingUiRequest } from "../../../chat/agentChatTypes";
+import { AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX } from "./AgentChatContentLayout";
 import { PendingCustomResponseInput } from "./PendingCustomResponseInput";
 import { type SelectOption, usePendingUiDraft } from "./usePendingUiDraft";
 
@@ -54,18 +56,28 @@ export function AgentPendingUiPrompt({
     return request.title;
   }, [parsedMultiSelectPrompt, request.title]);
 
+  const agentChatWidth = displaySettingsStore((state) => state.agentChatWidth);
+  const isFixedWidth = agentChatWidth === "fixed";
+
   return (
     <Box
       data-testid="agent-pending-ui-prompt"
       sx={{
-        mx: 2,
-        mb: 1,
-        px: 1.5,
-        py: 1.25,
         border: 1,
         borderColor: "divider",
-        borderRadius: 1,
+        borderRadius: isFixedWidth ? 2 : 1,
         bgcolor: "background.paper",
+        boxShadow: "0 -4px 16px 0 rgba(0,0,0,0.12)",
+        px: 1.5,
+        py: 1.25,
+        mb: 1,
+        ...(isFixedWidth
+          ? {
+              alignSelf: "center",
+              maxWidth: AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX,
+              width: "calc(100% - 32px)",
+            }
+          : { mx: 2 }),
       }}
     >
       <Stack
@@ -77,12 +89,11 @@ export function AgentPendingUiPrompt({
       >
         <Box
           sx={{
-            width: 18,
-            height: 18,
+            width: 28,
+            height: 28,
             borderRadius: "50%",
-            border: 1,
-            borderColor: "divider",
-            color: "text.secondary",
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -90,11 +101,11 @@ export function AgentPendingUiPrompt({
             mt: 0.25,
           }}
         >
-          <Typography variant="caption" sx={{ fontWeight: 600, lineHeight: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1 }}>
             ?
           </Typography>
         </Box>
-        <Stack spacing={1.25} sx={{ width: "100%", minWidth: 0 }}>
+        <Stack spacing={2} sx={{ width: "100%", minWidth: 0 }}>
           <Box>
             <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
               {displayTitle}

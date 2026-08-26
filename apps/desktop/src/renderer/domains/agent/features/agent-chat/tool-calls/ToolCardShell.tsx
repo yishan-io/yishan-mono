@@ -27,7 +27,7 @@ export function ToolCardShell({
       sx={{
         mb: 0.5,
         border: outlined ? 1 : 0,
-        borderColor: isError ? "error.main" : "primary.main",
+        borderColor: isError ? "error.main" : "divider",
         borderRadius: 1,
         overflow: "hidden",
       }}

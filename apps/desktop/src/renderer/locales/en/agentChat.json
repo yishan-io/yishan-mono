@@ -44,8 +44,8 @@
         "decline": "Decline"
       },
       "card": {
-        "question": "Question",
-        "answer": "Answer",
+        "question": "Question:",
+        "answer": "Answer:",
         "pending": "Pending",
         "cancelled": "Cancelled",
         "answered": "Answered",
