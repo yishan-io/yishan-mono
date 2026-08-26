@@ -72,7 +72,7 @@ const task = {
   projectId: "project-1",
   title: "Ship Task Hub",
   description: "Desktop UX",
-  status: "active" as const,
+  status: "progressing" as const,
   priority: "high" as const,
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
@@ -158,8 +158,8 @@ describe("TaskHubView", () => {
     expect(filterButton.getAttribute("aria-expanded")).toBe("true");
     expect(screen.queryByRole("textbox", { name: "localTask.filters.addFilter" })).toBeNull();
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.paused" }));
-    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: "paused" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.new" }));
+    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: "new" });
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.refresh" }));
     expect(commands.refreshLocalTaskHub).toHaveBeenCalledTimes(2);
     expect(filterButton.getAttribute("aria-expanded")).toBe("false");
@@ -179,7 +179,9 @@ describe("TaskHubView", () => {
       expect(filterFieldMenuItem.querySelector("svg")).toBeTruthy();
     }
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
-    expect(screen.getByRole("menuitem", { name: "localTask.status.paused" })).toBeTruthy();
+    for (const status of ["new", "progressing", "done", "cancelled"] as const) {
+      expect(screen.getByRole("menuitem", { name: `localTask.status.${status}` })).toBeTruthy();
+    }
   });
   it("renders value icons and searches only the Tag filter menu", () => {
     localTaskStore.setState({
@@ -197,7 +199,7 @@ describe("TaskHubView", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
     expect(
       screen
-        .getByRole("menuitem", { name: "localTask.status.active" })
+        .getByRole("menuitem", { name: "localTask.status.progressing" })
         .querySelector("[data-testid='local-task-status-icon']"),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
@@ -239,13 +241,13 @@ describe("TaskHubView", () => {
     render(<TaskHubView />);
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.paused" }));
-    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: "paused" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.new" }));
+    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: "new" });
   });
   it("renders active filters as removable grouped chips", () => {
-    localTaskStore.setState({ hubFilters: { status: "active" } });
+    localTaskStore.setState({ hubFilters: { status: "progressing" } });
     render(<TaskHubView />);
-    expect(screen.getByLabelText("localTask.fields.status localTask.status.active")).toBeTruthy();
+    expect(screen.getByLabelText("localTask.fields.status localTask.status.progressing")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "localTask.filters.addFilter" })).toBeNull();
     expect(screen.getByRole("button", { name: "localTask.filters.clearAll" })).toBeTruthy();
   });
@@ -349,11 +351,11 @@ describe("TaskHubView", () => {
     expect(screen.queryByText("Renderer Project")).toBeNull();
     expect(screen.queryByText("Desktop UX")).toBeNull();
     const taskTitle = screen.getByText("Ship Task Hub");
-    const statusIcon = screen.getByLabelText("localTask.status.active");
+    const statusIcon = screen.getByLabelText("localTask.status.progressing");
     const priorityIcon = screen.getByLabelText("localTask.fields.priority: localTask.priority.high");
     expect(statusIcon.compareDocumentPosition(taskTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(priorityIcon.compareDocumentPosition(statusIcon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.queryByText("localTask.status.active")).toBeNull();
+    expect(screen.queryByText("localTask.status.progressing")).toBeNull();
     expect(screen.queryByText("localTask.priority.high")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Ship Task Hub/ }));
     expect(screen.getByText("Desktop UX")).toBeTruthy();
@@ -426,7 +428,7 @@ describe("TaskHubView", () => {
     expect(screen.queryByText("Task 20")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "localTask.pagination.page 3" }));
     expect(screen.getByText("Task 40")).toBeTruthy();
-    act(() => localTaskStore.setState({ hubFilters: { status: "active" } }));
+    act(() => localTaskStore.setState({ hubFilters: { status: "progressing" } }));
     await waitFor(() => expect(screen.getByText("Task 0")).toBeTruthy());
     expect(screen.queryByText("Task 40")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "localTask.pagination.page 2" }));

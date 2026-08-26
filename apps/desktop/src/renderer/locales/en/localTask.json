@@ -37,9 +37,10 @@
       "clearAll": "Clear all"
     },
     "status": {
-      "active": "Active",
-      "paused": "Paused",
-      "completed": "Completed"
+      "new": "New",
+      "progressing": "Progressing",
+      "done": "Done",
+      "cancelled": "Cancelled"
     },
     "priority": {
       "low": "Low",
@@ -55,12 +56,6 @@
       "retry": "Retry",
       "link": "Link task",
       "retryLink": "Retry link",
-      "pauseTask": "Pause task",
-      "completeTask": "Complete task",
-      "reactivateTask": "Reactivate task",
-      "pauseLink": "Pause link",
-      "completeLink": "Complete link",
-      "reactivateLink": "Reactivate link",
       "unlink": "Unlink",
       "createLocal": "Create Local Task",
       "add": "Add tags"
@@ -94,7 +89,7 @@
       "loadingCandidates": "Loading link candidates",
       "noCandidates": "No tasks are available to link."
     },
-    "activeCount": "Tasks, {{count}} active",
+    "progressingCount": "Tasks, {{count}} progressing",
     "unlink": {
       "title": "Unlink task?",
       "description": "Unlink “{{title}}” from this workspace?"

@@ -6,7 +6,7 @@ import type { LocalTaskPriority, LocalTaskStatus } from "../../localTaskTypes";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 
-const STATUS_OPTIONS: LocalTaskStatus[] = ["active", "paused", "completed"];
+const STATUS_OPTIONS: LocalTaskStatus[] = ["new", "progressing", "done", "cancelled"];
 const PRIORITY_OPTIONS: LocalTaskPriority[] = ["low", "medium", "high"];
 const DETAIL_ACTION_BUTTON_SX = { fontSize: "0.75rem" };
 

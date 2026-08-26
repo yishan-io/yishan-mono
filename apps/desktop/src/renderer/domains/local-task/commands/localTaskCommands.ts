@@ -5,8 +5,8 @@ import { localTaskClient } from "../daemon/localTaskDaemonClient";
 import type {
   CreateLocalTaskInput,
   LocalTask,
-  LocalTaskDetails,
   LocalTaskContextFileName,
+  LocalTaskDetails,
   LocalTaskFilters,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
@@ -101,14 +101,14 @@ export async function loadLocalTaskTagSuggestions(): Promise<void> {
   }
 }
 
-/** Refreshes only the active Local Task count used by app-level indicators. */
-export async function refreshActiveLocalTaskCount(): Promise<void> {
-  const requestId = localTaskStore.getState().beginActiveTaskCountLoad();
+/** Refreshes only the progressing Local Task count used by app-level indicators. */
+export async function refreshProgressingLocalTaskCount(): Promise<void> {
+  const requestId = localTaskStore.getState().beginProgressingTaskCountLoad();
   try {
-    const activeTasks = await localTaskClient.list({ status: "active" });
-    localTaskStore.getState().setActiveTaskCount(requestId, activeTasks.length);
+    const progressingTasks = await localTaskClient.list({ status: "progressing" });
+    localTaskStore.getState().setProgressingTaskCount(requestId, progressingTasks.length);
   } catch (error) {
-    console.error("Failed to refresh active Local Task count", error);
+    console.error("Failed to refresh progressing Local Task count", error);
   }
 }
 
@@ -118,13 +118,13 @@ export async function refreshLocalTaskHub(): Promise<void> {
   const query = hubSearchQuery.trim();
   const requestId = localTaskStore.getState().beginHubLoad();
   try {
-    const [hubProjection, activeTasks] = await Promise.all([
+    const [hubProjection, progressingTasks] = await Promise.all([
       localTaskClient.listProjection(hubFilters, query),
-      localTaskClient.list({ status: "active" }),
+      localTaskClient.list({ status: "progressing" }),
     ]);
     localTaskStore
       .getState()
-      .setHubResults(requestId, hubProjection.tasks, hubProjection.projectsById, activeTasks.length);
+      .setHubResults(requestId, hubProjection.tasks, hubProjection.projectsById, progressingTasks.length);
   } catch (error) {
     localTaskStore.getState().setHubError(requestId, getErrorMessage(error));
   }

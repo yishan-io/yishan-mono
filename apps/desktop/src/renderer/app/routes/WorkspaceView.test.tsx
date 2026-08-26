@@ -21,7 +21,7 @@ const commandMocks = vi.hoisted(() => ({
   openEntryInExternalApp: vi.fn(async () => undefined),
   openTab: vi.fn(),
   refreshWorkspaceGitChanges: vi.fn(async () => undefined),
-  refreshActiveLocalTaskCount: vi.fn(async () => undefined),
+  refreshProgressingLocalTaskCount: vi.fn(async () => undefined),
   selectLocalTaskWorkspace: vi.fn(async () => undefined),
   selectTab: vi.fn(),
   setActiveWorkspace: vi.fn(async () => undefined),
@@ -80,7 +80,7 @@ vi.mock("../../app/commands/tabCloseHandler", () => ({
 }));
 
 vi.mock("@renderer/domains/local-task", () => ({
-  refreshActiveLocalTaskCount: commandMocks.refreshActiveLocalTaskCount,
+  refreshProgressingLocalTaskCount: commandMocks.refreshProgressingLocalTaskCount,
   selectLocalTaskWorkspace: commandMocks.selectLocalTaskWorkspace,
 }));
 
@@ -220,7 +220,7 @@ describe("WorkspaceView", () => {
     });
   }
 
-  it("loads the active task count and selected-workspace relationships through commands", async () => {
+  it("loads the progressing-task count and selected-workspace relationships through commands", async () => {
     setWorkspaceProjectsLoaded();
     workbenchNavigationStore.getState().setActiveWorkspaceId("workspace-1");
 
@@ -231,7 +231,7 @@ describe("WorkspaceView", () => {
     );
 
     await waitFor(() => {
-      expect(commandMocks.refreshActiveLocalTaskCount).toHaveBeenCalledTimes(1);
+      expect(commandMocks.refreshProgressingLocalTaskCount).toHaveBeenCalledTimes(1);
       expect(commandMocks.selectLocalTaskWorkspace).toHaveBeenLastCalledWith("workspace-1");
     });
 

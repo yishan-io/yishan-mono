@@ -69,10 +69,12 @@ export function LocalTaskHubFilterMenu({
       const tagIds = selectedTagIds.includes(tagId)
         ? selectedTagIds.filter((id) => id !== tagId)
         : [...selectedTagIds, tagId];
-      const nextFilters = { ...filters };
-      if (tagIds.length > 0) nextFilters.tagIds = tagIds;
-      else delete nextFilters.tagIds;
-      void setLocalTaskHubFilters(nextFilters);
+      if (tagIds.length > 0) {
+        void setLocalTaskHubFilters({ ...filters, tagIds });
+        return;
+      }
+      const { tagIds: _tagIds, ...filtersWithoutTagIds } = filters;
+      void setLocalTaskHubFilters(filtersWithoutTagIds);
     },
     [filters],
   );
@@ -102,7 +104,7 @@ export function LocalTaskHubFilterMenu({
       );
     }
     if (selectedField === "status") {
-      const statuses: LocalTaskStatus[] = ["active", "paused", "completed"];
+      const statuses: LocalTaskStatus[] = ["new", "progressing", "done", "cancelled"];
       return statuses.map((status) => (
         <MenuItem key={status} onClick={() => handleApply("status", status)}>
           <LocalTaskStatusIcon status={status} />

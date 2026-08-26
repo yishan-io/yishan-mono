@@ -50,7 +50,10 @@ describe("registerTaskTools", () => {
     expect(properties(tools, "task_start").workspaceId).toMatchObject({ minLength: 1 });
     expect(properties(tools, "task_finish")).not.toHaveProperty("date");
     expect(properties(tools, "task_append_note")).not.toHaveProperty("date");
-    expect(properties(tools, "task_update").status).toMatchObject({ enum: ["active", "paused"] });
+    expect(properties(tools, "task_update").status).toMatchObject({ enum: ["new", "progressing", "cancelled"] });
+    for (const toolName of ["task_list", "task_search"]) {
+      expect(properties(tools, toolName).status).toMatchObject({ enum: ["new", "progressing", "done", "cancelled"] });
+    }
     expect(properties(tools, "task_update").description).toMatchObject({ minLength: 0, maxLength: 10_000 });
     for (const toolName of ["task_start", "task_list", "task_search", "task_update"]) {
       expect(properties(tools, toolName).tags).toMatchObject({ maxItems: 12, items: { maxLength: 64 } });
@@ -83,20 +86,20 @@ describe("registerTaskTools", () => {
       acceptanceCriteria: ["Verify"],
       workspaceId: "workspace-1",
     });
-    await execute(tools, "task_list", { status: "active" });
+    await execute(tools, "task_list", { status: "progressing" });
     await execute(tools, "task_search", { query: "task", tags: ["tag"] });
     await execute(tools, "task_read", { id: "imported/task-id" });
-    await execute(tools, "task_update", { id: "imported/task-id", status: "paused", tags: ["new"] });
+    await execute(tools, "task_update", { id: "imported/task-id", status: "cancelled", tags: ["new"] });
     await execute(tools, "task_write", { id: "imported/task-id", document: "plan", content: "# Plan\n" });
     await execute(tools, "task_append_note", { id: "imported/task-id", content: "Note\n" });
     await execute(tools, "task_finish", { id: "imported/task-id", outcome: "Done" });
 
     expect(backend.create).toHaveBeenCalledWith(expect.objectContaining({ title: "New task", projectId: "project-a" }));
     expect(backend.linkWorkspace).toHaveBeenCalledWith("imported/task-id", "workspace-1");
-    expect(backend.list).toHaveBeenCalledWith({ projectId: "project-a", status: "active" });
+    expect(backend.list).toHaveBeenCalledWith({ projectId: "project-a", status: "progressing" });
     expect(backend.search).toHaveBeenCalledWith("task", { projectId: "project-a", tags: ["tag"] });
     expect(backend.getContextDetails).toHaveBeenCalled();
-    expect(backend.update).toHaveBeenCalledWith("imported/task-id", { status: "completed" });
+    expect(backend.update).toHaveBeenCalledWith("imported/task-id", { status: "done" });
     await expect(readFile(join(contextDirectory, "plan.md"), "utf8")).resolves.toBe("# Plan\n");
     await expect(readFile(join(contextDirectory, "notes.md"), "utf8")).resolves.toBe("Note\n");
     await expect(readFile(join(contextDirectory, "outcome.md"), "utf8")).resolves.toBe("Done");
@@ -160,7 +163,7 @@ function createBackend(overrides: { getResult?: LocalTask } = {}): LocalTaskTool
     get: vi.fn().mockResolvedValue(overrides.getResult ?? localTask),
     list: vi.fn().mockResolvedValue([localTask]),
     search: vi.fn().mockResolvedValue([{ ...localTask, rank: 1 } satisfies LocalTaskSearchResult]),
-    update: vi.fn().mockResolvedValue({ ...localTask, status: "completed" }),
+    update: vi.fn().mockResolvedValue({ ...localTask, status: "done" }),
     linkWorkspace: vi.fn(),
     getContextDetails: vi.fn().mockResolvedValue(details),
   } as LocalTaskToolBackend;
@@ -171,7 +174,7 @@ function task(overrides: Partial<LocalTask> = {}): LocalTask {
     projectId: "project-a",
     title: "Task",
     description: "Description",
-    status: "active",
+    status: "progressing",
     priority: "medium",
     createdAt: "2026-08-23T00:00:00Z",
     updatedAt: "2026-08-23T00:00:00Z",

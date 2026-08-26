@@ -43,7 +43,7 @@ const task: LocalTask = {
   projectId: null,
   title: "Task",
   description: "",
-  status: "active",
+  status: "progressing",
   priority: "medium",
   createdAt: "created",
   updatedAt: "updated",
@@ -55,7 +55,7 @@ const link: LocalTaskWorkspaceLink = {
   id: "link-1",
   localTaskId: task.id,
   workspaceId: "workspace-1",
-  status: "active",
+  status: "progressing",
   linkedAt: "linked",
   unlinkedAt: null,
 };
@@ -85,26 +85,26 @@ describe("localTaskCommands projections and detail loading", () => {
     ];
     vi.mocked(daemon.localTaskClient.list).mockResolvedValue(tasks);
     vi.mocked(daemon.localTaskClient.listWorkspaceLinks).mockResolvedValue([
-      { ...link, id: "active", localTaskId: "current-active", status: "active", unlinkedAt: null },
-      { ...link, id: "paused", localTaskId: "current-paused", status: "paused", unlinkedAt: null },
-      { ...link, id: "completed", localTaskId: "current-completed", status: "completed", unlinkedAt: null },
-      { ...link, id: "historical", localTaskId: "historical", status: "completed", unlinkedAt: "unlinked" },
+      { ...link, id: "progressing", localTaskId: "current-active", status: "progressing", unlinkedAt: null },
+      { ...link, id: "new", localTaskId: "current-paused", status: "new", unlinkedAt: null },
+      { ...link, id: "done", localTaskId: "current-completed", status: "done", unlinkedAt: null },
+      { ...link, id: "historical", localTaskId: "historical", status: "done", unlinkedAt: "unlinked" },
       {
         ...link,
         id: "older-history",
         localTaskId: "current-and-historical",
-        status: "completed",
+        status: "done",
         unlinkedAt: "unlinked",
       },
       {
         ...link,
         id: "new-current",
         localTaskId: "current-and-historical",
-        status: "paused",
+        status: "new",
         unlinkedAt: null,
       },
     ]);
-    localTaskStore.setState({ hubFilters: { status: "paused" }, hubSearchQuery: "unchanged" });
+    localTaskStore.setState({ hubFilters: { status: "new" }, hubSearchQuery: "unchanged" });
 
     await loadLocalTaskLinkCandidates("workspace-1");
 
@@ -112,7 +112,7 @@ describe("localTaskCommands projections and detail loading", () => {
     expect(localTaskStore.getState()).toMatchObject({
       linkCandidateWorkspaceId: "workspace-1",
       linkCandidateLoadState: "loaded",
-      hubFilters: { status: "paused" },
+      hubFilters: { status: "new" },
       hubSearchQuery: "unchanged",
     });
     expect(localTaskStore.getState().linkCandidateTasks.map((candidate) => candidate.id)).toEqual([

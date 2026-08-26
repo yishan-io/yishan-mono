@@ -2,7 +2,7 @@ import type { listActivePiSessions } from "@renderer/domains/agent";
 import type { AgentChatRecoveryCoordinator } from "@renderer/domains/agent";
 import { SYSTEM_FILE_MANAGER_APP_ID, type openEntryInExternalApp } from "@renderer/domains/files";
 import type { refreshWorkspaceGitChanges } from "@renderer/domains/git";
-import type { refreshActiveLocalTaskCount, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
+import type { refreshProgressingLocalTaskCount, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
 import { projectStore } from "@renderer/domains/project";
 import type { TerminalRecoveryCoordinator } from "@renderer/domains/terminal";
 import type { listTerminalSessions, setActiveWorkspace } from "@renderer/domains/terminal";
@@ -46,7 +46,7 @@ export type WorkspaceViewCommands = {
   setActiveWorkspace: typeof setActiveWorkspace;
   openEntryInExternalApp: typeof openEntryInExternalApp;
   refreshWorkspaceGitChanges: typeof refreshWorkspaceGitChanges;
-  refreshActiveLocalTaskCount: typeof refreshActiveLocalTaskCount;
+  refreshProgressingLocalTaskCount: typeof refreshProgressingLocalTaskCount;
   selectLocalTaskWorkspace: typeof selectLocalTaskWorkspace;
   loadWorkspaceSnapshot: typeof loadWorkspaceSnapshot;
 };
@@ -211,7 +211,7 @@ export function useWorkspaceBootstrap(input: {
         return;
       }
       await Promise.all([
-        cmd.refreshActiveLocalTaskCount(),
+        cmd.refreshProgressingLocalTaskCount(),
         cmd.selectLocalTaskWorkspace(workbenchNavigationStore.getState().activeWorkspaceId || null),
       ]);
       if (disposed) {

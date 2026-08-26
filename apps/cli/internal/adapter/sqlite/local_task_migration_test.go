@@ -33,12 +33,12 @@ func TestMigrate_013AddsTagCatalogAndBackfillsExistingTags(t *testing.T) {
 	assert012Schema(t, database)
 	assert012ExistingDataPreserved(t, database)
 	assert013CatalogBackfill(t, database)
-	assertMigrationCount(t, database, 17)
+	assertMigrationCount(t, database, 18)
 
 	if err := Migrate(database); err != nil {
 		t.Fatalf("rerun migration: %v", err)
 	}
-	assertMigrationCount(t, database, 17)
+	assertMigrationCount(t, database, 18)
 	assert012ExistingDataPreserved(t, database)
 	assert013CatalogBackfill(t, database)
 	assert013ColorConstraint(t, database)
@@ -215,9 +215,32 @@ func assert012Schema(t *testing.T, database *sql.DB) {
 	assertIndexExists(t, database, "idx_local_task_tags_tag_task")
 }
 
+func assert018LinksMapped(t *testing.T, database *sql.DB) {
+	t.Helper()
+	rows, err := database.Query(`SELECT id, status FROM local_task_workspace_links ORDER BY id`)
+	if err != nil {
+		t.Fatalf("query migrated links: %v", err)
+	}
+	defer rows.Close()
+	want := map[string]string{"link-active": "progressing", "link-paused": "cancelled", "link-completed": "done", "link-unlinked": "done"}
+	for rows.Next() {
+		var id, status string
+		if err := rows.Scan(&id, &status); err != nil {
+			t.Fatalf("scan migrated link: %v", err)
+		}
+		if status != want[id] {
+			t.Fatalf("link %s status = %q, want %q", id, status, want[id])
+		}
+		delete(want, id)
+	}
+	if err := rows.Err(); err != nil || len(want) != 0 {
+		t.Fatalf("iterate migrated links: %v; missing = %#v", err, want)
+	}
+}
+
 func assert012ExistingDataPreserved(t *testing.T, database *sql.DB) {
 	t.Helper()
-	assert011LinksPreserved(t, database)
+	assert018LinksMapped(t, database)
 	var taskCount int
 	if err := database.QueryRow(`SELECT COUNT(*) FROM local_tasks`).Scan(&taskCount); err != nil || taskCount != 4 {
 		t.Fatalf("local task count = %d, %v; want 4", taskCount, err)

@@ -45,7 +45,7 @@ const historicalTask: LocalTask = {
   projectId: null,
   title: "Delayed historical task",
   description: "",
-  status: "completed",
+  status: "done",
   priority: "medium",
   createdAt: "2026-01-01T12:00:00.000Z",
   updatedAt: "2026-01-02T12:00:00.000Z",
@@ -57,7 +57,7 @@ const historicalLink: LocalTaskWorkspaceLink = {
   id: "historical-link",
   localTaskId: historicalTask.id,
   workspaceId: "workspace-1",
-  status: "completed",
+  status: "done",
   linkedAt: "linked",
   unlinkedAt: null,
 };

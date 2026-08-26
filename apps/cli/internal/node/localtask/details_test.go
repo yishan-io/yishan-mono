@@ -44,7 +44,7 @@ func TestService_GetDetailsReturnsResolvedDisplays(t *testing.T) {
 	service.deps.ProjectResolver = resolver
 	task := createServiceTask(t, repository, "Task details")
 	if _, err := repository.LinkWorkspace(context.Background(), domain.WorkspaceLink{
-		LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: domain.StatusActive,
+		LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: domain.StatusProgressing,
 	}); err != nil {
 		t.Fatalf("link workspace: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestService_GetDetailsPrefersTaskProjectOverLinkedWorkspaceProject(t *testi
 	service.deps.ProjectResolver = resolver
 	task := createProjectServiceTask(t, repository, "project-1")
 	if _, err := repository.LinkWorkspace(context.Background(), domain.WorkspaceLink{
-		LocalTaskID: task.ID, WorkspaceID: "linked-workspace", Status: domain.StatusActive,
+		LocalTaskID: task.ID, WorkspaceID: "linked-workspace", Status: domain.StatusProgressing,
 	}); err != nil {
 		t.Fatalf("link workspace: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestService_GetDetailsOmitsUnresolvedHistoricalData(t *testing.T) {
 	service.deps.ProjectResolver = resolver
 	task := createServiceTask(t, repository, "Historical details")
 	if _, err := repository.LinkWorkspace(context.Background(), domain.WorkspaceLink{
-		LocalTaskID: task.ID, WorkspaceID: "deleted-workspace", Status: domain.StatusCompleted,
+		LocalTaskID: task.ID, WorkspaceID: "deleted-workspace", Status: domain.StatusDone,
 	}); err != nil {
 		t.Fatalf("link workspace: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestService_GetDetailsExcludesUnlinkedWorkspaceAndProjectDisplay(t *testing
 	service.deps.ProjectResolver = resolver
 	task := createServiceTask(t, repository, "Unlinked details")
 	link, err := repository.LinkWorkspace(context.Background(), domain.WorkspaceLink{
-		LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: domain.StatusActive,
+		LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: domain.StatusProgressing,
 	})
 	if err != nil {
 		t.Fatalf("link workspace: %v", err)

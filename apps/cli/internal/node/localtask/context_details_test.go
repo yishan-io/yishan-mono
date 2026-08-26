@@ -83,7 +83,7 @@ func TestService_GetContextDetailsRejectsUnresolvableProjectContext(t *testing.T
 func createProjectServiceTask(t *testing.T, repository domain.Repository, projectID string) domain.Task {
 	t.Helper()
 	task, err := repository.Create(context.Background(), domain.Task{
-		ProjectID: &projectID, Title: "Project context", Status: domain.StatusActive, Priority: domain.PriorityMedium,
+		ProjectID: &projectID, Title: "Project context", Status: domain.StatusProgressing, Priority: domain.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatal(err)

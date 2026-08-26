@@ -17,7 +17,7 @@ const task = {
   projectId: null,
   title: "Tagged task",
   description: "",
-  status: "active" as const,
+  status: "progressing" as const,
   priority: "high" as const,
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",
@@ -33,7 +33,7 @@ const link = {
   id: "link-1",
   localTaskId: task.id,
   workspaceId: "workspace-1",
-  status: "active" as const,
+  status: "progressing" as const,
   linkedAt: "2026-01-01",
   unlinkedAt: null,
 };

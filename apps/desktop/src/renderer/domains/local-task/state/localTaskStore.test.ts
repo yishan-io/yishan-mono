@@ -8,7 +8,7 @@ const task: LocalTask = {
   projectId: null,
   title: "Task",
   description: "",
-  status: "active",
+  status: "progressing",
   priority: "medium",
   createdAt: "created",
   updatedAt: "updated",
@@ -20,7 +20,7 @@ const link: LocalTaskWorkspaceLink = {
   id: "link-1",
   localTaskId: "task-1",
   workspaceId: "workspace-1",
-  status: "active",
+  status: "progressing",
   linkedAt: "linked",
   unlinkedAt: null,
 };
@@ -39,9 +39,9 @@ describe("localTaskStore", () => {
     expect(localTaskStore.getState().selectedWorkspaceTaskId).toBe("task-2");
   });
 
-  it("mutates hub filters, results, and active count without I/O", () => {
+  it("mutates hub filters, results, and progressing-task count without I/O", () => {
     const actions = localTaskStore.getState();
-    actions.setHubFilters({ status: "paused", priority: "high" });
+    actions.setHubFilters({ status: "new", priority: "high" });
     actions.setHubSearchQuery("desktop");
     const requestId = actions.beginHubLoad();
     const projectDisplayById = {
@@ -50,10 +50,10 @@ describe("localTaskStore", () => {
     actions.setHubResults(requestId, [task], projectDisplayById, 4);
 
     expect(localTaskStore.getState()).toMatchObject({
-      hubFilters: { status: "paused", priority: "high" },
+      hubFilters: { status: "new", priority: "high" },
       hubSearchQuery: "desktop",
       hubTasks: [task],
-      activeTaskCount: 4,
+      progressingTaskCount: 4,
       hubProjectDisplayById: projectDisplayById,
       hubLoadState: "loaded",
       hubError: null,
@@ -94,7 +94,7 @@ describe("localTaskStore", () => {
     expect(state.selectedWorkspaceId).toBe("workspace-1");
     expect(state.workspaceTasks).toEqual([task]);
     expect(state.workspaceLinks).toEqual([link]);
-    expect(state.workspaceActiveTaskCount).toBe(1);
+    expect(state.workspaceProgressingTaskCount).toBe(1);
     expect(state.contextByTaskId["task-1"]?.files[0]?.name).toBe("plan.md");
     expect(state.contextLoadStateByTaskId["task-1"]).toBe("loaded");
   });
@@ -161,9 +161,9 @@ describe("localTaskStore", () => {
     requestId = localTaskStore.getState().beginWorkspaceLoad("workspace-1");
     localTaskStore.getState().setWorkspaceData(requestId, "workspace-1", [task], [link]);
 
-    localTaskStore.getState().upsertTaskEntity({ ...task, status: "completed", title: "Done" });
+    localTaskStore.getState().upsertTaskEntity({ ...task, status: "done", title: "Done" });
 
-    expect(localTaskStore.getState().taskById["task-1"]).toMatchObject({ title: "Done", status: "completed" });
+    expect(localTaskStore.getState().taskById["task-1"]).toMatchObject({ title: "Done", status: "done" });
     expect(localTaskStore.getState().hubTasks).toEqual([task]);
     expect(localTaskStore.getState().workspaceTasks).toEqual([task]);
   });

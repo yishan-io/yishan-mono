@@ -57,7 +57,7 @@ func (s *Service) validateFilter(ctx context.Context, filter domain.TaskFilter) 
 }
 
 func isValidStatus(status domain.Status) bool {
-	return status == domain.StatusActive || status == domain.StatusPaused || status == domain.StatusCompleted
+	return status == domain.StatusNew || status == domain.StatusProgressing || status == domain.StatusDone || status == domain.StatusCancelled
 }
 
 func isValidPriority(priority domain.Priority) bool {

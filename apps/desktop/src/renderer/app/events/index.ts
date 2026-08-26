@@ -11,7 +11,12 @@ import { openLink } from "@renderer/domains/browser";
  */
 import { incrementFileTreeRefreshVersion } from "@renderer/domains/files";
 import { incrementGitRefreshVersion } from "@renderer/domains/git";
-import { refreshActiveLocalTaskCount, refreshLocalTaskHub, refreshSelectedWorkspaceTasks, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
+import {
+  refreshLocalTaskHub,
+  refreshProgressingLocalTaskCount,
+  refreshSelectedWorkspaceTasks,
+  selectLocalTaskWorkspace,
+} from "@renderer/domains/local-task";
 import { createNotificationEventHandlers } from "@renderer/domains/notification";
 import { createTerminalEventHandlers } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -24,7 +29,7 @@ import { loadWorkspaceSnapshot } from "../commands/workspaceSnapshotFlow";
 async function loadWorkspaceSnapshotAndLocalTasks(): Promise<void> {
   await loadWorkspaceSnapshot();
   const selectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
-  await Promise.all([refreshActiveLocalTaskCount(), selectLocalTaskWorkspace(selectedWorkspaceId || null)]);
+  await Promise.all([refreshProgressingLocalTaskCount(), selectLocalTaskWorkspace(selectedWorkspaceId || null)]);
 }
 
 /** Subscribes to webview new-window requests forwarded by the main process. */

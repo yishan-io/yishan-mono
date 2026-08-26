@@ -6,7 +6,7 @@ const taskPayload = {
   projectId: "project-1",
   title: "Ship desktop",
   description: "Add the Local Task client",
-  status: "active",
+  status: "progressing",
   priority: "high",
   createdAt: "2026-08-24T01:00:00Z",
   updatedAt: "2026-08-24T01:10:00Z",
@@ -19,7 +19,7 @@ const linkPayload = {
   id: "link-1",
   localTaskId: "task-1",
   workspaceId: "workspace-1",
-  status: "active",
+  status: "progressing",
   linkedAt: "2026-08-24T01:15:00Z",
   unlinkedAt: null,
 };
@@ -110,24 +110,24 @@ describe("DaemonLocalTaskClient", () => {
     await client.getDetails("task-1");
     await client.list({
       projectId: "project-1",
-      status: "active",
+      status: "progressing",
       priority: "high",
       workspaceId: "workspace-1",
       tags: ["desktop", "cli"],
       tagIds: ["tag-desktop", "tag-cli"],
     });
-    await client.search("desktop", { status: "active", tags: ["desktop"], tagIds: ["tag-desktop"] });
-    await client.listProjection({ status: "active" }, "desktop");
+    await client.search("desktop", { status: "progressing", tags: ["desktop"], tagIds: ["tag-desktop"] });
+    await client.listProjection({ status: "progressing" }, "desktop");
     await client.listTags();
     await client.listTagCatalog();
     await client.updateTagColor("tag-desktop", "#3B82F6");
-    await client.update("task-1", { status: "completed", tagIds: [] });
+    await client.update("task-1", { status: "done", tagIds: [] });
     await client.renameTag("tag-merged", "Desktop");
     await client.deleteTag("tag-desktop");
     await client.getContext("task-1");
     await client.linkWorkspace("task-1", "workspace-1");
     await client.unlinkWorkspace("link-1");
-    await client.updateLinkStatus("link-1", "paused");
+    await client.updateLinkStatus("link-1", "new");
     await client.listWorkspaceLinks("workspace-1");
     await client.listTaskLinks("task-1");
 
@@ -148,25 +148,25 @@ describe("DaemonLocalTaskClient", () => {
         "localTask.list",
         {
           projectId: "project-1",
-          status: "active",
+          status: "progressing",
           priority: "high",
           workspaceId: "workspace-1",
           tags: ["desktop", "cli"],
           tagIds: ["tag-desktop", "tag-cli"],
         },
       ],
-      ["localTask.search", { query: "desktop", status: "active", tags: ["desktop"], tagIds: ["tag-desktop"] }],
-      ["localTask.listProjection", { query: "desktop", status: "active" }],
+      ["localTask.search", { query: "desktop", status: "progressing", tags: ["desktop"], tagIds: ["tag-desktop"] }],
+      ["localTask.listProjection", { query: "desktop", status: "progressing" }],
       ["localTask.listTags", {}],
       ["localTask.listTagCatalog", {}],
       ["localTask.updateTagColor", { id: "tag-desktop", color: "#3B82F6" }],
-      ["localTask.update", { id: "task-1", status: "completed", tagRefs: [] }],
+      ["localTask.update", { id: "task-1", status: "done", tagRefs: [] }],
       ["localTask.renameTag", { id: "tag-merged", name: "Desktop" }],
       ["localTask.deleteTag", { id: "tag-desktop" }],
       ["localTask.getContextDetails", { id: "task-1" }],
       ["localTask.linkWorkspace", { taskId: "task-1", workspaceId: "workspace-1" }],
       ["localTask.unlinkWorkspace", { linkId: "link-1" }],
-      ["localTask.updateWorkspaceLinkStatus", { linkId: "link-1", status: "paused" }],
+      ["localTask.updateWorkspaceLinkStatus", { linkId: "link-1", status: "new" }],
       ["localTask.listWorkspaceLinks", { workspaceId: "workspace-1" }],
       ["localTask.listTaskLinks", { id: "task-1" }],
     ]);
@@ -241,6 +241,12 @@ describe("DaemonLocalTaskClient", () => {
     const client = new DaemonLocalTaskClient(vi.fn(async () => ["valid", null]));
 
     await expect(client.listTags()).rejects.toThrow("invalid Local Task tag list payload");
+  });
+
+  it.each(["new", "progressing", "done", "cancelled"] as const)("accepts the %s task status", async (status) => {
+    const client = new DaemonLocalTaskClient(vi.fn(async () => ({ ...taskPayload, status })));
+
+    await expect(client.get("task-1")).resolves.toMatchObject({ status });
   });
 
   it.each([
@@ -335,7 +341,7 @@ it("strictly parses the documented Local Task detail workspace-kind wire contrac
       ).getDetails("task-1"),
     ).rejects.toThrow("invalid Local Task details payload");
   }
-  for (const status of ["paused", "completed", "unknown", 1]) {
+  for (const status of ["new", "done", "unknown", 1]) {
     await expect(
       new DaemonLocalTaskClient(
         vi.fn(async () => ({ ...projection, workspaces: [{ ...projection.workspaces[0], status }] })),

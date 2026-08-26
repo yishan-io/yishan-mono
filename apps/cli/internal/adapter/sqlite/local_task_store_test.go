@@ -12,7 +12,7 @@ func TestLocalTaskStore_CreateUpdateAndSearch(t *testing.T) {
 	ctx := context.Background()
 	store, workspaceStore := openTestLocalTaskStore(t)
 	projectID := "project-1"
-	task, err := store.Create(ctx, localtask.Task{ProjectID: &projectID, Title: "Repair SQLite migration", Description: "Durable metadata", Status: localtask.StatusActive, Priority: localtask.PriorityHigh})
+	task, err := store.Create(ctx, localtask.Task{ProjectID: &projectID, Title: "Repair SQLite migration", Description: "Durable metadata", Status: localtask.StatusProgressing, Priority: localtask.PriorityHigh})
 	if err != nil {
 		t.Fatalf("create local task: %v", err)
 	}
@@ -20,17 +20,25 @@ func TestLocalTaskStore_CreateUpdateAndSearch(t *testing.T) {
 		t.Fatalf("created task = %#v", task)
 	}
 	createLocalTaskWorkspace(t, workspaceStore, "workspace-1")
-	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusActive}); err != nil {
+	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusProgressing}); err != nil {
 		t.Fatalf("link workspace: %v", err)
 	}
 	results, err := store.Search(ctx, "durable metadata", localtask.TaskFilter{WorkspaceID: stringPointer("workspace-1")})
 	if err != nil || len(results) != 1 || results[0].ID != task.ID {
 		t.Fatalf("search results = %#v, %v", results, err)
 	}
-	completed := localtask.StatusCompleted
+	completed := localtask.StatusDone
 	updated, err := store.Update(ctx, task.ID, localtask.TaskUpdate{Status: &completed})
 	if err != nil || updated.CompletedAt == nil {
 		t.Fatalf("complete local task = %#v, %v", updated, err)
+	}
+}
+
+func TestLocalTaskStore_CreateDefaultsToNew(t *testing.T) {
+	store, _ := openTestLocalTaskStore(t)
+	task, err := store.Create(context.Background(), localtask.Task{Title: "Default lifecycle", Priority: localtask.PriorityMedium})
+	if err != nil || task.Status != localtask.StatusNew {
+		t.Fatalf("created task = %#v, %v", task, err)
 	}
 }
 
@@ -55,7 +63,7 @@ func TestLocalTaskStore_UpdatePreservesCompletedAtAcrossLifecycle(t *testing.T) 
 	ctx := context.Background()
 	store, _ := openTestLocalTaskStore(t)
 	task := createTestLocalTask(t, store, "Lifecycle timestamp")
-	completed := localtask.StatusCompleted
+	completed := localtask.StatusDone
 	if _, err := store.Update(ctx, task.ID, localtask.TaskUpdate{Status: &completed}); err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +75,7 @@ func TestLocalTaskStore_UpdatePreservesCompletedAtAcrossLifecycle(t *testing.T) 
 	if err != nil || stillCompleted.CompletedAt == nil || *stillCompleted.CompletedAt != original {
 		t.Fatalf("repeated completion = %#v, %v", stillCompleted, err)
 	}
-	active := localtask.StatusActive
+	active := localtask.StatusProgressing
 	reopened, err := store.Update(ctx, task.ID, localtask.TaskUpdate{Status: &active})
 	if err != nil || reopened.CompletedAt != nil {
 		t.Fatalf("reopened task = %#v, %v", reopened, err)
@@ -79,22 +87,22 @@ func TestLocalTaskStore_UpdatesUniformLinkLifecycle(t *testing.T) {
 	store, workspaceStore := openTestLocalTaskStore(t)
 	task := createTestLocalTask(t, store, "History task")
 	createLocalTaskWorkspace(t, workspaceStore, "workspace-1")
-	link, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusActive})
+	link, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusProgressing})
 	if err != nil {
 		t.Fatal(err)
 	}
-	paused, err := store.UpdateWorkspaceLinkStatus(ctx, link.ID, localtask.StatusPaused)
-	if err != nil || paused.Status != localtask.StatusPaused {
+	paused, err := store.UpdateWorkspaceLinkStatus(ctx, link.ID, localtask.StatusCancelled)
+	if err != nil || paused.Status != localtask.StatusCancelled {
 		t.Fatalf("pause link = %#v, %v", paused, err)
 	}
-	completed, err := store.UpdateWorkspaceLinkStatus(ctx, link.ID, localtask.StatusCompleted)
-	if err != nil || completed.Status != localtask.StatusCompleted {
+	completed, err := store.UpdateWorkspaceLinkStatus(ctx, link.ID, localtask.StatusDone)
+	if err != nil || completed.Status != localtask.StatusDone {
 		t.Fatalf("complete link = %#v, %v", completed, err)
 	}
 	if err := store.UnlinkWorkspace(ctx, link.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.UpdateWorkspaceLinkStatus(ctx, link.ID, localtask.StatusActive); !errors.Is(err, localtask.ErrInvalidLink) {
+	if _, err := store.UpdateWorkspaceLinkStatus(ctx, link.ID, localtask.StatusProgressing); !errors.Is(err, localtask.ErrInvalidLink) {
 		t.Fatalf("update unlinked history error = %v", err)
 	}
 }
@@ -104,17 +112,17 @@ func TestLocalTaskStore_RejectsDuplicateActivePairAndPreservesHistory(t *testing
 	store, workspaceStore := openTestLocalTaskStore(t)
 	task := createTestLocalTask(t, store, "Pair task")
 	createLocalTaskWorkspace(t, workspaceStore, "workspace-1")
-	link, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusActive})
+	link, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusProgressing})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusPaused}); err == nil {
+	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusCancelled}); err == nil {
 		t.Fatal("expected duplicate active pair error")
 	}
 	if err := store.UnlinkWorkspace(ctx, link.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusActive}); err != nil {
+	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusProgressing}); err != nil {
 		t.Fatalf("relink after unlink: %v", err)
 	}
 	links, err := store.ListTaskLinks(ctx, task.ID)
@@ -126,7 +134,7 @@ func TestLocalTaskStore_RejectsDuplicateActivePairAndPreservesHistory(t *testing
 func TestLocalTaskStore_ValidatesTasksAndLinks(t *testing.T) {
 	ctx := context.Background()
 	store, workspaceStore := openTestLocalTaskStore(t)
-	_, err := store.Create(ctx, localtask.Task{Title: "", Status: localtask.StatusActive, Priority: localtask.PriorityMedium})
+	_, err := store.Create(ctx, localtask.Task{Title: "", Status: localtask.StatusProgressing, Priority: localtask.PriorityMedium})
 	if !errors.Is(err, localtask.ErrInvalidTask) {
 		t.Fatalf("invalid task error = %v", err)
 	}
@@ -168,7 +176,7 @@ func openTestLocalTaskStore(t *testing.T) (*LocalTaskStore, *WorkspaceStore) {
 
 func createTestLocalTask(t *testing.T, store *LocalTaskStore, title string) localtask.Task {
 	t.Helper()
-	task, err := store.Create(context.Background(), localtask.Task{Title: title, Status: localtask.StatusActive, Priority: localtask.PriorityMedium})
+	task, err := store.Create(context.Background(), localtask.Task{Title: title, Status: localtask.StatusProgressing, Priority: localtask.PriorityMedium})
 	if err != nil {
 		t.Fatalf("create test local task: %v", err)
 	}

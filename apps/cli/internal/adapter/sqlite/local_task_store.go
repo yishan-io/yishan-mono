@@ -30,6 +30,9 @@ func (store *LocalTaskStore) Create(ctx context.Context, task localtask.Task) (l
 	if task.ID == "" {
 		task.ID = uuid.NewString()
 	}
+	if task.Status == "" {
+		task.Status = localtask.StatusNew
+	}
 	if err := localtask.ValidateTask(task); err != nil {
 		return localtask.Task{}, err
 	}
@@ -50,7 +53,7 @@ func (store *LocalTaskStore) insertTask(ctx context.Context, task localtask.Task
 	}
 	if _, err := transaction.ExecContext(ctx, `INSERT INTO local_tasks (`+localTaskColumns+`)
 		VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), datetime('now')), datetime('now'),
-		CASE WHEN ? = 'completed' THEN COALESCE(NULLIF(?, ''), datetime('now')) ELSE NULL END)`, task.ID,
+		CASE WHEN ? = 'done' THEN COALESCE(NULLIF(?, ''), datetime('now')) ELSE NULL END)`, task.ID,
 		task.ProjectID, task.OrganizationID, task.Title, task.Description, task.Status, task.Priority, task.CreatedAt, task.Status, task.CompletedAt); err != nil {
 		_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
 		return localtask.Task{}, fmt.Errorf("create local task: %w", err)
@@ -223,7 +226,7 @@ func (store *LocalTaskStore) insertWorkspaceLink(ctx context.Context, link local
 // UnlinkWorkspace keeps link history while removing the current association.
 func (store *LocalTaskStore) UnlinkWorkspace(ctx context.Context, linkID string) error {
 	result, err := store.database.ExecContext(ctx, `UPDATE local_task_workspace_links
-		SET status = 'completed', unlinked_at = datetime('now') WHERE id = ? AND unlinked_at IS NULL`, linkID)
+		SET status = 'cancelled', unlinked_at = datetime('now') WHERE id = ? AND unlinked_at IS NULL`, linkID)
 	if err != nil {
 		return fmt.Errorf("unlink local task from workspace: %w", err)
 	}

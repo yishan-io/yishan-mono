@@ -53,7 +53,7 @@ const primaryTask = {
   projectId: null,
   title: "Primary task",
   description: "Primary details",
-  status: "active" as const,
+  status: "progressing" as const,
   priority: "high" as const,
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",
@@ -72,7 +72,7 @@ const primaryLink = {
   id: "link-primary",
   localTaskId: primaryTask.id,
   workspaceId: "workspace-1",
-  status: "active" as const,
+  status: "progressing" as const,
   linkedAt: "2026-01-01",
   unlinkedAt: null,
 };
@@ -80,7 +80,7 @@ const relatedLink = {
   id: "link-related",
   localTaskId: relatedTask.id,
   workspaceId: "workspace-1",
-  status: "active" as const,
+  status: "progressing" as const,
   linkedAt: "2026-01-01",
   unlinkedAt: null,
 };

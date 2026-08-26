@@ -74,7 +74,7 @@ const createdTask = {
   projectId: "project-1",
   title: "Created task",
   description: "Description",
-  status: "active" as const,
+  status: "progressing" as const,
   priority: "medium" as const,
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",

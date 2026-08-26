@@ -41,8 +41,10 @@ export type StartTaskInput = {
 export type TaskListInput = Omit<LocalTaskFilters, "projectId">;
 /** Input accepted when searching Local Task metadata. */
 export type SearchTasksInput = TaskListInput & { query: string };
-/** Metadata fields mutable through pi-task. Completion is owned by task_finish. */
-export type UpdateTaskInput = Omit<UpdateLocalTaskInput, "status"> & { status?: "active" | "paused" };
+/** Metadata fields mutable through pi-task. The done transition is owned by task_finish. */
+export type UpdateTaskInput = Omit<UpdateLocalTaskInput, "status"> & {
+  status?: "new" | "progressing" | "cancelled";
+};
 
 const MAX_TAGS_PER_TASK = 12;
 const MAX_TAG_CODE_POINTS = 32;
@@ -54,7 +56,7 @@ export class LocalTaskOperations {
     private readonly projectId: string | undefined = getProjectIdFromEnvironment(),
   ) {}
 
-  /** Creates an active Local Task in the configured project, or globally when none is configured. */
+  /** Creates a new Local Task in the configured project, or globally when none is configured. */
   async start(input: StartTaskInput, options: LocalTaskOperationOptions = {}): Promise<LocalTask> {
     assertRuntimeTags(input.tags);
     const workspaceId = input.workspaceId === undefined ? undefined : requireWorkspaceId(input.workspaceId);
@@ -194,8 +196,8 @@ export function getProjectIdFromEnvironment(): string | undefined {
 }
 
 function assertRuntimeUpdateStatus(status: UpdateTaskInput["status"]): void {
-  if (status !== undefined && status !== "active" && status !== "paused") {
-    throw new Error("Task status must be active or paused.");
+  if (status !== undefined && status !== "new" && status !== "progressing" && status !== "cancelled") {
+    throw new Error("Task status must be new, progressing, or cancelled.");
   }
 }
 

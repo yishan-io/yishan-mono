@@ -10,9 +10,9 @@ func TestMigrate_017AddsOptionalLocalTaskOrganizationContext(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	assertMigrationCount(t, database, 17)
+	assertMigrationCount(t, database, 18)
 	assertColumnExists(t, database, "local_tasks", "organization_id")
-	if _, err := database.Exec(`INSERT INTO local_tasks (id, title, status, priority) VALUES ('historical-task', 'Historical', 'active', 'medium')`); err != nil {
+	if _, err := database.Exec(`INSERT INTO local_tasks (id, title, status, priority) VALUES ('historical-task', 'Historical', 'new', 'medium')`); err != nil {
 		t.Fatalf("insert historical task without organization context: %v", err)
 	}
 }

@@ -26,7 +26,7 @@ func TestService_GetReturnsTaskAndNotFound(t *testing.T) {
 func TestService_ListFiltersAndRejectsInvalidStatus(t *testing.T) {
 	service, _, repository := newTestService(t)
 	createServiceTask(t, repository, "List task")
-	status := domain.StatusActive
+	status := domain.StatusProgressing
 	listedValue, err := service.List(context.Background(), rpc.LocalTaskListParams{Status: &status})
 	if err != nil || len(listedValue.([]domain.Task)) != 1 {
 		t.Fatalf("List = %#v, %v", listedValue, err)
@@ -94,7 +94,7 @@ func TestService_UnlinkWorkspacePreservesHistoryAndReturnsNotFound(t *testing.T)
 		t.Fatalf("UnlinkWorkspace: %v", err)
 	}
 	history, err := repository.ListTaskLinks(context.Background(), task.ID)
-	if err != nil || len(history) != 1 || history[0].Status != domain.StatusCompleted || history[0].UnlinkedAt == nil {
+	if err != nil || len(history) != 1 || history[0].Status != domain.StatusCancelled || history[0].UnlinkedAt == nil {
 		t.Fatalf("unlinked history = %#v, %v", history, err)
 	}
 	_, err = service.UnlinkWorkspace(context.Background(), rpc.LocalTaskLinkIDParams{LinkID: "missing"})
@@ -115,9 +115,9 @@ func TestService_UpdateWorkspaceLinkStatusValidatesAndPreservesHistory(t *testin
 	}
 	linkID := linkedValue.(domain.WorkspaceLink).ID
 	pausedValue, err := service.UpdateWorkspaceLinkStatus(context.Background(), rpc.LocalTaskUpdateLinkStatusParams{
-		LinkID: linkID, Status: domain.StatusPaused,
+		LinkID: linkID, Status: domain.StatusCancelled,
 	})
-	if err != nil || pausedValue.(domain.WorkspaceLink).Status != domain.StatusPaused {
+	if err != nil || pausedValue.(domain.WorkspaceLink).Status != domain.StatusCancelled {
 		t.Fatalf("UpdateWorkspaceLinkStatus = %#v, %v", pausedValue, err)
 	}
 	_, err = service.UpdateWorkspaceLinkStatus(context.Background(), rpc.LocalTaskUpdateLinkStatusParams{
@@ -127,7 +127,7 @@ func TestService_UpdateWorkspaceLinkStatusValidatesAndPreservesHistory(t *testin
 		t.Fatalf("invalid status error = %v", err)
 	}
 	_, err = service.UpdateWorkspaceLinkStatus(context.Background(), rpc.LocalTaskUpdateLinkStatusParams{
-		LinkID: "missing", Status: domain.StatusCompleted,
+		LinkID: "missing", Status: domain.StatusDone,
 	})
 	if !errors.Is(err, domain.ErrLinkNotFound) {
 		t.Fatalf("missing link error = %v", err)

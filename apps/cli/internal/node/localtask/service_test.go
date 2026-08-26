@@ -20,17 +20,17 @@ func TestService_CreateDefaultsAndCompletesTask(t *testing.T) {
 		t.Fatalf("Create: %v", err)
 	}
 	created := createdValue.(domain.Task)
-	if created.ID == "" || created.Status != domain.StatusActive || created.Priority != domain.PriorityMedium || created.Tags == nil {
+	if created.ID == "" || created.Status != domain.StatusNew || created.Priority != domain.PriorityMedium || created.Tags == nil {
 		t.Fatalf("created task = %#v", created)
 	}
 
-	completed := domain.StatusCompleted
+	completed := domain.StatusDone
 	updatedValue, err := service.Update(context.Background(), rpc.LocalTaskUpdateParams{ID: created.ID, Status: &completed})
 	if err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 	updated := updatedValue.(domain.Task)
-	if updated.Status != domain.StatusCompleted || updated.CompletedAt == nil {
+	if updated.Status != domain.StatusDone || updated.CompletedAt == nil {
 		t.Fatalf("updated task = %#v", updated)
 	}
 }
@@ -96,7 +96,7 @@ func TestService_CreateRejectsInvalidMetadata(t *testing.T) {
 func TestService_LinkWorkspaceRequiresPersistedLocalWorkspace(t *testing.T) {
 	service, workspaceStore, repository := newTestService(t)
 	created, err := repository.Create(context.Background(), domain.Task{
-		Title: "Link me", Status: domain.StatusActive, Priority: domain.PriorityMedium,
+		Title: "Link me", Status: domain.StatusProgressing, Priority: domain.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("create task: %v", err)
@@ -154,7 +154,7 @@ func TestService_ListNormalizesWorkspaceFilter(t *testing.T) {
 	createWorkspace(t, workspaceStore, "workspace-1")
 	task := createServiceTask(t, repository, "Filtered task")
 	if _, err := repository.LinkWorkspace(context.Background(), domain.WorkspaceLink{
-		LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: domain.StatusActive,
+		LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: domain.StatusProgressing,
 	}); err != nil {
 		t.Fatalf("link workspace: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestService_ListNormalizesWorkspaceFilter(t *testing.T) {
 func createServiceTask(t *testing.T, repository domain.Repository, title string) domain.Task {
 	t.Helper()
 	task, err := repository.Create(context.Background(), domain.Task{
-		Title: title, Status: domain.StatusActive, Priority: domain.PriorityMedium,
+		Title: title, Status: domain.StatusProgressing, Priority: domain.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("create task: %v", err)

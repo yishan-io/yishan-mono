@@ -9,8 +9,8 @@ import {
   loadLocalTaskContext,
   loadLocalTaskLinks,
   loadLocalTaskTagSuggestions,
-  refreshActiveLocalTaskCount,
   refreshLocalTaskHub,
+  refreshProgressingLocalTaskCount,
   refreshSelectedWorkspaceTasks,
   setLocalTaskHubFilters,
   setLocalTaskHubSearchQuery,
@@ -61,7 +61,7 @@ const task: LocalTask = {
   projectId: null,
   title: "Task",
   description: "",
-  status: "active",
+  status: "progressing",
   priority: "medium",
   createdAt: "created",
   updatedAt: "updated",
@@ -73,7 +73,7 @@ const link: LocalTaskWorkspaceLink = {
   id: "link-1",
   localTaskId: "task-1",
   workspaceId: "workspace-1",
-  status: "active",
+  status: "progressing",
   linkedAt: "linked",
   unlinkedAt: null,
 };
@@ -121,54 +121,58 @@ describe("localTaskCommands", () => {
     });
   });
 
-  it("refreshes the active count without loading the Task Hub projection", async () => {
+  it("refreshes the progressing-task count without loading the Task Hub projection", async () => {
     vi.mocked(daemon.localTaskClient.list).mockResolvedValue([task, { ...task, id: "task-2" }]);
 
-    await refreshActiveLocalTaskCount();
+    await refreshProgressingLocalTaskCount();
 
     expect(daemon.localTaskClient.list).toHaveBeenCalledOnce();
-    expect(daemon.localTaskClient.list).toHaveBeenCalledWith({ status: "active" });
-    expect(localTaskStore.getState()).toMatchObject({ activeTaskCount: 2, hubLoadState: "idle", hubTasks: [] });
+    expect(daemon.localTaskClient.list).toHaveBeenCalledWith({ status: "progressing" });
+    expect(localTaskStore.getState()).toMatchObject({ progressingTaskCount: 2, hubLoadState: "idle", hubTasks: [] });
   });
 
   it("keeps the newer hub-derived count when an older standalone count resolves last", async () => {
-    const staleActiveTasks = createDeferred<LocalTask[]>();
-    vi.mocked(daemon.localTaskClient.list).mockReturnValue(staleActiveTasks.promise);
+    const staleProgressingTasks = createDeferred<LocalTask[]>();
+    vi.mocked(daemon.localTaskClient.list).mockReturnValue(staleProgressingTasks.promise);
 
-    const standaloneRefresh = refreshActiveLocalTaskCount();
+    const standaloneRefresh = refreshProgressingLocalTaskCount();
     vi.mocked(daemon.localTaskClient.list).mockImplementation(async (filters = {}) =>
-      filters.status === "active" ? [task, { ...task, id: "task-2" }] : [task],
+      filters.status === "progressing" ? [task, { ...task, id: "task-2" }] : [task],
     );
     await refreshLocalTaskHub();
-    staleActiveTasks.resolve([]);
+    staleProgressingTasks.resolve([]);
     await standaloneRefresh;
 
-    expect(localTaskStore.getState().activeTaskCount).toBe(2);
+    expect(localTaskStore.getState().progressingTaskCount).toBe(2);
   });
 
   it("keeps the newer standalone count when an older hub-derived count resolves last", async () => {
-    const staleHubActiveTasks = createDeferred<LocalTask[]>();
+    const staleHubProgressingTasks = createDeferred<LocalTask[]>();
     vi.mocked(daemon.localTaskClient.list).mockImplementation(async (filters = {}) =>
-      filters.status === "active" ? staleHubActiveTasks.promise : [task],
+      filters.status === "progressing" ? staleHubProgressingTasks.promise : [task],
     );
 
     const hubRefresh = refreshLocalTaskHub();
     vi.mocked(daemon.localTaskClient.list).mockResolvedValue([task, { ...task, id: "task-2" }]);
-    await refreshActiveLocalTaskCount();
-    staleHubActiveTasks.resolve([]);
+    await refreshProgressingLocalTaskCount();
+    staleHubProgressingTasks.resolve([]);
     await hubRefresh;
 
-    expect(localTaskStore.getState()).toMatchObject({ activeTaskCount: 2, hubTasks: [task] });
+    expect(localTaskStore.getState()).toMatchObject({ progressingTaskCount: 2, hubTasks: [task] });
   });
 
-  it("refreshes a filtered hub list and active count", async () => {
+  it("refreshes a filtered hub list and progressing-task count", async () => {
     vi.mocked(daemon.localTaskClient.list).mockResolvedValue([task, { ...task, id: "task-2" }]);
 
     await setLocalTaskHubFilters({ priority: "medium" });
 
     expect(daemon.localTaskClient.listProjection).toHaveBeenCalledWith({ priority: "medium" }, "");
-    expect(daemon.localTaskClient.list).toHaveBeenCalledWith({ status: "active" });
-    expect(localTaskStore.getState()).toMatchObject({ hubTasks: [task], activeTaskCount: 2, hubLoadState: "loaded" });
+    expect(daemon.localTaskClient.list).toHaveBeenCalledWith({ status: "progressing" });
+    expect(localTaskStore.getState()).toMatchObject({
+      hubTasks: [task],
+      progressingTaskCount: 2,
+      hubLoadState: "loaded",
+    });
   });
 
   it("uses metadata search during refresh and preserves filters", async () => {
@@ -178,13 +182,13 @@ describe("localTaskCommands", () => {
       projectsById: {},
       total: 1,
     });
-    localTaskStore.getState().setHubFilters({ projectId: "project-1", status: "paused" });
+    localTaskStore.getState().setHubFilters({ projectId: "project-1", status: "new" });
 
     await setLocalTaskHubSearchQuery("  desktop  ");
     await refreshLocalTaskHub();
 
     expect(daemon.localTaskClient.listProjection).toHaveBeenLastCalledWith(
-      { projectId: "project-1", status: "paused" },
+      { projectId: "project-1", status: "new" },
       "desktop",
     );
     expect(localTaskStore.getState().hubTasks).toEqual([task]);
@@ -214,17 +218,17 @@ describe("localTaskCommands", () => {
     vi.mocked(daemon.localTaskClient.list).mockResolvedValue([task]);
     vi.mocked(daemon.localTaskClient.listWorkspaceLinks).mockResolvedValue([link]);
     vi.mocked(daemon.localTaskClient.linkWorkspace).mockResolvedValue(link);
-    vi.mocked(daemon.localTaskClient.updateLinkStatus).mockResolvedValue({ ...link, status: "paused" });
+    vi.mocked(daemon.localTaskClient.updateLinkStatus).mockResolvedValue({ ...link, status: "new" });
     vi.mocked(daemon.localTaskClient.listTaskLinks).mockResolvedValue([link]);
     await refreshSelectedWorkspaceTasks("workspace-1");
 
     await linkLocalTaskWorkspace("task-1", "workspace-1");
-    await updateLocalTaskLinkStatus("link-1", "paused");
+    await updateLocalTaskLinkStatus("link-1", "new");
     await unlinkLocalTaskWorkspace("link-1");
     await loadLocalTaskLinks("task-1");
 
     expect(daemon.localTaskClient.linkWorkspace).toHaveBeenCalledWith("task-1", "workspace-1");
-    expect(daemon.localTaskClient.updateLinkStatus).toHaveBeenCalledWith("link-1", "paused");
+    expect(daemon.localTaskClient.updateLinkStatus).toHaveBeenCalledWith("link-1", "new");
     expect(daemon.localTaskClient.unlinkWorkspace).toHaveBeenCalledWith("link-1");
     expect(daemon.localTaskClient.listWorkspaceLinks).toHaveBeenCalledTimes(4);
     expect(localTaskStore.getState()).toMatchObject({
@@ -350,19 +354,19 @@ describe("localTaskCommands", () => {
       workspaceLinks: [link],
       taskLinksByTaskId: { "task-1": [link] },
     });
-    vi.mocked(daemon.localTaskClient.updateLinkStatus).mockResolvedValue({ ...link, status: "paused" });
+    vi.mocked(daemon.localTaskClient.updateLinkStatus).mockResolvedValue({ ...link, status: "new" });
     vi.mocked(daemon.localTaskClient.list).mockResolvedValue([]);
     vi.mocked(daemon.localTaskClient.listWorkspaceLinks).mockResolvedValue([]);
     vi.mocked(daemon.localTaskClient.listTaskLinks)
-      .mockResolvedValueOnce([{ ...link, status: "paused" }])
-      .mockResolvedValueOnce([{ ...link, status: "completed", unlinkedAt: "unlinked" }]);
+      .mockResolvedValueOnce([{ ...link, status: "new" }])
+      .mockResolvedValueOnce([{ ...link, status: "done", unlinkedAt: "unlinked" }]);
 
-    await updateLocalTaskLinkStatus("link-1", "paused");
+    await updateLocalTaskLinkStatus("link-1", "new");
     await unlinkLocalTaskWorkspace("link-1");
 
     expect(daemon.localTaskClient.listTaskLinks).toHaveBeenCalledTimes(2);
     expect(localTaskStore.getState().taskLinksByTaskId["task-1"]).toEqual([
-      { ...link, status: "completed", unlinkedAt: "unlinked" },
+      { ...link, status: "done", unlinkedAt: "unlinked" },
     ]);
   });
 
@@ -378,7 +382,7 @@ describe("localTaskCommands", () => {
     await refreshSelectedWorkspaceTasks("workspace-1");
     await loadLocalTaskContext("task-1");
     await loadLocalTaskLinks("task-1");
-    await expect(updateLocalTask("task-1", { status: "paused" })).rejects.toBe("update failed");
+    await expect(updateLocalTask("task-1", { status: "new" })).rejects.toBe("update failed");
 
     expect(localTaskStore.getState()).toMatchObject({
       hubError: "daemon offline",
@@ -398,7 +402,11 @@ describe("localTaskCommands", () => {
     expect(created).toEqual(task);
     expect(daemon.localTaskClient.listProjection).toHaveBeenCalledOnce();
     expect(daemon.localTaskClient.list).toHaveBeenCalledOnce();
-    expect(localTaskStore.getState()).toMatchObject({ hubTasks: [task], activeTaskCount: 1, isMutationLoading: false });
+    expect(localTaskStore.getState()).toMatchObject({
+      hubTasks: [task],
+      progressingTaskCount: 1,
+      isMutationLoading: false,
+    });
   });
 
   it("ignores stale hub success and error after a newer success", async () => {
@@ -468,23 +476,23 @@ describe("localTaskCommands", () => {
   });
 
   it("does not put created or updated tasks into incompatible projections when refresh fails", async () => {
-    const updatedTask = { ...task, status: "paused" as const, title: "Paused" };
-    localTaskStore.getState().setHubFilters({ status: "active" });
+    const updatedTask = { ...task, status: "new" as const, title: "Paused" };
+    localTaskStore.getState().setHubFilters({ status: "progressing" });
     {
       const requestId = localTaskStore.getState().beginHubLoad();
       localTaskStore.getState().setHubResults(requestId, [task], {}, 1);
     }
-    vi.mocked(daemon.localTaskClient.create).mockResolvedValue({ ...task, id: "created", status: "paused" });
+    vi.mocked(daemon.localTaskClient.create).mockResolvedValue({ ...task, id: "created", status: "new" });
     vi.mocked(daemon.localTaskClient.update).mockResolvedValue(updatedTask);
     vi.mocked(daemon.localTaskClient.list).mockRejectedValue(new Error("refresh failed"));
 
     await createLocalTask({ title: "Created" });
-    await updateLocalTask("task-1", { status: "paused" });
+    await updateLocalTask("task-1", { status: "new" });
 
     expect(localTaskStore.getState().hubTasks).toEqual([task]);
     expect(localTaskStore.getState().taskById).toMatchObject({
-      created: { status: "paused" },
-      "task-1": { status: "paused", title: "Paused" },
+      created: { status: "new" },
+      "task-1": { status: "new", title: "Paused" },
     });
   });
 

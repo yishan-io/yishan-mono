@@ -123,8 +123,8 @@ func appendLocalTaskStatusUpdate(assignments *[]string, arguments *[]any, status
 		return
 	}
 	*assignments = append(*assignments, "status = ?", `completed_at = CASE
-		WHEN ? = 'completed' AND status <> 'completed' THEN datetime('now')
-		WHEN ? = 'completed' THEN completed_at ELSE NULL END`)
+		WHEN ? = 'done' AND status <> 'done' THEN datetime('now')
+		WHEN ? = 'done' THEN completed_at ELSE NULL END`)
 	*arguments = append(*arguments, *status, *status, *status)
 }
 

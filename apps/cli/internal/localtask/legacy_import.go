@@ -65,28 +65,43 @@ func importLegacyTask(ctx context.Context, repository Repository, contextRoot st
 	if err := validateLegacyTaskRecord(record); err != nil {
 		return err
 	}
+	status, err := legacyTaskStatus(record.Status)
+	if err != nil {
+		return err
+	}
 	taskPath, err := resolveLegacyTaskPath(contextRoot, record.Path)
 	if err != nil {
 		return err
 	}
-	description, completedAt, err := readLegacyTaskMetadata(contextRoot, taskPath, record.Status)
+	description, completedAt, err := readLegacyTaskMetadata(contextRoot, taskPath, string(status))
 	if err != nil {
 		return err
 	}
-	return createLegacyTaskIfMissing(ctx, repository, projectID, record, description, completedAt)
+	return createLegacyTaskIfMissing(ctx, repository, projectID, record, status, description, completedAt)
 }
 
 func validateLegacyTaskRecord(record legacyTaskRecord) error {
 	if !isSafeContextTaskID(record.ID) || strings.TrimSpace(record.Title) == "" || strings.TrimSpace(record.Created) == "" {
 		return fmt.Errorf("invalid legacy task record %q", record.ID)
 	}
-	if record.Status != string(StatusActive) && record.Status != string(StatusCompleted) {
-		return fmt.Errorf("invalid legacy task status %q", record.Status)
-	}
-	return nil
+	_, err := legacyTaskStatus(record.Status)
+	return err
 }
 
-func createLegacyTaskIfMissing(ctx context.Context, repository Repository, projectID string, record legacyTaskRecord, description string, completedAt *string) error {
+func legacyTaskStatus(status string) (Status, error) {
+	switch status {
+	case "active":
+		return StatusProgressing, nil
+	case "paused":
+		return StatusCancelled, nil
+	case "completed":
+		return StatusDone, nil
+	default:
+		return "", fmt.Errorf("invalid legacy task status %q", status)
+	}
+}
+
+func createLegacyTaskIfMissing(ctx context.Context, repository Repository, projectID string, record legacyTaskRecord, status Status, description string, completedAt *string) error {
 	existing, err := repository.Get(ctx, record.ID)
 	if err == nil {
 		return validateLegacyTaskProject(existing, projectID)
@@ -94,7 +109,6 @@ func createLegacyTaskIfMissing(ctx context.Context, repository Repository, proje
 	if !errors.Is(err, ErrTaskNotFound) {
 		return fmt.Errorf("read legacy local task %q: %w", record.ID, err)
 	}
-	status := Status(record.Status)
 	_, err = repository.Create(ctx, Task{ID: record.ID, ProjectID: &projectID, Title: record.Title, Description: description, Status: status, Priority: PriorityMedium, CreatedAt: record.Created, CompletedAt: completedAt})
 	if err != nil {
 		return fmt.Errorf("create legacy local task %q: %w", record.ID, err)
@@ -123,7 +137,7 @@ func readLegacyTaskMetadata(contextRoot string, taskPath string, status string) 
 }
 
 func readLegacyCompletionDate(contextRoot string, taskPath string, status string) (*string, error) {
-	if status != string(StatusCompleted) {
+	if status != string(StatusDone) {
 		return nil, nil
 	}
 	outcomePath, exists, err := resolveLegacyFile(contextRoot, taskPath, "outcome.md")

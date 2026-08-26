@@ -11,14 +11,14 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-// LinkWorkspace creates an active Local Task workspace link.
+// LinkWorkspace creates a progressing Local Task workspace link.
 func (s *Service) LinkWorkspace(ctx context.Context, req rpc.LocalTaskLinkWorkspaceParams) (any, error) {
 	taskID, workspaceID, err := s.validateTaskWorkspace(ctx, req.TaskID, req.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
 	link := domain.WorkspaceLink{
-		ID: uuid.NewString(), LocalTaskID: taskID, WorkspaceID: workspaceID, Status: domain.StatusActive,
+		ID: uuid.NewString(), LocalTaskID: taskID, WorkspaceID: workspaceID, Status: domain.StatusProgressing,
 	}
 	if err := domain.ValidateWorkspaceLink(link); err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (s *Service) LinkWorkspace(ctx context.Context, req rpc.LocalTaskLinkWorksp
 	return s.deps.Repository.LinkWorkspace(ctx, link)
 }
 
-// UnlinkWorkspace removes an active association while preserving history.
+// UnlinkWorkspace removes a current association while preserving history.
 func (s *Service) UnlinkWorkspace(ctx context.Context, req rpc.LocalTaskLinkIDParams) (any, error) {
 	linkID, err := requireIdentifier(req.LinkID, "linkId")
 	if err != nil {

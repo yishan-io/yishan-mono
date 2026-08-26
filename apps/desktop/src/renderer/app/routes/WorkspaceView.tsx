@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import { AgentChatRecoveryCoordinator, listActivePiSessions } from "@renderer/domains/agent";
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { gitProjectionStore, refreshWorkspaceGitChanges, useAllWorkspacesGitSync } from "@renderer/domains/git";
-import { TaskHubView, refreshActiveLocalTaskCount, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
+import { TaskHubView, refreshProgressingLocalTaskCount, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
 import { OverviewView } from "@renderer/domains/overview";
 import { CreateProjectDialogView, projectStore } from "@renderer/domains/project";
 
@@ -93,7 +93,7 @@ export function WorkspaceView() {
       setActiveWorkspace,
       openEntryInExternalApp,
       refreshWorkspaceGitChanges,
-      refreshActiveLocalTaskCount,
+      refreshProgressingLocalTaskCount,
       selectLocalTaskWorkspace,
       loadWorkspaceSnapshot,
     }),

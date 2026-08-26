@@ -4,20 +4,25 @@ import type { LocalTask, LocalTaskSearchResult } from "../backend/localTaskTypes
 
 import { buildDescription, createLocalTaskOperations } from "./taskOperations";
 
-const globalTask = createTask({ id: "550e8400-e29b-41d4-a716-446655440000" });
-const projectTask = createTask({ id: "imported/task-id", projectId: "project-a", title: "Project task" });
+const globalTask = createTask({ id: "550e8400-e29b-41d4-a716-446655440000", status: "new" });
+const projectTask = createTask({
+  id: "imported/task-id",
+  projectId: "project-a",
+  title: "Project task",
+  status: "new",
+});
 
 beforeEach(() => vi.stubEnv("YISHAN_PROJECT_ID", ""));
 afterEach(() => vi.unstubAllEnvs());
 
 describe("LocalTaskOperations", () => {
-  it("maps description or goal/criteria exactly when starting a scoped task", async () => {
+  it("starts a new task and maps description or goal/criteria exactly", async () => {
     const client = createClient({ create: projectTask });
     const operations = createLocalTaskOperations(client, "project-a");
 
     await expect(
       operations.start({ title: "Task", goal: "Ship it", acceptanceCriteria: ["Tests pass", "Lint passes"] }),
-    ).resolves.toEqual(projectTask);
+    ).resolves.toMatchObject({ status: "new" });
     expect(client.create).toHaveBeenCalledWith({
       title: "Task",
       description: "Ship it\n\n## Acceptance Criteria\n\n- Tests pass\n- Lint passes",
@@ -72,8 +77,8 @@ describe("LocalTaskOperations", () => {
     const client = createClient({ get: globalTask, list: [projectTask], search: [searchResult(projectTask)] });
     const operations = createLocalTaskOperations(client, "project-a");
 
-    await expect(operations.list({ status: "active", tags: ["tag"] })).resolves.toEqual([projectTask]);
-    expect(client.list).toHaveBeenCalledWith({ projectId: "project-a", status: "active", tags: ["tag"] });
+    await expect(operations.list({ status: "new", tags: ["tag"] })).resolves.toEqual([projectTask]);
+    expect(client.list).toHaveBeenCalledWith({ projectId: "project-a", status: "new", tags: ["tag"] });
     await expect(operations.search({ query: "project" })).resolves.toEqual([searchResult(projectTask)]);
     expect(client.search).toHaveBeenCalledWith("project", { projectId: "project-a" });
     await expect(operations.get(globalTask.id)).rejects.toThrow("configured project scope");
@@ -135,8 +140,8 @@ describe("LocalTaskOperations", () => {
     expect(client.update).not.toHaveBeenCalled();
   });
 
-  it("updates title, description, active/paused status, priority, and tags but cannot complete", async () => {
-    const updatedTask = createTask({ ...projectTask, status: "paused", tags: ["new"] });
+  it("updates title, description, new/progressing/cancelled status, priority, and tags but cannot mark done", async () => {
+    const updatedTask = createTask({ ...projectTask, status: "cancelled", tags: ["new"] });
     const client = createClient({ get: projectTask, update: updatedTask });
     const operations = createLocalTaskOperations(client, "project-a");
 
@@ -144,7 +149,7 @@ describe("LocalTaskOperations", () => {
       operations.update(projectTask.id, {
         title: "Updated",
         description: "Details",
-        status: "paused",
+        status: "cancelled",
         priority: "high",
         tags: ["new"],
       }),
@@ -152,18 +157,27 @@ describe("LocalTaskOperations", () => {
     expect(client.update).toHaveBeenCalledWith(projectTask.id, {
       title: "Updated",
       description: "Details",
-      status: "paused",
+      status: "cancelled",
       priority: "high",
       tags: ["new"],
     });
   });
 
-  it("rejects completed status before calling the client", async () => {
+  it.each(["new", "progressing", "cancelled"] as const)("allows %s status updates", async (status) => {
+    const updatedTask = createTask({ ...projectTask, status });
+    const client = createClient({ get: projectTask, update: updatedTask });
+    const operations = createLocalTaskOperations(client, "project-a");
+
+    await expect(operations.update(projectTask.id, { status })).resolves.toEqual(updatedTask);
+    expect(client.update).toHaveBeenCalledWith(projectTask.id, { status });
+  });
+
+  it("rejects done status before calling the client", async () => {
     const client = createClient({ get: projectTask });
     const operations = createLocalTaskOperations(client, "project-a");
 
-    await expect(operations.update(projectTask.id, { status: "completed" as never })).rejects.toThrow(
-      "Task status must be active or paused.",
+    await expect(operations.update(projectTask.id, { status: "done" as never })).rejects.toThrow(
+      "Task status must be new, progressing, or cancelled.",
     );
     expect(client.get).not.toHaveBeenCalled();
     expect(client.update).not.toHaveBeenCalled();
@@ -179,7 +193,7 @@ describe("LocalTaskOperations", () => {
 **Project:** global
 **Created:** 2026-08-23T00:00:00Z
 **Updated:** 2026-08-23T00:00:00Z
-**Status:** active
+**Status:** new
 **Priority:** medium
 **Tags:** tag
 
@@ -225,7 +239,7 @@ function createTask(overrides: Partial<LocalTask> = {}): LocalTask {
     projectId: null,
     title: "Task",
     description: "Description",
-    status: "active",
+    status: "new",
     priority: "medium",
     createdAt: "2026-08-23T00:00:00Z",
     updatedAt: "2026-08-23T00:00:00Z",

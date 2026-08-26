@@ -25,7 +25,7 @@ import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsInlineEditor } from "../tags/LocalTaskTagsInlineEditor";
 
-const STATUS_OPTIONS: LocalTaskStatus[] = ["active", "paused", "completed"];
+const STATUS_OPTIONS: LocalTaskStatus[] = ["new", "progressing", "done", "cancelled"];
 const PRIORITY_OPTIONS: LocalTaskPriority[] = ["low", "medium", "high"];
 const COMPACT_METADATA_SELECT_SX = { typography: "caption", "& .MuiSelect-select": { py: 0.5, pl: 1, pr: 4 } };
 const SIDEBAR_SECTION_TITLE_SX = { display: "block", mb: 0.5 };
