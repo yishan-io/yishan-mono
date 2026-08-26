@@ -208,10 +208,10 @@ describe("DSHTranscriptController durable reload", () => {
   });
 
   it("re-attaches after a same-incarnation reset before replaying buffered updates", async () => {
-    let resolveAttach: (() => void) | undefined;
+    let resolveAttach: ((snapshot: undefined) => void) | undefined;
     const attach = vi.fn(
       () =>
-        new Promise<void>((resolve) => {
+        new Promise<undefined>((resolve) => {
           resolveAttach = resolve;
         }),
     );
@@ -243,13 +243,59 @@ describe("DSHTranscriptController durable reload", () => {
       expect.arrayContaining([expect.objectContaining({ id: "u1" })]),
     );
 
-    resolveAttach?.();
+    resolveAttach?.(undefined);
     await vi.waitFor(() =>
       expect(actions.replaceMessages).toHaveBeenLastCalledWith(
         "tab",
         expect.arrayContaining([expect.objectContaining({ id: "u0" }), expect.objectContaining({ id: "u1" })]),
       ),
     );
+  });
+
+  it("keeps recovery retryable when its attach snapshot is malformed", async () => {
+    const { actions } = setup();
+    const attach = vi
+      .fn()
+      .mockResolvedValueOnce({
+        runtime: "dsh" as const,
+        sessionId: "session",
+        incarnation: "inc",
+        events: [{ ...event(0).update.event, seq: 0 }],
+        asOfSeq: 0,
+        durableThroughSeq: 0,
+        headSeq: 1,
+      })
+      .mockResolvedValueOnce({
+        runtime: "dsh" as const,
+        sessionId: "session",
+        incarnation: "inc",
+        events: [],
+        asOfSeq: -1,
+        durableThroughSeq: -1,
+        headSeq: -1,
+      });
+    const controller = new DSHTranscriptController(
+      "tab",
+      "session",
+      actions,
+      async () => ({
+        session: { sessionId: "session", createdAt: 0 },
+        events: [],
+        incarnation: "inc",
+        asOfSeq: -1,
+        durableThroughSeq: -1,
+      }),
+      () => {},
+      attach,
+    );
+
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: -1 } } });
+    await vi.waitFor(() => expect(actions.setDSHTranscriptRetryAvailable).toHaveBeenLastCalledWith("tab", true));
+
+    await controller.retry();
+
+    expect(attach).toHaveBeenCalledTimes(2);
+    expect(actions.setDSHTranscriptRetryAvailable).toHaveBeenLastCalledWith("tab", false);
   });
 
   it("adopts a newer durable snapshot incarnation and attaches after its cursor", async () => {

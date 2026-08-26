@@ -110,8 +110,23 @@ func (c *replayCoordinator) subscribe(result SessionSubscribeResult, request Ses
 	for _, update := range initialUpdates {
 		channel <- update
 	}
-	return SessionSubscription{Updates: channel, Unsubscribe: func() { c.unsubscribe(request.SessionID, id) }, Incarnation: result.Incarnation, Baseline: baseline}, nil
+	snapshot := result
+	snapshot.Events = sessionEventsFromUpdates(updates)
+	snapshot.HeadSeq = baseline
+	return SessionSubscription{Updates: channel, Unsubscribe: func() { c.unsubscribe(request.SessionID, id) }, Incarnation: result.Incarnation, Baseline: baseline, Snapshot: snapshot}, nil
 }
+
+func sessionEventsFromUpdates(updates []SessionUpdate) []SessionEvent {
+	events := make([]SessionEvent, 0, len(updates))
+	for _, update := range updates {
+		if update.Event == nil {
+			continue
+		}
+		events = append(events, *update.Event)
+	}
+	return events
+}
+
 func buildReplayUpdates(live []SessionEvent, result SessionSubscribeResult, after int64) ([]SessionUpdate, int64, bool) {
 	if !hasMatchingOverlap(live, result.Events, result.DurableThroughSeq) {
 		return nil, 0, false

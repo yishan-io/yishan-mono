@@ -13,7 +13,7 @@ import {
   readAgentRuntimeHistory,
   startAgentSession as startAgentSessionProcedure,
 } from "../daemon/daemonAgentProcedures";
-import type { AgentRuntime } from "../daemon/daemonAgentTypes";
+import type { AgentDSHAttachResult, AgentRuntime } from "../daemon/daemonAgentTypes";
 import { agentChatStore } from "../state/agentChatStore";
 import { registerAgentChatDSHEventRouter } from "../subscriptions/agentChatDSHEventRouter";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
@@ -314,8 +314,8 @@ function createDSHTranscriptController(
         cwd: record.cwd,
       }),
     () => {},
-    async (cursor) => {
-      await attachAgentSessionProcedure({
+    async (cursor): Promise<AgentDSHAttachResult> => {
+      const snapshot = await attachAgentSessionProcedure({
         runtime: "dsh",
         sessionId: record.sessionId,
         tabId,
@@ -323,6 +323,8 @@ function createDSHTranscriptController(
         cwd: record.cwd,
         afterSeq: cursor.durableThroughSeq,
       });
+      if (!("events" in snapshot)) throw new TypeError("invalid DSH recovery attach response");
+      return snapshot;
     },
   );
 }
@@ -399,7 +401,7 @@ async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: Ensu
   });
 }
 async function attachRuntimeSession(record: AgentRuntimeSessionRecord, tabId: string): Promise<void> {
-  await attachAgentSessionProcedure({
+  const result = await attachAgentSessionProcedure({
     runtime: record.runtime,
     sessionId: record.sessionId,
     tabId,
@@ -407,6 +409,12 @@ async function attachRuntimeSession(record: AgentRuntimeSessionRecord, tabId: st
     cwd: record.cwd,
     ...(record.runtime === "dsh" ? { afterSeq: record.dshTranscriptController?.getDurableThroughSeq() ?? -1 } : {}),
   });
+  if (record.runtime === "dsh") {
+    if (result.runtime !== "dsh" || !("events" in result) || !record.dshTranscriptController) {
+      throw new TypeError("invalid DSH attach response");
+    }
+    record.dshTranscriptController.applyAttachSnapshot(result);
+  }
 }
 async function releaseOrDisposeSession(tabId: string, record: AgentRuntimeSessionRecord): Promise<void> {
   if (record.state === "closing") return;

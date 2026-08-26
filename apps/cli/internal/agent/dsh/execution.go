@@ -89,6 +89,9 @@ type SessionSubscription struct {
 	// Incarnation and Baseline identify the transcript snapshot that seeded Updates.
 	Incarnation string
 	Baseline    int64
+	// Snapshot is the authoritative subscribe result after the replay coordinator
+	// merges durable and in-memory events. It is a transport snapshot, not persistence.
+	Snapshot SessionSubscribeResult
 }
 
 func (s *Supervisor) StartSession(ctx context.Context, request SessionStartRequest) (SessionStartResult, error) {

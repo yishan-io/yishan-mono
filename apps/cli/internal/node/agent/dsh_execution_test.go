@@ -43,6 +43,7 @@ type executionDSH struct {
 	isUndisposable                                                      bool
 	listResult                                                          dsh.SessionListResult
 	health                                                              dsh.Health
+	subscribeSnapshot                                                   dsh.SessionSubscribeResult
 }
 
 func (f *executionDSH) StartSession(_ context.Context, req dsh.SessionStartRequest) (dsh.SessionStartResult, error) {
@@ -109,7 +110,11 @@ func (f *executionDSH) SubscribeSession(_ context.Context, req dsh.SessionSubscr
 	f.subscriptions = append(f.subscriptions, updates)
 	f.mu.Unlock()
 	var once sync.Once
-	return dsh.SessionSubscription{Updates: updates, Unsubscribe: func() { once.Do(func() { close(updates) }) }}, nil
+	subscription := dsh.SessionSubscription{Updates: updates, Unsubscribe: func() { once.Do(func() { close(updates) }) }}
+	f.mu.Lock()
+	subscription.Snapshot = f.subscribeSnapshot
+	f.mu.Unlock()
+	return subscription, nil
 }
 func (f *executionDSH) ResumeSession(_ context.Context, req dsh.SessionReadRequest) (dsh.SessionResumeResult, error) {
 	f.mu.Lock()
@@ -355,5 +360,30 @@ func startDSHExecutionOnConnection(t *testing.T, service *Service, connection *r
 	})
 	if err != nil {
 		t.Fatalf("start DSH: %v", err)
+	}
+}
+
+func TestDSHExecution_AttachReturnsMergedReplaySnapshot(t *testing.T) {
+	runtime := &executionDSH{subscribeSnapshot: dsh.SessionSubscribeResult{
+		SessionID: "s", Incarnation: "inc-2", Events: []dsh.SessionEvent{
+			{SessionID: "s", Seq: 0, Event: json.RawMessage(`{"type":"turn/end","seq":0,"time":0,"data":{"turn":0,"reason":{"kind":"completed"}}}`)},
+		},
+		AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 1,
+	}}
+	service := newDSHExecutionService(runtime)
+	startDSHExecution(t, service)
+	result, err := service.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{
+		Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", AfterSeq: -1,
+	})
+	if err != nil {
+		t.Fatalf("attach: %v", err)
+	}
+	attach, ok := result.(rpc.AgentDSHAttachResult)
+	if !ok {
+		t.Fatalf("attach result = %T, want rpc.AgentDSHAttachResult", result)
+	}
+	if attach.Runtime != rpc.AgentRuntimeDSH || attach.SessionID != "s" || attach.Incarnation != "inc-2" ||
+		attach.AsOfSeq != 0 || attach.DurableThroughSeq != 0 || attach.HeadSeq != 1 || len(attach.Events) != 1 {
+		t.Fatalf("attach result = %#v", attach)
 	}
 }

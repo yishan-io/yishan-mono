@@ -263,6 +263,22 @@ export type AgentAckResult = {
   ok: boolean;
 };
 
+/** Seeds DSH attach state from the daemon's authoritative replay merge. */
+export type AgentDSHAttachResult = {
+  runtime: "dsh";
+  sessionId: string;
+  incarnation: string;
+  events: unknown[];
+  /** Durable baseline cursor; it equals durableThroughSeq for the current protocol. */
+  asOfSeq: number;
+  durableThroughSeq: number;
+  /** Highest event sequence represented by events, including in-memory replay. */
+  headSeq: number;
+};
+
+/** Returns an acknowledgement for Pi or a controller seed for DSH. */
+export type AgentAttachResult = AgentAckResult | AgentDSHAttachResult;
+
 /** Summarizes one durable session across agent runtimes. */
 export type AgentSessionSummary = {
   sessionId: string;

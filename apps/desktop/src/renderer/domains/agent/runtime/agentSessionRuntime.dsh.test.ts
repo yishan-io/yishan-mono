@@ -77,6 +77,18 @@ vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   sendPiCompatibilityCommand: mocks.send,
 }));
 
+function dshAttachResult(sessionId: string) {
+  return {
+    runtime: "dsh" as const,
+    sessionId,
+    incarnation: "run-1",
+    events: [],
+    asOfSeq: -1,
+    durableThroughSeq: -1,
+    headSeq: -1,
+  };
+}
+
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
   tabStore.setState(initialTabStoreState, true);
@@ -264,9 +276,71 @@ describe("agentSessionRuntime.DSH", () => {
     expect(mocks.send).not.toHaveBeenCalled();
   });
 
+  it("applies the recovery attach snapshot when no replay notifications arrive", async () => {
+    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-recovery-attach" });
+    mocks.readHistory.mockResolvedValue({
+      runtime: "dsh",
+      dsh: {
+        session: { sessionId: "dsh-recovery-attach", createdAt: 0 },
+        events: [],
+        incarnation: "run-1",
+        asOfSeq: -1,
+        durableThroughSeq: -1,
+      },
+    });
+    mocks.attachAgent.mockResolvedValue({
+      runtime: "dsh",
+      sessionId: "dsh-recovery-attach",
+      incarnation: "run-1",
+      events: [
+        {
+          type: "user/message",
+          seq: 0,
+          time: 0,
+          data: {
+            message: {
+              id: "recovery-attach-user",
+              role: "user",
+              content: [{ type: "text", text: "Recovered from attach" }],
+              source: { kind: "user" },
+            },
+          },
+          surfaceOp: "append",
+        },
+      ],
+      asOfSeq: 0,
+      durableThroughSeq: 0,
+      headSeq: 0,
+    });
+    await ensureAgentSession({
+      runtime: "dsh",
+      tabId: "tab-dsh-recovery-attach",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId: "dsh-recovery-attach",
+    });
+
+    mocks.dshEventHandler?.({
+      sessionId: "dsh-recovery-attach",
+      tabId: "tab-dsh-recovery-attach",
+      workspaceId: "workspace-1",
+      incarnation: "run-1",
+      update: { reset: { sessionId: "dsh-recovery-attach", incarnation: "run-1", headSeq: -1 } },
+    });
+
+    await vi.waitFor(() =>
+      expect(agentChatStore.getState().sessionsByTabId["tab-dsh-recovery-attach"]?.messages).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: "recovery-attach-user" })]),
+      ),
+    );
+    expect(agentChatStore.getState().sessionsByTabId["tab-dsh-recovery-attach"]?.state).not.toBe("error");
+  });
+
   it("attaches after the confirmed durable cursor on reconnect", async () => {
     mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-cursor-session" });
-    mocks.attachAgent.mockResolvedValue({ runtime: "dsh", ok: true });
+    mocks.attachAgent.mockImplementation(({ sessionId }: { sessionId: string }) =>
+      Promise.resolve(dshAttachResult(sessionId)),
+    );
     await ensureAgentSession({
       runtime: "dsh",
       tabId: "tab-dsh-cursor",
@@ -323,7 +397,9 @@ describe("agentSessionRuntime.DSH", () => {
     mocks.getCapabilities
       .mockResolvedValueOnce({ dsh: { configured: true, ready: false } })
       .mockResolvedValueOnce({ dsh: { configured: true, ready: true } });
-    mocks.attachAgent.mockResolvedValue({ runtime: "dsh", ok: true });
+    mocks.attachAgent.mockImplementation(({ sessionId }: { sessionId: string }) =>
+      Promise.resolve(dshAttachResult(sessionId)),
+    );
 
     await ensureAgentSession({
       runtime: "dsh",
@@ -371,7 +447,9 @@ describe("agentSessionRuntime.DSH", () => {
         };
       });
       mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: false } });
-      mocks.attachAgent.mockResolvedValue({ runtime: "dsh", ok: true });
+      mocks.attachAgent.mockImplementation(({ sessionId }: { sessionId: string }) =>
+        Promise.resolve(dshAttachResult(sessionId)),
+      );
 
       await ensureAgentSession({
         runtime: "dsh",
@@ -454,7 +532,7 @@ describe("agentSessionRuntime.DSH", () => {
     });
     mocks.startAgent.mockRejectedValue(Object.assign(new Error("agent session already exists"), { code: -32003 }));
     mocks.attachAgent
-      .mockResolvedValueOnce({ runtime: "dsh", ok: true })
+      .mockResolvedValueOnce(dshAttachResult("dsh-session"))
       .mockRejectedValueOnce(new Error("DSH unavailable"));
     await ensureAgentSession({
       runtime: "dsh",

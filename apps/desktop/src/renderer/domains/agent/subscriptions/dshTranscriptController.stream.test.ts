@@ -12,6 +12,67 @@ import {
 } from "./dshTranscriptController.testSupport";
 
 describe("DSHTranscriptController stream handling", () => {
+  it("applies a validated attach snapshot before racing notifications", () => {
+    const { controller, actions } = setup();
+    controller.applyAttachSnapshot({
+      runtime: "dsh",
+      sessionId: "session",
+      incarnation: "inc",
+      events: [{ type: "turn/end", seq: 0, time: 0, data: { turn: 0, reason: { kind: "completed" } } }],
+      asOfSeq: 0,
+      durableThroughSeq: 0,
+      headSeq: 0,
+    });
+    controller.handle({
+      sessionId: "session",
+      tabId: "tab",
+      workspaceId: "workspace",
+      incarnation: "inc",
+      update: { event: { type: "turn/end", seq: 0, time: 0, data: { turn: 0, reason: { kind: "completed" } } } },
+    });
+    expect(controller.getDurableThroughSeq()).toBe(0);
+    expect(actions.setSessionState).not.toHaveBeenCalledWith("tab", "error");
+  });
+  it("keeps ahead notifications when a verified attach snapshot is a stale prefix", () => {
+    const { controller, actions } = setup();
+    controller.handle(event(0));
+    controller.handle(event(1));
+
+    controller.applyAttachSnapshot({
+      runtime: "dsh",
+      sessionId: "session",
+      incarnation: "inc",
+      events: [event(0).update.event],
+      asOfSeq: 0,
+      durableThroughSeq: 0,
+      headSeq: 0,
+    });
+
+    expect(controller.getDurableThroughSeq()).toBe(0);
+    expect(actions.replaceMessages).toHaveBeenLastCalledWith(
+      "tab",
+      expect.arrayContaining([expect.objectContaining({ id: "u0" }), expect.objectContaining({ id: "u1" })]),
+    );
+    expect(actions.setSessionState).not.toHaveBeenCalledWith("tab", "error");
+  });
+
+  it("rejects an attach snapshot whose declared durable head is absent from its events", () => {
+    const { controller, actions } = setup();
+
+    expect(() =>
+      controller.applyAttachSnapshot({
+        runtime: "dsh",
+        sessionId: "session",
+        incarnation: "inc",
+        events: [event(0).update.event],
+        asOfSeq: 0,
+        durableThroughSeq: 0,
+        headSeq: 1,
+      }),
+    ).toThrow("DSH attach head does not match events");
+    expect(actions.setSessionState).toHaveBeenLastCalledWith("tab", "error");
+  });
+
   it("accepts the contiguous rc.2 fixture sequence", () => {
     const events: unknown[] = JSON.parse(
       readFileSync(new URL("./fixtures/dshRc2Events.json", import.meta.url), "utf8"),

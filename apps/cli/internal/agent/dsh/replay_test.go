@@ -182,6 +182,10 @@ func TestReplayCoordinator_SubscribeReturnsSnapshotIdentityAndMergedBaseline(t *
 	if subscription.Incarnation != "run-2" || subscription.Baseline != 2 {
 		t.Fatalf("snapshot = incarnation %q, baseline %d", subscription.Incarnation, subscription.Baseline)
 	}
+	if subscription.Snapshot.AsOfSeq != 1 || subscription.Snapshot.DurableThroughSeq != 1 ||
+		subscription.Snapshot.HeadSeq != 2 || len(subscription.Snapshot.Events) != 3 {
+		t.Fatalf("merged attach snapshot = %#v", subscription.Snapshot)
+	}
 }
 
 func TestReplayCoordinator_CursorIncarnationMismatchEmitsReset(t *testing.T) {

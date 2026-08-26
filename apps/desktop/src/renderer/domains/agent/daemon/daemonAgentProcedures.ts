@@ -1,10 +1,12 @@
 import { subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport } from "@renderer/events/desktopRpcEventBus";
 import { request } from "@renderer/rpc";
+import { parseAgentAttachResult } from "./daemonAgentAttachParser";
 import { parseAgentHistoryResult } from "./daemonAgentHistoryParser";
 import type {
   AgentAbortRequest,
   AgentAckResult,
   AgentAttachRequest,
+  AgentAttachResult,
   AgentCapabilities,
   AgentDefinitionCreateInput,
   AgentDefinitionDetail,
@@ -146,8 +148,8 @@ export async function startAgentSession(input: AgentStartRequest): Promise<Agent
 }
 
 /** Attaches the current daemon connection to one existing agent session. */
-export async function attachAgentSession(input: AgentAttachRequest): Promise<AgentAckResult> {
-  return (await request("agent.attach", input)) as AgentAckResult;
+export async function attachAgentSession(input: AgentAttachRequest): Promise<AgentAttachResult> {
+  return parseAgentAttachResult(await request("agent.attach", input), input);
 }
 
 /** Sends one semantic prompt to an agent session. */

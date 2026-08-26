@@ -114,6 +114,21 @@ type AgentAckResult struct {
 	OK      bool         `json:"ok"`
 }
 
+// AgentDSHAttachResult seeds a renderer's DSH controller from the same
+// authoritative subscribe/replay merge that backs notifications. AsOfSeq is
+// the durable baseline; DurableThroughSeq is its persisted cursor. Events can
+// also include contiguous in-memory replay through HeadSeq and remain safe to
+// deduplicate with racing notifications.
+type AgentDSHAttachResult struct {
+	Runtime           AgentRuntime      `json:"runtime"`
+	SessionID         string            `json:"sessionId"`
+	Incarnation       string            `json:"incarnation"`
+	Events            []json.RawMessage `json:"events"`
+	AsOfSeq           int64             `json:"asOfSeq"`
+	DurableThroughSeq int64             `json:"durableThroughSeq"`
+	HeadSeq           int64             `json:"headSeq"`
+}
+
 // AgentSessionSummary is the stable cross-runtime representation of a durable session.
 type AgentSessionSummary struct {
 	SessionID     string `json:"sessionId"`

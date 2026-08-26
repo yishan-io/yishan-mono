@@ -1,6 +1,6 @@
 import { getErrorMessage } from "../../../../shared/errors/getErrorMessage";
 import type { AgentMessage } from "../chat/agentChatTypes";
-import type { AgentDSHHistory } from "../daemon/daemonAgentTypes";
+import type { AgentDSHAttachResult, AgentDSHHistory } from "../daemon/daemonAgentTypes";
 import {
   type DSHEvent,
   type DSHFrontendPayload,
@@ -47,12 +47,41 @@ export class DSHTranscriptController {
     private readonly actions: DSHTranscriptActions,
     private readonly loadDurableSnapshot: () => Promise<AgentDSHHistory>,
     private readonly onDurableCursor: (cursor: DSHDurableCursor) => void,
-    private readonly attachSnapshotIncarnation: (cursor: DSHDurableCursor) => Promise<void> = async () => {},
+    private readonly attachSnapshotIncarnation: (
+      cursor: DSHDurableCursor,
+    ) => Promise<AgentDSHAttachResult | undefined> = async () => undefined,
   ) {}
 
   /** Returns the sequence that may safely be used as an attach replay cursor. */
   public getDurableThroughSeq(): number {
     return this.durableThroughSeq;
+  }
+
+  /** Strictly validates and applies the authoritative DSH attach snapshot. */
+  public applyAttachSnapshot(snapshot: AgentDSHAttachResult): void {
+    try {
+      const events = this.parseAttachEvents(snapshot);
+      const hasNewIncarnation = !this.incarnation || this.incarnation !== snapshot.incarnation;
+      if (hasNewIncarnation) this.replaceAttachState(snapshot.incarnation);
+      if (this.incarnation !== snapshot.incarnation) throw new TypeError("DSH attach incarnation mismatch");
+      this.reconcileAttachEvents(events);
+      if (snapshot.durableThroughSeq > this.nextSeq - 1) {
+        throw new TypeError("DSH attach durable cursor exceeds transcript");
+      }
+      if (snapshot.durableThroughSeq > this.durableThroughSeq) {
+        this.durableThroughSeq = snapshot.durableThroughSeq;
+        this.onDurableCursor({
+          sessionId: this.sessionId,
+          incarnation: snapshot.incarnation,
+          durableThroughSeq: snapshot.durableThroughSeq,
+        });
+      }
+    } catch (error) {
+      if (this.controllerState !== "recovering") {
+        this.markBlocked(`DSH attach snapshot failed: ${getErrorMessage(error)}`);
+      }
+      throw error;
+    }
   }
 
   /** Retries a failed DSH durable reload without changing runtimes. */
@@ -91,6 +120,89 @@ export class DSHTranscriptController {
     }
     this.incarnation ||= payload.incarnation;
     this.applyUpdate(payload.update);
+  }
+
+  private parseAttachEvents(snapshot: AgentDSHAttachResult): DSHEvent[] {
+    if (
+      snapshot.runtime !== "dsh" ||
+      snapshot.sessionId !== this.sessionId ||
+      !snapshot.incarnation ||
+      !this.isSafeSequence(snapshot.asOfSeq, -1) ||
+      !this.isSafeSequence(snapshot.durableThroughSeq, -1) ||
+      !this.isSafeSequence(snapshot.headSeq, -1) ||
+      snapshot.asOfSeq !== snapshot.durableThroughSeq ||
+      snapshot.headSeq < snapshot.durableThroughSeq
+    ) {
+      throw new TypeError("DSH attach snapshot metadata is invalid");
+    }
+    const events = snapshot.events.map((event) => {
+      const sequence = this.getAttachEventSequence(event);
+      const payload = parseDSHFrontendPayload({
+        sessionId: this.sessionId,
+        tabId: this.tabId,
+        workspaceId: "attach-snapshot",
+        incarnation: snapshot.incarnation,
+        update: { event: { sessionId: this.sessionId, seq: sequence, event } },
+      });
+      if (!payload?.update.event || isUnknownRequiredDSHEvent(payload.update.event)) {
+        throw new TypeError("DSH attach event is invalid");
+      }
+      return payload.update.event;
+    });
+    const firstSequence = events[0]?.seq;
+    if (firstSequence !== undefined && events.some((event, index) => event.seq !== firstSequence + index)) {
+      throw new TypeError("DSH attach events are not contiguous");
+    }
+    if (events.length === 0 && snapshot.headSeq !== snapshot.asOfSeq) {
+      throw new TypeError("DSH attach head does not match events");
+    }
+    if (
+      events.length > 0 &&
+      (events.at(-1)?.seq !== snapshot.headSeq || firstSequence === undefined || firstSequence > snapshot.asOfSeq + 1)
+    ) {
+      throw new TypeError("DSH attach head does not match events");
+    }
+    return events;
+  }
+
+  private reconcileAttachEvents(events: DSHEvent[]): void {
+    for (const event of events) {
+      if (event.seq < this.nextSeq) {
+        const prior = this.events[event.seq];
+        if (!prior || JSON.stringify(prior) !== JSON.stringify(event)) {
+          throw new TypeError("DSH attach event conflicts with transcript");
+        }
+        continue;
+      }
+      if (event.seq > this.nextSeq) throw new TypeError("DSH attach snapshot has a transcript gap");
+      this.applyEvent(event);
+      if (this.controllerState === "failed" || this.isBlocked) {
+        throw new TypeError("DSH attach event could not be applied");
+      }
+    }
+  }
+
+  private isSafeSequence(sequence: number, minimum: number): boolean {
+    return Number.isSafeInteger(sequence) && sequence >= minimum;
+  }
+
+  private getAttachEventSequence(event: unknown): number {
+    if (typeof event !== "object" || event === null || !("seq" in event)) {
+      throw new TypeError("DSH attach event sequence is missing");
+    }
+    const { seq } = event;
+    if (typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 0) {
+      throw new TypeError("DSH attach event sequence is invalid");
+    }
+    return seq;
+  }
+
+  private replaceAttachState(incarnation: string): void {
+    this.incarnation = incarnation;
+    this.nextSeq = 0;
+    this.durableThroughSeq = -1;
+    this.events = [];
+    this.clearActiveTextStream();
   }
 
   private applyUpdate(update: DSHUpdate): void {
@@ -194,7 +306,8 @@ export class DSHTranscriptController {
         durableThroughSeq: this.durableThroughSeq,
       };
       this.onDurableCursor(cursor);
-      await this.attachSnapshotIncarnation(cursor);
+      const attachSnapshot = await this.attachSnapshotIncarnation(cursor);
+      if (attachSnapshot) this.applyAttachSnapshot(attachSnapshot);
       const bufferedUpdates = this.bufferedUpdates;
       this.bufferedUpdates = [];
       this.controllerState = "normal";

@@ -149,7 +149,19 @@ func (s *Service) rebindDSHSession(connection *rpc.Connection, sessionID string,
 		}
 	}
 	s.pumpDSHSubscription(entry)
-	return rpc.AgentAckResult{Runtime: rpc.AgentRuntimeDSH, OK: true}, nil
+	return mapDSHAttachResult(subscription), nil
+}
+
+func mapDSHAttachResult(subscription dsh.SessionSubscription) rpc.AgentDSHAttachResult {
+	snapshot := subscription.Snapshot
+	events := make([]json.RawMessage, len(snapshot.Events))
+	for index, event := range snapshot.Events {
+		events[index] = event.Event
+	}
+	return rpc.AgentDSHAttachResult{
+		Runtime: rpc.AgentRuntimeDSH, SessionID: snapshot.SessionID, Incarnation: snapshot.Incarnation,
+		Events: events, AsOfSeq: snapshot.AsOfSeq, DurableThroughSeq: snapshot.DurableThroughSeq, HeadSeq: snapshot.HeadSeq,
+	}
 }
 
 func (s *Service) promptDSH(ctx context.Context, req rpc.AgentPromptParams) (any, error) {
