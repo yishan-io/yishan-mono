@@ -22,7 +22,20 @@ Do not create a task for a small one-time edit or a question with no work.
 
 ## Start a Task
 
-Use `task_start` with a concise title. Provide a description, or provide a goal and acceptance criteria. Do not provide both forms.
+Use `task_start` with an outcome-focused title. Prefer separate `goal`, `context`, and independently checkable `acceptanceCriteria` fields for multi-step work; use `description` only when a short free-form brief is clearer. Do not provide both forms.
+
+Use this concise creation shape when the information is known; omit sections that would be speculation:
+
+```text
+Title: <verb> <observable outcome>
+Goal: <one-sentence outcome>
+Context / background: <why this work matters, prior decisions, or constraints>
+Acceptance criteria:
+- <verifiable result>
+- <verifiable result>
+```
+
+Include context/background when it is known and materially affects the work; omit it rather than inventing history. Keep detailed research logs and changing decisions out of the task description. Put them in `notes` after task creation. The user can update task metadata with `task_update` at any time.
 
 You can set priority and tags at creation. New tasks start with new status. Do not provide an ID.
 

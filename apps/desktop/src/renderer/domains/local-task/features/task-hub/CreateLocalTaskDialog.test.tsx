@@ -2,6 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { localTaskTemplateStore } from "../../state/localTaskTemplateStore";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
 
@@ -112,11 +113,14 @@ describe("CreateLocalTaskDialog", () => {
     commands.createAndLinkLocalTask.mockResolvedValue({ status: "linked", task: createdTask });
     commands.linkLocalTaskWorkspace.mockResolvedValue(undefined);
     localTaskStore.setState({ ...initialState, tagCatalog: [] });
+    localTaskTemplateStore.getState().resetTemplates();
   });
 
   afterEach(() => {
     cleanup();
     localTaskStore.setState(initialState, true);
+    localTaskTemplateStore.getState().resetTemplates();
+    window.localStorage.clear();
   });
 
   it("uses placeholder-backed accessible controls, icons, and a medium dialog", () => {
@@ -148,6 +152,30 @@ describe("CreateLocalTaskDialog", () => {
     expect(prioritySelect.querySelector('[data-testid="local-task-priority-icon"]')).toBeTruthy();
     fireEvent.mouseDown(prioritySelect);
     expect(screen.getAllByTestId("local-task-priority-icon")).toHaveLength(4);
+  });
+
+  it("prefills the editable Markdown description from the default template", () => {
+    renderDialog();
+
+    expect((screen.getByTestId("local-task-description-editor") as HTMLTextAreaElement).value).toContain("## Goal");
+    expect((screen.getByTestId("local-task-description-editor") as HTMLTextAreaElement).value).toContain(
+      "## Acceptance Criteria",
+    );
+  });
+
+  it("prefills the editable Markdown description from the selected personal template", () => {
+    const templateId = localTaskTemplateStore
+      .getState()
+      .addTemplate({ name: "Bug", content: "## Reproduction\n\nSteps" });
+    renderDialog();
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.templates.select" }));
+    fireEvent.click(screen.getByRole("option", { name: "Bug" }));
+
+    expect((screen.getByTestId("local-task-description-editor") as HTMLTextAreaElement).value).toBe(
+      "## Reproduction\n\nSteps",
+    );
+    expect(localTaskTemplateStore.getState().selectedTemplateId).toBe(templateId);
   });
 
   it("renders tag options outside the dialog so they are not clipped by the description editor toolbar", () => {

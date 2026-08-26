@@ -48,6 +48,7 @@ describe("registerTaskTools", () => {
     expect(properties(tools, "task_start")).not.toHaveProperty("ticket");
     expect(properties(tools, "task_start")).not.toHaveProperty("date");
     expect(properties(tools, "task_start").workspaceId).toMatchObject({ minLength: 1 });
+    expect(properties(tools, "task_start").context).toMatchObject({ minLength: 1, maxLength: 10_000 });
     expect(properties(tools, "task_finish")).not.toHaveProperty("date");
     expect(properties(tools, "task_append_note")).not.toHaveProperty("date");
     expect(properties(tools, "task_update").status).toMatchObject({ enum: ["new", "progressing", "cancelled"] });
@@ -83,6 +84,7 @@ describe("registerTaskTools", () => {
     await execute(tools, "task_start", {
       title: "New task",
       goal: "Ship",
+      context: "Customer onboarding is blocked.",
       acceptanceCriteria: ["Verify"],
       workspaceId: "workspace-1",
     });
@@ -94,7 +96,14 @@ describe("registerTaskTools", () => {
     await execute(tools, "task_append_note", { id: "imported/task-id", content: "Note\n" });
     await execute(tools, "task_finish", { id: "imported/task-id", outcome: "Done" });
 
-    expect(backend.create).toHaveBeenCalledWith(expect.objectContaining({ title: "New task", projectId: "project-a" }));
+    expect(backend.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "New task",
+        projectId: "project-a",
+        description:
+          "## Goal\n\nShip\n\n## Context\n\nCustomer onboarding is blocked.\n\n## Acceptance Criteria\n\n- Verify",
+      }),
+    );
     expect(backend.linkWorkspace).toHaveBeenCalledWith("imported/task-id", "workspace-1");
     expect(backend.list).toHaveBeenCalledWith({ projectId: "project-a", status: "progressing" });
     expect(backend.search).toHaveBeenCalledWith("task", { projectId: "project-a", tags: ["tag"] });

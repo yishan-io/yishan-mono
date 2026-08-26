@@ -29,6 +29,24 @@ The daemon provides the paths for three context documents:
 
 Use `task_write` to replace `plan`, `notes`, or `outcome`. Use `task_append_note` to add research or progress to `notes`. Keep the plan coherent. Keep notes specific to this task.
 
+Start a new `notes` document with this compact, editable Markdown structure:
+
+```markdown
+# Notes
+
+## Summary
+
+## Decisions
+
+## Evidence and Progress
+
+- YYYY-MM-DD — <fact, result, or change>
+
+## Open Questions
+```
+
+Append dated, factual entries under **Evidence and Progress**. Move resolved material into **Summary** or **Decisions** when it becomes important. Do not preserve an old format for its own sake: when the user asks to change the notes, replace or reorganize the Markdown with `task_write`. Users can also edit `notes.md` directly in the file editor.
+
 ## Completion
 
 Use `task_finish` only when the user explicitly asks to complete the task. After explicit direction that all work is complete, perform the self-checks, prepare a factual outcome, and finish without asking again. The tool writes the outcome and marks the task done.

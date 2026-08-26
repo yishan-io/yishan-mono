@@ -27,6 +27,28 @@ The package registers exactly these eight tools:
 
 The synthetic brief shows daemon metadata. It is not a writable context document. The daemon provides paths for `plan`, `notes`, and `outcome`.
 
+## Markdown conventions
+
+For multi-step work, create tasks with an outcome-focused title, a concise goal, relevant context/background, and independently checkable acceptance criteria. Include context only when it explains why the work matters, records a binding decision, or states a constraint; keep changing research and implementation detail in `notes.md`, not in task metadata.
+
+Use this editable notes structure by default:
+
+```markdown
+# Notes
+
+## Summary
+
+## Decisions
+
+## Evidence and Progress
+
+- YYYY-MM-DD — <fact, result, or change>
+
+## Open Questions
+```
+
+Agents may append dated facts or replace the document to reorganize it. Users can edit the Markdown context documents directly.
+
 Use `task_finish` only when the user explicitly asks to complete the task. When the user explicitly says all work is complete, run self-checks and finish without asking again.
 
 ## Development

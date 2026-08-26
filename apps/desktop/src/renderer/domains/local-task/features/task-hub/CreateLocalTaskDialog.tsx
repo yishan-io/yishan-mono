@@ -29,10 +29,12 @@ import {
   loadLocalTaskTagSuggestions,
 } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskPriority } from "../../localTaskTypes";
+import { localTaskTemplateStore } from "../../state/localTaskTemplateStore";
 import { localTaskStore } from "../../state/localTaskStore";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskTagsInput } from "../tags/LocalTaskTagsInput";
 import { LocalTaskDescriptionEditor } from "./LocalTaskDescriptionEditor";
+import { LocalTaskTemplateControls } from "./LocalTaskTemplateControls";
 
 type CreateLocalTaskDialogProps = {
   open: boolean;
@@ -74,6 +76,12 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
   const [partialLinkError, setPartialLinkError] = useState<string | null>(null);
   useEffect(() => {
     if (open) void loadLocalTaskTagSuggestions();
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const { selectedTemplateId, templates } = localTaskTemplateStore.getState();
+    const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
+    setDescription(selectedTemplate?.content ?? "");
   }, [open]);
   const handleProjectChange = useCallback(
     (_event: React.SyntheticEvent, nextProject: WorkspaceProjectRecord | null) => setProject(nextProject),
@@ -223,6 +231,11 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
             slotProps={{ htmlInput: { "aria-label": t("localTask.fields.title") } }}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
+          />
+          <LocalTaskTemplateControls
+            description={description}
+            onDescriptionChange={setDescription}
+            disabled={isMutationLoading || Boolean(createdTask)}
           />
           <LocalTaskDescriptionEditor
             value={description}

@@ -5,6 +5,12 @@
       "title": "Create task",
       "linkFailed": "Creation succeeded for “{{title}}” ({{taskId}}), but linking failed: {{error}}"
     },
+    "templates": {
+      "select": "Task template",
+      "name": "Template name",
+      "save": "Save template",
+      "delete": "Delete template"
+    },
     "fields": {
       "title": "Title",
       "description": "Description",

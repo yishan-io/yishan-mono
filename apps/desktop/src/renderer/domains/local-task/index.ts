@@ -47,6 +47,12 @@ export {
   normalizeLocalTaskTag,
 } from "./localTaskTags";
 export { localTaskStore, type LocalTaskStoreState } from "./state/localTaskStore";
+export {
+  DEFAULT_LOCAL_TASK_TEMPLATE,
+  localTaskTemplateStore,
+  type LocalTaskTemplate,
+  type LocalTaskTemplateStoreState,
+} from "./state/localTaskTemplateStore";
 
 export { TaskHubView } from "./features/task-hub/TaskHubView";
 export { WorkspaceTasksView } from "./features/workspace-tasks/WorkspaceTasksView";

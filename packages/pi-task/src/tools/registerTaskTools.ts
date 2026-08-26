@@ -36,6 +36,7 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
         title: titleSchema,
         description: Type.Optional(descriptionSchema),
         goal: Type.Optional(descriptionSchema),
+        context: Type.Optional(descriptionSchema),
         acceptanceCriteria: Type.Optional(
           Type.Array(Type.String({ minLength: 1, maxLength: 2_000 }), { maxItems: 50 }),
         ),
