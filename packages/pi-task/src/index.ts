@@ -9,6 +9,8 @@ export type {
   LocalTaskSearchResult,
   LocalTaskStatus,
   LocalTaskTagRef,
+  LocalTaskTemplate,
+  LocalTaskTemplatesResult,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "./backend/localTaskTypes";
@@ -21,6 +23,7 @@ export {
 } from "./tools/taskOperations";
 export type {
   LocalTaskMetadataClient,
+  LocalTaskTemplateClient,
   SearchTasksInput,
   StartTaskInput,
   TaskListInput,

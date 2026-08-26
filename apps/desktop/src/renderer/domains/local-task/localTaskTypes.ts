@@ -4,6 +4,25 @@ export type LocalTaskStatus = "new" | "progressing" | "done" | "cancelled";
 /** Local Task priority values supported by the daemon. */
 export type LocalTaskPriority = "low" | "medium" | "high";
 
+/** A personal Markdown template available when creating a Local Task. */
+export type LocalTaskTemplate = {
+  id: string;
+  name: string;
+  content: string;
+};
+
+/** The full task template collection and the template the Pi agent uses by default. */
+export type LocalTaskTemplatesResult = {
+  templates: LocalTaskTemplate[];
+  agentDefaultId: string;
+};
+
+/** The full template collection and agent default accepted by the daemon. */
+export type LocalTaskSetTemplatesInput = {
+  templates: LocalTaskTemplate[];
+  agentDefaultId: string;
+};
+
 /** Authoritative Local Task metadata returned by the local daemon. */
 export type LocalTask = {
   id: string;

@@ -146,6 +146,8 @@ type LocalTaskService interface {
 	Get(ctx context.Context, req LocalTaskIDParams) (any, error)
 	GetDetails(ctx context.Context, req LocalTaskIDParams) (any, error)
 	GetContextDetails(ctx context.Context, req LocalTaskIDParams) (any, error)
+	GetTaskTemplates(ctx context.Context, req struct{}) (any, error)
+	SetTaskTemplates(ctx context.Context, req LocalTaskSetTemplatesParams) (any, error)
 	List(ctx context.Context, req LocalTaskListParams) (any, error)
 	ListProjection(ctx context.Context, req LocalTaskListProjectionParams) (any, error)
 	ListTags(ctx context.Context) (any, error)

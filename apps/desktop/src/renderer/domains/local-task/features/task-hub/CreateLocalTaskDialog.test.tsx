@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { localTaskTemplateStore } from "../../state/localTaskTemplateStore";
+import { DEFAULT_LOCAL_TASK_TEMPLATE, localTaskTemplateStore } from "../../state/localTaskTemplateStore";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
 
@@ -12,6 +12,7 @@ const commands = vi.hoisted(() => ({
   createLocalTaskTag: vi.fn(),
   linkLocalTaskWorkspace: vi.fn(),
   loadLocalTaskTagSuggestions: vi.fn(),
+  loadLocalTaskTemplates: vi.fn(),
 }));
 
 vi.mock("../../commands/localTaskCommands", () => commands);
@@ -113,7 +114,10 @@ describe("CreateLocalTaskDialog", () => {
     commands.createAndLinkLocalTask.mockResolvedValue({ status: "linked", task: createdTask });
     commands.linkLocalTaskWorkspace.mockResolvedValue(undefined);
     localTaskStore.setState({ ...initialState, tagCatalog: [] });
-    localTaskTemplateStore.getState().resetTemplates();
+    localTaskTemplateStore
+      .getState()
+      .setTemplates([DEFAULT_LOCAL_TASK_TEMPLATE, { id: "bug", name: "Bug", content: "## Reproduction\n\nSteps" }], "default");
+    localTaskTemplateStore.getState().setSelectedTemplateId("");
   });
 
   afterEach(() => {
@@ -154,28 +158,24 @@ describe("CreateLocalTaskDialog", () => {
     expect(screen.getAllByTestId("local-task-priority-icon")).toHaveLength(4);
   });
 
-  it("prefills the editable Markdown description from the default template", () => {
+  it("prefills the editable Markdown description from the daemon agent-default template", async () => {
     renderDialog();
 
-    expect((screen.getByTestId("local-task-description-editor") as HTMLTextAreaElement).value).toContain("## Goal");
-    expect((screen.getByTestId("local-task-description-editor") as HTMLTextAreaElement).value).toContain(
-      "## Acceptance Criteria",
+    await waitFor(() =>
+      expect((screen.getByTestId("local-task-description-editor") as HTMLTextAreaElement).value).toContain("## Goal"),
     );
+    expect(commands.loadLocalTaskTemplates).toHaveBeenCalled();
   });
 
-  it("prefills the editable Markdown description from the selected personal template", () => {
-    const templateId = localTaskTemplateStore
-      .getState()
-      .addTemplate({ name: "Bug", content: "## Reproduction\n\nSteps" });
+  it("prefills the editable Markdown description from an explicitly selected template", async () => {
+    localTaskTemplateStore.getState().setSelectedTemplateId("bug");
     renderDialog();
 
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.templates.select" }));
-    fireEvent.click(screen.getByRole("option", { name: "Bug" }));
-
-    expect((screen.getByTestId("local-task-description-editor") as HTMLTextAreaElement).value).toBe(
-      "## Reproduction\n\nSteps",
+    await waitFor(() =>
+      expect((screen.getByTestId("local-task-description-editor") as HTMLTextAreaElement).value).toBe(
+        "## Reproduction\n\nSteps",
+      ),
     );
-    expect(localTaskTemplateStore.getState().selectedTemplateId).toBe(templateId);
   });
 
   it("renders tag options outside the dialog so they are not clipped by the description editor toolbar", () => {
@@ -200,6 +200,9 @@ describe("CreateLocalTaskDialog", () => {
 
   it("submits the selected metadata and Markdown emitted by the description editor", async () => {
     renderDialog();
+    await waitFor(() =>
+      expect((screen.getByTestId("local-task-description-editor") as HTMLTextAreaElement).value).toContain("## Goal"),
+    );
     fireEvent.change(getTitleInput(), { target: { value: "  New task  " } });
     fireEvent.change(screen.getByTestId("local-task-description-editor"), { target: { value: "  **Markdown**  " } });
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.project" }));

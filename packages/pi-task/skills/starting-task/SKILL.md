@@ -35,6 +35,8 @@ Acceptance criteria:
 - <verifiable result>
 ```
 
+Before creating a task automatically (without explicit user direction), call `task_template_read` to read the Agent default section structure. Use those headings and their order when writing the task description. Fall back to the built-in structure (## Goal, ## Context, ## Acceptance Criteria, ## Notes) only when the tool is unavailable.
+
 Include context/background when it is known and materially affects the work; omit it rather than inventing history. Keep detailed research logs and changing decisions out of the task description. Put them in `notes` after task creation. The user can update task metadata with `task_update` at any time.
 
 You can set priority and tags at creation. New tasks start with new status. Do not provide an ID.

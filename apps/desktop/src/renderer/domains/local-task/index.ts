@@ -11,10 +11,12 @@ export {
   loadLocalTaskDetails,
   loadLocalTaskLinks,
   loadLocalTaskTagSuggestions,
+  loadLocalTaskTemplates,
   renameLocalTaskTag,
   refreshProgressingLocalTaskCount,
   refreshLocalTaskHub,
   refreshSelectedWorkspaceTasks,
+  saveLocalTaskTemplates,
   selectLocalTaskWorkspace,
   setLocalTaskHubFilters,
   setLocalTaskHubSearchQuery,
@@ -34,6 +36,9 @@ export type {
   LocalTaskLoadState,
   LocalTaskPriority,
   LocalTaskSearchResult,
+  LocalTaskSetTemplatesInput,
+  LocalTaskTemplate,
+  LocalTaskTemplatesResult,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
   LocalTaskTagRef,
@@ -50,7 +55,6 @@ export { localTaskStore, type LocalTaskStoreState } from "./state/localTaskStore
 export {
   DEFAULT_LOCAL_TASK_TEMPLATE,
   localTaskTemplateStore,
-  type LocalTaskTemplate,
   type LocalTaskTemplateStoreState,
 } from "./state/localTaskTemplateStore";
 

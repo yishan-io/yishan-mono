@@ -11,13 +11,16 @@ import type {
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
   LocalTaskTagRenameResult,
+  LocalTaskSetTemplatesInput,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../localTaskTypes";
 import { localTaskStore } from "../state/localTaskStore";
+import { localTaskTemplateStore } from "../state/localTaskTemplateStore";
 
 const taskLoadsInFlight = new Map<string, Promise<LocalTask>>();
 const detailLoadsInFlight = new Map<string, Promise<LocalTaskDetails>>();
+let templatesLoadInFlight: Promise<void> | null = null;
 
 function getTrackedTaskLinkProjectionIds(): string[] {
   const { taskLinksByTaskId, taskLinksLoadStateByTaskId } = localTaskStore.getState();
@@ -87,6 +90,38 @@ async function runMutation<T>(operation: () => Promise<T>): Promise<T> {
   } catch (error) {
     localTaskStore.getState().finishMutation(getErrorMessage(error));
     throw error;
+  }
+}
+
+/** Loads task templates from daemon into the template store. */
+export function loadLocalTaskTemplates(): Promise<void> {
+  if (templatesLoadInFlight) return templatesLoadInFlight;
+
+  localTaskTemplateStore.getState().setIsTemplatesLoading(true);
+  const load = localTaskClient
+    .getTemplates()
+    .then(({ templates, agentDefaultId }) => {
+      localTaskTemplateStore.getState().setTemplates(templates, agentDefaultId);
+    })
+    .catch((error) => {
+      console.error("Failed to load Local Task templates", getErrorMessage(error));
+    })
+    .finally(() => {
+      localTaskTemplateStore.getState().setIsTemplatesLoading(false);
+      if (templatesLoadInFlight === load) templatesLoadInFlight = null;
+    });
+  templatesLoadInFlight = load;
+  return load;
+}
+
+/** Saves updated task templates and refreshes the template store from the daemon response. */
+export async function saveLocalTaskTemplates(input: LocalTaskSetTemplatesInput): Promise<void> {
+  localTaskTemplateStore.getState().setIsTemplatesLoading(true);
+  try {
+    const { templates, agentDefaultId } = await localTaskClient.setTemplates(input);
+    localTaskTemplateStore.getState().setTemplates(templates, agentDefaultId);
+  } finally {
+    localTaskTemplateStore.getState().setIsTemplatesLoading(false);
   }
 }
 

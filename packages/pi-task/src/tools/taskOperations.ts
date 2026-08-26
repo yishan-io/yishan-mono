@@ -3,12 +3,17 @@ import type {
   LocalTask,
   LocalTaskFilters,
   LocalTaskSearchResult,
+  LocalTaskTemplatesResult,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../backend/localTaskTypes";
 
 /** Cancellation options for Local Task metadata operations. */
 export type LocalTaskOperationOptions = { signal?: AbortSignal };
+/** The Local Task RPC method used to read task templates. */
+export type LocalTaskTemplateClient = {
+  getTemplates(options?: LocalTaskOperationOptions): Promise<LocalTaskTemplatesResult>;
+};
 /** The Local Task RPC methods used by metadata operations. */
 export type LocalTaskMetadataClient = {
   create(input: CreateLocalTaskInput, options?: LocalTaskOperationOptions): Promise<LocalTask>;

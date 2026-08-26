@@ -4,6 +4,7 @@ import {
   type LocalTaskContextDetails,
   type LocalTaskFilters,
   type LocalTaskSearchResult,
+  type LocalTaskTemplatesResult,
   type LocalTaskWorkspaceLink,
   type UpdateLocalTaskInput,
   parseLocalTask,
@@ -11,6 +12,7 @@ import {
   parseLocalTaskID,
   parseLocalTaskList,
   parseLocalTaskSearchResults,
+  parseLocalTaskTemplates,
   parseLocalTaskWorkspaceLink,
 } from "./localTaskTypes";
 
@@ -210,6 +212,10 @@ export class LocalTaskRpcClient {
     options?: LocalTaskRpcOptions,
   ): Promise<LocalTaskSearchResult[]> {
     return parseLocalTaskSearchResults(await this.call("localTask.search", { query, ...filters }, options));
+  }
+  /** Loads personal task templates and the agent default. */
+  async getTemplates(options?: LocalTaskRpcOptions): Promise<LocalTaskTemplatesResult> {
+    return parseLocalTaskTemplates(await this.call("localTask.getTemplates", {}, options));
   }
   /** Loads daemon-derived Task Context paths. */
   async getContextDetails(id: string, options?: LocalTaskRpcOptions): Promise<LocalTaskContextDetails> {

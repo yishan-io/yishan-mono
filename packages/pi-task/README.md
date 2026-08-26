@@ -14,7 +14,7 @@ The package uses `YISHAN_PROJECT_ID` when it is set. Operations then use only th
 
 ## Tools
 
-The package registers exactly these eight tools:
+The package registers exactly these nine tools:
 
 - `task_start` creates a new task with a title, description or goal and acceptance criteria, priority, tags, and an optional workspace association.
 - `task_list` lists tasks by status, priority, workspace, and tags.
@@ -24,6 +24,7 @@ The package registers exactly these eight tools:
 - `task_write` replaces the `plan`, `notes`, or `outcome` context document.
 - `task_append_note` adds text to `notes`.
 - `task_finish` writes the outcome and marks a task done.
+- `task_template_read` reads the Agent default task description template structure.
 
 The synthetic brief shows daemon metadata. It is not a writable context document. The daemon provides paths for `plan`, `notes`, and `outcome`.
 

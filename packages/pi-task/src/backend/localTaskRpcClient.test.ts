@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import contractFixture from "../../../../fixtures/local-task-rpc-contract.json";
 
 import { LocalTaskRpcClient, validateLocalTaskDaemonURL } from "./localTaskRpcClient";
-import { parseLocalTask, parseLocalTaskContextDetails } from "./localTaskTypes";
+import { parseLocalTask, parseLocalTaskContextDetails, parseLocalTaskTemplates } from "./localTaskTypes";
 
 class FakeWebSocket {
   readonly listeners = new Map<string, Set<(event: Event) => void>>();
@@ -135,6 +135,41 @@ describe("LocalTaskRpcClient", () => {
     };
     socket?.emit("message", JSON.stringify({ jsonrpc: "2.0", id: 1, result: link }));
     await expect(request).resolves.toEqual(link);
+  });
+
+  it("reads and strictly parses personal task templates", async () => {
+    let socket: FakeWebSocket | undefined;
+    const client = new LocalTaskRpcClient(
+      endpoint,
+      class extends FakeWebSocket {
+        constructor(url: string) {
+          super(url);
+          socket = this;
+        }
+      },
+    );
+    const templates = {
+      templates: [{ id: "agent-default", name: "Agent default", content: "## Goal" }],
+      agentDefaultId: "agent-default",
+    };
+
+    const request = client.getTemplates();
+    socket?.emit("open");
+    expect(JSON.parse(socket?.send.mock.calls[0]?.[0] ?? "")).toEqual({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "localTask.getTemplates",
+      params: {},
+    });
+    socket?.emit("message", JSON.stringify({ jsonrpc: "2.0", id: 1, result: templates }));
+    await expect(request).resolves.toEqual(templates);
+
+    expect(() =>
+      parseLocalTaskTemplates({ ...templates, templates: [{ id: "agent-default", name: "Agent default" }] }),
+    ).toThrow("invalid Local Task templates payload");
+    expect(() => parseLocalTaskTemplates({ ...templates, agentDefaultId: 1 })).toThrow(
+      "invalid Local Task templates payload",
+    );
   });
 
   it("rejects invalid, mismatched, and binary response frames", async () => {

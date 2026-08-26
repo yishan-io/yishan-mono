@@ -4,6 +4,10 @@ import { basename, dirname, isAbsolute, join, normalize, resolve } from "node:pa
 export type LocalTaskStatus = "new" | "progressing" | "done" | "cancelled";
 /** Local Task priority values accepted by the daemon. */
 export type LocalTaskPriority = "low" | "medium" | "high";
+/** One personal Markdown task description template. */
+export type LocalTaskTemplate = { id: string; name: string; content: string };
+/** Current personal task templates and agent default. */
+export type LocalTaskTemplatesResult = { templates: LocalTaskTemplate[]; agentDefaultId: string };
 /** A catalog tag assigned to a Local Task. */
 export type LocalTaskTagRef = { id: string; name?: string };
 /** Authoritative Local Task metadata returned by the daemon. */
@@ -145,6 +149,20 @@ export function parseLocalTask(payload: unknown): LocalTask {
     tagRefs: parseLocalTaskTagRefs(record.tagRefs),
   };
 }
+/** Strictly parses current personal task templates and the agent default. */
+export function parseLocalTaskTemplates(payload: unknown): LocalTaskTemplatesResult {
+  const templatesPayload = requireRecord(payload, "Local Task templates", ["templates", "agentDefaultId"]);
+  if (typeof templatesPayload.agentDefaultId !== "string" || !Array.isArray(templatesPayload.templates))
+    throw new TypeError("invalid Local Task templates payload");
+  const templates = templatesPayload.templates.map((entry): LocalTaskTemplate => {
+    const template = requireRecord(entry, "Local Task templates", ["id", "name", "content"]);
+    if (typeof template.id !== "string" || typeof template.name !== "string" || typeof template.content !== "string")
+      throw new TypeError("invalid Local Task templates payload");
+    return { id: template.id, name: template.name, content: template.content };
+  });
+  return { templates, agentDefaultId: templatesPayload.agentDefaultId };
+}
+
 /** Strictly parses a daemon Local Task workspace link. */
 export function parseLocalTaskWorkspaceLink(payload: unknown): LocalTaskWorkspaceLink {
   const record = requireRecord(payload, "Local Task workspace link", [

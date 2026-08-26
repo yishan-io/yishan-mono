@@ -27,6 +27,7 @@ import {
   createLocalTaskTag,
   linkLocalTaskWorkspace,
   loadLocalTaskTagSuggestions,
+  loadLocalTaskTemplates,
 } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskPriority } from "../../localTaskTypes";
 import { localTaskTemplateStore } from "../../state/localTaskTemplateStore";
@@ -79,9 +80,19 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
   }, [open]);
   useEffect(() => {
     if (!open) return;
-    const { selectedTemplateId, templates } = localTaskTemplateStore.getState();
-    const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
-    setDescription(selectedTemplate?.content ?? "");
+    let isCancelled = false;
+    const loadTemplateDescription = async () => {
+      await loadLocalTaskTemplates();
+      if (isCancelled) return;
+      const { agentDefaultId, selectedTemplateId, templates } = localTaskTemplateStore.getState();
+      const templateId = selectedTemplateId || agentDefaultId;
+      const template = templates?.find((candidate) => candidate.id === templateId);
+      setDescription(template?.content ?? "");
+    };
+    void loadTemplateDescription();
+    return () => {
+      isCancelled = true;
+    };
   }, [open]);
   const handleProjectChange = useCallback(
     (_event: React.SyntheticEvent, nextProject: WorkspaceProjectRecord | null) => setProject(nextProject),

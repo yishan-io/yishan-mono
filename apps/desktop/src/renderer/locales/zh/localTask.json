@@ -9,7 +9,10 @@
       "select": "任务模板",
       "name": "模板名称",
       "save": "保存模板",
-      "delete": "删除模板"
+      "delete": "删除模板",
+      "agentDefault": "智能体默认模板",
+      "setAgentDefault": "设为智能体默认模板",
+      "loading": "正在加载模板…"
     },
     "fields": {
       "title": "标题",

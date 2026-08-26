@@ -9,7 +9,10 @@
       "select": "Task template",
       "name": "Template name",
       "save": "Save template",
-      "delete": "Delete template"
+      "delete": "Delete template",
+      "agentDefault": "Agent default",
+      "setAgentDefault": "Set as agent default",
+      "loading": "Loading templates…"
     },
     "fields": {
       "title": "Title",
