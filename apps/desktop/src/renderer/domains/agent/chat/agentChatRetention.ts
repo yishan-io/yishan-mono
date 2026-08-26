@@ -25,7 +25,7 @@ export function mergeActiveTurnHistory(
   );
   const liveLifecycleMessages = committedMessages.filter(
     (message) =>
-      isBackgroundSubagentLifecycleMessage(message) &&
+      isLiveSubagentLifecycleMessage(message) &&
       !terminalHistoryChildSessionIds.has(getSubagentChildSessionId(message) ?? ""),
   );
   const liveLifecycleChildSessionIds = new Set(
@@ -105,10 +105,8 @@ function getRendererFinalToolCallIds(
   return toolCallIds;
 }
 
-function isBackgroundSubagentLifecycleMessage(message: AgentMessage): boolean {
-  return (
-    message.role === "custom" && message.customType === "pi-subagent-child" && message.details?.mode === "background"
-  );
+function isLiveSubagentLifecycleMessage(message: AgentMessage): boolean {
+  return message.role === "custom" && message.customType === "pi-subagent-child";
 }
 
 function isCompletedSubagentLifecycleMessage(message: AgentMessage): boolean {

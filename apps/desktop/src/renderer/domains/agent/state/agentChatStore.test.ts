@@ -589,6 +589,49 @@ describe("agentChatStore", () => {
   // ─── running subagent panel state ─────────────────────────────────────────
 
   describe("running subagent panel state", () => {
+    it("retains a foreground start through stale history until persisted completion replaces it", () => {
+      const tabId = "tab-foreground-lifecycle-retention";
+      agentChatStore.getState().initSession(tabId, "session-foreground-lifecycle-retention");
+
+      const startedMessage = {
+        id: "child-session-1:started",
+        role: "custom" as const,
+        customType: "pi-subagent-child",
+        display: false,
+        content: "",
+        details: {
+          event: "started",
+          mode: "foreground",
+          agentId: "agent-1",
+          agentName: "builder",
+          childSessionId: "child-session-1",
+          title: "builder — implement retention",
+          summary: "implement retention",
+        },
+      } satisfies AgentMessage;
+      const completedMessage = {
+        ...startedMessage,
+        id: "child-session-1:completed",
+        details: { ...startedMessage.details, event: "completed" },
+      } satisfies AgentMessage;
+
+      agentChatStore.getState().appendMessage(tabId, startedMessage);
+      agentChatStore.getState().replaceMessages(tabId, []);
+
+      let session = agentChatStore.getState().sessionsByTabId[tabId];
+      expect(session?.messages).toEqual([startedMessage]);
+      expect(session?.runningSubagents).toEqual([
+        expect.objectContaining({ childSessionId: "child-session-1", state: "running" }),
+      ]);
+
+      agentChatStore.getState().replaceMessages(tabId, [completedMessage]);
+
+      session = agentChatStore.getState().sessionsByTabId[tabId];
+      expect(session?.messages).toEqual([completedMessage]);
+      expect(session?.runningSubagents).toEqual([]);
+      expect(session?.finishedSubagents).toEqual([expect.objectContaining({ childSessionId: "child-session-1" })]);
+    });
+
     it("updates an existing Agent row from preparing to queued when its background result arrives", () => {
       const tabId = "tab-background-subagent";
       agentChatStore.getState().initSession(tabId, "session-background-subagent");

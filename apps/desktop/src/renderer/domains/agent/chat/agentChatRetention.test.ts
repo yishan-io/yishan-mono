@@ -104,7 +104,7 @@ describe("mergeActiveTurnHistory", () => {
     expect(mergeActiveTurnHistory([], [liveLifecycle])).toEqual([liveLifecycle]);
   });
 
-  it("does not retain foreground lifecycle messages absent from RPC history", () => {
+  it("keeps live foreground lifecycle messages absent from RPC history", () => {
     const foregroundLifecycle = {
       id: "child-1:started",
       role: "custom" as const,
@@ -114,7 +114,7 @@ describe("mergeActiveTurnHistory", () => {
       details: { event: "started", mode: "foreground", childSessionId: "child-1" },
     } satisfies AgentMessage;
 
-    expect(mergeActiveTurnHistory([], [foregroundLifecycle], {})).toEqual([]);
+    expect(mergeActiveTurnHistory([], [foregroundLifecycle], {})).toEqual([foregroundLifecycle]);
   });
 
   it("does not retain unrelated custom messages absent from RPC history", () => {
