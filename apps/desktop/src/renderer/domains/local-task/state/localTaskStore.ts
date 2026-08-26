@@ -8,7 +8,7 @@ export type { LocalTaskStoreState } from "./localTaskStoreState";
 /** Stores Local Task entities, projections, context, links, and operation state. */
 export const localTaskStore = create<LocalTaskStoreState>()(
   immer((set) => {
-    let activeTaskCountRequestGeneration = 0;
+    let progressingTaskCountRequestGeneration = 0;
     let hubRequestGeneration = 0;
     let workspaceRequestGeneration = 0;
     let tagSuggestionsRequestGeneration = 0;
@@ -75,7 +75,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       hubProjectDisplayById: {},
       hubFilters: {},
       hubSearchQuery: "",
-      activeTaskCount: 0,
+      progressingTaskCount: 0,
       hubLoadState: "idle",
       hubError: null,
       tagCatalog: [],
@@ -86,7 +86,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       selectedWorkspaceTaskId: null,
       workspaceTasks: [],
       workspaceLinks: [],
-      workspaceActiveTaskCount: 0,
+      workspaceProgressingTaskCount: 0,
       workspaceLoadState: "idle",
       workspaceError: null,
       linkCandidateWorkspaceId: null,
@@ -171,22 +171,22 @@ export const localTaskStore = create<LocalTaskStoreState>()(
           reconcileCachedTaskTagRefs(state, deletedTagId);
         });
       },
-      beginActiveTaskCountLoad: () => ++activeTaskCountRequestGeneration,
-      setActiveTaskCount: (requestId, activeTaskCount) => {
-        if (requestId === activeTaskCountRequestGeneration) set({ activeTaskCount });
+      beginProgressingTaskCountLoad: () => ++progressingTaskCountRequestGeneration,
+      setProgressingTaskCount: (requestId, progressingTaskCount) => {
+        if (requestId === progressingTaskCountRequestGeneration) set({ progressingTaskCount });
       },
       beginHubLoad: () => {
-        const requestId = ++activeTaskCountRequestGeneration;
+        const requestId = ++progressingTaskCountRequestGeneration;
         hubRequestGeneration = requestId;
         set({ hubLoadState: "loading", hubError: null });
         return requestId;
       },
-      setHubResults: (requestId, hubTasks, hubProjectDisplayById, activeTaskCount) => {
+      setHubResults: (requestId, hubTasks, hubProjectDisplayById, progressingTaskCount) => {
         if (requestId !== hubRequestGeneration) return;
         set((state) => {
           state.hubTasks = hubTasks;
           state.hubProjectDisplayById = hubProjectDisplayById;
-          if (requestId === activeTaskCountRequestGeneration) state.activeTaskCount = activeTaskCount;
+          if (requestId === progressingTaskCountRequestGeneration) state.progressingTaskCount = progressingTaskCount;
           state.hubLoadState = "loaded";
           state.hubError = null;
           for (const task of hubTasks) writeTaskEntity(state, task);
@@ -202,7 +202,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
             state.workspaceTasks = [];
             state.selectedWorkspaceTaskId = null;
             state.workspaceLinks = [];
-            state.workspaceActiveTaskCount = 0;
+            state.workspaceProgressingTaskCount = 0;
           }
           state.selectedWorkspaceId = workspaceId;
           state.workspaceLoadState = "loading";
@@ -217,7 +217,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
           selectedWorkspaceTaskId: null,
           workspaceTasks: [],
           workspaceLinks: [],
-          workspaceActiveTaskCount: 0,
+          workspaceProgressingTaskCount: 0,
           workspaceLoadState: "idle",
           workspaceError: null,
         });
@@ -232,7 +232,7 @@ export const localTaskStore = create<LocalTaskStoreState>()(
           }
           state.workspaceTasks = workspaceTasks;
           state.workspaceLinks = workspaceLinks;
-          state.workspaceActiveTaskCount = workspaceTasks.filter((task) => task.status === "active").length;
+          state.workspaceProgressingTaskCount = workspaceTasks.filter((task) => task.status === "progressing").length;
           state.workspaceLoadState = "loaded";
           state.workspaceError = null;
           for (const task of workspaceTasks) writeTaskEntity(state, task);

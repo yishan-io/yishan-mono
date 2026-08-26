@@ -109,19 +109,19 @@ describe("LocalTaskDocuments", () => {
 
     await expect(documents.finish("task-1", "saved outcome")).rejects.toThrow("Outcome was saved");
     await expect(readFile(join(contextDirectory, "outcome.md"), "utf8")).resolves.toBe("saved outcome");
-    expect(backend.update).toHaveBeenCalledWith("task-1", { status: "completed" });
+    expect(backend.update).toHaveBeenCalledWith("task-1", { status: "done" });
 
-    await expect(documents.finish("task-1", "repaired outcome")).resolves.toMatchObject({ status: "completed" });
+    await expect(documents.finish("task-1", "repaired outcome")).resolves.toMatchObject({ status: "done" });
     await expect(readFile(join(contextDirectory, "outcome.md"), "utf8")).resolves.toBe("repaired outcome");
     expect(backend.update).toHaveBeenCalledTimes(2);
   });
 
-  it("repairs the outcome without another status update for an already completed task", async () => {
+  it("repairs the outcome without another status update for an already done task", async () => {
     const backend = createBackend();
-    const metadata = { get: vi.fn().mockResolvedValue(task("completed")) };
+    const metadata = { get: vi.fn().mockResolvedValue(task("done")) };
     const documents = createLocalTaskDocuments(metadata as never, backend as never);
 
-    await expect(documents.finish("task-1", "repaired")).resolves.toMatchObject({ status: "completed" });
+    await expect(documents.finish("task-1", "repaired")).resolves.toMatchObject({ status: "done" });
     await expect(readFile(join(contextDirectory, "outcome.md"), "utf8")).resolves.toBe("repaired");
     expect(backend.update).not.toHaveBeenCalled();
   });
@@ -147,7 +147,7 @@ function createDocuments(details = contextDetails(), backend = createBackend()) 
 function createBackend(): { getContextDetails: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> } {
   return {
     getContextDetails: vi.fn().mockResolvedValue(contextDetails()),
-    update: vi.fn().mockResolvedValue({ status: "completed" }),
+    update: vi.fn().mockResolvedValue({ status: "done" }),
   };
 }
 function backendFor(details: LocalTaskContextDetails, backend: ReturnType<typeof createBackend>) {
@@ -156,7 +156,7 @@ function backendFor(details: LocalTaskContextDetails, backend: ReturnType<typeof
 function contextDetails(directory = contextDirectory): LocalTaskContextDetails {
   return { directory, files: [] };
 }
-function task(status: LocalTask["status"] = "active"): LocalTask {
+function task(status: LocalTask["status"] = "progressing"): LocalTask {
   return {
     id: "task-1",
     projectId: null,

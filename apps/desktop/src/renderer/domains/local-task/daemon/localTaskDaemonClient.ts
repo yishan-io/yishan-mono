@@ -24,7 +24,7 @@ import type {
 type InvokeFn = (method: string, params?: unknown) => Promise<unknown>;
 
 function isStatus(status: unknown): status is LocalTaskStatus {
-  return status === "active" || status === "paused" || status === "completed";
+  return status === "new" || status === "progressing" || status === "done" || status === "cancelled";
 }
 
 function isPriority(priority: unknown): priority is LocalTaskPriority {
@@ -341,7 +341,7 @@ export class DaemonLocalTaskClient {
     return parseContext(await this.invoke("localTask.getContextDetails", { id: taskId }));
   }
 
-  /** Creates one active task-to-workspace relationship. */
+  /** Creates one current task-to-workspace relationship. */
   async linkWorkspace(taskId: string, workspaceId: string): Promise<LocalTaskWorkspaceLink> {
     return parseLink(await this.invoke("localTask.linkWorkspace", { taskId, workspaceId }));
   }

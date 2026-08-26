@@ -45,7 +45,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
   const isScheduledJobPanelOpen = overlayPanel === "scheduledJob";
   const isOverviewPanelOpen = overlayPanel === "overview";
   const isTasksPanelOpen = overlayPanel === "tasks";
-  const activeTaskCount = localTaskStore((state) => state.activeTaskCount);
+  const progressingTaskCount = localTaskStore((state) => state.progressingTaskCount);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefreshProjects = useCallback(async () => {
@@ -140,7 +140,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         variant="text"
         startIcon={<LuListTodo size={14} />}
         onClick={handleToggleTasks}
-        aria-label={t("localTask.activeCount", { count: activeTaskCount })}
+        aria-label={t("localTask.progressingCount", { count: progressingTaskCount })}
         aria-pressed={isTasksPanelOpen}
         sx={{
           justifyContent: "flex-start",
@@ -156,7 +156,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         }}
       >
         {t("localTask.title")}
-        {activeTaskCount > 0 ? (
+        {progressingTaskCount > 0 ? (
           <Box
             component="span"
             data-testid="local-task-active-count"
@@ -172,7 +172,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
               textAlign: "center",
             }}
           >
-            {activeTaskCount > 99 ? "99+" : activeTaskCount}
+            {progressingTaskCount > 99 ? "99+" : progressingTaskCount}
           </Box>
         ) : null}
       </Button>

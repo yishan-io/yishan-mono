@@ -95,7 +95,7 @@ func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 		{MethodLocalTaskSearch, `{"query":"task"}`},
 		{MethodLocalTaskLinkWorkspace, `{"taskId":"task-1","workspaceId":"workspace-1"}`},
 		{MethodLocalTaskUnlinkWorkspace, `{"linkId":"link-1"}`},
-		{MethodLocalTaskUpdateWorkspaceLinkStatus, `{"linkId":"link-1","status":"paused"}`},
+		{MethodLocalTaskUpdateWorkspaceLinkStatus, `{"linkId":"link-1","status":"cancelled"}`},
 		{MethodLocalTaskListWorkspaceLinks, `{"workspaceId":"workspace-1"}`},
 		{MethodLocalTaskListTaskLinks, `{"id":"task-1"}`},
 	}

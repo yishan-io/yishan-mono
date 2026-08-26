@@ -66,7 +66,7 @@ func TestService_ListProjectionReturnsTasksAndBulkResolvedProjects(t *testing.T)
 func createOrganizationProjectServiceTask(t *testing.T, repository domain.Repository, organizationID, projectID string) domain.Task {
 	t.Helper()
 	task, err := repository.Create(context.Background(), domain.Task{
-		ProjectID: &projectID, OrganizationID: &organizationID, Title: "Project task", Status: domain.StatusActive, Priority: domain.PriorityMedium,
+		ProjectID: &projectID, OrganizationID: &organizationID, Title: "Project task", Status: domain.StatusProgressing, Priority: domain.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func TestService_ListProjectionResolvesProjectScopedTaskWithoutWorkspace(t *test
 	service, _, repository := newTestService(t)
 	createOrganizationProjectServiceTask(t, repository, "org-1", "project-1")
 	legacyProjectID := "legacy-project"
-	legacyTask, err := repository.Create(context.Background(), domain.Task{ProjectID: &legacyProjectID, Title: "Historical", Status: domain.StatusActive, Priority: domain.PriorityMedium})
+	legacyTask, err := repository.Create(context.Background(), domain.Task{ProjectID: &legacyProjectID, Title: "Historical", Status: domain.StatusProgressing, Priority: domain.PriorityMedium})
 	if err != nil {
 		t.Fatalf("create historical task: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestService_ListProjectionResolvesProjectScopedTaskWithoutWorkspace(t *test
 func TestService_ListProjectionPreservesSearchAndFilters(t *testing.T) {
 	service, _, repository := newTestService(t)
 	matching := createServiceTask(t, repository, "Resolve daemon projection")
-	completed := domain.StatusCompleted
+	completed := domain.StatusDone
 	if _, err := repository.Update(context.Background(), matching.ID, domain.TaskUpdate{Status: &completed}); err != nil {
 		t.Fatalf("complete task: %v", err)
 	}

@@ -129,7 +129,7 @@ describe("LocalTaskRpcClient", () => {
       id: "link-1",
       localTaskId: "task-1",
       workspaceId: "workspace-1",
-      status: "active",
+      status: "progressing",
       linkedAt: "2026-08-23T00:00:00Z",
       unlinkedAt: null,
     };
@@ -202,6 +202,10 @@ describe("LocalTaskRpcClient", () => {
 
   it("strictly parses contract task results", () => {
     expect(parseLocalTask(task)).toEqual(task);
+    for (const status of ["new", "progressing", "done", "cancelled"] as const) {
+      expect(parseLocalTask({ ...task, status })).toMatchObject({ status });
+    }
+    expect(() => parseLocalTask({ ...task, status: "active" })).toThrow("invalid Local Task payload");
     expect(() => parseLocalTask({ ...task, unexpected: true })).toThrow("invalid Local Task payload");
     expect(() => parseLocalTask({ ...task, tags: [1] })).toThrow("invalid Local Task payload");
     expect(() => parseLocalTask({ ...task, tagRefs: [{ id: 1 }] })).toThrow("invalid Local Task payload");

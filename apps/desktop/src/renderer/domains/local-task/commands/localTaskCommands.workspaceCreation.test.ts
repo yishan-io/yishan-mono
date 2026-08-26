@@ -34,7 +34,7 @@ const task: LocalTask = {
   projectId: null,
   title: "Task",
   description: "",
-  status: "active",
+  status: "progressing",
   priority: "medium",
   createdAt: "created",
   updatedAt: "updated",
@@ -46,7 +46,7 @@ const link: LocalTaskWorkspaceLink = {
   id: "link-1",
   localTaskId: "task-1",
   workspaceId: "workspace-1",
-  status: "active",
+  status: "progressing",
   linkedAt: "linked",
   unlinkedAt: null,
 };

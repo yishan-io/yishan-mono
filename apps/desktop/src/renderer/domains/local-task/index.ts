@@ -12,7 +12,7 @@ export {
   loadLocalTaskLinks,
   loadLocalTaskTagSuggestions,
   renameLocalTaskTag,
-  refreshActiveLocalTaskCount,
+  refreshProgressingLocalTaskCount,
   refreshLocalTaskHub,
   refreshSelectedWorkspaceTasks,
   selectLocalTaskWorkspace,

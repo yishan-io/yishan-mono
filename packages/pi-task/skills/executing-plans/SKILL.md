@@ -24,9 +24,9 @@ If `YISHAN_PROJECT_ID` is set, work only with that project. Without it, work onl
 
 When a new issue appears during a workspace task, decide whether it is related. Incorporate related work into the current task. Otherwise, ask the user whether to create a separate task.
 
-Use `task_write` to replace `plan` when the execution plan changes. Use `task_append_note` to add task-specific research or progress. Use `task_update` for a title, description, active or paused status, priority, or tags.
+Use `task_write` to replace `plan` when the execution plan changes. Use `task_append_note` to add task-specific research or progress. Use `task_update` for a title, description, new, progressing, or cancelled status, priority, or tags. It cannot set done.
 
-`task_update` cannot complete a task. Use `task_finish` only when the user explicitly asks to complete the task. When the user explicitly says all work is complete, run the self-checks and finish without asking again. It writes `outcome` and completes the task.
+`task_update` cannot complete a task. Use `task_finish` only when the user explicitly asks to complete the task. When the user explicitly says all work is complete, run the self-checks and finish without asking again. It writes `outcome` and marks the task done.
 
 ## Boundaries
 

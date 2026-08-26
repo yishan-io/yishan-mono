@@ -137,7 +137,7 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		json.RawMessage(`{"linkId":"`+link.ID+`"}`)); err != nil {
 		t.Fatalf("unlink workspace: %v", err)
 	}
-	for _, status := range []domain.Status{domain.StatusPaused, domain.StatusCompleted} {
+	for _, status := range []domain.Status{domain.StatusCancelled, domain.StatusDone} {
 		_, err = router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskUpdateWorkspaceLinkStatus,
 			json.RawMessage(`{"linkId":"`+link.ID+`","status":"`+string(status)+`"}`))
 		if mapped := rpc.MapRPCError(err); mapped == nil || mapped.Code != rpc.CodeInvalidParams {
@@ -177,7 +177,7 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		t.Fatalf("delete stable tag response = %#v, %v", deletedTagValue, err)
 	}
 	history, err := sqlite.NewLocalTaskStore(database).ListTaskLinks(context.Background(), created.ID)
-	if err != nil || len(history) != 1 || history[0].Status != domain.StatusCompleted || history[0].UnlinkedAt == nil {
+	if err != nil || len(history) != 1 || history[0].Status != domain.StatusCancelled || history[0].UnlinkedAt == nil {
 		t.Fatalf("unlinked repository history = %#v, %v", history, err)
 	}
 }

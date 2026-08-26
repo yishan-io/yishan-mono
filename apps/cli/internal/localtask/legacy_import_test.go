@@ -181,3 +181,20 @@ func writeLegacyStateForPath(t *testing.T, root string, path string) {
 		t.Fatal(err)
 	}
 }
+
+func TestLegacyTaskStatus_ConvertsLegacyLifecycleValues(t *testing.T) {
+	tests := []struct {
+		legacy string
+		want   Status
+	}{
+		{legacy: "active", want: StatusProgressing},
+		{legacy: "paused", want: StatusCancelled},
+		{legacy: "completed", want: StatusDone},
+	}
+	for _, test := range tests {
+		got, err := legacyTaskStatus(test.legacy)
+		if err != nil || got != test.want {
+			t.Fatalf("legacyTaskStatus(%q) = %q, %v; want %q, nil", test.legacy, got, err, test.want)
+		}
+	}
+}

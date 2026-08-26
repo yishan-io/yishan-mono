@@ -291,7 +291,7 @@ func seedProjectTask(t *testing.T, database *sql.DB, taskID string) {
 	t.Helper()
 	projectID := "project-1"
 	_, err := sqlite.NewLocalTaskStore(database).Create(context.Background(), localtask.Task{
-		ID: taskID, ProjectID: &projectID, Title: "Project task", Status: localtask.StatusActive, Priority: localtask.PriorityMedium,
+		ID: taskID, ProjectID: &projectID, Title: "Project task", Status: localtask.StatusNew, Priority: localtask.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("seed Local Task: %v", err)

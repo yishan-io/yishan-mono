@@ -15,8 +15,8 @@ const updateDescriptionSchema = Type.String({ minLength: 0, maxLength: 10_000 })
 const tagSchema = Type.String({ minLength: 1, maxLength: 64 });
 const tagsSchema = Type.Array(tagSchema, { maxItems: 12 });
 const prioritySchema = StringEnum(["low", "medium", "high"] as const);
-const listStatusSchema = StringEnum(["active", "paused", "completed"] as const);
-const updateStatusSchema = StringEnum(["active", "paused"] as const);
+const listStatusSchema = StringEnum(["new", "progressing", "done", "cancelled"] as const);
+const updateStatusSchema = StringEnum(["new", "progressing", "cancelled"] as const);
 const readDocumentSchema = StringEnum(["task", "notes", "plan", "outcome"] as const);
 const writeDocumentSchema = StringEnum(["notes", "plan", "outcome"] as const);
 
@@ -122,7 +122,8 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
   pi.registerTool({
     name: "task_update",
     label: "Update Task",
-    description: "Update Local Task metadata without completing the task.",
+    description:
+      "Update Local Task metadata and set new, progressing, or cancelled status. Use task_finish to mark done.",
     parameters: Type.Object(
       {
         id: taskIdSchema,
@@ -173,7 +174,7 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
   pi.registerTool({
     name: "task_finish",
     label: "Finish Task",
-    description: "Write the outcome, then mark a Local Task completed.",
+    description: "Write the outcome, then mark a Local Task done.",
     parameters: Type.Object({ id: taskIdSchema, outcome: contentSchema }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
       const operations = createLocalTaskOperations(getBackend());

@@ -77,7 +77,7 @@ vi.mock("react-i18next", () => ({
         "project.actions.filter": "Filter",
         "project.actions.pin": "Pin projects",
         "project.actions.addRepository": "Add project",
-        "localTask.activeCount": `Tasks, ${params?.count ?? 0} active`,
+        "localTask.progressingCount": `Tasks, ${params?.count ?? 0} active`,
       };
 
       return translations[key] ?? key;
@@ -251,8 +251,8 @@ describe("LeftPaneView deletion", () => {
     expect(screen.getByTestId("visible-repo-repo-2")).toBeTruthy();
   });
 
-  it("shows the active task badge immediately under Overview and opens only the Task Hub", () => {
-    localTaskStore.setState({ activeTaskCount: 7 });
+  it("shows the progressing-task badge immediately under Overview and opens only the Task Hub", () => {
+    localTaskStore.setState({ progressingTaskCount: 7 });
     workbenchNavigationStore.getState().setOverlayPanel(null);
     render(<LeftPaneView />);
 

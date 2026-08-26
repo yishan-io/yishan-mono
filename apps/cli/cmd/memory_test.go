@@ -266,7 +266,7 @@ func seedProfileTaskContext(t *testing.T, profileDir string, worktree string) {
 	projectID := "project-1"
 	_, err = sqlite.NewLocalTaskStore(database).Create(context.Background(), localtask.Task{
 		ID: "task-1", ProjectID: &projectID, Title: "CLI reconcile",
-		Status: localtask.StatusActive, Priority: localtask.PriorityMedium,
+		Status: localtask.StatusNew, Priority: localtask.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -18,7 +18,7 @@ func TestReadLegacyTaskMetadata_ReadsCompletionDate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	description, completedAt, err := readLegacyTaskMetadata(contextRoot, contextRoot, string(StatusCompleted))
+	description, completedAt, err := readLegacyTaskMetadata(contextRoot, contextRoot, string(StatusDone))
 	if err != nil || description != "Finish work." || completedAt == nil || *completedAt != "2026-08-24" {
 		t.Fatalf("metadata = (%q, %#v, %v)", description, completedAt, err)
 	}

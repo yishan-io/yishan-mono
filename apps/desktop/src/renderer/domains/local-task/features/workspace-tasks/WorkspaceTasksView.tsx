@@ -27,7 +27,7 @@ import {
   selectWorkspaceLocalTask,
   updateLocalTask,
 } from "../../commands/localTaskCommands";
-import type { LocalTaskContextFileName } from "../../localTaskTypes";
+import type { LocalTaskContextFileName, LocalTaskStatus } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "../task-hub/CreateLocalTaskDialog";
 import { LinkLocalTaskDialog } from "./LinkLocalTaskDialog";
@@ -126,7 +126,7 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
   );
   const handleBack = useCallback(() => setDetailNavigation(null), []);
   const handleDetailStatus = useCallback(
-    (status: "active" | "paused" | "completed") => {
+    (status: LocalTaskStatus) => {
       if (detailTaskId) {
         void updateLocalTask(detailTaskId, { status }).catch((statusError) =>
           console.error("Failed to update Local Task status", statusError),

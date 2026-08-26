@@ -106,7 +106,7 @@ func assertImportedLegacyTasks(t *testing.T, database *sql.DB) {
 func assertImportedActiveTask(t *testing.T, task localtask.Task, description string) {
 	t.Helper()
 	if task.ProjectID == nil || *task.ProjectID != "project-1" || task.Title != "Compatibility validation" ||
-		task.Description != description || task.Status != localtask.StatusActive || task.Priority != localtask.PriorityMedium ||
+		task.Description != description || task.Status != localtask.StatusProgressing || task.Priority != localtask.PriorityMedium ||
 		task.CreatedAt != "2026-08-26" || task.CompletedAt != nil {
 		t.Fatalf("active imported task = %#v", task)
 	}
@@ -116,7 +116,7 @@ func assertImportedCompletedTask(t *testing.T, task localtask.Task) {
 	t.Helper()
 	wantDescription := "Persist local task metadata.\n\nAcceptance Criteria:\n- Preserve the completed date."
 	if task.ProjectID == nil || *task.ProjectID != "project-1" || task.Title != "Persistence foundation" ||
-		task.Description != wantDescription || task.Status != localtask.StatusCompleted || task.Priority != localtask.PriorityMedium ||
+		task.Description != wantDescription || task.Status != localtask.StatusDone || task.Priority != localtask.PriorityMedium ||
 		task.CreatedAt != "2026-08-24" || task.CompletedAt == nil || *task.CompletedAt != "2026-08-25" {
 		t.Fatalf("completed imported task = %#v", task)
 	}

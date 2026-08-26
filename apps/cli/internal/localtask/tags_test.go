@@ -86,7 +86,7 @@ func TestNormalizeTags_RejectsWhitespaceOnlyTags(t *testing.T) {
 }
 
 func TestValidateTaskAndUpdate_ValidateTags(t *testing.T) {
-	task := Task{ID: "task-1", Title: "Task", Status: StatusActive, Priority: PriorityMedium, Tags: []string{"ok", ""}}
+	task := Task{ID: "task-1", Title: "Task", Status: StatusProgressing, Priority: PriorityMedium, Tags: []string{"ok", ""}}
 	if err := ValidateTask(task); !errors.Is(err, ErrInvalidTask) {
 		t.Fatalf("validate task error = %v, want %v", err, ErrInvalidTask)
 	}
@@ -148,7 +148,7 @@ func TestValidateTagKey_RejectsInvalidWireShape(t *testing.T) {
 func TestValidateTaskAndUpdate_RejectMixedAndInvalidTagReferences(t *testing.T) {
 	refs := []TagRef{{ID: "tag-1"}}
 	legacy := []string{}
-	if err := ValidateTask(Task{ID: "task-1", Title: "Task", Status: StatusActive, Priority: PriorityMedium, Tags: legacy, TagRefs: refs}); !errors.Is(err, ErrInvalidTag) {
+	if err := ValidateTask(Task{ID: "task-1", Title: "Task", Status: StatusProgressing, Priority: PriorityMedium, Tags: legacy, TagRefs: refs}); !errors.Is(err, ErrInvalidTag) {
 		t.Fatalf("mixed create references error = %v, want invalid tag", err)
 	}
 	if err := ValidateTaskUpdate(TaskUpdate{Tags: &legacy, TagRefs: &refs}); !errors.Is(err, ErrInvalidTag) {

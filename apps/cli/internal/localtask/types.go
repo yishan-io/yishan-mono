@@ -8,12 +8,14 @@ import (
 )
 
 const (
-	// StatusActive identifies work that is currently in progress.
-	StatusActive Status = "active"
-	// StatusPaused identifies work that is intentionally on hold.
-	StatusPaused Status = "paused"
-	// StatusCompleted identifies work that is finished.
-	StatusCompleted Status = "completed"
+	// StatusNew identifies work that has not started.
+	StatusNew Status = "new"
+	// StatusProgressing identifies work that is currently in progress.
+	StatusProgressing Status = "progressing"
+	// StatusDone identifies work that is finished.
+	StatusDone Status = "done"
+	// StatusCancelled identifies work that will not continue.
+	StatusCancelled Status = "cancelled"
 )
 
 const (
@@ -291,7 +293,7 @@ func ValidateWorkspaceLink(link WorkspaceLink) error {
 }
 
 func isValidStatus(status Status) bool {
-	return status == StatusActive || status == StatusPaused || status == StatusCompleted
+	return status == StatusNew || status == StatusProgressing || status == StatusDone || status == StatusCancelled
 }
 
 func isValidPriority(priority Priority) bool {

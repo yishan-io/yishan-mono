@@ -1,7 +1,7 @@
 import { basename, dirname, isAbsolute, join, normalize, resolve } from "node:path";
 
 /** Local Task lifecycle states accepted by the daemon. */
-export type LocalTaskStatus = "active" | "paused" | "completed";
+export type LocalTaskStatus = "new" | "progressing" | "done" | "cancelled";
 /** Local Task priority values accepted by the daemon. */
 export type LocalTaskPriority = "low" | "medium" | "high";
 /** A catalog tag assigned to a Local Task. */
@@ -102,7 +102,7 @@ function parseLocalTaskTagRefs(payload: unknown): LocalTaskTagRef[] {
   });
 }
 function parseStatus(payload: unknown): LocalTaskStatus {
-  if (payload === "active" || payload === "paused" || payload === "completed") return payload;
+  if (payload === "new" || payload === "progressing" || payload === "done" || payload === "cancelled") return payload;
   throw new TypeError("invalid Local Task payload");
 }
 function parsePriority(payload: unknown): LocalTaskPriority {

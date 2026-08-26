@@ -12,7 +12,7 @@ import (
 func TestLocalTaskStore_PersistsHydratesAndReplacesTagsAtomically(t *testing.T) {
 	ctx := context.Background()
 	store, _ := openTestLocalTaskStore(t)
-	task, err := store.Create(ctx, localtask.Task{Title: "Tagged task", Status: localtask.StatusActive,
+	task, err := store.Create(ctx, localtask.Task{Title: "Tagged task", Status: localtask.StatusProgressing,
 		Priority: localtask.PriorityMedium, Tags: []string{" Alpha ", "BETA", "alpha"}})
 	if err != nil {
 		t.Fatalf("create tagged task: %v", err)
@@ -47,7 +47,7 @@ func TestLocalTaskStore_RollsBackTagWritesWhenTriggerAborts(t *testing.T) {
 		WHEN NEW.tag_id = (SELECT id FROM local_task_tag_catalog WHERE tag = 'abort') BEGIN SELECT RAISE(ABORT, 'tag rejected'); END`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Create(ctx, localtask.Task{Title: "Rejected", Status: localtask.StatusActive,
+	if _, err := store.Create(ctx, localtask.Task{Title: "Rejected", Status: localtask.StatusProgressing,
 		Priority: localtask.PriorityMedium, Tags: []string{"abort"}}); err == nil {
 		t.Fatal("expected create to abort")
 	}
@@ -83,11 +83,11 @@ func TestLocalTaskStore_FiltersAndSearchesWithAllFoldedTags(t *testing.T) {
 	_ = createTaggedTask(t, store, "searchable second", []string{"alpha"})
 	createTaggedTask(t, store, "searchable third", []string{"BETA", "Gamma"})
 	createLocalTaskWorkspace(t, workspaceStore, "workspace-tags")
-	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: first.ID, WorkspaceID: "workspace-tags", Status: localtask.StatusActive}); err != nil {
+	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: first.ID, WorkspaceID: "workspace-tags", Status: localtask.StatusProgressing}); err != nil {
 		t.Fatal(err)
 	}
 
-	filter := localtask.TaskFilter{Status: statusPointer(localtask.StatusActive), Tags: []string{"ALPHA", "beta"}, WorkspaceID: stringPointer("workspace-tags")}
+	filter := localtask.TaskFilter{Status: statusPointer(localtask.StatusProgressing), Tags: []string{"ALPHA", "beta"}, WorkspaceID: stringPointer("workspace-tags")}
 	listed, err := store.List(ctx, filter)
 	if err != nil || len(listed) != 1 || listed[0].ID != first.ID {
 		t.Fatalf("AND filtered list = %#v, %v", listed, err)
@@ -119,7 +119,7 @@ func TestLocalTaskStore_HydratesTagBatchesAndListsDeterministicSuggestions(t *te
 	for index := 0; index <= sqliteBindChunkSize; index++ {
 		id := "batch-" + string(rune(index+1000))
 		if _, err := store.database.ExecContext(ctx, `INSERT INTO local_tasks
-			(id, title, description, status, priority, created_at, updated_at) VALUES (?, ?, '', 'active', 'medium', ?, ?)`,
+			(id, title, description, status, priority, created_at, updated_at) VALUES (?, ?, '', 'progressing', 'medium', ?, ?)`,
 			id, id, fixtureTimestamp, fixtureTimestamp); err != nil {
 			t.Fatalf("insert task %d: %v", index, err)
 		}
@@ -176,7 +176,7 @@ func assertTaskTags(t *testing.T, task localtask.Task, want []string) {
 
 func createTaggedTask(t *testing.T, store *LocalTaskStore, title string, tags []string) localtask.Task {
 	t.Helper()
-	task, err := store.Create(context.Background(), localtask.Task{Title: title, Status: localtask.StatusActive,
+	task, err := store.Create(context.Background(), localtask.Task{Title: title, Status: localtask.StatusProgressing,
 		Priority: localtask.PriorityMedium, Tags: tags})
 	if err != nil {
 		t.Fatalf("create tagged task: %v", err)
@@ -273,7 +273,7 @@ func TestLocalTaskStore_RollsBackCatalogAndAssignmentWritesTogether(t *testing.T
 		WHEN NEW.tag_id = (SELECT id FROM local_task_tag_catalog WHERE tag = 'abort') BEGIN SELECT RAISE(ABORT, 'tag rejected'); END`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Create(ctx, localtask.Task{Title: "Rejected", Status: localtask.StatusActive,
+	if _, err := store.Create(ctx, localtask.Task{Title: "Rejected", Status: localtask.StatusProgressing,
 		Priority: localtask.PriorityMedium, Tags: []string{"abort"}}); err == nil {
 		t.Fatal("expected create to abort")
 	}

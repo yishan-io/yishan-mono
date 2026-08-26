@@ -1,5 +1,5 @@
 /** Local Task lifecycle states supported by the daemon. */
-export type LocalTaskStatus = "active" | "paused" | "completed";
+export type LocalTaskStatus = "new" | "progressing" | "done" | "cancelled";
 
 /** Local Task priority values supported by the daemon. */
 export type LocalTaskPriority = "low" | "medium" | "high";

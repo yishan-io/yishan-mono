@@ -9,10 +9,10 @@ import (
 
 func TestLocalTaskUpdateLinkStatusParams_DecodeTypedStatus(t *testing.T) {
 	var params LocalTaskUpdateLinkStatusParams
-	if err := json.Unmarshal([]byte(`{"linkId":"link-1","status":"paused"}`), &params); err != nil {
+	if err := json.Unmarshal([]byte(`{"linkId":"link-1","status":"cancelled"}`), &params); err != nil {
 		t.Fatal(err)
 	}
-	if params.LinkID != "link-1" || params.Status != localtask.StatusPaused {
+	if params.LinkID != "link-1" || params.Status != localtask.StatusCancelled {
 		t.Fatalf("params = %#v", params)
 	}
 }
@@ -43,18 +43,18 @@ func TestLocalTaskWirePayloads_MatchDesktopContract(t *testing.T) {
 	}{
 		{
 			name:     "task with tags",
-			value:    localtask.Task{ID: "task-1", ProjectID: &projectID, Title: "Imported", Description: "Legacy metadata", Status: localtask.StatusCompleted, Priority: localtask.PriorityMedium, CreatedAt: "2026-08-24", UpdatedAt: "2026-08-26", CompletedAt: &completedAt, Tags: []string{"first", "second"}, TagRefs: []localtask.TagRef{}},
-			expected: `{"id":"task-1","projectId":"project-1","title":"Imported","description":"Legacy metadata","status":"completed","priority":"medium","createdAt":"2026-08-24","updatedAt":"2026-08-26","completedAt":"2026-08-25","tags":["first","second"],"tagRefs":[]}`,
+			value:    localtask.Task{ID: "task-1", ProjectID: &projectID, Title: "Imported", Description: "Legacy metadata", Status: localtask.StatusDone, Priority: localtask.PriorityMedium, CreatedAt: "2026-08-24", UpdatedAt: "2026-08-26", CompletedAt: &completedAt, Tags: []string{"first", "second"}, TagRefs: []localtask.TagRef{}},
+			expected: `{"id":"task-1","projectId":"project-1","title":"Imported","description":"Legacy metadata","status":"done","priority":"medium","createdAt":"2026-08-24","updatedAt":"2026-08-26","completedAt":"2026-08-25","tags":["first","second"],"tagRefs":[]}`,
 		},
 		{
 			name:     "task without tags",
-			value:    localtask.Task{ID: "task-2", Title: "Empty", Status: localtask.StatusActive, Priority: localtask.PriorityMedium, Tags: []string{}, TagRefs: []localtask.TagRef{}},
-			expected: `{"id":"task-2","projectId":null,"title":"Empty","description":"","status":"active","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"tags":[],"tagRefs":[]}`,
+			value:    localtask.Task{ID: "task-2", Title: "Empty", Status: localtask.StatusProgressing, Priority: localtask.PriorityMedium, Tags: []string{}, TagRefs: []localtask.TagRef{}},
+			expected: `{"id":"task-2","projectId":null,"title":"Empty","description":"","status":"progressing","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"tags":[],"tagRefs":[]}`,
 		},
 		{
 			name:     "workspace link",
-			value:    localtask.WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Status: localtask.StatusCompleted, LinkedAt: "2026-08-24", UnlinkedAt: &unlinkedAt},
-			expected: `{"id":"link-1","localTaskId":"task-1","workspaceId":"workspace-1","status":"completed","linkedAt":"2026-08-24","unlinkedAt":"2026-08-26"}`,
+			value:    localtask.WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Status: localtask.StatusDone, LinkedAt: "2026-08-24", UnlinkedAt: &unlinkedAt},
+			expected: `{"id":"link-1","localTaskId":"task-1","workspaceId":"workspace-1","status":"done","linkedAt":"2026-08-24","unlinkedAt":"2026-08-26"}`,
 		},
 	}
 	for _, payload := range payloads {

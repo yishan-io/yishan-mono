@@ -21,7 +21,7 @@ Before completion, make sure that:
 
 Use `task_read` for the synthetic, read-only brief. Use `task_list` or `task_search` to locate the task. Project scope uses `YISHAN_PROJECT_ID`. Without it, use global tasks only.
 
-Use `task_update` for title, description, active or paused status, priority, or tags. It cannot complete a task.
+Use `task_update` for title, description, new, progressing, or cancelled status, priority, or tags. It cannot set done.
 
 ## Prepare the Outcome
 
@@ -31,7 +31,7 @@ Use `task_write` for `plan`, `notes`, or `outcome`. Use `task_append_note` for t
 
 ## Complete the Task
 
-After explicit user direction that all work is complete, perform the precondition self-checks. Then use `task_finish` with the factual outcome. Do not ask for confirmation again. The tool writes `outcome` and completes the task.
+After explicit user direction that all work is complete, perform the precondition self-checks. Then use `task_finish` with the factual outcome. Do not ask for confirmation again. The tool writes `outcome` and marks the task done.
 
 ## Boundaries
 

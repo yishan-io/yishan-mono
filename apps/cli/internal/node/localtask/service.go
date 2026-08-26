@@ -56,7 +56,7 @@ func (s *Service) publishTaskChanged() {
 func (s *Service) Create(ctx context.Context, req rpc.LocalTaskCreateParams) (any, error) {
 	task := domain.Task{
 		ID: uuid.NewString(), ProjectID: req.ProjectID, OrganizationID: req.OrganizationID, Title: req.Title, Description: req.Description,
-		Status: domain.StatusActive, Priority: req.Priority, Tags: req.Tags, TagRefs: req.TagRefs,
+		Status: domain.StatusNew, Priority: req.Priority, Tags: req.Tags, TagRefs: req.TagRefs,
 	}
 	if task.Priority == "" {
 		task.Priority = domain.PriorityMedium

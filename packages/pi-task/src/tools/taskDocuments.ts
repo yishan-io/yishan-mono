@@ -93,7 +93,7 @@ export class LocalTaskDocuments {
     });
   }
 
-  /** Stores the outcome before marking the task completed; retained outcomes make failures safely retryable. */
+  /** Stores the outcome before marking the task done; retained outcomes make failures safely retryable. */
   async finish(id: string, outcome: string, options: TaskDocumentOptions = {}): Promise<{ status: LocalTaskStatus }> {
     throwIfAborted(options.signal);
     const task =
@@ -104,14 +104,14 @@ export class LocalTaskDocuments {
     return withFileMutationQueue(documentPath, async () => {
       throwIfAborted(options.signal);
       await writeAtomic(documentPath.directory, documentPath.path, "outcome", outcome, options.signal);
-      if (task.status === "completed") return task;
+      if (task.status === "done") return task;
       throwIfAborted(options.signal);
       try {
         return options.signal === undefined
-          ? await this.backend.update(id, { status: "completed" })
-          : await this.backend.update(id, { status: "completed" }, { signal: options.signal });
+          ? await this.backend.update(id, { status: "done" })
+          : await this.backend.update(id, { status: "done" }, { signal: options.signal });
       } catch (error) {
-        throw new Error("Outcome was saved, but task completion failed. Retry task_finish to complete the task.", {
+        throw new Error("Outcome was saved, but task completion failed. Retry task_finish to mark the task done.", {
           cause: error,
         });
       }

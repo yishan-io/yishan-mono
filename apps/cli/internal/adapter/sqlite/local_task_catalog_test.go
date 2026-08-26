@@ -171,11 +171,11 @@ func TestLocalTaskStore_CreatesAndUpdatesTagReferencesWithTypedValidation(t *tes
 	if err != nil {
 		t.Fatalf("create second: %v", err)
 	}
-	if _, err := store.Create(ctx, localtask.Task{Title: "Unknown IDs", Status: localtask.StatusActive,
+	if _, err := store.Create(ctx, localtask.Task{Title: "Unknown IDs", Status: localtask.StatusProgressing,
 		Priority: localtask.PriorityMedium, TagRefs: []localtask.TagRef{{ID: "missing"}}}); !errors.Is(err, localtask.ErrTagNotFound) {
 		t.Fatalf("unknown create reference error = %v, want tag not found", err)
 	}
-	created, err := store.Create(ctx, localtask.Task{Title: "Created by IDs", Status: localtask.StatusActive,
+	created, err := store.Create(ctx, localtask.Task{Title: "Created by IDs", Status: localtask.StatusProgressing,
 		Priority: localtask.PriorityMedium, TagRefs: []localtask.TagRef{{ID: first.ID}, {ID: second.ID}}})
 	if err != nil {
 		t.Fatalf("create with references: %v", err)

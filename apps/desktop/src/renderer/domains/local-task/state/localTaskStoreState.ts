@@ -16,7 +16,7 @@ export type LocalTaskStoreState = {
   hubProjectDisplayById: Record<string, LocalTaskProjectDisplay>;
   hubFilters: LocalTaskFilters;
   hubSearchQuery: string;
-  activeTaskCount: number;
+  progressingTaskCount: number;
   hubLoadState: LocalTaskLoadState;
   hubError: string | null;
   tagCatalog: LocalTaskTagCatalogEntry[];
@@ -27,7 +27,7 @@ export type LocalTaskStoreState = {
   selectedWorkspaceTaskId: string | null;
   workspaceTasks: LocalTask[];
   workspaceLinks: LocalTaskWorkspaceLink[];
-  workspaceActiveTaskCount: number;
+  workspaceProgressingTaskCount: number;
   workspaceLoadState: LocalTaskLoadState;
   workspaceError: string | null;
   linkCandidateWorkspaceId: string | null;
@@ -57,14 +57,14 @@ export type LocalTaskStoreState = {
   upsertTagCatalogEntry: (entry: LocalTaskTagCatalogEntry) => void;
   reconcileTagRename: (renamedTag: LocalTaskTagCatalogEntry, removedTagId?: string) => void;
   reconcileTagDeletion: (deletedTagId: string) => void;
-  beginActiveTaskCountLoad: () => number;
-  setActiveTaskCount: (requestId: number, activeTaskCount: number) => void;
+  beginProgressingTaskCountLoad: () => number;
+  setProgressingTaskCount: (requestId: number, progressingTaskCount: number) => void;
   beginHubLoad: () => number;
   setHubResults: (
     requestId: number,
     tasks: LocalTask[],
     projectDisplayById: Record<string, LocalTaskProjectDisplay>,
-    activeTaskCount: number,
+    progressingTaskCount: number,
   ) => void;
   setHubError: (requestId: number, error: string) => void;
   beginWorkspaceLoad: (workspaceId: string) => number;

@@ -10,10 +10,10 @@ func TestValidateTask_RejectsMissingFieldsAndInvalidEnums(t *testing.T) {
 		name string
 		task Task
 	}{
-		{name: "missing id", task: Task{Title: "Task", Status: StatusActive, Priority: PriorityMedium}},
-		{name: "missing title", task: Task{ID: "task-1", Status: StatusActive, Priority: PriorityMedium}},
+		{name: "missing id", task: Task{Title: "Task", Status: StatusProgressing, Priority: PriorityMedium}},
+		{name: "missing title", task: Task{ID: "task-1", Status: StatusProgressing, Priority: PriorityMedium}},
 		{name: "invalid status", task: Task{ID: "task-1", Title: "Task", Status: "other", Priority: PriorityMedium}},
-		{name: "invalid priority", task: Task{ID: "task-1", Title: "Task", Status: StatusActive, Priority: "other"}},
+		{name: "invalid priority", task: Task{ID: "task-1", Title: "Task", Status: StatusProgressing, Priority: "other"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -36,7 +36,7 @@ func TestValidateTaskUpdate_RejectsInvalidValues(t *testing.T) {
 }
 
 func TestValidateWorkspaceLink_RejectsInvalidValues(t *testing.T) {
-	link := WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Status: StatusActive}
+	link := WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Status: StatusProgressing}
 	if err := ValidateWorkspaceLink(link); err != nil {
 		t.Fatalf("ValidateWorkspaceLink() error = %v", err)
 	}
@@ -51,9 +51,10 @@ func TestValidateLinkStatus_AcceptsLifecycleStatuses(t *testing.T) {
 		status Status
 		want   error
 	}{
-		{StatusActive, nil},
-		{StatusPaused, nil},
-		{StatusCompleted, nil},
+		{StatusNew, nil},
+		{StatusProgressing, nil},
+		{StatusDone, nil},
+		{StatusCancelled, nil},
 		{Status("invalid"), ErrInvalidLink},
 	}
 	for _, test := range tests {
@@ -64,20 +65,20 @@ func TestValidateLinkStatus_AcceptsLifecycleStatuses(t *testing.T) {
 }
 
 func TestTaskAndWorkspaceLink_JSONIncludesNullableFields(t *testing.T) {
-	taskJSON, err := json.Marshal(Task{ID: "task-1", Title: "Task", Description: "", Status: StatusActive, Priority: PriorityMedium, Tags: []string{}, TagRefs: []TagRef{}})
+	taskJSON, err := json.Marshal(Task{ID: "task-1", Title: "Task", Description: "", Status: StatusProgressing, Priority: PriorityMedium, Tags: []string{}, TagRefs: []TagRef{}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantTask := `{"id":"task-1","projectId":null,"title":"Task","description":"","status":"active","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"tags":[],"tagRefs":[]}`
+	wantTask := `{"id":"task-1","projectId":null,"title":"Task","description":"","status":"progressing","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"tags":[],"tagRefs":[]}`
 	if string(taskJSON) != wantTask {
 		t.Fatalf("encoded task = %s, want %s", taskJSON, wantTask)
 	}
 
-	linkJSON, err := json.Marshal(WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Status: StatusActive})
+	linkJSON, err := json.Marshal(WorkspaceLink{ID: "link-1", LocalTaskID: "task-1", WorkspaceID: "workspace-1", Status: StatusProgressing})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantLink := `{"id":"link-1","localTaskId":"task-1","workspaceId":"workspace-1","status":"active","linkedAt":"","unlinkedAt":null}`
+	wantLink := `{"id":"link-1","localTaskId":"task-1","workspaceId":"workspace-1","status":"progressing","linkedAt":"","unlinkedAt":null}`
 	if string(linkJSON) != wantLink {
 		t.Fatalf("encoded link = %s, want %s", linkJSON, wantLink)
 	}
