@@ -68,60 +68,12 @@ export interface LiveTranscriptMessage {
 }
 
 /**
- * Counts the display-visible UTF-8 bytes of one normalized live message.
- * Mirrors the desktop receive-side accounting (agentChatBudget.ts) so both
- * sides agree on what a payload costs.
+ * Counts the exact UTF-8 bytes serialized for one normalized live message.
+ * This includes every emitted field, JSON key, delimiter, and escaping so a
+ * tool-call ID or name cannot bypass the child or aggregate byte budgets.
  */
 export function countLiveMessageUtf8Bytes(message: LiveTranscriptMessage): number {
-  let total = 0;
-
-  if (typeof message.content === "string") {
-    total += countUtf8Bytes(message.content);
-  } else {
-    for (const block of message.content) {
-      if (block.type === "text") {
-        total += countUtf8Bytes(block.text);
-      } else if (block.type === "thinking") {
-        total += countUtf8Bytes(block.thinking);
-        if (typeof block.thinkingSignature === "string") {
-          total += countUtf8Bytes(block.thinkingSignature);
-        } else if (block.thinkingSignature) {
-          if (block.thinkingSignature.id) {
-            total += countUtf8Bytes(block.thinkingSignature.id);
-          }
-          if (block.thinkingSignature.type) {
-            total += countUtf8Bytes(block.thinkingSignature.type);
-          }
-          for (const item of block.thinkingSignature.summary ?? []) {
-            total += countUtf8Bytes(item.text);
-          }
-        }
-      } else if (block.type === "toolCall") {
-        total += countUtf8Bytes(JSON.stringify(block.arguments));
-      }
-    }
-  }
-
-  if (message.errorMessage) {
-    total += countUtf8Bytes(message.errorMessage);
-  }
-  if (message.stopReason) {
-    total += countUtf8Bytes(message.stopReason);
-  }
-  if (message.customType) {
-    total += countUtf8Bytes(message.customType);
-  }
-  if (message.toolName) {
-    total += countUtf8Bytes(message.toolName);
-  }
-  if (message.toolCallId) {
-    total += countUtf8Bytes(message.toolCallId);
-  }
-  if (message.details) {
-    total += countUtf8Bytes(JSON.stringify(message.details));
-  }
-
-  return total;
+  return countUtf8Bytes(JSON.stringify(message));
 }
 
 /**
@@ -132,26 +84,97 @@ export function normalizeLiveMessages(messages: readonly AgentMessage[]): {
   messages: LiveTranscriptMessage[];
   truncated: number;
 } {
-  const slice = messages.slice(-MAX_LIVE_MESSAGES_PER_CHILD);
+  const selectedMessages = selectMessagesWithinCountBudget(messages);
   const truncationCounter = { truncated: 0 };
   const result: LiveTranscriptMessage[] = [];
-
-  for (const raw of slice) {
+  const droppedToolCallIds = new Set<string>();
+  for (const raw of selectedMessages) {
     const message = normalizeLiveMessage(raw, truncationCounter);
     if (!message) {
       continue;
     }
+    if (message.role === "assistant") {
+      collectDroppedToolCallIds(raw, message, droppedToolCallIds);
+    }
     result.push(message);
   }
-
-  return { messages: result, truncated: truncationCounter.truncated };
+  return {
+    messages: result.filter(
+      (message) => message.role !== "toolResult" || !message.toolCallId || !droppedToolCallIds.has(message.toolCallId),
+    ),
+    truncated: truncationCounter.truncated,
+  };
 }
-
+/**
+ * Selects the newest messages within the count budget without separating a
+ * tool result from the assistant message that issued its call.
+ */
+function selectMessagesWithinCountBudget(messages: readonly AgentMessage[]): AgentMessage[] {
+  if (messages.length <= MAX_LIVE_MESSAGES_PER_CHILD) {
+    return [...messages];
+  }
+  const associationGroups = buildRawToolAssociationGroups(messages);
+  const keptIndexes = new Set<number>();
+  const processedIndexes = new Set<number>();
+  for (let index = messages.length - 1; index >= 0; index--) {
+    if (processedIndexes.has(index)) {
+      continue;
+    }
+    const group = associationGroups.get(index) ?? [index];
+    if (keptIndexes.size + group.length > MAX_LIVE_MESSAGES_PER_CHILD) {
+      for (const groupIndex of group) {
+        processedIndexes.add(groupIndex);
+      }
+      if (group.length === 1) {
+        break;
+      }
+      continue;
+    }
+    for (const groupIndex of group) {
+      keptIndexes.add(groupIndex);
+      processedIndexes.add(groupIndex);
+    }
+  }
+  return messages.filter((_, index) => keptIndexes.has(index));
+}
+/** Groups each raw tool-call assistant message with its emitted tool results. */
+function buildRawToolAssociationGroups(messages: readonly AgentMessage[]): Map<number, number[]> {
+  const assistantIndexByCallId = new Map<string, number>();
+  const resultIndexesByAssistant = new Map<number, number[]>();
+  for (const [index, raw] of messages.entries()) {
+    if (!isRecord(raw)) {
+      continue;
+    }
+    if (raw.role === "assistant" && Array.isArray(raw.content)) {
+      for (const block of raw.content) {
+        if (isRecord(block) && block.type === "toolCall" && typeof block.id === "string") {
+          assistantIndexByCallId.set(block.id, index);
+        }
+      }
+      continue;
+    }
+    if (raw.role === "toolResult" && typeof raw.toolCallId === "string") {
+      const assistantIndex = assistantIndexByCallId.get(raw.toolCallId);
+      if (assistantIndex !== undefined) {
+        const resultIndexes = resultIndexesByAssistant.get(assistantIndex) ?? [];
+        resultIndexes.push(index);
+        resultIndexesByAssistant.set(assistantIndex, resultIndexes);
+      }
+    }
+  }
+  const groups = new Map<number, number[]>();
+  for (const [assistantIndex, resultIndexes] of resultIndexesByAssistant) {
+    const group = [assistantIndex, ...resultIndexes];
+    for (const index of group) {
+      groups.set(index, group);
+    }
+  }
+  return groups;
+}
 function normalizeLiveMessage(raw: AgentMessage, counter: { truncated: number }): LiveTranscriptMessage | undefined {
   if (!isRecord(raw) || typeof raw.role !== "string") {
     return undefined;
   }
-
   const truncate = (text: string): string => {
     const bounded = truncateUtf8Bytes(text, MAX_LIVE_PER_MESSAGE_UTF8_BYTES);
     if (bounded !== text) {
@@ -161,7 +184,6 @@ function normalizeLiveMessage(raw: AgentMessage, counter: { truncated: number })
   };
   const maybeString = (value: unknown): string | undefined => (typeof value === "string" ? truncate(value) : undefined);
   const maybeNumber = (value: unknown): number | undefined => (typeof value === "number" ? value : undefined);
-
   /** Copies timestamp/elapsed fields the desktop transcript renderer reads. */
   const setNumericTimingFields = (message: LiveTranscriptMessage, raw: Record<string, unknown>): void => {
     const timestamp = maybeNumber(raw.timestamp);
@@ -177,7 +199,6 @@ function normalizeLiveMessage(raw: AgentMessage, counter: { truncated: number })
       message.durationMs = durationMs;
     }
   };
-
   if (raw.role === "assistant") {
     const content = normalizeAssistantContent(raw.content, truncate);
     if (content === undefined) {
@@ -197,9 +218,9 @@ function normalizeLiveMessage(raw: AgentMessage, counter: { truncated: number })
       message.usage = usage;
     }
     setNumericTimingFields(message, raw);
+    message.content = trimAssistantContentToByteBudget(message, counter);
     return message;
   }
-
   if (raw.role === "user") {
     const content = normalizeUserContent(raw.content, truncate);
     if (content === undefined) {
@@ -209,7 +230,6 @@ function normalizeLiveMessage(raw: AgentMessage, counter: { truncated: number })
     setNumericTimingFields(message, raw);
     return message;
   }
-
   if (raw.role === "toolResult") {
     const content = normalizeToolResultContent(raw.content, truncate);
     if (content === undefined) {
@@ -234,7 +254,6 @@ function normalizeLiveMessage(raw: AgentMessage, counter: { truncated: number })
     setNumericTimingFields(message, raw);
     return message;
   }
-
   // Custom messages (unknown app shapes): keep only the fields the desktop
   // renders, bounded to the per-message budget. Anything not serializable is
   // dropped entirely — display-only metadata is never worth an unbounded emit.
@@ -253,10 +272,8 @@ function normalizeLiveMessage(raw: AgentMessage, counter: { truncated: number })
     setNumericTimingFields(message, raw);
     return message;
   }
-
   return undefined;
 }
-
 /** Bounds a details/arguments record by shape and by total bytes; omits when empty. */
 function boundedDetails(value: unknown): Record<string, unknown> | undefined {
   const normalized = normalizeBoundedRecord(value, 0);
@@ -266,7 +283,6 @@ function boundedDetails(value: unknown): Record<string, unknown> | undefined {
   const trimmed = trimRecordToBytes(normalized, MAX_LIVE_DETAILS_UTF8_BYTES);
   return Object.keys(trimmed).length > 0 ? trimmed : undefined;
 }
-
 function normalizeUserContent(
   content: unknown,
   truncate: (text: string) => string,
@@ -283,6 +299,79 @@ function normalizeUserContent(
     }
     return [{ type: "text", text: truncate(block.text) }];
   });
+}
+/** Removes tool results whose calls were omitted from a byte-capped assistant message. */
+function collectDroppedToolCallIds(
+  raw: AgentMessage,
+  message: LiveTranscriptMessage,
+  droppedToolCallIds: Set<string>,
+): void {
+  if (!isRecord(raw) || !Array.isArray(raw.content) || !Array.isArray(message.content)) {
+    return;
+  }
+  const emittedToolCallIds = new Set(
+    message.content.filter((block) => block.type === "toolCall").map((block) => block.id),
+  );
+  for (const block of raw.content) {
+    if (isRecord(block) && block.type === "toolCall" && typeof block.id === "string") {
+      const normalizedId = truncateUtf8Bytes(block.id, MAX_LIVE_PER_MESSAGE_UTF8_BYTES);
+      if (!emittedToolCallIds.has(normalizedId)) {
+        droppedToolCallIds.add(normalizedId);
+      }
+    }
+  }
+}
+/** Keeps assistant content in order while enforcing the complete message byte budget. */
+function trimAssistantContentToByteBudget(
+  message: LiveTranscriptMessage,
+  counter: { truncated: number },
+): LiveTranscriptContentBlock[] {
+  if (!Array.isArray(message.content)) {
+    return [];
+  }
+  const kept: LiveTranscriptContentBlock[] = [];
+  for (const block of message.content) {
+    const candidate = [...kept, block];
+    if (countLiveMessageUtf8Bytes({ ...message, content: candidate }) <= MAX_LIVE_PER_MESSAGE_UTF8_BYTES) {
+      kept.push(block);
+      continue;
+    }
+    if (block.type === "text") {
+      const truncatedText = truncateAssistantTextToFit(message, kept, block.text);
+      if (truncatedText !== undefined) {
+        kept.push({ type: "text", text: truncatedText });
+        counter.truncated += 1;
+      }
+    }
+  }
+  return kept;
+}
+/** Truncates one text block to the remaining serialized-message byte budget. */
+function truncateAssistantTextToFit(
+  message: LiveTranscriptMessage,
+  kept: readonly LiveTranscriptContentBlock[],
+  text: string,
+): string | undefined {
+  let minimum = 0;
+  let maximum = countUtf8Bytes(text);
+  let bounded: string | undefined;
+
+  while (minimum <= maximum) {
+    const limit = Math.floor((minimum + maximum) / 2);
+    const candidate = truncateUtf8Bytes(text, limit);
+    const candidateMessage: LiveTranscriptMessage = {
+      ...message,
+      content: [...kept, { type: "text", text: candidate }],
+    };
+    if (countLiveMessageUtf8Bytes(candidateMessage) <= MAX_LIVE_PER_MESSAGE_UTF8_BYTES) {
+      bounded = candidate;
+      minimum = limit + 1;
+    } else {
+      maximum = limit - 1;
+    }
+  }
+
+  return bounded;
 }
 
 function normalizeAssistantContent(
