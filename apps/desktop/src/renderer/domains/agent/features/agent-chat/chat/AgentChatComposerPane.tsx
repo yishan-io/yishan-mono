@@ -1,5 +1,5 @@
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
-import { keybindingSettingsStore } from "@renderer/domains/settings";
+import { displaySettingsStore, keybindingSettingsStore } from "@renderer/domains/settings";
 import { TAB_FOCUS_REQUEST_EVENT, consumeTabFocus, getTabFocusRequest, tabStore } from "@renderer/domains/workbench";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,7 @@ import { AgentModelSelector } from "../../select-model/AgentModelSelector";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
 import { AgentChatComposerFooter } from "./AgentChatComposerFooter";
+import { AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX } from "./AgentChatContentLayout";
 import { AgentChatSubagentList } from "./AgentChatSubagentList";
 import { AgentChatVoiceButton } from "./AgentChatVoiceButton";
 import { ComposerAttachmentBlock } from "./composer/ComposerAttachmentBlock";
@@ -42,6 +43,8 @@ function AgentChatComposerPaneComponent({
 }: AgentChatComposerPaneProps) {
   const { t } = useTranslation();
   const slashCommands = useAgentChatSlashCommands();
+  const agentChatWidth = displaySettingsStore((state) => state.agentChatWidth);
+  const isFixedWidth = agentChatWidth === "fixed";
   const foundTab = tabStore((state) => state.tabs.find((tab) => tab.id === tabId));
   const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
   const {
@@ -175,12 +178,21 @@ function AgentChatComposerPaneComponent({
     <Box
       ref={composerContainerRef}
       sx={{
-        borderTop: 1,
+        border: isFixedWidth ? 1 : 0,
+        borderTop: isFixedWidth ? 1 : 0,
         borderColor: "divider",
+        borderRadius: isFixedWidth ? 2 : 0,
         p: 1,
         display: "flex",
         flexDirection: "column",
         gap: 0.75,
+        ...(isFixedWidth
+          ? {
+              alignSelf: "center",
+              maxWidth: AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX,
+              width: "calc(100% - 32px)",
+            }
+          : { borderTop: 1, width: "100%" }),
       }}
     >
       <AgentChatSubagentList
