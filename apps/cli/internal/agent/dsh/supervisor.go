@@ -38,6 +38,7 @@ type Config struct {
 	Initialize      InitializeConfig
 	RestartLimit    int
 	RestartBackoff  time.Duration
+	RestartWait     func(context.Context, time.Duration)
 	StartupTimeout  time.Duration
 	ShutdownTimeout time.Duration
 	Diagnostics     func(string)
@@ -64,6 +65,7 @@ type Supervisor struct {
 	startDone          chan struct{}
 	isStarting         bool
 	isClosing          bool
+	isRestartScheduled bool
 	health             Health
 	nextID             uint64
 	runtimeIncarnation uint64
@@ -97,6 +99,9 @@ func normalizeConfig(config Config) Config {
 	if config.RestartBackoff <= 0 {
 		config.RestartBackoff = defaultRestartBackoff
 	}
+	if config.RestartWait == nil {
+		config.RestartWait = waitForRestart
+	}
 	if config.StartupTimeout <= 0 {
 		config.StartupTimeout = defaultStartupTimeout
 	}
@@ -127,7 +132,7 @@ func (s *Supervisor) reserveStart() error {
 	if s.isClosing {
 		return errors.New("DSH supervisor is closed")
 	}
-	if s.isStarting || s.process != nil {
+	if s.isStarting || s.isRestartScheduled || s.process != nil {
 		return errors.New("DSH runtime is already started")
 	}
 	s.isStarting = true
@@ -188,12 +193,17 @@ func (s *Supervisor) handshakeContext(caller context.Context) (context.Context, 
 	return ctx, func() { stop(); cancel() }
 }
 
-func (s *Supervisor) failStart(err error) error { s.recordFailure(err); return err }
+func (s *Supervisor) failStart(err error) error {
+	s.recordFailure(err)
+	s.scheduleRestart()
+	return err
+}
 
 func (s *Supervisor) failProcess(process *runtimeProcess, err error) error {
 	s.clearStartingProcess(process)
 	s.stopFailedProcess(process)
 	s.recordFailure(err)
+	s.scheduleRestart()
 	return err
 }
 
@@ -322,34 +332,6 @@ func exitError(err error) error {
 		return errors.New("DSH runtime exited unexpectedly")
 	}
 	return fmt.Errorf("DSH runtime exited: %w", err)
-}
-
-func (s *Supervisor) scheduleRestart() {
-	s.mu.Lock()
-	if s.isClosing || s.health.RestartCount >= s.config.RestartLimit {
-		s.mu.Unlock()
-		return
-	}
-	s.health.RestartCount++
-	backoff := s.config.RestartBackoff
-	s.mu.Unlock()
-	go s.restartAfterBackoff(backoff)
-}
-
-func (s *Supervisor) restartAfterBackoff(backoff time.Duration) {
-	select {
-	case <-s.ctx.Done():
-		return
-	case <-time.After(backoff):
-	}
-	if err := s.reserveStart(); err != nil {
-		return
-	}
-	err := s.startProcess(s.ctx)
-	s.releaseStart()
-	if err != nil {
-		s.scheduleRestart()
-	}
 }
 
 func (s *Supervisor) stopFailedProcess(process *runtimeProcess) {
