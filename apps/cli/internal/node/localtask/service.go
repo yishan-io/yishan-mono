@@ -29,6 +29,7 @@ type Deps struct {
 	Events              *eventbus.Hub
 	TaskContextsChanged func()
 	TaskTitleChanged    func(context.Context, string, string)
+	TemplateStore       *TemplateStore
 }
 
 // Service validates and orchestrates Local Task lifecycle operations.
@@ -50,6 +51,31 @@ func (s *Service) publishTaskChanged() {
 		Topic:   "localTaskChanged",
 		Payload: map[string]any{},
 	})
+}
+
+// GetTaskTemplates returns the current template collection and agent default.
+func (s *Service) GetTaskTemplates(ctx context.Context, _ struct{}) (any, error) {
+	if s.deps.TemplateStore == nil {
+		return rpc.LocalTaskTemplatesResult{Templates: defaultTemplateList(), AgentDefaultID: builtInTemplateID}, nil
+	}
+	templates, err := s.deps.TemplateStore.Load()
+	if err != nil {
+		return nil, err
+	}
+	return rpc.LocalTaskTemplatesResult{Templates: templates.Templates, AgentDefaultID: templates.AgentDefaultID}, nil
+}
+
+// SetTaskTemplates replaces the full custom template collection.
+func (s *Service) SetTaskTemplates(ctx context.Context, req rpc.LocalTaskSetTemplatesParams) (any, error) {
+	if s.deps.TemplateStore == nil {
+		return nil, ErrInvalidTemplates
+	}
+	if err := s.deps.TemplateStore.Save(domain.TemplatesData{
+		Templates: req.Templates, AgentDefaultID: req.AgentDefaultID,
+	}); err != nil {
+		return nil, err
+	}
+	return s.GetTaskTemplates(ctx, struct{}{})
 }
 
 // Create validates and persists a new Local Task.
