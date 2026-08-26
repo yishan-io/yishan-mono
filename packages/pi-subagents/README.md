@@ -44,7 +44,6 @@ This package ships built-in agents inside the package:
 - `builder`
 - `code-reviewer`
 - `plan-reviewer`
-- `task-reviewer`
 
 User and project full-definition overrides use standard Pi locations:
 - User: `<active-agent-dir>/agents/*.md` (normally `~/.pi/agent/agents/*.md`; Yishan-managed sessions use `~/.yishan/pi/agent/agents/*.md`)
@@ -88,12 +87,6 @@ Override precedence:
 ### plan-reviewer
 - Purpose: review implementation plans before execution
 - Default tools: `read`, `grep`, `glob`
-- Default mode: read-only
-- Default model: unset
-
-### task-reviewer
-- Purpose: review one task-sized implementation for requirements compliance
-- Default tools: `read`, `grep`, `glob`, `bash`, `lsp_diagnostics`
 - Default mode: read-only
 - Default model: unset
 

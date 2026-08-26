@@ -25,11 +25,13 @@ export function mergeActiveTurnHistory(
   );
   const liveLifecycleMessages = committedMessages.filter(
     (message) =>
-      isBackgroundSubagentLifecycleMessage(message) &&
+      isLiveSubagentLifecycleMessage(message) &&
       !terminalHistoryChildSessionIds.has(getSubagentChildSessionId(message) ?? ""),
   );
   const liveLifecycleChildSessionIds = new Set(
-    liveLifecycleMessages.map(getSubagentChildSessionId).filter((childSessionId): childSessionId is string => Boolean(childSessionId)),
+    liveLifecycleMessages
+      .map(getSubagentChildSessionId)
+      .filter((childSessionId): childSessionId is string => Boolean(childSessionId)),
   );
   const historyWithoutStaleLifecycleMessages = historyMessages.filter((message) => {
     const childSessionId = getSubagentChildSessionId(message);
@@ -40,6 +42,8 @@ export function mergeActiveTurnHistory(
     rendererFinalAssistantIds === undefined || rendererFinalAssistantIds[message.id] === true;
   const retainedLifecycleMessages = liveLifecycleMessages.filter((message) => !historyMessageIds.has(message.id));
   const retainedLifecycleMessageIds = new Set(retainedLifecycleMessages.map((message) => message.id));
+  const retainedToolResults = getRetainedToolResults(historyMessageIds, committedMessages, isRendererFinalAssistant);
+  const retainedToolResultIds = new Set(retainedToolResults.map((message) => message.id));
   return [
     // Keep live metadata before history so transcript trimming drops it before
     // it drops persisted conversation messages.
@@ -51,17 +55,64 @@ export function mergeActiveTurnHistory(
       (message) =>
         isRendererFinalAssistant(message) &&
         !historyMessageIds.has(message.id) &&
-        !retainedLifecycleMessageIds.has(message.id),
+        !retainedLifecycleMessageIds.has(message.id) &&
+        !retainedToolResultIds.has(message.id),
     ),
+    ...retainedToolResults,
   ];
 }
 
-function isBackgroundSubagentLifecycleMessage(message: AgentMessage): boolean {
-  return message.role === "custom" && message.customType === "pi-subagent-child" && message.details?.mode === "background";
+/** Returns live tool-result IDs that require their renderer-final assistant to remain after trimming. */
+export function getRetainedToolResultIds(
+  historyMessages: AgentMessage[],
+  committedMessages: AgentMessage[],
+  rendererFinalAssistantIds?: Record<string, true>,
+): Set<string> {
+  const historyMessageIds = new Set(historyMessages.map((message) => message.id));
+  const isRendererFinalAssistant = (message: AgentMessage): boolean =>
+    rendererFinalAssistantIds === undefined || rendererFinalAssistantIds[message.id] === true;
+  return new Set(
+    getRetainedToolResults(historyMessageIds, committedMessages, isRendererFinalAssistant).map((message) => message.id),
+  );
+}
+
+function getRetainedToolResults(
+  historyMessageIds: Set<string>,
+  committedMessages: AgentMessage[],
+  isRendererFinalAssistant: (message: AgentMessage) => boolean,
+): AgentMessage[] {
+  const rendererFinalToolCallIds = getRendererFinalToolCallIds(committedMessages, isRendererFinalAssistant);
+  return committedMessages.filter(
+    (message) =>
+      message.role === "toolResult" &&
+      message.toolCallId !== undefined &&
+      rendererFinalToolCallIds.has(message.toolCallId) &&
+      !historyMessageIds.has(message.id),
+  );
+}
+
+function getRendererFinalToolCallIds(
+  messages: AgentMessage[],
+  isRendererFinalAssistant: (message: AgentMessage) => boolean,
+): Set<string> {
+  const toolCallIds = new Set<string>();
+  for (const message of messages) {
+    if (message.role !== "assistant" || !isRendererFinalAssistant(message) || !Array.isArray(message.content)) continue;
+    for (const contentBlock of message.content) {
+      if (contentBlock.type === "toolCall") toolCallIds.add(contentBlock.id);
+    }
+  }
+  return toolCallIds;
+}
+
+function isLiveSubagentLifecycleMessage(message: AgentMessage): boolean {
+  return message.role === "custom" && message.customType === "pi-subagent-child";
 }
 
 function isCompletedSubagentLifecycleMessage(message: AgentMessage): boolean {
-  return message.role === "custom" && message.customType === "pi-subagent-child" && message.details?.event === "completed";
+  return (
+    message.role === "custom" && message.customType === "pi-subagent-child" && message.details?.event === "completed"
+  );
 }
 
 function getSubagentChildSessionId(message: AgentMessage): string | undefined {
@@ -75,9 +126,13 @@ function getSubagentChildSessionId(message: AgentMessage): string | undefined {
 /**
  * Trims session messages to fit within MAX_MESSAGES_PER_TAB and the aggregate
  * UTF-8 byte budget. Keeps newest messages; a single oversized message is
- * retained rather than leaving the transcript empty.
+ * retained rather than leaving the transcript empty. Transient retained tool
+ * results are removed when trimming evicts their matching assistant tool call.
  */
-export function trimSessionMessages(messages: AgentMessage[]): AgentMessage[] {
+export function trimSessionMessages(
+  messages: AgentMessage[],
+  transientToolResultIds?: ReadonlySet<string>,
+): AgentMessage[] {
   // 1. Apply count cap (keep newest).
   let trimmed = messages;
   if (trimmed.length > MAX_MESSAGES_PER_TAB) {
@@ -99,7 +154,27 @@ export function trimSessionMessages(messages: AgentMessage[]): AgentMessage[] {
       break;
     }
   }
-  return kept;
+  if (!transientToolResultIds || transientToolResultIds.size === 0) return kept;
+
+  const retainedToolCallIds = getToolCallIds(kept);
+  return kept.filter(
+    (message) =>
+      !transientToolResultIds.has(message.id) ||
+      message.role !== "toolResult" ||
+      message.toolCallId === undefined ||
+      retainedToolCallIds.has(message.toolCallId),
+  );
+}
+
+function getToolCallIds(messages: AgentMessage[]): Set<string> {
+  const toolCallIds = new Set<string>();
+  for (const message of messages) {
+    if (message.role !== "assistant" || !Array.isArray(message.content)) continue;
+    for (const contentBlock of message.content) {
+      if (contentBlock.type === "toolCall") toolCallIds.add(contentBlock.id);
+    }
+  }
+  return toolCallIds;
 }
 
 /**

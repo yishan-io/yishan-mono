@@ -27,6 +27,7 @@ export {
   type AgentDefinition,
   type AgentDefinitionDiagnostic,
   type AgentDefinitionSource,
+  type InvalidAgentDefinition,
   type AgentRecord,
   type AgentRegistrySnapshot,
   type AgentResult,

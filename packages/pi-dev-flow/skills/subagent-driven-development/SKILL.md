@@ -26,8 +26,7 @@ This workflow separates roles:
 
 - controller: coordinates the plan and handoffs
 - `builder`: implements one task
-- `task-reviewer`: reviews one task before the next begins
-- `code-reviewer`: performs the broader final code review
+- `code-reviewer`: reviews each completed implementation task and the final broader change
 
 ## When to Use This Skill
 
@@ -46,10 +45,11 @@ Do not use this skill when the work is tiny, highly exploratory, or too tightly 
 2. Check for obvious contradictions or missing constraints before starting
 3. Execute one task at a time with a fresh `builder` agent
 4. If `builder` returns `NEEDS_CONTEXT` or `BLOCKED`, resolve that before proceeding
-5. Review the completed task with `task-reviewer`
+5. Review the completed task with `code-reviewer`
 6. If review finds important issues, dispatch a fix pass back through `builder`
 7. Only mark the task complete once review is clean enough to proceed
-8. After all tasks are done, run a broader `code-reviewer` pass
+8. After all tasks are done, run a broader final `code-reviewer` pass
+9. Complete tracked work with `finishing-task` after the final review
 
 If a `.my-context` task exists, the controller should keep `plan.md`, `notes.md`, and final task state aligned with what the subagents actually discovered and completed.
 
@@ -86,9 +86,9 @@ Expect one of these statuses back:
 
 Treat any non-`DONE` status as a real signal, not noise.
 
-## Handoff Contract For `task-reviewer`
+## Handoff Contract For `code-reviewer`
 
-When dispatching `task-reviewer`, include:
+When dispatching `code-reviewer`, include:
 
 - the task text or brief
 - the intended behavior
@@ -103,7 +103,7 @@ The review must answer two questions:
 
 ## Review Loop
 
-If `task-reviewer` returns Critical or Important issues:
+If `code-reviewer` returns Critical or Important issues:
 
 - send the findings back through `builder`
 - keep the scope focused on the current task
@@ -142,8 +142,7 @@ One advantage of dedicated agents is stable per-role model control.
 Suggested defaults:
 
 - `builder`: cheaper or mid-tier model for scoped implementation work
-- `task-reviewer`: stronger reasoning model than `builder`
-- `code-reviewer`: stronger reasoning model for whole-change review
+- `code-reviewer`: stronger reasoning model than `builder` for task and whole-change review
 
 Adjust upward when a task is unusually complex.
 

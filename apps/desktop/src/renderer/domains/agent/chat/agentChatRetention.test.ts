@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mergeActiveTurnHistory } from "./agentChatRetention";
+import { MAX_PER_TAB_AGGREGATE_UTF8_BYTES } from "./agentChatBudget";
+import { mergeActiveTurnHistory, trimSessionMessages } from "./agentChatRetention";
 import type { AgentMessage } from "./agentChatTypes";
 
 describe("mergeActiveTurnHistory", () => {
@@ -103,7 +104,7 @@ describe("mergeActiveTurnHistory", () => {
     expect(mergeActiveTurnHistory([], [liveLifecycle])).toEqual([liveLifecycle]);
   });
 
-  it("does not retain foreground lifecycle messages absent from RPC history", () => {
+  it("keeps live foreground lifecycle messages absent from RPC history", () => {
     const foregroundLifecycle = {
       id: "child-1:started",
       role: "custom" as const,
@@ -113,7 +114,7 @@ describe("mergeActiveTurnHistory", () => {
       details: { event: "started", mode: "foreground", childSessionId: "child-1" },
     } satisfies AgentMessage;
 
-    expect(mergeActiveTurnHistory([], [foregroundLifecycle], {})).toEqual([]);
+    expect(mergeActiveTurnHistory([], [foregroundLifecycle], {})).toEqual([foregroundLifecycle]);
   });
 
   it("does not retain unrelated custom messages absent from RPC history", () => {
@@ -126,6 +127,64 @@ describe("mergeActiveTurnHistory", () => {
     } satisfies AgentMessage;
 
     expect(mergeActiveTurnHistory([], [unrelatedCustomMessage], {})).toEqual([]);
+  });
+
+  it("preserves an unmatched tool result persisted in history", () => {
+    const persistedToolResult = {
+      id: "tool-result-persisted",
+      role: "toolResult" as const,
+      toolCallId: "missing-tool-call",
+      toolName: "Read",
+      content: "persisted standalone result",
+    } satisfies AgentMessage;
+
+    expect(mergeActiveTurnHistory([persistedToolResult], [], {})).toEqual([persistedToolResult]);
+  });
+
+  it("does not retain an orphan tool result absent from RPC history", () => {
+    const finalizedAssistant = {
+      id: "assistant-1",
+      role: "assistant" as const,
+      content: [{ type: "toolCall" as const, id: "tool-call-1", name: "Read", arguments: {} }],
+    } satisfies AgentMessage;
+    const orphanToolResult = {
+      id: "tool-result-orphan",
+      role: "toolResult" as const,
+      toolCallId: "tool-call-2",
+      toolName: "Read",
+      content: "unrelated result",
+    } satisfies AgentMessage;
+
+    expect(
+      mergeActiveTurnHistory([finalizedAssistant], [finalizedAssistant, orphanToolResult], { "assistant-1": true }),
+    ).toEqual([finalizedAssistant]);
+  });
+
+  it("removes a transient tool result when byte trimming evicts its matching assistant", () => {
+    const finalizedAssistant = {
+      id: "assistant-1",
+      role: "assistant" as const,
+      content: [{ type: "toolCall" as const, id: "tool-call-1", name: "Read", arguments: {} }],
+    } satisfies AgentMessage;
+    const retainedToolResult = {
+      id: "tool-result-1",
+      role: "toolResult" as const,
+      toolCallId: "tool-call-1",
+      toolName: "Read",
+      content: "file contents",
+    } satisfies AgentMessage;
+    const budgetFillingHistory = {
+      id: "history-1",
+      role: "assistant" as const,
+      content: [{ type: "text" as const, text: "x".repeat(MAX_PER_TAB_AGGREGATE_UTF8_BYTES) }],
+    } satisfies AgentMessage;
+
+    expect(
+      trimSessionMessages(
+        [finalizedAssistant, budgetFillingHistory, retainedToolResult],
+        new Set([retainedToolResult.id]),
+      ),
+    ).toEqual([]);
   });
 
   it("keeps the committed finalized message over a stale same-ID history placeholder", () => {

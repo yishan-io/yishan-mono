@@ -72,7 +72,7 @@ Use role-appropriate agents when available, for example:
 
 - `Explorer` for codebase search or investigation
 - `builder` for independent implementation tasks
-- `task-reviewer` or `code-reviewer` for separate review scopes
+- `code-reviewer` for separate review scopes
 
 ### 4. Review And Integrate
 

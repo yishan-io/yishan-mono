@@ -166,7 +166,7 @@
     },
     "packages/pi-dev-flow": {
       "name": "@yishan-io/pi-dev-flow",
-      "version": "0.2.0",
+      "version": "0.2.1",
     },
     "packages/pi-lsp": {
       "name": "@yishan-io/pi-lsp",
@@ -207,7 +207,7 @@
     },
     "packages/pi-subagents": {
       "name": "@yishan-io/pi-subagents",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "devDependencies": {
         "@earendil-works/pi-agent-core": "^0.80.3",
         "@earendil-works/pi-ai": "^0.80.3",

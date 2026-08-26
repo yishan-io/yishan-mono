@@ -123,7 +123,7 @@ In this repo's workflow:
 
 - use this skill before dispatching `builder` on a speculative bug fix
 - if `builder` or a controller cannot explain the failure clearly, switch into debugging mode first
-- use `task-reviewer` and `code-reviewer` to catch fixes that patched symptoms but missed the real issue
+- use `code-reviewer` to catch fixes that patched symptoms but missed the real issue
 
 ## Red Flags
 

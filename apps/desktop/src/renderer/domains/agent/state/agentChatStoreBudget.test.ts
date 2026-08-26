@@ -256,23 +256,31 @@ describe("usage ledger retention", () => {
     expect(agentChatStore.getState().sessionsByTabId[tabId]?.messages).toEqual([finalized]);
   });
 
-  it("keeps a renderer-finalized assistant when stale history arrives after settlement", () => {
+  it("keeps renderer-final assistant and result when stale history arrives after settlement", () => {
     const tabId = "tab-ledger-settled-stale-history";
     agentChatStore.getState().initSession(tabId, "session-ledger-settled-stale-history");
-    const finalMessage = {
+    const finalMessage: AgentMessage = {
       ...makeBilledAssistant("live-final", 7, 700),
-      content: [{ type: "text" as const, text: "renderer final" }],
+      content: [{ type: "toolCall", id: "tool-call-1", name: "Read", arguments: {} }],
+    };
+    const liveResult: AgentMessage = {
+      id: "live-result",
+      role: "toolResult",
+      toolCallId: "tool-call-1",
+      toolName: "Read",
+      content: "renderer result",
     };
 
     agentChatStore.getState().updateStreamingMessage(tabId, finalMessage);
     agentChatStore.getState().finalizeStreamingMessage(tabId);
+    agentChatStore.getState().appendMessage(tabId, liveResult);
     agentChatStore
       .getState()
       .replaceMessages(tabId, [
         { id: "live-final", role: "assistant", content: [{ type: "text", text: "stale history" }] },
       ]);
 
-    expect(agentChatStore.getState().sessionsByTabId[tabId]?.messages).toEqual([finalMessage]);
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.messages).toEqual([finalMessage, liveResult]);
   });
 
   it("compacts renderer-final IDs at a stats boundary while retaining post-boundary replay protection", () => {

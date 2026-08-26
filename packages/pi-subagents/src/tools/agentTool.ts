@@ -53,6 +53,11 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
       registry.reload();
       const agentDefinition = registry.getByName(params.agent);
       if (!agentDefinition) {
+        const invalidAgent = registry.getInvalidByName(params.agent);
+        if (invalidAgent) {
+          const validationReasons = invalidAgent.diagnostics.map((diagnostic) => diagnostic.message).join("; ");
+          throw new Error(`Agent \`${invalidAgent.name}\` is invalid: ${validationReasons}`);
+        }
         throw new Error(`Unknown agent: ${params.agent}`);
       }
 

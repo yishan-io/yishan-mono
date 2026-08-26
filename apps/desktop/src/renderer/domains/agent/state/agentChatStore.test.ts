@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resolveAgentToolCallLifecycleStates } from "../chat/agentChatSubagents";
 import type { AgentMessage } from "../chat/agentChatTypes";
 import { agentChatStore } from "./agentChatStore";
 
@@ -317,6 +318,86 @@ describe("agentChatStore", () => {
     });
   });
 
+  describe("active history retention", () => {
+    it("retains an Agent result from the renderer once, in source order, and resolves its card", () => {
+      const tabId = "tab-active-tool-result-history";
+      agentChatStore.getState().initSession(tabId, "session-active-tool-result-history");
+
+      const finalizedAssistant: AgentMessage = {
+        id: "assistant-tool-call",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "tool-call-1",
+            name: "Agent",
+            arguments: { agent: "researcher", prompt: "Inspect notes" },
+          },
+        ],
+      };
+      const toolResult: AgentMessage = {
+        id: "tool-result-1",
+        role: "toolResult",
+        toolCallId: "tool-call-1",
+        toolName: "Agent",
+        content: "Agent completed",
+      };
+
+      agentChatStore.getState().updateStreamingMessage(tabId, finalizedAssistant);
+      agentChatStore.getState().finalizeStreamingMessage(tabId);
+      agentChatStore.getState().appendMessage(tabId, toolResult);
+      agentChatStore.getState().setTurnActive(tabId, true);
+      agentChatStore.getState().updateStreamingMessage(tabId, {
+        id: "assistant-still-streaming",
+        role: "assistant",
+        content: [{ type: "text", text: "Continuing the response" }],
+      });
+
+      // The get_messages response was taken before the result arrived.
+      agentChatStore
+        .getState()
+        .replaceMessages(tabId, [
+          { ...finalizedAssistant, content: [{ type: "toolCall", id: "tool-call-1", name: "Agent", arguments: {} }] },
+        ]);
+
+      const session = agentChatStore.getState().sessionsByTabId[tabId];
+      expect(session?.messages).toEqual([finalizedAssistant, toolResult]);
+      expect(resolveAgentToolCallLifecycleStates(session?.messages ?? []).get("tool-call-1")).toBe("completed");
+      expect(session?.runningSubagents).toEqual([]);
+    });
+
+    it("removes a transient retained result when count trimming evicts its assistant", () => {
+      const tabId = "tab-retained-tool-result-count-cap";
+      agentChatStore.getState().initSession(tabId, "session-retained-tool-result-count-cap");
+      const finalizedAssistant: AgentMessage = {
+        id: "assistant-tool-call",
+        role: "assistant",
+        content: [{ type: "toolCall", id: "tool-call-1", name: "Read", arguments: {} }],
+      };
+      const toolResult: AgentMessage = {
+        id: "tool-result-1",
+        role: "toolResult",
+        toolCallId: "tool-call-1",
+        toolName: "Read",
+        content: "file contents",
+      };
+
+      agentChatStore.getState().appendMessage(tabId, finalizedAssistant);
+      agentChatStore.getState().appendMessage(tabId, toolResult);
+      agentChatStore
+        .getState()
+        .replaceMessages(tabId, [
+          { ...finalizedAssistant, content: [] },
+          ...Array.from({ length: MAX_MESSAGES }, (_, index) => makeMessage(`history-${index}`)),
+        ]);
+
+      const messages = agentChatStore.getState().sessionsByTabId[tabId]?.messages ?? [];
+      expect(messages).toHaveLength(MAX_MESSAGES - 1);
+      expect(messages.some((message) => message.id === finalizedAssistant.id)).toBe(false);
+      expect(messages.some((message) => message.id === toolResult.id)).toBe(false);
+    });
+  });
+
   // ─── setSubagentLiveTranscripts caps children and aggregate bytes ──────────
 
   describe("setSubagentLiveTranscripts retention", () => {
@@ -508,6 +589,49 @@ describe("agentChatStore", () => {
   // ─── running subagent panel state ─────────────────────────────────────────
 
   describe("running subagent panel state", () => {
+    it("retains a foreground start through stale history until persisted completion replaces it", () => {
+      const tabId = "tab-foreground-lifecycle-retention";
+      agentChatStore.getState().initSession(tabId, "session-foreground-lifecycle-retention");
+
+      const startedMessage = {
+        id: "child-session-1:started",
+        role: "custom" as const,
+        customType: "pi-subagent-child",
+        display: false,
+        content: "",
+        details: {
+          event: "started",
+          mode: "foreground",
+          agentId: "agent-1",
+          agentName: "builder",
+          childSessionId: "child-session-1",
+          title: "builder — implement retention",
+          summary: "implement retention",
+        },
+      } satisfies AgentMessage;
+      const completedMessage = {
+        ...startedMessage,
+        id: "child-session-1:completed",
+        details: { ...startedMessage.details, event: "completed" },
+      } satisfies AgentMessage;
+
+      agentChatStore.getState().appendMessage(tabId, startedMessage);
+      agentChatStore.getState().replaceMessages(tabId, []);
+
+      let session = agentChatStore.getState().sessionsByTabId[tabId];
+      expect(session?.messages).toEqual([startedMessage]);
+      expect(session?.runningSubagents).toEqual([
+        expect.objectContaining({ childSessionId: "child-session-1", state: "running" }),
+      ]);
+
+      agentChatStore.getState().replaceMessages(tabId, [completedMessage]);
+
+      session = agentChatStore.getState().sessionsByTabId[tabId];
+      expect(session?.messages).toEqual([completedMessage]);
+      expect(session?.runningSubagents).toEqual([]);
+      expect(session?.finishedSubagents).toEqual([expect.objectContaining({ childSessionId: "child-session-1" })]);
+    });
+
     it("updates an existing Agent row from preparing to queued when its background result arrives", () => {
       const tabId = "tab-background-subagent";
       agentChatStore.getState().initSession(tabId, "session-background-subagent");

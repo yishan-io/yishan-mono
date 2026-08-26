@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { mergeActiveTurnHistory, trimSessionMessages, trimSubagentLiveTranscripts } from "../chat/agentChatRetention";
+import {
+  getRetainedToolResultIds,
+  mergeActiveTurnHistory,
+  trimSessionMessages,
+  trimSubagentLiveTranscripts,
+} from "../chat/agentChatRetention";
 import { deriveRunningSubagents } from "../chat/agentChatSubagents";
 import type {
   AgentCompactionReason,
@@ -167,12 +172,17 @@ export const agentChatStore = create<AgentChatStoreState>()(
           historyMessages,
           !session.hasLoadedMessages,
         );
+        const retainedToolResultIds = getRetainedToolResultIds(
+          historyMessages,
+          session.messages,
+          session.rendererFinalAssistantIds,
+        );
         const nextMessages = mergeActiveTurnHistory(
           historyMessages,
           session.messages,
           session.rendererFinalAssistantIds,
         );
-        session.messages = trimSessionMessages(nextMessages);
+        session.messages = trimSessionMessages(nextMessages, retainedToolResultIds);
         session.hasLoadedMessages = true;
         if (!hasLiveStream) {
           session.streamingMessage = null;
