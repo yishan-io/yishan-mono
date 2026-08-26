@@ -19,7 +19,7 @@ func requireIdentifier(identifier string, field string) (string, error) {
 
 func taskFilter(req rpc.LocalTaskListParams) domain.TaskFilter {
 	filter := domain.TaskFilter{
-		ProjectID: req.ProjectID, Status: req.Status, Priority: req.Priority,
+		ProjectID: req.ProjectID, Status: req.Status, Statuses: req.Statuses, Priority: req.Priority,
 	}
 	if req.WorkspaceID != nil {
 		workspaceID := strings.TrimSpace(*req.WorkspaceID)
@@ -42,6 +42,11 @@ func (s *Service) validateFilter(ctx context.Context, filter domain.TaskFilter) 
 	}
 	if filter.Status != nil && !isValidStatus(*filter.Status) {
 		return fmt.Errorf("invalid status: %w", domain.ErrInvalidTask)
+	}
+	for _, status := range filter.Statuses {
+		if !isValidStatus(status) {
+			return fmt.Errorf("invalid status: %w", domain.ErrInvalidTask)
+		}
 	}
 	if filter.Priority != nil && !isValidPriority(*filter.Priority) {
 		return fmt.Errorf("invalid priority: %w", domain.ErrInvalidTask)

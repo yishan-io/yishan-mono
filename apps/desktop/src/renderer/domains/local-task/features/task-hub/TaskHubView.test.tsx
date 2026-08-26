@@ -158,8 +158,9 @@ describe("TaskHubView", () => {
     expect(filterButton.getAttribute("aria-expanded")).toBe("true");
     expect(screen.queryByRole("textbox", { name: "localTask.filters.addFilter" })).toBeNull();
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.new" }));
-    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: "new" });
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.new" }));
+    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: ["new"] });
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.refresh" }));
     expect(commands.refreshLocalTaskHub).toHaveBeenCalledTimes(2);
     expect(filterButton.getAttribute("aria-expanded")).toBe("false");
@@ -180,8 +181,27 @@ describe("TaskHubView", () => {
     }
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
     for (const status of ["new", "progressing", "done", "cancelled"] as const) {
-      expect(screen.getByRole("menuitem", { name: `localTask.status.${status}` })).toBeTruthy();
+      expect(screen.getByRole("menuitemcheckbox", { name: `localTask.status.${status}` })).toBeTruthy();
     }
+  });
+  it("exposes status choices as keyboard-toggleable menu item checkboxes", async () => {
+    localTaskStore.setState({ hubFilters: { status: ["new"] } });
+    const user = userEvent.setup();
+    render(<TaskHubView />);
+
+    await user.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
+    await user.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
+
+    const selectedStatus = screen.getByRole("menuitemcheckbox", { name: "localTask.status.new" });
+    const unselectedStatus = screen.getByRole("menuitemcheckbox", { name: "localTask.status.progressing" });
+    expect(selectedStatus.getAttribute("aria-checked")).toBe("true");
+    expect(unselectedStatus.getAttribute("aria-checked")).toBe("false");
+    expect(screen.queryByRole("checkbox")).toBeNull();
+
+    unselectedStatus.focus();
+    await user.keyboard("{Enter}");
+
+    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: ["new", "progressing"] });
   });
   it("renders value icons and searches only the Tag filter menu", () => {
     localTaskStore.setState({
@@ -199,7 +219,7 @@ describe("TaskHubView", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
     expect(
       screen
-        .getByRole("menuitem", { name: "localTask.status.progressing" })
+        .getByRole("menuitemcheckbox", { name: "localTask.status.progressing" })
         .querySelector("[data-testid='local-task-status-icon']"),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
@@ -237,19 +257,31 @@ describe("TaskHubView", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.tags" }));
     expect(screen.getAllByRole("menuitem").length).toBeLessThan(20);
   });
-  it("applies a selected filter value through the Local Task command", () => {
+  it("toggles multiple status filters through the Local Task command", () => {
     render(<TaskHubView />);
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.filter" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.new" }));
-    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: "new" });
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.new" }));
+    act(() => localTaskStore.setState({ hubFilters: { status: ["new"] } }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.progressing" }));
+    expect(commands.setLocalTaskHubFilters).toHaveBeenLastCalledWith({ status: ["new", "progressing"] });
+    act(() => localTaskStore.setState({ hubFilters: { status: ["new", "progressing"] } }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.new" }));
+    expect(commands.setLocalTaskHubFilters).toHaveBeenLastCalledWith({ status: ["progressing"] });
+    act(() => localTaskStore.setState({ hubFilters: { status: ["progressing"] } }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.progressing" }));
+    expect(commands.setLocalTaskHubFilters).toHaveBeenLastCalledWith({});
   });
-  it("renders active filters as removable grouped chips", () => {
-    localTaskStore.setState({ hubFilters: { status: "progressing" } });
+  it("renders active multi-status filters as removable grouped chips", () => {
+    localTaskStore.setState({ hubFilters: { status: ["new", "progressing"] } });
     render(<TaskHubView />);
-    expect(screen.getByLabelText("localTask.fields.status localTask.status.progressing")).toBeTruthy();
+    expect(
+      screen.getByLabelText("localTask.fields.status localTask.status.new, localTask.status.progressing"),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "localTask.filters.addFilter" })).toBeNull();
     expect(screen.getByRole("button", { name: "localTask.filters.clearAll" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "localTask.filters.remove localTask.fields.status" }));
+    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({});
   });
   it("removes an active filter with its keyboard-accessible button", async () => {
     localTaskStore.setState({ hubFilters: { priority: "high" } });
@@ -428,7 +460,7 @@ describe("TaskHubView", () => {
     expect(screen.queryByText("Task 20")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "localTask.pagination.page 3" }));
     expect(screen.getByText("Task 40")).toBeTruthy();
-    act(() => localTaskStore.setState({ hubFilters: { status: "progressing" } }));
+    act(() => localTaskStore.setState({ hubFilters: { status: ["progressing"] } }));
     await waitFor(() => expect(screen.getByText("Task 0")).toBeTruthy());
     expect(screen.queryByText("Task 40")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "localTask.pagination.page 2" }));

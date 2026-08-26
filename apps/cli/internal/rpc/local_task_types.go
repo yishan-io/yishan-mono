@@ -1,6 +1,12 @@
 package rpc
 
-import localtasktemplates "yishan/apps/cli/internal/localtask"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+
+	localtasktemplates "yishan/apps/cli/internal/localtask"
+)
 
 // LocalTaskTemplatesResult is the response payload for localTask.getTemplates.
 type LocalTaskTemplatesResult struct {
@@ -40,8 +46,11 @@ type LocalTaskListProjectionParams struct {
 
 // LocalTaskListParams contains optional Local Task filters.
 type LocalTaskListParams struct {
-	ProjectID   *string                      `json:"projectId,omitempty"`
-	Status      *localtasktemplates.Status   `json:"status,omitempty"`
+	ProjectID *string `json:"projectId,omitempty"`
+	// Status preserves scalar status filters from existing daemon clients.
+	Status *localtasktemplates.Status `json:"status,omitempty"`
+	// Statuses contains the status array accepted from Pi task tools.
+	Statuses    []localtasktemplates.Status  `json:"-"`
 	Priority    *localtasktemplates.Priority `json:"priority,omitempty"`
 	WorkspaceID *string                      `json:"workspaceId,omitempty"`
 	Tags        []string                     `json:"tags,omitempty"`
@@ -121,4 +130,90 @@ type LocalTaskUpdateLinkStatusParams struct {
 // LocalTaskWorkspaceIDParams identifies one local workspace.
 type LocalTaskWorkspaceIDParams struct {
 	WorkspaceID string `json:"workspaceId"`
+}
+
+// UnmarshalJSON accepts the current status array and the legacy scalar status filter.
+func (params *LocalTaskListParams) UnmarshalJSON(payload []byte) error {
+	var wire struct {
+		ProjectID   *string                      `json:"projectId"`
+		Status      json.RawMessage              `json:"status"`
+		Priority    *localtasktemplates.Priority `json:"priority"`
+		WorkspaceID *string                      `json:"workspaceId"`
+		Tags        []string                     `json:"tags"`
+		TagIDs      []string                     `json:"tagIds"`
+	}
+	if err := json.Unmarshal(payload, &wire); err != nil {
+		return err
+	}
+	params.ProjectID, params.Priority, params.WorkspaceID = wire.ProjectID, wire.Priority, wire.WorkspaceID
+	params.Tags, params.TagIDs, params.Status, params.Statuses = wire.Tags, wire.TagIDs, nil, nil
+	if len(wire.Status) == 0 || bytes.Equal(wire.Status, []byte("null")) {
+		return nil
+	}
+	if wire.Status[0] == '[' {
+		statuses, err := decodeLocalTaskStatuses(wire.Status)
+		if err != nil {
+			return err
+		}
+		params.Statuses = statuses
+		return nil
+	}
+	return json.Unmarshal(wire.Status, &params.Status)
+}
+
+const maxLocalTaskStatusFilters = 4
+
+func decodeLocalTaskStatuses(payload json.RawMessage) ([]localtasktemplates.Status, error) {
+	var statuses []localtasktemplates.Status
+	if err := json.Unmarshal(payload, &statuses); err != nil {
+		return nil, err
+	}
+	if len(statuses) == 0 {
+		return nil, fmt.Errorf("status array must not be empty")
+	}
+	if len(statuses) > maxLocalTaskStatusFilters {
+		return nil, fmt.Errorf("status array must contain at most %d entries", maxLocalTaskStatusFilters)
+	}
+	uniqueStatuses := make([]localtasktemplates.Status, 0, len(statuses))
+	seenStatuses := make(map[localtasktemplates.Status]struct{}, len(statuses))
+	for _, status := range statuses {
+		if _, exists := seenStatuses[status]; exists {
+			continue
+		}
+		seenStatuses[status] = struct{}{}
+		uniqueStatuses = append(uniqueStatuses, status)
+	}
+	return uniqueStatuses, nil
+}
+
+// UnmarshalJSON preserves projection fields while accepting either status filter form.
+func (params *LocalTaskListProjectionParams) UnmarshalJSON(payload []byte) error {
+	var wire struct {
+		Query  string `json:"query"`
+		Offset int    `json:"offset"`
+		Limit  int    `json:"limit"`
+	}
+	if err := json.Unmarshal(payload, &wire); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(payload, &params.LocalTaskListParams); err != nil {
+		return err
+	}
+	params.Query, params.Offset, params.Limit = wire.Query, wire.Offset, wire.Limit
+	return nil
+}
+
+// UnmarshalJSON preserves the search query while accepting either status filter form.
+func (params *LocalTaskSearchParams) UnmarshalJSON(payload []byte) error {
+	var wire struct {
+		Query string `json:"query"`
+	}
+	if err := json.Unmarshal(payload, &wire); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(payload, &params.LocalTaskListParams); err != nil {
+		return err
+	}
+	params.Query = wire.Query
+	return nil
 }

@@ -41,7 +41,7 @@ describe("localTaskStore", () => {
 
   it("mutates hub filters, results, and progressing-task count without I/O", () => {
     const actions = localTaskStore.getState();
-    actions.setHubFilters({ status: "new", priority: "high" });
+    actions.setHubFilters({ status: ["new"], priority: "high" });
     actions.setHubSearchQuery("desktop");
     const requestId = actions.beginHubLoad();
     const projectDisplayById = {
@@ -50,7 +50,7 @@ describe("localTaskStore", () => {
     actions.setHubResults(requestId, [task], projectDisplayById, 4);
 
     expect(localTaskStore.getState()).toMatchObject({
-      hubFilters: { status: "new", priority: "high" },
+      hubFilters: { status: ["new"], priority: "high" },
       hubSearchQuery: "desktop",
       hubTasks: [task],
       progressingTaskCount: 4,

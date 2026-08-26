@@ -87,3 +87,109 @@ func TestLocalTaskTagParams_PreserveExplicitEmptyUpdate(t *testing.T) {
 		t.Fatalf("update tags = %#v, want explicit empty", update.Tags)
 	}
 }
+
+func TestLocalTaskListParams_DecodeMultipleStatuses(t *testing.T) {
+	var params LocalTaskListParams
+	if err := json.Unmarshal([]byte(`{"status":["new","done"]}`), &params); err != nil {
+		t.Fatalf("decode statuses: %v", err)
+	}
+	if len(params.Statuses) != 2 || params.Statuses[0] != localtask.StatusNew || params.Statuses[1] != localtask.StatusDone {
+		t.Fatalf("statuses = %#v", params.Statuses)
+	}
+}
+
+func TestLocalTaskListParams_RejectsEmptyAndExcessiveStatusArrays(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+	}{
+		{name: "empty", payload: `{"status":[]}`},
+		{name: "excessive", payload: `{"status":["new","progressing","done","cancelled","new"]}`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var params LocalTaskListParams
+			if err := json.Unmarshal([]byte(test.payload), &params); err == nil {
+				t.Fatalf("decode %s status array succeeded", test.name)
+			}
+		})
+	}
+}
+
+func TestLocalTaskListParams_NormalizesDuplicateStatuses(t *testing.T) {
+	var params LocalTaskListParams
+	if err := json.Unmarshal([]byte(`{"status":["new","done","new"]}`), &params); err != nil {
+		t.Fatalf("decode statuses: %v", err)
+	}
+	if got, want := params.Statuses, []localtask.Status{localtask.StatusNew, localtask.StatusDone}; len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Fatalf("statuses = %#v, want %#v", got, want)
+	}
+}
+
+func TestLocalTaskSearchParams_DecodeStatusFilterForms(t *testing.T) {
+	tests := []struct {
+		name       string
+		payload    string
+		wantStatus *localtask.Status
+		wantMany   []localtask.Status
+	}{
+		{name: "array", payload: `{"query":"release","status":["new","done"],"projectId":"project-1","priority":"high","workspaceId":"workspace-1","tags":["urgent"],"tagIds":["tag-1"]}`, wantMany: []localtask.Status{localtask.StatusNew, localtask.StatusDone}},
+		{name: "legacy scalar", payload: `{"query":"release","status":"done","projectId":"project-1","priority":"high","workspaceId":"workspace-1","tags":["urgent"],"tagIds":["tag-1"]}`, wantStatus: statusPointer(localtask.StatusDone)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var params LocalTaskSearchParams
+			if err := json.Unmarshal([]byte(test.payload), &params); err != nil {
+				t.Fatal(err)
+			}
+			assertDecodedTaskFilters(t, params.LocalTaskListParams, test.wantStatus, test.wantMany)
+			if params.Query != "release" {
+				t.Fatalf("query = %q", params.Query)
+			}
+		})
+	}
+}
+
+func TestLocalTaskListProjectionParams_DecodeStatusFilterForms(t *testing.T) {
+	tests := []struct {
+		name       string
+		payload    string
+		wantStatus *localtask.Status
+		wantMany   []localtask.Status
+	}{
+		{name: "array", payload: `{"query":"release","offset":20,"limit":10,"status":["new","done"],"projectId":"project-1","priority":"high","workspaceId":"workspace-1","tags":["urgent"],"tagIds":["tag-1"]}`, wantMany: []localtask.Status{localtask.StatusNew, localtask.StatusDone}},
+		{name: "legacy scalar", payload: `{"query":"release","offset":20,"limit":10,"status":"done","projectId":"project-1","priority":"high","workspaceId":"workspace-1","tags":["urgent"],"tagIds":["tag-1"]}`, wantStatus: statusPointer(localtask.StatusDone)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var params LocalTaskListProjectionParams
+			if err := json.Unmarshal([]byte(test.payload), &params); err != nil {
+				t.Fatal(err)
+			}
+			assertDecodedTaskFilters(t, params.LocalTaskListParams, test.wantStatus, test.wantMany)
+			if params.Query != "release" || params.Offset != 20 || params.Limit != 10 {
+				t.Fatalf("projection = %#v", params)
+			}
+		})
+	}
+}
+
+func assertDecodedTaskFilters(t *testing.T, params LocalTaskListParams, wantStatus *localtask.Status, wantMany []localtask.Status) {
+	t.Helper()
+	if params.ProjectID == nil || *params.ProjectID != "project-1" || params.Priority == nil || *params.Priority != localtask.PriorityHigh || params.WorkspaceID == nil || *params.WorkspaceID != "workspace-1" || len(params.Tags) != 1 || params.Tags[0] != "urgent" || len(params.TagIDs) != 1 || params.TagIDs[0] != "tag-1" {
+		t.Fatalf("filters = %#v", params)
+	}
+	if (params.Status == nil) != (wantStatus == nil) || params.Status != nil && *params.Status != *wantStatus {
+		t.Fatalf("status = %#v, want %#v", params.Status, wantStatus)
+	}
+	if len(params.Statuses) != len(wantMany) {
+		t.Fatalf("statuses = %#v, want %#v", params.Statuses, wantMany)
+	}
+	for index, status := range wantMany {
+		if params.Statuses[index] != status {
+			t.Fatalf("statuses = %#v, want %#v", params.Statuses, wantMany)
+		}
+	}
+}
+
+func statusPointer(status localtask.Status) *localtask.Status { return &status }

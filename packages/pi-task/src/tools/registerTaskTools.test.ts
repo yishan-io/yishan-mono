@@ -59,7 +59,7 @@ describe("registerTaskTools", () => {
     expect(properties(tools, "task_append_note")).not.toHaveProperty("date");
     expect(properties(tools, "task_update").status).toMatchObject({ enum: ["new", "progressing", "cancelled"] });
     for (const toolName of ["task_list", "task_search"]) {
-      expect(properties(tools, toolName).status).toMatchObject({ enum: ["new", "progressing", "done", "cancelled"] });
+      expect(properties(tools, toolName).status).toHaveProperty("anyOf");
     }
     expect(properties(tools, "task_update").description).toMatchObject({ minLength: 0, maxLength: 10_000 });
     for (const toolName of ["task_start", "task_list", "task_search", "task_update"]) {
@@ -67,6 +67,24 @@ describe("registerTaskTools", () => {
     }
     expect(properties(tools, "task_write").document).toMatchObject({ enum: ["notes", "plan", "outcome"] });
     expect(properties(tools, "task_read").id).not.toHaveProperty("pattern");
+  });
+
+  it("accepts legacy scalar and multi-status filters in list and search schemas", () => {
+    const tools = collectTools(createBackend());
+
+    for (const toolName of ["task_list", "task_search"]) {
+      expect(properties(tools, toolName).status).toEqual({
+        anyOf: [
+          { type: "string", enum: ["new", "progressing", "done", "cancelled"] },
+          {
+            type: "array",
+            minItems: 1,
+            maxItems: 4,
+            items: { type: "string", enum: ["new", "progressing", "done", "cancelled"] },
+          },
+        ],
+      });
+    }
   });
 
   it("returns the agent default task template content", async () => {
@@ -110,7 +128,7 @@ describe("registerTaskTools", () => {
       acceptanceCriteria: ["Verify"],
       workspaceId: "workspace-1",
     });
-    await execute(tools, "task_list", { status: "progressing" });
+    await execute(tools, "task_list", { status: ["new", "progressing"] });
     await execute(tools, "task_search", { query: "task", tags: ["tag"] });
     await execute(tools, "task_read", { id: "imported/task-id" });
     await execute(tools, "task_update", { id: "imported/task-id", status: "cancelled", tags: ["new"] });
@@ -128,7 +146,7 @@ describe("registerTaskTools", () => {
       }),
     );
     expect(backend.linkWorkspace).toHaveBeenCalledWith("imported/task-id", "workspace-1");
-    expect(backend.list).toHaveBeenCalledWith({ projectId: "project-a", status: "progressing" });
+    expect(backend.list).toHaveBeenCalledWith({ projectId: "project-a", status: ["new", "progressing"] });
     expect(backend.search).toHaveBeenCalledWith("task", { projectId: "project-a", tags: ["tag"] });
     expect(backend.getContextDetails).toHaveBeenCalled();
     expect(backend.update).toHaveBeenCalledWith("imported/task-id", { status: "done" });

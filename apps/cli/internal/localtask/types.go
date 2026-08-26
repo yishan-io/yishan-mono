@@ -141,6 +141,7 @@ type WorkspaceLink struct {
 type TaskFilter struct {
 	ProjectID   *string
 	Status      *Status
+	Statuses    []Status
 	Priority    *Priority
 	WorkspaceID *string
 	Tags        []string

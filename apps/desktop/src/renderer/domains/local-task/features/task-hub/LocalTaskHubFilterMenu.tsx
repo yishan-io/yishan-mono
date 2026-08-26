@@ -63,6 +63,21 @@ export function LocalTaskHubFilterMenu({
     },
     [filters, handleClose],
   );
+  const handleSelectStatus = useCallback(
+    (status: LocalTaskStatus) => {
+      const selectedStatuses = filters.status ?? [];
+      const statuses = selectedStatuses.includes(status)
+        ? selectedStatuses.filter((selectedStatus) => selectedStatus !== status)
+        : [...selectedStatuses, status];
+      if (statuses.length > 0) {
+        void setLocalTaskHubFilters({ ...filters, status: statuses });
+        return;
+      }
+      const { status: _status, ...filtersWithoutStatus } = filters;
+      void setLocalTaskHubFilters(filtersWithoutStatus);
+    },
+    [filters],
+  );
   const handleSelectTag = useCallback(
     (tagId: string) => {
       const selectedTagIds = filters.tagIds ?? [];
@@ -105,14 +120,24 @@ export function LocalTaskHubFilterMenu({
     }
     if (selectedField === "status") {
       const statuses: LocalTaskStatus[] = ["new", "progressing", "done", "cancelled"];
-      return statuses.map((status) => (
-        <MenuItem key={status} onClick={() => handleApply("status", status)}>
-          <LocalTaskStatusIcon status={status} />
-          <Box component="span" sx={{ ml: 1 }}>
-            {t(`localTask.status.${status}`)}
-          </Box>
-        </MenuItem>
-      ));
+      return statuses.map((status) => {
+        const isSelected = (filters.status ?? []).includes(status);
+        return (
+          <MenuItem
+            key={status}
+            aria-checked={isSelected}
+            role="menuitemcheckbox"
+            selected={isSelected}
+            onClick={() => handleSelectStatus(status)}
+          >
+            <Checkbox checked={isSelected} size="small" slotProps={{ input: { "aria-hidden": true } }} tabIndex={-1} />
+            <LocalTaskStatusIcon status={status} />
+            <Box component="span" sx={{ ml: 1 }}>
+              {t(`localTask.status.${status}`)}
+            </Box>
+          </MenuItem>
+        );
+      });
     }
     if (selectedField === "priority") {
       const priorities: LocalTaskPriority[] = ["low", "medium", "high"];

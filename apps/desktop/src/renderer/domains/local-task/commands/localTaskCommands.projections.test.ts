@@ -104,7 +104,7 @@ describe("localTaskCommands projections and detail loading", () => {
         unlinkedAt: null,
       },
     ]);
-    localTaskStore.setState({ hubFilters: { status: "new" }, hubSearchQuery: "unchanged" });
+    localTaskStore.setState({ hubFilters: { status: ["new"] }, hubSearchQuery: "unchanged" });
 
     await loadLocalTaskLinkCandidates("workspace-1");
 
@@ -112,7 +112,7 @@ describe("localTaskCommands projections and detail loading", () => {
     expect(localTaskStore.getState()).toMatchObject({
       linkCandidateWorkspaceId: "workspace-1",
       linkCandidateLoadState: "loaded",
-      hubFilters: { status: "new" },
+      hubFilters: { status: ["new"] },
       hubSearchQuery: "unchanged",
     });
     expect(localTaskStore.getState().linkCandidateTasks.map((candidate) => candidate.id)).toEqual([

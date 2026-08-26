@@ -127,7 +127,7 @@ describe("localTaskCommands", () => {
     await refreshProgressingLocalTaskCount();
 
     expect(daemon.localTaskClient.list).toHaveBeenCalledOnce();
-    expect(daemon.localTaskClient.list).toHaveBeenCalledWith({ status: "progressing" });
+    expect(daemon.localTaskClient.list).toHaveBeenCalledWith({ status: ["progressing"] });
     expect(localTaskStore.getState()).toMatchObject({ progressingTaskCount: 2, hubLoadState: "idle", hubTasks: [] });
   });
 
@@ -137,7 +137,7 @@ describe("localTaskCommands", () => {
 
     const standaloneRefresh = refreshProgressingLocalTaskCount();
     vi.mocked(daemon.localTaskClient.list).mockImplementation(async (filters = {}) =>
-      filters.status === "progressing" ? [task, { ...task, id: "task-2" }] : [task],
+      filters.status?.includes("progressing") ? [task, { ...task, id: "task-2" }] : [task],
     );
     await refreshLocalTaskHub();
     staleProgressingTasks.resolve([]);
@@ -149,7 +149,7 @@ describe("localTaskCommands", () => {
   it("keeps the newer standalone count when an older hub-derived count resolves last", async () => {
     const staleHubProgressingTasks = createDeferred<LocalTask[]>();
     vi.mocked(daemon.localTaskClient.list).mockImplementation(async (filters = {}) =>
-      filters.status === "progressing" ? staleHubProgressingTasks.promise : [task],
+      filters.status?.includes("progressing") ? staleHubProgressingTasks.promise : [task],
     );
 
     const hubRefresh = refreshLocalTaskHub();
@@ -167,12 +167,21 @@ describe("localTaskCommands", () => {
     await setLocalTaskHubFilters({ priority: "medium" });
 
     expect(daemon.localTaskClient.listProjection).toHaveBeenCalledWith({ priority: "medium" }, "");
-    expect(daemon.localTaskClient.list).toHaveBeenCalledWith({ status: "progressing" });
+    expect(daemon.localTaskClient.list).toHaveBeenCalledWith({ status: ["progressing"] });
     expect(localTaskStore.getState()).toMatchObject({
       hubTasks: [task],
       progressingTaskCount: 2,
       hubLoadState: "loaded",
     });
+  });
+
+  it("omits an empty status filter before storing and sending the Task Hub request", async () => {
+    vi.mocked(daemon.localTaskClient.list).mockResolvedValue([task]);
+
+    await setLocalTaskHubFilters({ status: [] });
+
+    expect(localTaskStore.getState().hubFilters).toEqual({});
+    expect(daemon.localTaskClient.listProjection).toHaveBeenCalledWith({}, "");
   });
 
   it("uses metadata search during refresh and preserves filters", async () => {
@@ -182,13 +191,13 @@ describe("localTaskCommands", () => {
       projectsById: {},
       total: 1,
     });
-    localTaskStore.getState().setHubFilters({ projectId: "project-1", status: "new" });
+    localTaskStore.getState().setHubFilters({ projectId: "project-1", status: ["new"] });
 
     await setLocalTaskHubSearchQuery("  desktop  ");
     await refreshLocalTaskHub();
 
     expect(daemon.localTaskClient.listProjection).toHaveBeenLastCalledWith(
-      { projectId: "project-1", status: "new" },
+      { projectId: "project-1", status: ["new"] },
       "desktop",
     );
     expect(localTaskStore.getState().hubTasks).toEqual([task]);
@@ -477,7 +486,7 @@ describe("localTaskCommands", () => {
 
   it("does not put created or updated tasks into incompatible projections when refresh fails", async () => {
     const updatedTask = { ...task, status: "new" as const, title: "Paused" };
-    localTaskStore.getState().setHubFilters({ status: "progressing" });
+    localTaskStore.getState().setHubFilters({ status: ["progressing"] });
     {
       const requestId = localTaskStore.getState().beginHubLoad();
       localTaskStore.getState().setHubResults(requestId, [task], {}, 1);

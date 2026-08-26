@@ -8,10 +8,10 @@ import type {
   LocalTaskContextFileName,
   LocalTaskDetails,
   LocalTaskFilters,
+  LocalTaskSetTemplatesInput,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
   LocalTaskTagRenameResult,
-  LocalTaskSetTemplatesInput,
   LocalTaskWorkspaceLink,
   UpdateLocalTaskInput,
 } from "../localTaskTypes";
@@ -140,7 +140,7 @@ export async function loadLocalTaskTagSuggestions(): Promise<void> {
 export async function refreshProgressingLocalTaskCount(): Promise<void> {
   const requestId = localTaskStore.getState().beginProgressingTaskCountLoad();
   try {
-    const progressingTasks = await localTaskClient.list({ status: "progressing" });
+    const progressingTasks = await localTaskClient.list({ status: ["progressing"] });
     localTaskStore.getState().setProgressingTaskCount(requestId, progressingTasks.length);
   } catch (error) {
     console.error("Failed to refresh progressing Local Task count", error);
@@ -155,7 +155,7 @@ export async function refreshLocalTaskHub(): Promise<void> {
   try {
     const [hubProjection, progressingTasks] = await Promise.all([
       localTaskClient.listProjection(hubFilters, query),
-      localTaskClient.list({ status: "progressing" }),
+      localTaskClient.list({ status: ["progressing"] }),
     ]);
     localTaskStore
       .getState()
@@ -165,9 +165,16 @@ export async function refreshLocalTaskHub(): Promise<void> {
   }
 }
 
+function normalizeLocalTaskHubFilters(filters: LocalTaskFilters): LocalTaskFilters {
+  if (filters.status?.length) return filters;
+  const { status: _status, ...filtersWithoutStatus } = filters;
+  return filtersWithoutStatus;
+}
+
 /** Replaces Task Hub filters and refreshes the current list or search. */
 export async function setLocalTaskHubFilters(filters: LocalTaskFilters): Promise<void> {
-  localTaskStore.getState().setHubFilters(filters);
+  const normalizedFilters = normalizeLocalTaskHubFilters(filters);
+  localTaskStore.getState().setHubFilters(normalizedFilters);
   await refreshLocalTaskHub();
 }
 

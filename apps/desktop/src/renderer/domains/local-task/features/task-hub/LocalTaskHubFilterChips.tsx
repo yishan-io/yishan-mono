@@ -1,12 +1,11 @@
 import { Box, Button, IconButton, Typography } from "@mui/material";
-import { renderProjectIcon, type WorkspaceProjectRecord } from "@renderer/domains/project";
+import { type WorkspaceProjectRecord, renderProjectIcon } from "@renderer/domains/project";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBox, LuCircleDot, LuTag, LuX } from "react-icons/lu";
 import { setLocalTaskHubFilters } from "../../commands/localTaskCommands";
 import type { LocalTaskFilters, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
-import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 
 type ProjectFilterOption = Pick<WorkspaceProjectRecord, "id" | "name" | "icon">;
 type FilterChip = {
@@ -34,11 +33,11 @@ export function LocalTaskHubFilterChips({ filters, projects, tagCatalog }: Local
         valueLabel: projects.find((project) => project.id === filters.projectId)?.name ?? filters.projectId,
       });
     }
-    if (filters.status)
+    if (filters.status?.length)
       chips.push({
         field: "status",
         fieldLabel: t("localTask.fields.status"),
-        valueLabel: t(`localTask.status.${filters.status}`),
+        valueLabel: filters.status.map((status) => t(`localTask.status.${status}`)).join(", "),
       });
     if (filters.priority)
       chips.push({
@@ -89,7 +88,10 @@ export function LocalTaskHubFilterChips({ filters, projects, tagCatalog }: Local
               fontSize: "0.75rem",
             }}
           >
-            <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, px: 1, whiteSpace: "nowrap" }}>
+            <Box
+              component="span"
+              sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, px: 1, whiteSpace: "nowrap" }}
+            >
               {chip.field === "projectId" ? (
                 <LuBox aria-hidden="true" size={14} />
               ) : chip.field === "status" ? (
@@ -119,10 +121,6 @@ export function LocalTaskHubFilterChips({ filters, projects, tagCatalog }: Local
               {project ? (
                 <Box component="span" sx={{ display: "inline-flex", mr: 0.75 }}>
                   {renderProjectIcon(project.icon ?? undefined, 14)}
-                </Box>
-              ) : chip.field === "status" && filters.status ? (
-                <Box component="span" sx={{ display: "inline-flex", mr: 0.75 }}>
-                  <LocalTaskStatusIcon status={filters.status} size={14} />
                 </Box>
               ) : chip.field === "priority" && filters.priority ? (
                 <Box component="span" sx={{ display: "inline-flex", mr: 0.75 }}>

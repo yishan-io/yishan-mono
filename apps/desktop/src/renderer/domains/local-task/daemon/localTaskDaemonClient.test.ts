@@ -110,14 +110,14 @@ describe("DaemonLocalTaskClient", () => {
     await client.getDetails("task-1");
     await client.list({
       projectId: "project-1",
-      status: "progressing",
+      status: ["progressing", "new"],
       priority: "high",
       workspaceId: "workspace-1",
       tags: ["desktop", "cli"],
       tagIds: ["tag-desktop", "tag-cli"],
     });
-    await client.search("desktop", { status: "progressing", tags: ["desktop"], tagIds: ["tag-desktop"] });
-    await client.listProjection({ status: "progressing" }, "desktop");
+    await client.search("desktop", { status: ["progressing", "new"], tags: ["desktop"], tagIds: ["tag-desktop"] });
+    await client.listProjection({ status: ["progressing", "new"] }, "desktop");
     await client.listTags();
     await client.listTagCatalog();
     await client.updateTagColor("tag-desktop", "#3B82F6");
@@ -148,15 +148,18 @@ describe("DaemonLocalTaskClient", () => {
         "localTask.list",
         {
           projectId: "project-1",
-          status: "progressing",
+          status: ["progressing", "new"],
           priority: "high",
           workspaceId: "workspace-1",
           tags: ["desktop", "cli"],
           tagIds: ["tag-desktop", "tag-cli"],
         },
       ],
-      ["localTask.search", { query: "desktop", status: "progressing", tags: ["desktop"], tagIds: ["tag-desktop"] }],
-      ["localTask.listProjection", { query: "desktop", status: "progressing" }],
+      [
+        "localTask.search",
+        { query: "desktop", status: ["progressing", "new"], tags: ["desktop"], tagIds: ["tag-desktop"] },
+      ],
+      ["localTask.listProjection", { query: "desktop", status: ["progressing", "new"] }],
       ["localTask.listTags", {}],
       ["localTask.listTagCatalog", {}],
       ["localTask.updateTagColor", { id: "tag-desktop", color: "#3B82F6" }],
@@ -193,7 +196,10 @@ describe("DaemonLocalTaskClient", () => {
 
   it("rejects malformed template responses", async () => {
     const client = new DaemonLocalTaskClient(
-      vi.fn(async () => ({ templates: [{ id: "default", name: "Standard task", content: 1 }], agentDefaultId: "default" })),
+      vi.fn(async () => ({
+        templates: [{ id: "default", name: "Standard task", content: 1 }],
+        agentDefaultId: "default",
+      })),
     );
 
     await expect(client.getTemplates()).rejects.toThrow("invalid Local Task template payload");

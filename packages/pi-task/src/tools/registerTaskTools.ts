@@ -20,6 +20,7 @@ const tagSchema = Type.String({ minLength: 1, maxLength: 64 });
 const tagsSchema = Type.Array(tagSchema, { maxItems: 12 });
 const prioritySchema = StringEnum(["low", "medium", "high"] as const);
 const listStatusSchema = StringEnum(["new", "progressing", "done", "cancelled"] as const);
+const listStatusesSchema = Type.Union([listStatusSchema, Type.Array(listStatusSchema, { minItems: 1, maxItems: 4 })]);
 const updateStatusSchema = StringEnum(["new", "progressing", "cancelled"] as const);
 const readDocumentSchema = StringEnum(["task", "notes", "plan", "outcome"] as const);
 const writeDocumentSchema = StringEnum(["notes", "plan", "outcome"] as const);
@@ -63,7 +64,7 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
     description: "List Local Tasks in the current project scope.",
     parameters: Type.Object(
       {
-        status: Type.Optional(listStatusSchema),
+        status: Type.Optional(listStatusesSchema),
         priority: Type.Optional(prioritySchema),
         workspaceId: Type.Optional(taskIdSchema),
         tags: Type.Optional(tagsSchema),
@@ -88,7 +89,7 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
     parameters: Type.Object(
       {
         query: descriptionSchema,
-        status: Type.Optional(listStatusSchema),
+        status: Type.Optional(listStatusesSchema),
         priority: Type.Optional(prioritySchema),
         workspaceId: Type.Optional(taskIdSchema),
         tags: Type.Optional(tagsSchema),

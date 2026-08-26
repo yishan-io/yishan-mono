@@ -111,7 +111,7 @@ export type LocalTaskWorkspaceLink = {
 /** Optional filters accepted by Local Task list and metadata search calls. */
 export type LocalTaskFilters = {
   projectId?: string;
-  status?: LocalTaskStatus;
+  status?: LocalTaskStatus[];
   priority?: LocalTaskPriority;
   workspaceId?: string;
   tags?: string[];
