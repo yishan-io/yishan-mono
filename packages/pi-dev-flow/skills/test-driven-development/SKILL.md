@@ -112,7 +112,7 @@ Do not fix the bug first and add the test later while calling it TDD.
 In this repo's agent workflow:
 
 - `builder` should follow TDD whenever the task involves behavior changes that are testable
-- `task-reviewer` should treat missing test-first discipline as a real quality concern when the task clearly called for it
+- `code-reviewer` should treat missing test-first discipline as a real quality concern when the task clearly called for it
 - `code-reviewer` can treat weak or suspicious test coverage as a merge risk
 
 When dispatching `builder`, include the expected verification commands so the red and green steps are concrete.

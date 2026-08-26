@@ -21,7 +21,6 @@ func TestSyncManagedPiAgentFilesCopiesApprovedAgentsAndRemovesStaleOnes(t *testi
 		"builder.md":       "# builder\n",
 		"code-reviewer.md": "# code-reviewer\n",
 		"plan-reviewer.md": "# plan-reviewer\n",
-		"task-reviewer.md": "# task-reviewer\n",
 	} {
 		if err := os.WriteFile(filepath.Join(sourceDir, fileName), []byte(content), 0o644); err != nil {
 			t.Fatalf("write source file %s: %v", fileName, err)
@@ -43,7 +42,6 @@ func TestSyncManagedPiAgentFilesCopiesApprovedAgentsAndRemovesStaleOnes(t *testi
 		"builder.md":       "# builder\n",
 		"code-reviewer.md": "# code-reviewer\n",
 		"plan-reviewer.md": "# plan-reviewer\n",
-		"task-reviewer.md": "# task-reviewer\n",
 	} {
 		content, err := os.ReadFile(filepath.Join(targetDir, fileName))
 		if err != nil {
@@ -60,6 +58,43 @@ func TestSyncManagedPiAgentFilesCopiesApprovedAgentsAndRemovesStaleOnes(t *testi
 	}
 }
 
+func writeManagedAgentSources(t *testing.T, sourceDir string) {
+	t.Helper()
+	for _, fileName := range managedPiAgentFileNames {
+		content := []byte("# " + fileName + "\n")
+		if err := os.WriteFile(filepath.Join(sourceDir, fileName), content, 0o644); err != nil {
+			t.Fatalf("write source file %s: %v", fileName, err)
+		}
+	}
+}
+
+func TestSyncManagedPiAgentFilesPreservesExistingTaskReviewer(t *testing.T) {
+	sourceDir := t.TempDir()
+	targetDir := t.TempDir()
+	taskReviewerContent := []byte("# task-reviewer\n")
+	writeManagedAgentSources(t, sourceDir)
+	if err := os.WriteFile(filepath.Join(targetDir, "task-reviewer.md"), taskReviewerContent, 0o644); err != nil {
+		t.Fatalf("write existing task reviewer: %v", err)
+	}
+	if err := saveManagedAgentManifest(targetDir, managedAgentManifest{Files: map[string]string{
+		"task-reviewer.md": fileSHA256Bytes(taskReviewerContent),
+	}}); err != nil {
+		t.Fatalf("save managed agent manifest: %v", err)
+	}
+
+	if err := syncManagedPiAgentFiles(sourceDir, targetDir); err != nil {
+		t.Fatalf("sync managed pi agent files: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(targetDir, "task-reviewer.md"))
+	if err != nil {
+		t.Fatalf("read preserved task reviewer: %v", err)
+	}
+	if string(content) != string(taskReviewerContent) {
+		t.Fatalf("expected task reviewer content %q, got %q", taskReviewerContent, content)
+	}
+}
+
 func TestEnsureManagedPiAgentsAlsoInstallsManagedPiRootFiles(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
@@ -71,7 +106,6 @@ func TestEnsureManagedPiAgentsAlsoInstallsManagedPiRootFiles(t *testing.T) {
 		"builder.md":       "# builder\n",
 		"code-reviewer.md": "# code-reviewer\n",
 		"plan-reviewer.md": "# plan-reviewer\n",
-		"task-reviewer.md": "# task-reviewer\n",
 	}
 	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
 		t.Fatalf("create source dir: %v", err)
@@ -123,7 +157,6 @@ func TestEnsureDefaultPiExtensionSetupInstallsExtensionsAndSyncsManagedPiAgents(
 		"builder.md":       "# builder\n",
 		"code-reviewer.md": "# code-reviewer\n",
 		"plan-reviewer.md": "# plan-reviewer\n",
-		"task-reviewer.md": "# task-reviewer\n",
 	}
 	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
 		t.Fatalf("create source dir: %v", err)

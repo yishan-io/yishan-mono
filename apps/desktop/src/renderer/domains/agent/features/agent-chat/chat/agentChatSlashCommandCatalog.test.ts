@@ -9,6 +9,7 @@ describe("buildSubagentSlashCommands", () => {
     expect(commandTitles).toContain("/builder");
     expect(commandTitles).toContain("/code-reviewer");
     expect(commandTitles).toContain("/plan-reviewer");
+    expect(commandTitles).not.toContain("/task-reviewer");
     expect(commandTitles).not.toContain("/claude");
     expect(commandTitles).not.toContain("/gemini");
   });

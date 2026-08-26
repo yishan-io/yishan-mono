@@ -22,7 +22,7 @@ var managedPiAppendSystemContent string
 //go:embed assets/pi-agent/keybindings.json
 var managedPiKeybindingsContent string
 
-var managedPiAgentFileNames = []string{"general.md", "explore.md", "builder.md", "code-reviewer.md", "plan-reviewer.md", "task-reviewer.md"}
+var managedPiAgentFileNames = []string{"general.md", "explore.md", "builder.md", "code-reviewer.md", "plan-reviewer.md"}
 var staleManagedPiAgentFileNames = []string{"Planner.md", "Reviewer.md"}
 var managedPiRootFiles = []managedPiRootFile{
 	{name: "APPEND_SYSTEM.md", content: managedPiAppendSystemContent, mode: 0o644},

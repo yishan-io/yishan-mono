@@ -400,6 +400,16 @@ describe("public loader result compatibility", () => {
 });
 
 describe("loadAgentDefinitions", () => {
+  it("does not load the retired task-reviewer built-in agent", () => {
+    const tempDir = createTempDir();
+    const result = loadAgentDefinitions({
+      cwd: tempDir,
+      userAgentsDir: join(tempDir, "missing-user-agents"),
+      projectAgentsDir: null,
+    });
+
+    expect(result.agents.map((agent) => agent.name)).not.toContain("task-reviewer");
+  });
   it("allows a later valid file to override an earlier invalid file with the same name", () => {
     const tempDir = createTempDir();
     const builtinAgentsDir = join(tempDir, "builtin-agents");

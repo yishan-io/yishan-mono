@@ -23,7 +23,7 @@ Core expectations:
 - For plan review, prefer the `plan-reviewer` agent.
 - For task-level implementation that requires edits, prefer the `builder` agent.
 - Use `general` only when no specialist role fits a short, clearly scoped task.
-- For task-level review during subagent-driven execution, prefer the `task-reviewer` agent.
+- For code review during subagent-driven execution, prefer the `code-reviewer` agent.
 - For independent scopes, use parallel subagents only when they do not overlap in files or mutable state.
 
 Subagent expectations:

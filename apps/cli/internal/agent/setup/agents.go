@@ -11,7 +11,7 @@ import (
 
 // Agent management: pi agent definition files live in the managed pi agents
 // dir (<agentDir>/agents/<name>.md). The runtime identifies an agent by its
-// file name; official agents are the 6 managed names synced from
+// file name; official agents are the 5 managed names synced from
 // @yishan-io/pi-subagents/agents on `yishan setup`. File I/O and path rules
 // live in agents_io.go, frontmatter parsing in agents_frontmatter.go, and the
 // official-agent policy in agents_policy.go.
