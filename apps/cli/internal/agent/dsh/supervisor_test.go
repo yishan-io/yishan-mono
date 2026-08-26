@@ -291,8 +291,10 @@ func handleRPCRequests(mode string, input *bufio.Reader) {
 			ID     uint64 `json:"id"`
 			Method string `json:"method"`
 			Params struct {
-				CWD       string `json:"cwd"`
-				SessionID string `json:"sessionId"`
+				CWD           string `json:"cwd"`
+				SessionID     string `json:"sessionId"`
+				RootSessionID string `json:"rootSessionId"`
+				Mode          string `json:"mode"`
 			} `json:"params"`
 		}
 		if json.Unmarshal(line, &request) != nil {
@@ -320,8 +322,10 @@ func writeRPCResponse(request struct {
 	ID     uint64 `json:"id"`
 	Method string `json:"method"`
 	Params struct {
-		CWD       string `json:"cwd"`
-		SessionID string `json:"sessionId"`
+		CWD           string `json:"cwd"`
+		SessionID     string `json:"sessionId"`
+		RootSessionID string `json:"rootSessionId"`
+		Mode          string `json:"mode"`
 	} `json:"params"`
 }) {
 	if writeExceptionalRPCResponse(request) {
@@ -334,8 +338,10 @@ func writeExceptionalRPCResponse(request struct {
 	ID     uint64 `json:"id"`
 	Method string `json:"method"`
 	Params struct {
-		CWD       string `json:"cwd"`
-		SessionID string `json:"sessionId"`
+		CWD           string `json:"cwd"`
+		SessionID     string `json:"sessionId"`
+		RootSessionID string `json:"rootSessionId"`
+		Mode          string `json:"mode"`
 	} `json:"params"`
 }) bool {
 	if request.Params.SessionID == "wait" {
@@ -344,6 +350,10 @@ func writeExceptionalRPCResponse(request struct {
 	}
 	if request.Params.SessionID == "server-error" {
 		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"error":{"code":9,"message":"denied"}}`+"\n", request.ID)
+		return true
+	}
+	if request.Method == yishanSessionLineageMethod {
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"rootSessionId":"%s","mode":"%s","children":[{"sessionId":"child","parentSessionId":"%s","origin":"subagent","delegationDepth":1,"relativeDepth":1,"live":false,"persisted":true,"activity":"inactive","mode":"one-shot"}]}}`+"\n", request.ID, request.Params.RootSessionID, request.Params.Mode, request.Params.RootSessionID)
 		return true
 	}
 	if request.Method != yishanSessionListMethod {
@@ -357,8 +367,10 @@ func writeSessionRPCResponse(request struct {
 	ID     uint64 `json:"id"`
 	Method string `json:"method"`
 	Params struct {
-		CWD       string `json:"cwd"`
-		SessionID string `json:"sessionId"`
+		CWD           string `json:"cwd"`
+		SessionID     string `json:"sessionId"`
+		RootSessionID string `json:"rootSessionId"`
+		Mode          string `json:"mode"`
 	} `json:"params"`
 }) {
 	if request.Method == yishanSessionStartMethod {
@@ -376,8 +388,10 @@ func writeSessionControlResponse(request struct {
 	ID     uint64 `json:"id"`
 	Method string `json:"method"`
 	Params struct {
-		CWD       string `json:"cwd"`
-		SessionID string `json:"sessionId"`
+		CWD           string `json:"cwd"`
+		SessionID     string `json:"sessionId"`
+		RootSessionID string `json:"rootSessionId"`
+		Mode          string `json:"mode"`
 	} `json:"params"`
 }) {
 	if request.Method == yishanSessionCancelMethod {

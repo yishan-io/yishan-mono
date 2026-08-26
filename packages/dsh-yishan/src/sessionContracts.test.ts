@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { parseSessionListRequest, parseSessionReadRequest, parseSessionResumeRequest } from "./sessionContracts";
+import {
+  parseSessionLineageRequest,
+  parseSessionListRequest,
+  parseSessionReadRequest,
+  parseSessionResumeRequest,
+} from "./sessionContracts";
 
 describe("Yishan session contracts", () => {
   it("requires exactly the current workspace cwd to list sessions", () => {
@@ -19,6 +24,22 @@ describe("Yishan session contracts", () => {
     );
     expect(() => parseSessionResumeRequest({ cwd: "/workspace" })).toThrow(
       "session resume request has unsupported fields",
+    );
+  });
+});
+
+describe("parseSessionLineageRequest", () => {
+  it("requires the exact lineage request with a supported mode", () => {
+    expect(parseSessionLineageRequest({ cwd: "/workspace", rootSessionId: "root", mode: "children" })).toEqual({
+      cwd: "/workspace",
+      rootSessionId: "root",
+      mode: "children",
+    });
+    expect(() => parseSessionLineageRequest({ cwd: "/workspace", rootSessionId: "root", mode: "all" })).toThrow(
+      "mode must be children or descendants",
+    );
+    expect(() => parseSessionLineageRequest({ cwd: "/workspace", rootSessionId: "", mode: "descendants" })).toThrow(
+      "rootSessionId is required",
     );
   });
 });

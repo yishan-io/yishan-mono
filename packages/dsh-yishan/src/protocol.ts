@@ -9,6 +9,7 @@ export const YISHAN_METHODS = {
   dispose: yishanMethod("session.dispose"),
   flush: yishanMethod("session.flush"),
   list: yishanMethod("session.list"),
+  lineage: yishanMethod("session.lineage"),
   read: yishanMethod("session.read"),
   resume: yishanMethod("session.resume"),
   start: yishanMethod("session.start"),

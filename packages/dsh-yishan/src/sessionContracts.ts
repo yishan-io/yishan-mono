@@ -22,6 +22,34 @@ export type SessionListResult = {
   sessions: SessionListEntry[];
 };
 
+/** Workspace-scoped request to enumerate DSH-native subagent lineage. */
+export type SessionLineageRequest = {
+  cwd: string;
+  rootSessionId: string;
+  mode: "children" | "descendants";
+};
+
+/** One DSH-native subagent below a requested lineage root. */
+export type SessionLineageEntry = {
+  sessionId: string;
+  parentSessionId: string;
+  origin: "subagent";
+  delegationDepth: number;
+  relativeDepth: number;
+  live: boolean;
+  persisted: boolean;
+  activity?: "running" | "inactive";
+  mode?: "one-shot" | "continuable";
+  label?: string;
+};
+
+/** Deterministic DSH-native lineage below a root session. */
+export type SessionLineageResult = {
+  rootSessionId: string;
+  mode: SessionLineageRequest["mode"];
+  children: SessionLineageEntry[];
+};
+
 /** Workspace-scoped request to read one DSH session. */
 export type SessionReadRequest = {
   cwd: string;
@@ -66,6 +94,18 @@ export type SessionResumeResult = {
 export function parseSessionListRequest(payload: unknown): SessionListRequest {
   const request = requireExactRecord(payload, "session list request", ["cwd"]);
   return { cwd: requireNonEmptyString(request, "cwd") };
+}
+
+/** Parses an exact DSH-native subagent lineage request. */
+export function parseSessionLineageRequest(payload: unknown): SessionLineageRequest {
+  const request = requireExactRecord(payload, "session lineage request", ["cwd", "rootSessionId", "mode"]);
+  const mode = request.mode;
+  if (mode !== "children" && mode !== "descendants") throw new TypeError("mode must be children or descendants");
+  return {
+    cwd: requireNonEmptyString(request, "cwd"),
+    rootSessionId: requireNonEmptyString(request, "rootSessionId"),
+    mode,
+  };
 }
 
 /** Parses an exact workspace-scoped session read request. */

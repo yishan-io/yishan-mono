@@ -1,6 +1,7 @@
 import type {} from "@deepseek-ai/dsh-agent";
 import type { SessionId } from "@deepseek-ai/dsh-session";
 import type { SessionLogSnapshot, SessionRecord } from "@deepseek-ai/dsh-session-query";
+import type { SubagentDescendantListEntry, SubagentListEntry } from "@deepseek-ai/dsh-subagent";
 
 import {
   parseSessionCancelRequest,
@@ -13,11 +14,14 @@ import { YISHAN_METHODS } from "./protocol";
 import {
   type SessionDisposeResult,
   type SessionHeaderResult,
+  type SessionLineageEntry,
+  type SessionLineageResult,
   type SessionListResult,
   type SessionReadRequest,
   type SessionReadResult,
   type SessionResumeResult,
   parseSessionDisposeRequest,
+  parseSessionLineageRequest,
   parseSessionListRequest,
   parseSessionReadRequest,
   parseSessionResumeRequest,
@@ -27,6 +31,7 @@ import {
 export type YishanSessionErrorCode =
   | "YISHAN_SESSION_ID_MISMATCH"
   | "YISHAN_SESSION_NOT_PERSISTED"
+  | "YISHAN_SESSION_NOT_FOUND"
   | "YISHAN_SESSION_WORKSPACE_MISMATCH"
   | "YISHAN_UNSUPPORTED_METHOD";
 
@@ -62,6 +67,14 @@ export class YishanSessionWorkspaceMismatchError extends YishanSessionError {
 }
 
 /** Raised when a session cannot be cold-resumed from DSH persistence. */
+export class YishanSessionNotFoundError extends YishanSessionError {
+  /** Creates a missing-session error. */
+  constructor(sessionId: string) {
+    super(`session does not exist: ${sessionId}`, "YISHAN_SESSION_NOT_FOUND");
+    this.name = "YishanSessionNotFoundError";
+  }
+}
+
 export class YishanSessionNotPersistedError extends YishanSessionError {
   /** Creates a persistence error. */
   constructor(sessionId: string) {
@@ -87,6 +100,10 @@ export type YishanSessionHandlerDependencies = {
   };
   resumeSession(sessionId: SessionId): Promise<void>;
   disposeSession(sessionId: SessionId): Promise<boolean>;
+  subagents: {
+    listChildren(sessionId: SessionId): Promise<SubagentListEntry[]>;
+    listDescendants(sessionId: SessionId): Promise<SubagentDescendantListEntry[]>;
+  };
   execution?: {
     start(request: ReturnType<typeof parseSessionStartRequest>): Promise<unknown>;
     prompt(request: ReturnType<typeof parseSessionPromptRequest>): Promise<unknown>;
@@ -128,6 +145,8 @@ export function createSessionHandler(dependencies: YishanSessionHandlerDependenc
         return await requireExecution(dependencies).subscribe(parseSessionSubscribeRequest(params));
       case YISHAN_METHODS.list:
         return await handleList(dependencies, params);
+      case YISHAN_METHODS.lineage:
+        return await handleLineage(dependencies, params);
       case YISHAN_METHODS.read:
         return await handleRead(dependencies, params);
       case YISHAN_METHODS.resume:
@@ -159,6 +178,80 @@ async function handleList(
       .filter(({ header }) => header.cwd === request.cwd && (header.delegationDepth ?? 0) === 0)
       .map(({ header, live, persisted }) => ({ ...createSessionHeaderResult(header), live, persisted })),
   };
+}
+
+async function handleLineage(
+  dependencies: YishanSessionHandlerDependencies,
+  params: Record<string, unknown>,
+): Promise<SessionLineageResult> {
+  const request = parseSessionLineageRequest(params);
+  const records = await dependencies.sessionQuery.listSessions();
+  const root = records.find(({ header }) => header.id === request.rootSessionId);
+  if (root === undefined) throw new YishanSessionNotFoundError(request.rootSessionId);
+  if (root.header.cwd !== request.cwd) throw new YishanSessionWorkspaceMismatchError(request.rootSessionId);
+  const lineage =
+    request.mode === "children"
+      ? await dependencies.subagents.listChildren(request.rootSessionId as SessionId)
+      : await dependencies.subagents.listDescendants(request.rootSessionId as SessionId);
+  const recordsByID = new Map(records.map((record) => [record.header.id, record]));
+  return {
+    rootSessionId: request.rootSessionId,
+    mode: request.mode,
+    children: lineage.flatMap((entry) => createLineageEntry(entry, recordsByID, request.rootSessionId, request.cwd)),
+  };
+}
+
+function createLineageEntry(
+  entry: SubagentListEntry | SubagentDescendantListEntry,
+  recordsByID: Map<string, SessionRecord>,
+  rootSessionId: string,
+  cwd: string,
+): SessionLineageEntry[] {
+  if (entry.kind !== "child") return [];
+  const record = recordsByID.get(entry.id);
+  const parentSessionId = "parentId" in entry ? entry.parentId : rootSessionId;
+  if (
+    record === undefined ||
+    record.header.cwd !== cwd ||
+    record.header.origin !== "subagent" ||
+    record.header.parentSession !== parentSessionId ||
+    record.header.delegationDepth === undefined
+  )
+    return [];
+  if (!hasValidParentLineage(parentSessionId, recordsByID, rootSessionId, cwd)) return [];
+  return [
+    {
+      sessionId: entry.id,
+      parentSessionId,
+      origin: "subagent",
+      delegationDepth: record.header.delegationDepth,
+      relativeDepth: "depth" in entry ? entry.depth : 1,
+      live: record.live,
+      persisted: record.persisted,
+      activity: entry.activity,
+      mode: entry.mode,
+      ...(entry.label === undefined ? {} : { label: entry.label }),
+    },
+  ];
+}
+
+function hasValidParentLineage(
+  sessionId: string,
+  recordsByID: Map<string, SessionRecord>,
+  rootSessionId: string,
+  cwd: string,
+): boolean {
+  const visitedSessionIds = new Set<string>();
+  let currentSessionId = sessionId;
+  while (true) {
+    if (visitedSessionIds.has(currentSessionId)) return false;
+    visitedSessionIds.add(currentSessionId);
+    const currentRecord = recordsByID.get(currentSessionId);
+    if (currentRecord === undefined || currentRecord.header.cwd !== cwd) return false;
+    if (currentSessionId === rootSessionId) return true;
+    if (currentRecord.header.origin !== "subagent" || currentRecord.header.parentSession === undefined) return false;
+    currentSessionId = currentRecord.header.parentSession;
+  }
 }
 
 async function handleRead(

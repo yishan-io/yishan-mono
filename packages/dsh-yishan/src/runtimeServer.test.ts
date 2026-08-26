@@ -38,6 +38,10 @@ async function mountRuntime(): Promise<Harness> {
   ctx.provide("sessionPersistence", {
     readFrom: async () => [],
   });
+  ctx.provide("subagents", {
+    listChildren: async () => [],
+    listDescendants: async () => [],
+  });
   await ctx.plugin(FakeSessionQuery);
   const input = new PassThrough();
   const frames: Record<string, unknown>[] = [];
@@ -74,7 +78,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe("Yishan runtime server", () => {
   it("declares each runtime service it accesses for injection", () => {
     expect(runtimeServer.inject).toEqual(
-      expect.arrayContaining(["agents", "sessionQuery", "sessions", "sessionPersistence"]),
+      expect.arrayContaining(["agents", "sessionQuery", "sessions", "sessionPersistence", "subagents"]),
     );
   });
 

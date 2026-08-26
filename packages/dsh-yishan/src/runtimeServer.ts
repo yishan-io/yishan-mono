@@ -4,6 +4,7 @@ import type { Context } from "@deepseek-ai/cordis";
 import { HarnessSdkJsonRpcServer } from "@deepseek-ai/dsh-sdk-jsonrpc-server";
 import { JsonRpcLineTransport } from "@deepseek-ai/dsh-sdk-protocol";
 import type { SessionId } from "@deepseek-ai/dsh-session";
+import type {} from "@deepseek-ai/dsh-subagent";
 
 import { parseStockSessionPromptRequest } from "./executionContracts";
 import { YISHAN_METHODS } from "./protocol";
@@ -14,7 +15,7 @@ import { createSessionHandler } from "./sessionHandler";
 /** Cordis plugin name for the Yishan-owned SDK JSON-RPC stdio server. */
 export const name = "yishan-sdk-jsonrpc-server";
 /** Session history and agent lifecycle services are required at activation. */
-export const inject = ["agents", "sessionQuery", "sessions", "sessionPersistence"];
+export const inject = ["agents", "sessionQuery", "sessions", "sessionPersistence", "subagents"];
 
 /** Runtime-only stream hooks used by packaged launchers and tests. */
 export type YishanRuntimeServerConfig = {
@@ -53,6 +54,7 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
     sessionQuery: ctx.sessionQuery,
     resumeSession: async (sessionId) => await owner.resume({ sessionId, cwd: "" }),
     disposeSession: async (sessionId) => await owner.disposeSession({ sessionId, cwd: "" }),
+    subagents: ctx.subagents,
     execution: owner,
   });
   const route = createRequestRouter(async (method, params) => {

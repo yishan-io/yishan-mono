@@ -6,7 +6,9 @@ import { Context } from "@deepseek-ai/cordis";
 import * as agentSpine from "@deepseek-ai/dsh-agent-spine-demo";
 import * as sessionCheckpointPolicy from "@deepseek-ai/dsh-session-checkpoint-policy";
 import JsonlSessionPersistence from "@deepseek-ai/dsh-session-persistence-jsonl";
+import { SessionProjectionRegistry } from "@deepseek-ai/dsh-session-projection";
 import SqliteSessionQueryEngine from "@deepseek-ai/dsh-session-query-sqlite";
+import { SubagentRuntime } from "@deepseek-ai/dsh-subagent";
 
 import * as runtimeServer from "./runtimeServer";
 
@@ -45,6 +47,8 @@ export async function createYishanRuntime(config: YishanRuntimeConfig = {}): Pro
     toolJobs: false,
     goals: false,
   });
+  new SessionProjectionRegistry(context);
+  new SubagentRuntime(context);
   await context.plugin(JsonlSessionPersistence, { root: sessionDirectory });
   await context.plugin(sessionCheckpointPolicy);
   await context.plugin(SqliteSessionQueryEngine, { path: join(dataDirectory, SESSION_QUERY_DATABASE_NAME) });
