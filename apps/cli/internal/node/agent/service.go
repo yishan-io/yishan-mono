@@ -43,6 +43,11 @@ type DSHSessions interface {
 	Health() dsh.Health
 }
 
+// DSHSessionLineage exposes the optional DSH lineage capability.
+type DSHSessionLineage interface {
+	ListSessionLineage(context.Context, dsh.SessionLineageRequest) (dsh.SessionLineageResult, error)
+}
+
 // Deps are the explicit dependencies of the agent application service.
 type Deps struct {
 	// Workspace resolves workspace-scoped handles (skill active workspace).

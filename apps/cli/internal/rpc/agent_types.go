@@ -1,6 +1,11 @@
 package rpc
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+)
 
 // AgentRuntime identifies the execution runtime selected by agent.* callers.
 type AgentRuntime string
@@ -98,6 +103,83 @@ type AgentReadHistoryParams struct {
 	WorkspaceID               string       `json:"workspaceId"`
 	CWD                       string       `json:"cwd"`
 	TranscriptProtocolVersion int          `json:"transcriptProtocolVersion,omitempty"`
+}
+
+// AgentSessionLineageMode selects direct children or all descendants.
+type AgentSessionLineageMode string
+
+const (
+	AgentSessionLineageChildren    AgentSessionLineageMode = "children"
+	AgentSessionLineageDescendants AgentSessionLineageMode = "descendants"
+)
+
+// AgentListSessionLineageParams lists DSH-native subagents for an open workspace session.
+type AgentListSessionLineageParams struct {
+	Runtime       AgentRuntime            `json:"runtime"`
+	WorkspaceID   string                  `json:"workspaceId"`
+	CWD           string                  `json:"cwd"`
+	RootSessionID string                  `json:"rootSessionId"`
+	Mode          AgentSessionLineageMode `json:"mode"`
+}
+
+// UnmarshalJSON rejects fields outside the lineage RPC contract.
+func (p *AgentListSessionLineageParams) UnmarshalJSON(raw []byte) error {
+	type wire AgentListSessionLineageParams
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode((*wire)(p)); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return fmt.Errorf("unexpected trailing JSON value")
+		}
+		return err
+	}
+	return nil
+}
+
+// AgentSessionLineageOrigin identifies the native DSH origin of a lineage entry.
+type AgentSessionLineageOrigin string
+
+const AgentSessionLineageOriginSubagent AgentSessionLineageOrigin = "subagent"
+
+// AgentSessionLineageActivity reports a lineage entry's lifecycle state.
+type AgentSessionLineageActivity string
+
+const (
+	AgentSessionLineageRunning  AgentSessionLineageActivity = "running"
+	AgentSessionLineageInactive AgentSessionLineageActivity = "inactive"
+)
+
+// AgentSessionLineageChildMode reports whether a lineage entry can continue.
+type AgentSessionLineageChildMode string
+
+const (
+	AgentSessionLineageChildOneShot     AgentSessionLineageChildMode = "one-shot"
+	AgentSessionLineageChildContinuable AgentSessionLineageChildMode = "continuable"
+)
+
+// AgentSessionLineageEntry is one DSH-native subagent in a lineage response.
+type AgentSessionLineageEntry struct {
+	SessionID       string                       `json:"sessionId"`
+	ParentSessionID string                       `json:"parentSessionId"`
+	Origin          AgentSessionLineageOrigin    `json:"origin"`
+	DelegationDepth int64                        `json:"delegationDepth"`
+	RelativeDepth   int64                        `json:"relativeDepth"`
+	Live            bool                         `json:"live"`
+	Persisted       bool                         `json:"persisted"`
+	Activity        AgentSessionLineageActivity  `json:"activity,omitempty"`
+	Mode            AgentSessionLineageChildMode `json:"mode,omitempty"`
+	Label           string                       `json:"label,omitempty"`
+}
+
+// AgentSessionLineageResult is the runtime-neutral DSH lineage response.
+type AgentSessionLineageResult struct {
+	Runtime       AgentRuntime               `json:"runtime"`
+	RootSessionID string                     `json:"rootSessionId"`
+	Mode          AgentSessionLineageMode    `json:"mode"`
+	Children      []AgentSessionLineageEntry `json:"children"`
 }
 
 // AgentStartResult is the stable start response shared by agent runtimes.

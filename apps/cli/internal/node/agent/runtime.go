@@ -161,6 +161,22 @@ func (s *Service) AgentListSessions(ctx context.Context, req rpc.AgentListSessio
 	return rpc.AgentSessionsResult{Runtime: req.Runtime, Sessions: mapPiSessions(piSessions, workspaceInstance.Path)}, nil
 }
 
+// AgentListSessionLineage lists DSH-native subagents below an open workspace session.
+func (s *Service) AgentListSessionLineage(ctx context.Context, req rpc.AgentListSessionLineageParams) (any, error) {
+	if err := validateAgentSessionLineageRequest(req); err != nil {
+		return nil, err
+	}
+	workspaceInstance, err := s.resolveAgentWorkspace(req.Runtime, req.WorkspaceID, req.CWD)
+	if err != nil {
+		return nil, err
+	}
+	lineage, err := s.listDSHSessionLineage(ctx, workspaceInstance.Path, req.RootSessionID, req.Mode)
+	if err != nil {
+		return nil, mapDSHExecutionError(err)
+	}
+	return mapDSHSessionLineage(lineage), nil
+}
+
 // AgentReadHistory reads durable runtime history without resuming DSH.
 func (s *Service) AgentReadHistory(ctx context.Context, req rpc.AgentReadHistoryParams) (any, error) {
 	workspaceInstance, err := s.resolveAgentSessionWorkspace(req.Runtime, req.SessionID, req.WorkspaceID, req.CWD)
@@ -315,6 +331,19 @@ func mapDSHSessions(summaries []dsh.SessionListEntry, cwd string) []rpc.AgentSes
 		mapped = append(mapped, rpc.AgentSessionSummary{SessionID: summary.SessionID, CWD: cwd, CreatedAt: summary.CreatedAt, ParentSession: summary.ParentSession, AgentPreset: summary.AgentPreset, Live: summary.Live, Persisted: summary.Persisted})
 	}
 	return mapped
+}
+
+func validateAgentSessionLineageRequest(req rpc.AgentListSessionLineageParams) error {
+	if req.Runtime != rpc.AgentRuntimeDSH {
+		return rpc.NewRPCError(rpc.CodeInvalidParams, "runtime must be dsh")
+	}
+	if strings.TrimSpace(req.RootSessionID) == "" {
+		return rpc.NewRPCError(rpc.CodeInvalidParams, "rootSessionId is required")
+	}
+	if req.Mode != rpc.AgentSessionLineageChildren && req.Mode != rpc.AgentSessionLineageDescendants {
+		return rpc.NewRPCError(rpc.CodeInvalidParams, "mode must be children or descendants")
+	}
+	return nil
 }
 
 func validateAgentWorkspaceRequest(runtime rpc.AgentRuntime, workspaceID string, cwd string) error {

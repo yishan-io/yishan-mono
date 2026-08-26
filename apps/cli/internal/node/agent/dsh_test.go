@@ -12,19 +12,27 @@ import (
 )
 
 type recordingDSHSessions struct {
-	listCWD      string
-	readCWD      string
-	resumeCWD    string
-	disposeCWD   string
-	startRequest dsh.SessionStartRequest
-	listResult   dsh.SessionListResult
-	listErr      error
-	readErr      error
+	listCWD        string
+	readCWD        string
+	resumeCWD      string
+	disposeCWD     string
+	startRequest   dsh.SessionStartRequest
+	listResult     dsh.SessionListResult
+	listErr        error
+	readErr        error
+	lineageRequest dsh.SessionLineageRequest
+	lineageResult  dsh.SessionLineageResult
+	lineageErr     error
 }
 
 func (r *recordingDSHSessions) ListSessions(_ context.Context, request dsh.SessionListRequest) (dsh.SessionListResult, error) {
 	r.listCWD = request.CWD
 	return r.listResult, r.listErr
+}
+
+func (r *recordingDSHSessions) ListSessionLineage(_ context.Context, request dsh.SessionLineageRequest) (dsh.SessionLineageResult, error) {
+	r.lineageRequest = request
+	return r.lineageResult, r.lineageErr
 }
 
 func (r *recordingDSHSessions) ReadSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionReadResult, error) {
@@ -220,5 +228,81 @@ func TestAgentInspectionRPC_MapsDSHRuntimeErrorsToStableUnavailableCode(t *testi
 				t.Fatalf("RPC error = %#v, want stable DSH runtime-unavailable code", err)
 			}
 		})
+	}
+}
+
+func TestAgentListSessionLineage_UsesResolvedWorkspaceAndMapsResult(t *testing.T) {
+	runtime := &recordingDSHSessions{lineageResult: dsh.SessionLineageResult{
+		RootSessionID: "root", Mode: dsh.SessionLineageDescendants,
+		Children: []dsh.SessionLineageEntry{{SessionID: "child", ParentSessionID: "root", Origin: "subagent", DelegationDepth: 1, RelativeDepth: 1, Live: true, Persisted: true, Activity: "running", Mode: "continuable", Label: "worker"}},
+	}}
+	service := newTestHandler(t)
+	service.deps.Workspace = testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: workspaceID, Path: "/open/workspace"}, nil
+	})
+	service.deps.DSH = runtime
+
+	response, err := service.AgentListSessionLineage(context.Background(), rpc.AgentListSessionLineageParams{
+		Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/open/workspace", RootSessionID: "root", Mode: rpc.AgentSessionLineageDescendants,
+	})
+	if err != nil {
+		t.Fatalf("AgentListSessionLineage: %v", err)
+	}
+	if runtime.lineageRequest != (dsh.SessionLineageRequest{CWD: "/open/workspace", RootSessionID: "root", Mode: dsh.SessionLineageDescendants}) {
+		t.Fatalf("DSH request = %#v", runtime.lineageRequest)
+	}
+	got, ok := response.(rpc.AgentSessionLineageResult)
+	if !ok || got.Runtime != rpc.AgentRuntimeDSH || got.RootSessionID != "root" || len(got.Children) != 1 || got.Children[0].SessionID != "child" || got.Children[0].Mode != "continuable" {
+		t.Fatalf("result = %#v", response)
+	}
+}
+
+func TestAgentListSessionLineage_RejectsInvalidRequestsBeforeDSH(t *testing.T) {
+	tests := []struct {
+		name       string
+		params     rpc.AgentListSessionLineageParams
+		workspace  workspace.Workspace
+		resolveErr error
+		isInvalid  bool
+	}{
+		{"pi runtime", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimePi, WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: "root", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{}, nil, true},
+		{"unknown runtime", rpc.AgentListSessionLineageParams{Runtime: "other", WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: "root", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{}, nil, true},
+		{"blank root session", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: " ", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{}, nil, true},
+		{"invalid mode", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: "root", Mode: "all"}, workspace.Workspace{}, nil, true},
+		{"workspace cwd mismatch", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/untrusted", RootSessionID: "root", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{ID: "workspace", Path: "/workspace"}, nil, true},
+		{"closed workspace", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: "root", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{}, errors.New("workspace not found"), false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			runtime := &recordingDSHSessions{}
+			service := newTestHandler(t)
+			service.deps.Workspace = testWorkspaceResolver(func(string) (workspace.Workspace, error) {
+				return test.workspace, test.resolveErr
+			})
+			service.deps.DSH = runtime
+			_, err := service.AgentListSessionLineage(context.Background(), test.params)
+			var rpcErr *rpc.Error
+			if test.isInvalid && (!errors.As(err, &rpcErr) || rpcErr.Code != rpc.CodeInvalidParams) {
+				t.Fatalf("error = %#v, want invalid params", err)
+			}
+			if runtime.lineageRequest.CWD != "" {
+				t.Fatalf("DSH called for rejected request: %#v", runtime.lineageRequest)
+			}
+		})
+	}
+}
+
+func TestAgentListSessionLineage_MapsRuntimeUnavailable(t *testing.T) {
+	service := newTestHandler(t)
+	service.deps.Workspace = testWorkspaceResolver(func(string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: "workspace", Path: "/workspace"}, nil
+	})
+	service.deps.DSH = &recordingDSHSessions{lineageErr: dsh.ErrRuntimeUnavailable}
+	_, err := service.AgentListSessionLineage(context.Background(), rpc.AgentListSessionLineageParams{
+		Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: "root", Mode: rpc.AgentSessionLineageChildren,
+	})
+	var rpcErr *rpc.Error
+	if !errors.As(err, &rpcErr) || rpcErr.Data["code"] != rpc.ErrorDataCodeDSHRuntimeUnavailable {
+		t.Fatalf("error = %#v, want stable runtime-unavailable code", err)
 	}
 }

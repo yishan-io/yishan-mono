@@ -252,6 +252,40 @@ export type AgentReadHistoryRequest = {
   cwd: string;
 };
 
+/** Selects direct DSH subagents or all DSH descendants. */
+export type AgentSessionLineageMode = "children" | "descendants";
+
+/** Lists native DSH subagents below one open workspace session. */
+export type AgentListSessionLineageRequest = {
+  runtime: "dsh";
+  workspaceId: string;
+  cwd: string;
+  rootSessionId: string;
+  mode: AgentSessionLineageMode;
+};
+
+/** One native DSH subagent in a session lineage response. */
+export type AgentSessionLineageEntry = {
+  sessionId: string;
+  parentSessionId: string;
+  origin: "subagent";
+  delegationDepth: number;
+  relativeDepth: number;
+  live: boolean;
+  persisted: boolean;
+  activity?: "running" | "inactive";
+  mode?: "one-shot" | "continuable";
+  label?: string;
+};
+
+/** Returns the DSH-native lineage below a requested root session. */
+export type AgentSessionLineageResult = {
+  runtime: "dsh";
+  rootSessionId: string;
+  mode: AgentSessionLineageMode;
+  children: AgentSessionLineageEntry[];
+};
+
 /** Returns the runtime and session identity after a successful start. */
 export type AgentStartResult = {
   runtime: AgentRuntime;

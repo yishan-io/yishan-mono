@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
-import type { AgentDSHHistory } from "./daemonAgentTypes";
+import type { AgentDSHHistory, AgentSessionLineageResult } from "./daemonAgentTypes";
 
 const mocks = vi.hoisted(() => ({ request: vi.fn() }));
 
@@ -11,6 +11,7 @@ import {
   disposeAgentSession,
   getAgentCapabilities,
   listAgentRuntimeSessions,
+  listAgentSessionLineage,
   promptAgentSession,
   readAgentRuntimeHistory,
   startAgentSession,
@@ -162,6 +163,57 @@ describe("runtime-neutral agent daemon procedures", () => {
         },
       ],
     ]);
+  });
+
+  it("lists DSH session lineage with the exact RPC payload and parses its typed result", async () => {
+    const request = {
+      runtime: "dsh" as const,
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      rootSessionId: "root-1",
+      mode: "descendants" as const,
+    };
+    const response: AgentSessionLineageResult = {
+      runtime: "dsh",
+      rootSessionId: "root-1",
+      mode: "descendants",
+      children: [
+        {
+          sessionId: "child-1",
+          parentSessionId: "root-1",
+          origin: "subagent",
+          delegationDepth: 1,
+          relativeDepth: 1,
+          live: true,
+          persisted: true,
+          activity: "running",
+          mode: "continuable",
+          label: "worker",
+        },
+      ],
+    };
+    mocks.request.mockResolvedValue(response);
+
+    await expect(listAgentSessionLineage(request)).resolves.toEqual(response);
+    expect(mocks.request).toHaveBeenCalledExactlyOnceWith("agent.listSessionLineage", request);
+  });
+
+  it("rejects malformed DSH session lineage results", async () => {
+    mocks.request.mockResolvedValue({ runtime: "dsh", rootSessionId: "root-1", mode: "children", children: [{}] });
+
+    await expect(
+      listAgentSessionLineage({
+        runtime: "dsh",
+        workspaceId: "workspace-1",
+        cwd: "/workspace",
+        rootSessionId: "root-1",
+        mode: "children",
+      }),
+    ).rejects.toThrow("sessionId is required");
+  });
+
+  it("exposes a strict DSH session lineage result", () => {
+    expectTypeOf<Awaited<ReturnType<typeof listAgentSessionLineage>>>().toEqualTypeOf<AgentSessionLineageResult>();
   });
 
   it("keeps DSH history events unknown at the transport boundary", () => {

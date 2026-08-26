@@ -21,6 +21,29 @@ func (s *Service) ListDSHSessions(ctx context.Context, workspaceID string) (dsh.
 	return s.deps.DSH.ListSessions(ctx, dsh.SessionListRequest{CWD: workspacePath})
 }
 
+func (s *Service) listDSHSessionLineage(ctx context.Context, cwd, rootSessionID string, mode rpc.AgentSessionLineageMode) (dsh.SessionLineageResult, error) {
+	lineage, ok := s.deps.DSH.(DSHSessionLineage)
+	if !ok {
+		return dsh.SessionLineageResult{}, dsh.ErrRuntimeUnavailable
+	}
+	return lineage.ListSessionLineage(ctx, dsh.SessionLineageRequest{
+		CWD: cwd, RootSessionID: rootSessionID, Mode: dsh.SessionLineageMode(mode),
+	})
+}
+
+func mapDSHSessionLineage(lineage dsh.SessionLineageResult) rpc.AgentSessionLineageResult {
+	children := make([]rpc.AgentSessionLineageEntry, 0, len(lineage.Children))
+	for _, child := range lineage.Children {
+		children = append(children, rpc.AgentSessionLineageEntry{
+			SessionID: child.SessionID, ParentSessionID: child.ParentSessionID, Origin: rpc.AgentSessionLineageOrigin(child.Origin),
+			DelegationDepth: child.DelegationDepth, RelativeDepth: child.RelativeDepth, Live: child.Live,
+			Persisted: child.Persisted, Activity: rpc.AgentSessionLineageActivity(child.Activity), Mode: rpc.AgentSessionLineageChildMode(child.Mode), Label: child.Label,
+		})
+	}
+	return rpc.AgentSessionLineageResult{Runtime: rpc.AgentRuntimeDSH, RootSessionID: lineage.RootSessionID,
+		Mode: rpc.AgentSessionLineageMode(lineage.Mode), Children: children}
+}
+
 // ReadDSHSession reads a durable DSH session for an open workspace.
 func (s *Service) ReadDSHSession(ctx context.Context, workspaceID string, sessionID string) (dsh.SessionReadResult, error) {
 	workspacePath, err := s.resolveDSHWorkspacePath(workspaceID)
@@ -110,3 +133,4 @@ func (s *Service) resolveDSHWorkspacePath(workspaceID string) (string, error) {
 }
 
 var _ DSHSessions = (*dsh.Supervisor)(nil)
+var _ DSHSessionLineage = (*dsh.Supervisor)(nil)

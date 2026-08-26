@@ -8,8 +8,9 @@ import (
 )
 
 type recordingAgentFacade struct {
-	calls  int
-	method string
+	calls         int
+	method        string
+	lineageParams AgentListSessionLineageParams
 }
 
 func (s *recordingAgentFacade) called(method string) (any, error) {
@@ -39,6 +40,10 @@ func (s *recordingAgentFacade) AgentDispose(context.Context, AgentDisposeParams)
 func (s *recordingAgentFacade) AgentListSessions(context.Context, AgentListSessionsParams) (any, error) {
 	return s.called(MethodAgentListSessions)
 }
+func (s *recordingAgentFacade) AgentListSessionLineage(_ context.Context, params AgentListSessionLineageParams) (any, error) {
+	s.lineageParams = params
+	return s.called(MethodAgentListSessionLineage)
+}
 func (s *recordingAgentFacade) AgentReadHistory(context.Context, AgentReadHistoryParams) (any, error) {
 	return s.called(MethodAgentReadHistory)
 }
@@ -51,6 +56,7 @@ func TestAgentHandler_RoutesRuntimeNeutralMethods(t *testing.T) {
 		{MethodAgentAbort, `{"runtime":"pi","sessionId":"s","workspaceId":"w","cwd":"/w"}`},
 		{MethodAgentDispose, `{"runtime":"pi","sessionId":"s","workspaceId":"w","cwd":"/w"}`},
 		{MethodAgentListSessions, `{"runtime":"pi","workspaceId":"w","cwd":"/w"}`},
+		{MethodAgentListSessionLineage, `{"runtime":"dsh","workspaceId":"w","cwd":"/w","rootSessionId":"s","mode":"children"}`},
 		{MethodAgentReadHistory, `{"runtime":"pi","sessionId":"s","workspaceId":"w","cwd":"/w"}`},
 	}
 	for _, test := range tests {
@@ -68,7 +74,7 @@ func TestAgentHandler_RoutesRuntimeNeutralMethods(t *testing.T) {
 func TestAgentHandler_InvalidRuntimeNeutralParamsDoNotCallService(t *testing.T) {
 	facade := &recordingAgentFacade{}
 	handler := &AgentHandler{Agent: facade}
-	_, err := handler.Call(context.Background(), &Connection{}, MethodAgentStart, json.RawMessage(`{`))
+	_, err := handler.Call(context.Background(), &Connection{}, MethodAgentListSessionLineage, json.RawMessage(`{`))
 	var rpcErr *Error
 	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams || facade.calls != 0 {
 		t.Fatalf("Call error = %v, calls = %d", err, facade.calls)
@@ -96,5 +102,29 @@ func TestAgentHandler_PreservesExistingCatalogRoutes(t *testing.T) {
 				t.Fatalf("Call = %v, result = %v, catalog method = %q", err, got, catalog.method)
 			}
 		})
+	}
+}
+
+func TestAgentHandler_RejectsUnknownSessionLineageParams(t *testing.T) {
+	facade := &recordingAgentFacade{}
+	handler := &AgentHandler{Agent: facade}
+	_, err := handler.Call(context.Background(), &Connection{}, MethodAgentListSessionLineage,
+		json.RawMessage(`{"runtime":"dsh","workspaceId":"w","cwd":"/w","rootSessionId":"root","mode":"children","unexpected":true}`))
+	var rpcErr *Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams || facade.calls != 0 {
+		t.Fatalf("Call error = %v, calls = %d", err, facade.calls)
+	}
+}
+
+func TestAgentHandler_DecodesSessionLineageParams(t *testing.T) {
+	facade := &recordingAgentFacade{}
+	handler := &AgentHandler{Agent: facade}
+	_, err := handler.Call(context.Background(), &Connection{}, MethodAgentListSessionLineage,
+		json.RawMessage(`{"runtime":"dsh","workspaceId":"w","cwd":"/w","rootSessionId":"root","mode":"descendants"}`))
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if facade.lineageParams != (AgentListSessionLineageParams{Runtime: AgentRuntimeDSH, WorkspaceID: "w", CWD: "/w", RootSessionID: "root", Mode: AgentSessionLineageDescendants}) {
+		t.Fatalf("lineage params = %#v", facade.lineageParams)
 	}
 }

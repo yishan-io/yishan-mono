@@ -2,6 +2,7 @@ import { subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport } fro
 import { request } from "@renderer/rpc";
 import { parseAgentAttachResult } from "./daemonAgentAttachParser";
 import { parseAgentHistoryResult } from "./daemonAgentHistoryParser";
+import { parseAgentSessionLineageResult } from "./daemonAgentSessionLineageParser";
 import type {
   AgentAbortRequest,
   AgentAckResult,
@@ -14,10 +15,12 @@ import type {
   AgentDefinitionUpdateInput,
   AgentDisposeRequest,
   AgentHistoryResult,
+  AgentListSessionLineageRequest,
   AgentListSessionsRequest,
   AgentPromptRequest,
   AgentReadHistoryRequest,
   AgentRuntime,
+  AgentSessionLineageResult,
   AgentSessionsResult,
   AgentStartRequest,
   AgentStartResult,
@@ -184,6 +187,13 @@ export async function disposeAgentSession(input: AgentDisposeRequest): Promise<A
 /** Lists durable agent sessions for one runtime and workspace. */
 export async function listAgentRuntimeSessions(input: AgentListSessionsRequest): Promise<AgentSessionsResult> {
   return (await request("agent.listSessions", input)) as AgentSessionsResult;
+}
+
+/** Lists native DSH subagents below one open workspace session. */
+export async function listAgentSessionLineage(
+  input: AgentListSessionLineageRequest,
+): Promise<AgentSessionLineageResult> {
+  return parseAgentSessionLineageResult(await request("agent.listSessionLineage", input), input);
 }
 
 /** Reads durable history without interpreting runtime-specific event payloads. */

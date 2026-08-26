@@ -36,6 +36,7 @@ type AgentService interface {
 	AgentAbort(ctx context.Context, req AgentAbortParams) (any, error)
 	AgentDispose(ctx context.Context, req AgentDisposeParams) (any, error)
 	AgentListSessions(ctx context.Context, req AgentListSessionsParams) (any, error)
+	AgentListSessionLineage(ctx context.Context, req AgentListSessionLineageParams) (any, error)
 	AgentReadHistory(ctx context.Context, req AgentReadHistoryParams) (any, error)
 }
 
@@ -148,6 +149,12 @@ func (h *AgentHandler) callAgent(ctx context.Context, connection *Connection, me
 			return nil, err
 		}
 		return h.Agent.AgentListSessions(ctx, req)
+	case MethodAgentListSessionLineage:
+		var req AgentListSessionLineageParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentListSessionLineage(ctx, req)
 	case MethodAgentReadHistory:
 		var req AgentReadHistoryParams
 		if err := DecodeParams(params, &req); err != nil {
