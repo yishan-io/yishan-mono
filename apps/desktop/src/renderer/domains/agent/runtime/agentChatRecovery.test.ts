@@ -227,6 +227,105 @@ describe("AgentChatRecoveryCoordinator", () => {
     expect(tabStoreAccess.getState().selectedTabId).toBe("agent-tab-1");
   });
 
+  it.each(["empty Pi sessions", "failed Pi discovery"])("restores a DSH-only restart when %s", async (scenario) => {
+    const storage = createMemoryStorage();
+    storage.setItem(
+      "yishan-agent-chat-recovery-v1",
+      JSON.stringify({
+        selectedTabId: "dsh-tab-1",
+        tabs: [
+          {
+            tabId: "dsh-tab-1",
+            workspaceId: "workspace-1",
+            title: "Durable DSH chat",
+            pinned: false,
+            cwd: "/tmp/workspace-1",
+            sessionId: "dsh-session-1",
+            runtime: "dsh",
+            userRenamed: false,
+            sessionView: "full",
+          },
+        ],
+      }),
+    );
+    const tabStoreAccess = createTabStoreAccess({ tabs: [] });
+    const coordinator = new AgentChatRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1") as never,
+      storage,
+    );
+    const listActivePiSessions = vi.fn();
+    if (scenario === "empty Pi sessions") {
+      listActivePiSessions.mockResolvedValue([]);
+    } else {
+      listActivePiSessions.mockRejectedValue(new Error("Pi unavailable"));
+    }
+
+    const recoveryResult = await coordinator.restoreAgentChatTabsFromDaemon({ listActivePiSessions });
+
+    expect(recoveryResult.selectedWorkspaceId).toBe("workspace-1");
+    expect(tabStoreAccess.getState().tabs).toMatchObject([
+      {
+        id: "dsh-tab-1",
+        kind: "agent-chat",
+        data: { sessionId: "dsh-session-1", runtime: "dsh" },
+      },
+    ]);
+  });
+
+  it("restores same-ID Pi and DSH tabs independently after restart", async () => {
+    const storage = createMemoryStorage();
+    storage.setItem(
+      "yishan-agent-chat-recovery-v1",
+      JSON.stringify({
+        selectedTabId: "dsh-tab",
+        tabs: [
+          {
+            tabId: "pi-tab",
+            workspaceId: "workspace-1",
+            title: "Pi chat",
+            pinned: false,
+            cwd: "/tmp/workspace-1",
+            sessionId: "same-id",
+            runtime: "pi",
+            userRenamed: false,
+            sessionView: "full",
+          },
+          {
+            tabId: "dsh-tab",
+            workspaceId: "workspace-1",
+            title: "DSH chat",
+            pinned: false,
+            cwd: "/tmp/workspace-1",
+            sessionId: "same-id",
+            runtime: "dsh",
+            userRenamed: false,
+            sessionView: "full",
+          },
+        ],
+      }),
+    );
+    const tabStoreAccess = createTabStoreAccess({ tabs: [] });
+    const coordinator = new AgentChatRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1") as never,
+      storage,
+    );
+
+    await coordinator.restoreAgentChatTabsFromDaemon({
+      listActivePiSessions: vi
+        .fn()
+        .mockResolvedValue([
+          { sessionId: "same-id", tabId: "pi-tab", workspaceId: "workspace-1", cwd: "/tmp/workspace-1" },
+        ]),
+    });
+
+    expect(tabStoreAccess.getState().tabs).toMatchObject([
+      { id: "dsh-tab", kind: "agent-chat", data: { sessionId: "same-id", runtime: "dsh" } },
+      { id: "pi-tab", kind: "agent-chat", data: { sessionId: "same-id", runtime: "pi" } },
+    ]);
+  });
+
   it("returns a fallback workspace when restoring agent tabs without a persisted selected tab", async () => {
     const tabStoreAccess = createTabStoreAccess({
       tabs: [],

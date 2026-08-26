@@ -2,6 +2,13 @@ import type {} from "@deepseek-ai/dsh-agent";
 import type { SessionId } from "@deepseek-ai/dsh-session";
 import type { SessionLogSnapshot, SessionRecord } from "@deepseek-ai/dsh-session-query";
 
+import {
+  parseSessionCancelRequest,
+  parseSessionFlushRequest,
+  parseSessionPromptRequest,
+  parseSessionStartRequest,
+  parseSessionSubscribeRequest,
+} from "./executionContracts";
 import { YISHAN_METHODS } from "./protocol";
 import {
   type SessionDisposeResult,
@@ -80,14 +87,45 @@ export type YishanSessionHandlerDependencies = {
   };
   resumeSession(sessionId: SessionId): Promise<void>;
   disposeSession(sessionId: SessionId): Promise<boolean>;
+  execution?: {
+    start(request: ReturnType<typeof parseSessionStartRequest>): Promise<unknown>;
+    prompt(request: ReturnType<typeof parseSessionPromptRequest>): Promise<unknown>;
+    cancel(request: ReturnType<typeof parseSessionCancelRequest>): Promise<unknown>;
+    flushSession(request: ReturnType<typeof parseSessionFlushRequest>): Promise<unknown>;
+    subscribe(request: ReturnType<typeof parseSessionSubscribeRequest>): Promise<unknown>;
+    readDurableSession(request: SessionReadRequest): Promise<{
+      session: { id: string; createdAt: number; parentSession?: string; agentPreset?: string };
+      events: SessionReadResult["events"];
+      incarnation: string;
+      asOfSeq: number;
+      durableThroughSeq: number;
+    }>;
+    resume(request: ReturnType<typeof parseSessionResumeRequest>): Promise<void>;
+    disposeSession(request: ReturnType<typeof parseSessionDisposeRequest>): Promise<boolean>;
+  };
 };
 
 /** Handles corrected Phase 2 workspace-scoped session requests through DSH services. */
 export function createSessionHandler(dependencies: YishanSessionHandlerDependencies) {
   return async (method: string, params: Record<string, unknown>): Promise<unknown> => {
     switch (method) {
+      case YISHAN_METHODS.cancel:
+        return await requireExecution(dependencies).cancel(parseSessionCancelRequest(params));
       case YISHAN_METHODS.dispose:
-        return await handleDispose(dependencies, params);
+        return dependencies.execution === undefined
+          ? await handleDispose(dependencies, params)
+          : {
+              sessionId: parseSessionDisposeRequest(params).sessionId,
+              disposed: await dependencies.execution.disposeSession(parseSessionDisposeRequest(params)),
+            };
+      case YISHAN_METHODS.flush:
+        return await requireExecution(dependencies).flushSession(parseSessionFlushRequest(params));
+      case YISHAN_METHODS.prompt:
+        return await requireExecution(dependencies).prompt(parseSessionPromptRequest(params));
+      case YISHAN_METHODS.start:
+        return await requireExecution(dependencies).start(parseSessionStartRequest(params));
+      case YISHAN_METHODS.subscribe:
+        return await requireExecution(dependencies).subscribe(parseSessionSubscribeRequest(params));
       case YISHAN_METHODS.list:
         return await handleList(dependencies, params);
       case YISHAN_METHODS.read:
@@ -128,10 +166,13 @@ async function handleRead(
   params: Record<string, unknown>,
 ): Promise<SessionReadResult> {
   const request = parseSessionReadRequest(params);
-  const snapshot = await readWorkspaceSession(dependencies, request);
+  const snapshot = await requireExecution(dependencies).readDurableSession(request);
   return {
     session: createSessionHeaderResult(snapshot.session),
     events: snapshot.events,
+    incarnation: snapshot.incarnation,
+    asOfSeq: snapshot.asOfSeq,
+    durableThroughSeq: snapshot.durableThroughSeq,
   };
 }
 
@@ -140,6 +181,10 @@ async function handleResume(
   params: Record<string, unknown>,
 ): Promise<SessionResumeResult> {
   const request = parseSessionResumeRequest(params);
+  if (dependencies.execution !== undefined) {
+    await dependencies.execution.resume(request);
+    return { sessionId: request.sessionId };
+  }
   const snapshot = await readWorkspaceSession(dependencies, request);
   const records = await dependencies.sessionQuery.listSessions();
   const record = records.find(({ header }) => header.id === snapshot.session.id);
@@ -170,4 +215,12 @@ function createSessionHeaderResult(header: {
     ...(header.parentSession === undefined ? {} : { parentSession: header.parentSession }),
     ...(header.agentPreset === undefined ? {} : { agentPreset: header.agentPreset }),
   };
+}
+
+function requireExecution(
+  dependencies: YishanSessionHandlerDependencies,
+): NonNullable<YishanSessionHandlerDependencies["execution"]> {
+  if (dependencies.execution === undefined)
+    throw new YishanUnsupportedMethodError("session execution is not configured");
+  return dependencies.execution;
 }

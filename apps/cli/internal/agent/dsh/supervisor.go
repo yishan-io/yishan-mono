@@ -77,6 +77,7 @@ type runtimeProcess struct {
 	pendingMu   sync.Mutex
 	pending     map[uint64]chan rpcResponse
 	terminalErr error
+	replay      *replayCoordinator
 }
 
 // NewSupervisor constructs a stopped supervisor with safe lifecycle defaults.
@@ -215,7 +216,7 @@ func (s *Supervisor) createProcess(ctx context.Context) (*runtimeProcess, error)
 	}
 	process := &runtimeProcess{
 		command: command, stdin: stdin, output: newScanner(stdout),
-		done: make(chan struct{}), pending: make(map[uint64]chan rpcResponse),
+		done: make(chan struct{}), pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(defaultReplayCapacity),
 	}
 	go s.scanDiagnostics(stderr)
 	go s.waitForProcess(command, process)
@@ -287,6 +288,7 @@ func (s *Supervisor) waitForProcess(command *exec.Cmd, process *runtimeProcess) 
 func (s *Supervisor) awaitExit(process *runtimeProcess) {
 	<-process.done
 	err := exitError(process.exitErr)
+	process.replay.invalidate()
 	process.failPending(err)
 	if s.clearExitedProcess(process) {
 		return
@@ -368,6 +370,7 @@ func (s *Supervisor) Close() error {
 	s.mu.Unlock()
 	s.cancel()
 	if process != nil {
+		process.replay.invalidate()
 		process.interruptPending(ErrRuntimeUnavailable)
 	}
 	var err error

@@ -14,7 +14,7 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-func TestService_AgentStartRejectsDSHWithoutCallingRuntime(t *testing.T) {
+func TestService_AgentStartDispatchesToDSHRuntime(t *testing.T) {
 	runtime := &recordingDSHSessions{}
 	service := NewService(Deps{
 		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
@@ -25,9 +25,8 @@ func TestService_AgentStartRejectsDSHWithoutCallingRuntime(t *testing.T) {
 	_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{
 		Runtime: rpc.AgentRuntimeDSH, SessionID: "session-1", TabID: "tab-1", WorkspaceID: "workspace-1", CWD: "/workspace",
 	})
-	assertRPCErrorCode(t, err, rpc.CodeInvalidParams)
-	if runtime.listCWD != "" || runtime.readCWD != "" || runtime.resumeCWD != "" {
-		t.Fatal("agent.start called the DSH runtime")
+	if err != nil {
+		t.Fatalf("AgentStart: %v", err)
 	}
 }
 
@@ -63,7 +62,7 @@ func TestService_AgentInspectionDispatchesToAuthorizedRuntime(t *testing.T) {
 	}
 }
 
-func TestService_AgentExecutionMethodsRejectDSH(t *testing.T) {
+func TestService_AgentExecutionMethodsRequireDSHRegistryOwnership(t *testing.T) {
 	service := NewService(Deps{Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
 		return workspace.Workspace{ID: workspaceID, Path: "/w"}, nil
 	})})
@@ -88,7 +87,7 @@ func TestService_AgentExecutionMethodsRejectDSH(t *testing.T) {
 			return err
 		}},
 	} {
-		t.Run(call.name, func(t *testing.T) { assertRPCErrorCode(t, call.call(), rpc.CodeInvalidParams) })
+		t.Run(call.name, func(t *testing.T) { assertRPCErrorCode(t, call.call(), rpc.CodeNotFound) })
 	}
 }
 
@@ -141,12 +140,19 @@ func TestService_AgentOperationsRejectMismatchedWorkspacePath(t *testing.T) {
 }
 
 func TestBuildAgentPromptCommand_EncodesSemanticPrompt(t *testing.T) {
-	command, err := buildAgentPromptCommand(json.RawMessage(`"hello"`), "steer")
+	command, err := buildAgentPromptCommand(rpc.AgentRuntimePi, json.RawMessage(`"hello"`), "steer")
 	if err != nil {
 		t.Fatalf("buildAgentPromptCommand: %v", err)
 	}
 	if got := string(command); got != `{"type":"prompt","message":"hello","streamingBehavior":"steer"}` {
 		t.Fatalf("command = %s", got)
+	}
+	command, err = buildAgentPromptCommand(rpc.AgentRuntimeDSH, json.RawMessage(`"hello"`), "steer")
+	if err != nil {
+		t.Fatalf("build DSH prompt command: %v", err)
+	}
+	if got := string(command); got != `{"type":"prompt","message":"hello"}` {
+		t.Fatalf("DSH command = %s", got)
 	}
 }
 

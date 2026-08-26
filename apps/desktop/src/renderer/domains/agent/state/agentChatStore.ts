@@ -41,12 +41,14 @@ export type AgentChatStoreState = {
   setTurnActive: (tabId: string, active: boolean) => void;
   setCompactionReason: (tabId: string, reason: AgentCompactionReason) => void;
   setSessionError: (tabId: string, error: string) => void;
+  setDSHTranscriptRetryAvailable: (tabId: string, available: boolean) => void;
   setTurnError: (tabId: string, error: string) => void;
   clearTurnError: (tabId: string) => void;
   appendMessage: (tabId: string, message: AgentMessage) => void;
   replaceMessages: (tabId: string, messages: AgentMessage[]) => void;
   updateStreamingMessage: (tabId: string, message: AgentMessage) => void;
   finalizeStreamingMessage: (tabId: string) => void;
+  clearStreamingMessage: (tabId: string) => void;
   setActiveCoreTurnAssistantId: (tabId: string, assistantId: string | null) => void;
   finalizeActiveCoreTurnAssistant: (tabId: string, endedAtMs: number) => void;
   setAvailableModels: (tabId: string, models: AgentModel[]) => void;
@@ -116,6 +118,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session) {
           session.state = "error";
           session.error = error;
+        }
+      });
+    },
+
+    setDSHTranscriptRetryAvailable: (tabId, available) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.dshTranscriptRetryAvailable = available;
         }
       });
     },
@@ -234,6 +245,14 @@ export const agentChatStore = create<AgentChatStoreState>()(
           deriveRunningSubagents(session.messages, undefined, session.subagentSessionEndedAtMs),
         );
         setFinishedSubagents(session);
+      });
+    },
+
+    clearStreamingMessage: (tabId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.streamingMessage = null;
       });
     },
 

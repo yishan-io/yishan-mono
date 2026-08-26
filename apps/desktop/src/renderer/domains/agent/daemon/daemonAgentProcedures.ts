@@ -1,9 +1,11 @@
 import { subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport } from "@renderer/events/desktopRpcEventBus";
 import { request } from "@renderer/rpc";
+import { parseAgentHistoryResult } from "./daemonAgentHistoryParser";
 import type {
   AgentAbortRequest,
   AgentAckResult,
   AgentAttachRequest,
+  AgentCapabilities,
   AgentDefinitionCreateInput,
   AgentDefinitionDetail,
   AgentDefinitionInfo,
@@ -113,6 +115,11 @@ export async function removePiProvider(input: { provider: string }): Promise<{ o
 
 // ─── runtime-neutral agent ───────────────────────────────────────────────────
 
+/** Gets daemon-owned runtime availability for new top-level agent tabs. */
+export async function getAgentCapabilities(): Promise<AgentCapabilities> {
+  return (await request("agent.getCapabilities", {})) as AgentCapabilities;
+}
+
 /** Starts one session in the runtime selected by the request. */
 export async function startAgentSession(input: AgentStartRequest): Promise<AgentStartResult> {
   return (await request("agent.start", input)) as AgentStartResult;
@@ -145,7 +152,7 @@ export async function listAgentRuntimeSessions(input: AgentListSessionsRequest):
 
 /** Reads durable history without interpreting runtime-specific event payloads. */
 export async function readAgentRuntimeHistory(input: AgentReadHistoryRequest): Promise<AgentHistoryResult> {
-  return (await request("agent.readHistory", input)) as AgentHistoryResult;
+  return parseAgentHistoryResult(await request("agent.readHistory", input), input);
 }
 
 // ─── agent ───────────────────────────────────────────────────────────────────

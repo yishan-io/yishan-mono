@@ -207,3 +207,72 @@ func TestSupervisor_Start_ObservesNotifications(t *testing.T) {
 		t.Fatal("notification was not observed")
 	}
 }
+
+func TestSupervisor_ExecutionCallsValidateExactResults(t *testing.T) {
+	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc")})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	request := SessionExecutionRequest{CWD: "/workspace", SessionID: "session"}
+	if response, err := supervisor.StartSession(context.Background(), request); err != nil || response.Incarnation != "run" {
+		t.Fatalf("StartSession = %#v, %v", response, err)
+	}
+	if response, err := supervisor.PromptSession(context.Background(), SessionPromptRequest{CWD: request.CWD, SessionID: request.SessionID, ContentBlocks: []TextPromptContentBlock{{Type: "text", Text: "hello"}}}); err != nil || response.MessageID != "message" {
+		t.Fatalf("PromptSession = %#v, %v", response, err)
+	}
+	if response, err := supervisor.CancelSession(context.Background(), request); err != nil || !response.Cancelled {
+		t.Fatalf("CancelSession = %#v, %v", response, err)
+	}
+	if response, err := supervisor.FlushSession(context.Background(), request); err != nil || response.Incarnation != "run" {
+		t.Fatalf("FlushSession = %#v, %v", response, err)
+	}
+	subscription, err := supervisor.SubscribeSession(context.Background(), SessionSubscribeRequest{CWD: request.CWD, SessionID: request.SessionID, AfterSeq: -1})
+	if err != nil {
+		t.Fatalf("SubscribeSession: %v", err)
+	}
+	if subscription.Incarnation != "run" || subscription.Baseline != -1 {
+		t.Fatalf("subscription snapshot = incarnation %q, baseline %d", subscription.Incarnation, subscription.Baseline)
+	}
+	subscription.Unsubscribe()
+}
+
+func TestSupervisor_KnownMalformedNotificationInterruptsGeneration(t *testing.T) {
+	process := &runtimeProcess{pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(1)}
+	response, remove := process.registerPending(1)
+	defer remove()
+	supervisor := NewSupervisor(Config{})
+	supervisor.routeNotification(process, rpcEnvelope{Method: sessionEventMethod, Params: []byte(`{"sessionId":"session","event":{"seq":-1}}`)})
+	if frame := <-response; !errors.Is(frame.err, ErrRequestInterrupted) {
+		t.Fatalf("pending error = %v", frame.err)
+	}
+}
+
+func TestSupervisor_MalformedKnownNotificationKillsOnlyItsGeneration(t *testing.T) {
+	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc-invalid-notify"), RestartLimit: 1, RestartBackoff: time.Millisecond})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	_, err := supervisor.ReadSession(context.Background(), SessionReadRequest{CWD: "/workspace", SessionID: "wait"})
+	if !errors.Is(err, ErrRequestInterrupted) {
+		t.Fatalf("ReadSession error = %v", err)
+	}
+	waitFor(t, func() bool { return supervisor.Health().RestartCount == 1 })
+}
+
+func TestSequenceValidation_RejectsUnsafeValues(t *testing.T) {
+	unsafe := maxSafeInteger + 1
+	if err := validateSubscribeRequest(SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: maxSafeInteger}); err == nil {
+		t.Fatal("accepted max afterSeq despite required increment")
+	}
+	if _, err := (durableCursorWire{SessionID: "session", Incarnation: "run", DurableThroughSeq: unsafe}).validate("session"); err == nil {
+		t.Fatal("accepted unsafe durable cursor")
+	}
+	if _, err := parseEvent([]byte(`{"seq":9007199254740992}`), "session"); err == nil {
+		t.Fatal("accepted unsafe event sequence")
+	}
+	if _, err := parseTranscriptResetNotification([]byte(`{"sessionId":"session","incarnation":"run","headSeq":9007199254740992}`)); err == nil {
+		t.Fatal("accepted unsafe reset head")
+	}
+}

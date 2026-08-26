@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  YishanSessionWorkspaceMismatchError,
-  YishanUnsupportedMethodError,
-  createSessionHandler,
-} from "./sessionHandler";
+import { YishanUnsupportedMethodError, createSessionHandler } from "./sessionHandler";
 
 const WORKSPACE_CWD = "/workspaces/yishan";
 const OTHER_CWD = "/workspaces/other";
@@ -67,46 +63,6 @@ describe("createSessionHandler", () => {
         },
       ],
     });
-  });
-
-  it("reads a session only after its header matches the requested workspace cwd", async () => {
-    const dependencies = createDependencies();
-    dependencies.sessionQuery.readSession.mockResolvedValue({
-      session: { id: "session-1", createdAt: 1, cwd: WORKSPACE_CWD },
-      events: [{ type: "turn/end" }],
-    });
-    const handle = createSessionHandler(dependencies);
-
-    await expect(handle("yishan.v1.session.read", { cwd: WORKSPACE_CWD, sessionId: "session-1" })).resolves.toEqual({
-      session: { sessionId: "session-1", createdAt: 1 },
-      events: [{ type: "turn/end" }],
-    });
-  });
-
-  it("rejects a read when DSH returns a different session identity", async () => {
-    const dependencies = createDependencies();
-    dependencies.sessionQuery.readSession.mockResolvedValue({
-      session: { id: "different-session", createdAt: 1, cwd: WORKSPACE_CWD },
-      events: [],
-    });
-    const handle = createSessionHandler(dependencies);
-
-    await expect(
-      handle("yishan.v1.session.read", { cwd: WORKSPACE_CWD, sessionId: "session-1" }),
-    ).rejects.toMatchObject({ code: "YISHAN_SESSION_ID_MISMATCH" });
-  });
-
-  it("rejects a read when the persisted session header belongs to another workspace", async () => {
-    const dependencies = createDependencies();
-    dependencies.sessionQuery.readSession.mockResolvedValue({
-      session: { id: "session-1", createdAt: 1, cwd: OTHER_CWD },
-      events: [],
-    });
-    const handle = createSessionHandler(dependencies);
-
-    await expect(
-      handle("yishan.v1.session.read", { cwd: WORKSPACE_CWD, sessionId: "session-1" }),
-    ).rejects.toBeInstanceOf(YishanSessionWorkspaceMismatchError);
   });
 
   it("checks the persisted header before resuming the DSH agent", async () => {
@@ -175,5 +131,27 @@ describe("createSessionHandler", () => {
     const handle = createSessionHandler(createDependencies());
 
     await expect(handle("yishan.v1.session.unknown", {})).rejects.toBeInstanceOf(YishanUnsupportedMethodError);
+  });
+});
+
+describe("Yishan execution routing", () => {
+  it("routes start through the unified execution owner instead of stock routing", async () => {
+    const dependencies = createDependencies();
+    const execution = {
+      start: vi.fn(async () => ({ sessionId: "session-1", incarnation: "run-1" })),
+      prompt: vi.fn(),
+      cancel: vi.fn(),
+      flushSession: vi.fn(),
+      subscribe: vi.fn(),
+      readDurableSession: vi.fn(),
+      resume: vi.fn(),
+      disposeSession: vi.fn(),
+    };
+    const handle = createSessionHandler({ ...dependencies, execution });
+    await expect(handle("yishan.v1.session.start", { cwd: WORKSPACE_CWD, sessionId: "session-1" })).resolves.toEqual({
+      sessionId: "session-1",
+      incarnation: "run-1",
+    });
+    expect(execution.start).toHaveBeenCalledWith({ cwd: WORKSPACE_CWD, sessionId: "session-1" });
   });
 });

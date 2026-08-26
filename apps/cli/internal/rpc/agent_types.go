@@ -23,11 +23,37 @@ type AgentStartParams struct {
 
 // AgentAttachParams attaches a client connection to an existing session.
 type AgentAttachParams struct {
-	Runtime     AgentRuntime `json:"runtime"`
-	SessionID   string       `json:"sessionId"`
-	TabID       string       `json:"tabId,omitempty"`
-	WorkspaceID string       `json:"workspaceId"`
-	CWD         string       `json:"cwd"`
+	Runtime          AgentRuntime `json:"runtime"`
+	SessionID        string       `json:"sessionId"`
+	TabID            string       `json:"tabId,omitempty"`
+	WorkspaceID      string       `json:"workspaceId"`
+	CWD              string       `json:"cwd"`
+	AfterSeq         int64        `json:"afterSeq,omitempty"`
+	AfterSeqProvided bool         `json:"-"`
+}
+
+// UnmarshalJSON distinguishes an omitted DSH replay cursor from an explicit
+// zero cursor. Omitted cursors begin before the transcript at -1.
+func (p *AgentAttachParams) UnmarshalJSON(raw []byte) error {
+	var wire struct {
+		Runtime     AgentRuntime `json:"runtime"`
+		SessionID   string       `json:"sessionId"`
+		TabID       string       `json:"tabId"`
+		WorkspaceID string       `json:"workspaceId"`
+		CWD         string       `json:"cwd"`
+		AfterSeq    *int64       `json:"afterSeq"`
+	}
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		return err
+	}
+	p.Runtime, p.SessionID, p.TabID = wire.Runtime, wire.SessionID, wire.TabID
+	p.WorkspaceID, p.CWD = wire.WorkspaceID, wire.CWD
+	p.AfterSeqProvided = wire.AfterSeq != nil
+	p.AfterSeq = 0
+	if wire.AfterSeq != nil {
+		p.AfterSeq = *wire.AfterSeq
+	}
+	return nil
 }
 
 // AgentPromptParams sends one runtime-neutral prompt to a session.
@@ -73,6 +99,16 @@ type AgentStartResult struct {
 }
 
 // AgentAckResult is the stable acknowledgement for session mutations.
+type AgentCapabilitiesResult struct {
+	DSH AgentDSHCapabilities `json:"dsh"`
+}
+type AgentDSHCapabilities struct {
+	Configured  bool   `json:"configured"`
+	Ready       bool   `json:"ready"`
+	Incarnation string `json:"incarnation,omitempty"`
+}
+
+// AgentAckResult is the stable acknowledgement for session mutations.
 type AgentAckResult struct {
 	Runtime AgentRuntime `json:"runtime"`
 	OK      bool         `json:"ok"`
@@ -113,8 +149,11 @@ type AgentDSHSessionMetadata struct {
 
 // AgentDSHHistory is the DSH-specific durable history representation.
 type AgentDSHHistory struct {
-	Session AgentDSHSessionMetadata `json:"session"`
-	Events  []json.RawMessage       `json:"events"`
+	Session           AgentDSHSessionMetadata `json:"session"`
+	Events            []json.RawMessage       `json:"events"`
+	Incarnation       string                  `json:"incarnation"`
+	AsOfSeq           int64                   `json:"asOfSeq"`
+	DurableThroughSeq int64                   `json:"durableThroughSeq"`
 }
 
 // AgentHistoryResult is a runtime-tagged session-history response. Exactly one

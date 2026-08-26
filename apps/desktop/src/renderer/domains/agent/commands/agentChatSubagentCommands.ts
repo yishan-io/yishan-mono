@@ -11,6 +11,9 @@ import {
 } from "@renderer/domains/workbench";
 import { findOppositePaneId } from "@renderer/domains/workbench";
 import { isAgentSessionBusy } from "../chat/agentChatTypes";
+import type { AgentRuntime } from "../daemon/daemonAgentTypes";
+import { normalizeAgentChatRuntime } from "../runtime/agentRuntimeSelection";
+import { buildAgentRuntimeSessionKey } from "../runtime/agentSessionIdentity";
 import { promptAgentSession } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
 import { findTabWithSession } from "./agentChatCommands";
@@ -34,16 +37,22 @@ export async function openSubagentSessionInRightSplitPane(opts: {
   parentSessionId?: string;
   agentId?: string;
   childSessionId: string;
+  runtime?: AgentRuntime;
   title: string;
 }): Promise<void> {
   console.debug("[agentChatSubagentCommands] open requested", opts);
+  const runtime = normalizeAgentChatRuntime({ runtime: opts.runtime, sessionId: opts.childSessionId });
+  const sessionKey = buildAgentRuntimeSessionKey(runtime, opts.childSessionId);
   const existingTabId =
-    findTabWithSession(opts.childSessionId) ??
+    findTabWithSession(opts.childSessionId, runtime) ??
     tabStore.getState().tabs.find((tab) => {
+      const sessionId = tab.kind === "agent-chat" ? tab.data.sessionId?.trim() : undefined;
       return (
         tab.workspaceId === opts.workspaceId &&
         tab.kind === "agent-chat" &&
-        tab.data.sessionId?.trim() === opts.childSessionId
+        sessionId &&
+        buildAgentRuntimeSessionKey(normalizeAgentChatRuntime({ runtime: tab.data.runtime, sessionId }), sessionId) ===
+          sessionKey
       );
     })?.id;
   if (existingTabId) {
@@ -73,6 +82,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
       title: opts.title,
       cwd: opts.cwd,
       sessionId: opts.childSessionId,
+      runtime,
       sessionView: "subagent-detail",
       subagentAgentId: opts.agentId,
       subagentParentSessionId: opts.parentSessionId,
@@ -92,6 +102,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
       title: opts.title,
       cwd: opts.cwd,
       sessionId: opts.childSessionId,
+      runtime,
       sessionView: "subagent-detail",
       subagentAgentId: opts.agentId,
       subagentParentSessionId: opts.parentSessionId,
@@ -113,6 +124,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
       title: opts.title,
       cwd: opts.cwd,
       sessionId: opts.childSessionId,
+      runtime,
       sessionView: "subagent-detail",
       subagentAgentId: opts.agentId,
       subagentParentSessionId: opts.parentSessionId,

@@ -76,6 +76,7 @@ const (
 
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
 	MethodAgentListModels            = "agent.listModels"
+	MethodAgentGetCapabilities       = "agent.getCapabilities"
 	MethodAgentStart                 = "agent.start"
 	MethodAgentAttach                = "agent.attach"
 	MethodAgentPrompt                = "agent.prompt"

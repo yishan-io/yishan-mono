@@ -47,6 +47,7 @@ export type AgentChatSessionData = {
   hasLoadedMessages: boolean;
   hasLoadedModels: boolean;
   hasLoadedState: boolean;
+  dshTranscriptRetryAvailable: boolean;
   error: string | null;
   turnError: string | null;
 };
@@ -79,6 +80,7 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
     hasLoadedMessages: false,
     hasLoadedModels: false,
     hasLoadedState: false,
+    dshTranscriptRetryAvailable: false,
     error: null,
     turnError: null,
   };

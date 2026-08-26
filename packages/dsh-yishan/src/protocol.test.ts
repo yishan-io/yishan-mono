@@ -24,6 +24,9 @@ describe("yishanMethod", () => {
       dispose: "yishan.v1.session.dispose",
       read: "yishan.v1.session.read",
       resume: "yishan.v1.session.resume",
+      start: "yishan.v1.session.start",
+      prompt: "yishan.v1.session.prompt",
+      subscribe: "yishan.v1.session.subscribe",
     });
   });
 

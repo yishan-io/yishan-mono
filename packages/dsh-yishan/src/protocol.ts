@@ -11,6 +11,9 @@ export const YISHAN_METHODS = {
   list: yishanMethod("session.list"),
   read: yishanMethod("session.read"),
   resume: yishanMethod("session.resume"),
+  start: yishanMethod("session.start"),
+  prompt: yishanMethod("session.prompt"),
+  subscribe: yishanMethod("session.subscribe"),
   interactionRespond: yishanMethod("interaction.respond"),
 } as const;
 

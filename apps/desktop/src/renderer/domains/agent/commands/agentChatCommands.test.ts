@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => ({
   ensureChatSession: vi.fn(),
   getDetectionStatuses: vi.fn(),
   listDetectionStatuses: vi.fn(),
+  getCapabilities: vi.fn(),
 }));
 
 vi.mock("@shared/ids/generateId", () => ({
@@ -43,9 +44,11 @@ vi.mock("../subscriptions/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
   attachAgentSession: mocks.attachAgent,
   abortAgentSession: mocks.abortAgent,
   disposeAgentSession: mocks.disposeAgent,
+  getAgentCapabilities: mocks.getCapabilities,
   promptAgentSession: mocks.promptAgent,
   startAgentSession: mocks.startAgent,
   closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
@@ -91,6 +94,123 @@ vi.mock("../../workspace/state/workspaceActions", () => ({
   enqueueWorkspaceErrorNotice: vi.fn(),
 }));
 describe("agentChatCommands.startAgentChatSession", () => {
+  it.each([
+    [{ configured: false, ready: true }, "pi"],
+    [{ configured: true, ready: false }, "pi"],
+    [{ configured: true, ready: true }, "dsh"],
+  ] as const)("selects %s for a brand-new top-level tab", async (dsh, runtime) => {
+    mocks.getCapabilities.mockResolvedValue({ dsh });
+    const tabId = `tab-choice-${runtime}-${dsh.ready}`;
+    tabStore.setState({
+      tabs: [
+        {
+          id: tabId,
+          workspaceId: "workspace-1",
+          title: "Agent",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project" },
+        },
+      ],
+    });
+    mocks.startAgent.mockImplementation(async () => {
+      const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
+      expect(tab?.kind === "agent-chat" ? tab.data.runtime : undefined).toBe(runtime);
+      return { runtime, sessionId: "selected-session" };
+    });
+
+    await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
+
+    expect(mocks.startAgent).toHaveBeenCalledWith(expect.objectContaining({ runtime }));
+    expect(tabStore.getState().tabs[0]).toMatchObject({ data: { runtime } });
+    if (runtime === "dsh") expect(mocks.send).not.toHaveBeenCalled();
+  });
+
+  it("retains DSH after a start failure so retry does not reselect Pi", async () => {
+    const tabId = "tab-dsh-retry";
+    tabStore.setState({
+      tabs: [
+        {
+          id: tabId,
+          workspaceId: "workspace-1",
+          title: "Agent",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project" },
+        },
+      ],
+    });
+    mocks.getCapabilities.mockResolvedValueOnce({ dsh: { configured: true, ready: true } });
+    mocks.startAgent.mockRejectedValueOnce(new Error("DSH unavailable")).mockResolvedValueOnce({ runtime: "dsh" });
+
+    await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
+
+    const persistedTab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
+    const persistedRuntime = persistedTab?.kind === "agent-chat" ? persistedTab.data.runtime : undefined;
+    expect(persistedRuntime).toBe("dsh");
+
+    await startAgentChatSession({
+      tabId,
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      runtime: persistedRuntime,
+      sessionView: "full",
+    });
+
+    expect(mocks.startAgent).toHaveBeenNthCalledWith(2, expect.objectContaining({ runtime: "dsh" }));
+    expect(mocks.getCapabilities).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves a requested restored session ID when start initialization fails", async () => {
+    mocks.startAgent.mockRejectedValueOnce(new Error("DSH unavailable"));
+
+    await startAgentChatSession({
+      tabId: "tab-restored-error",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "restored-dsh-session",
+      runtime: "dsh",
+      sessionView: "full",
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-restored-error"]).toMatchObject({
+      sessionId: "restored-dsh-session",
+      state: "error",
+    });
+  });
+
+  it("starts restored DSH history through agent.start with resume without changing Pi", async () => {
+    mocks.startAgent.mockResolvedValue({ ok: true });
+    await startAgentChatSession({
+      tabId: "tab-pi",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "same-id",
+      runtime: "pi",
+      sessionView: "full",
+    });
+    await startAgentChatSession({
+      tabId: "tab-dsh",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "same-id",
+      runtime: "dsh",
+      sessionView: "full",
+    });
+
+    expect(mocks.startAgent).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ runtime: "pi", sessionId: "same-id" }),
+    );
+    expect(mocks.startAgent).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ runtime: "dsh", sessionId: "same-id", resume: true }),
+    );
+    const piStartRequest = mocks.startAgent.mock.calls[0]?.[0];
+    if (!piStartRequest) throw new Error("missing Pi start request");
+    expect(piStartRequest).not.toHaveProperty("resume");
+  });
+
   it("classifies pre-existing history as interrupted after a fresh start", async () => {
     mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "session-1" });
 
@@ -196,6 +316,25 @@ describe("renameAgentChatSessionByTab", () => {
     expect(renamePiCompatibilitySession).toHaveBeenCalledWith({ sessionId: "sess-123", title: "New Chat Name" });
   });
 
+  it("does not rename an equal-ID Pi session from a DSH tab", async () => {
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-dsh",
+          workspaceId: "ws-1",
+          title: "DSH Chat",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp", sessionId: "shared-id", runtime: "dsh" },
+        },
+      ],
+    });
+
+    await renameAgentChatSessionByTab("tab-dsh", "New DSH Name");
+
+    expect(renamePiCompatibilitySession).not.toHaveBeenCalled();
+  });
+
   it("does nothing for non-agent-chat tabs", async () => {
     vi.mocked(renamePiCompatibilitySession).mockResolvedValue({ ok: true });
     tabStore.setState({
@@ -234,5 +373,76 @@ describe("renameAgentChatSessionByTab", () => {
     await renameAgentChatSessionByTab("tab-chat", "New Name");
 
     expect(renamePiCompatibilitySession).not.toHaveBeenCalled();
+  });
+});
+
+describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
+  it("marks an empty DSH session loaded and idle after ensure", async () => {
+    const tabId = "tab-dsh-empty";
+    tabStore.setState({
+      tabs: [
+        {
+          id: tabId,
+          workspaceId: "workspace-1",
+          title: "Agent",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", runtime: "dsh" },
+        },
+      ],
+    });
+    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-empty" });
+
+    await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
+
+    expect(agentChatStore.getState().sessionsByTabId[tabId]).toMatchObject({
+      state: "idle",
+      messages: [],
+      availableModels: [],
+      hasLoadedModels: true,
+      hasLoadedState: true,
+    });
+  });
+
+  it("keeps projected DSH messages and running status after ensure", async () => {
+    const tabId = "tab-dsh-restored";
+    tabStore.setState({
+      tabs: [
+        {
+          id: tabId,
+          workspaceId: "workspace-1",
+          title: "Agent",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", runtime: "dsh", sessionId: "dsh-restored" },
+        },
+      ],
+    });
+    mocks.startAgent.mockImplementation(async () => {
+      agentChatStore
+        .getState()
+        .replaceMessages(tabId, [
+          { id: "projected", role: "assistant", content: [{ type: "text", text: "Restored" }], timestamp: 0 },
+        ]);
+      agentChatStore.getState().setSessionState(tabId, "running");
+      return { runtime: "dsh", sessionId: "dsh-restored" };
+    });
+
+    await startAgentChatSession({
+      tabId,
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "dsh-restored",
+      runtime: "dsh",
+      sessionView: "full",
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId[tabId]).toMatchObject({
+      state: "running",
+      messages: [expect.objectContaining({ id: "projected" })],
+      availableModels: [],
+      hasLoadedModels: true,
+      hasLoadedState: true,
+    });
   });
 });

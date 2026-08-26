@@ -29,3 +29,12 @@ export function requirePositiveSafeInteger(record: WireRecord, field: string): n
   }
   return value;
 }
+
+/** Reads one required safe-integer field with an inclusive lower bound. */
+export function requireSafeIntegerAtLeast(record: WireRecord, field: string, minimum: number): number {
+  const value = record[field];
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
+    throw new TypeError(`${field} must be a safe integer greater than or equal to ${minimum}`);
+  }
+  return value;
+}

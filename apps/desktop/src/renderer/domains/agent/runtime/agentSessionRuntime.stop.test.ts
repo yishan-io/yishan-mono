@@ -41,6 +41,7 @@ vi.mock("../subscriptions/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
   attachAgentSession: mocks.attachAgent,
   abortAgentSession: mocks.abortAgent,
   disposeAgentSession: mocks.disposeAgent,

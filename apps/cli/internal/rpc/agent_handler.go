@@ -29,6 +29,7 @@ type PiService interface {
 
 // AgentService backs the runtime-neutral agent.* facade.
 type AgentService interface {
+	AgentGetCapabilities(ctx context.Context) (any, error)
 	AgentStart(ctx context.Context, connection *Connection, req AgentStartParams) (any, error)
 	AgentAttach(ctx context.Context, connection *Connection, req AgentAttachParams) (any, error)
 	AgentPrompt(ctx context.Context, req AgentPromptParams) (any, error)
@@ -101,6 +102,8 @@ func (h *AgentHandler) Call(ctx context.Context, connection *Connection, method 
 
 func (h *AgentHandler) callAgent(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error) {
 	switch method {
+	case MethodAgentGetCapabilities:
+		return h.Agent.AgentGetCapabilities(ctx)
 	case MethodAgentListDetectionStatuses:
 		return h.Catalog.AgentListDetectionStatuses(ctx, params)
 	case MethodAgentListModels:

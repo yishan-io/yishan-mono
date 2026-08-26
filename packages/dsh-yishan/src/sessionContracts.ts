@@ -40,6 +40,9 @@ export type SessionHeaderResult = {
 export type SessionReadResult = {
   session: SessionHeaderResult;
   events: readonly SessionEvent[];
+  incarnation: string;
+  asOfSeq: number;
+  durableThroughSeq: number;
 };
 
 /** Workspace-scoped request to resume one DSH session. */

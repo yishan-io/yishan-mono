@@ -23,11 +23,22 @@ func (s *Service) Start(ctx context.Context, connState *rpc.Connection, req rpc.
 	if err := validatePiStart(req); err != nil {
 		return nil, err
 	}
+	claim, err := s.runtimeIdentities.claim(req.SessionID, rpc.AgentRuntimePi)
+	if err != nil {
+		return nil, err
+	}
 	admission, err := s.piSessions.Admit(req.WorkspaceID)
 	if err != nil {
+		if claim.isFresh {
+			s.runtimeIdentities.release(req.SessionID, rpc.AgentRuntimePi)
+		}
 		return nil, workspaceClosingError(req.WorkspaceID)
 	}
-	return s.startAdmittedPi(ctx, admission, connState, req)
+	result, err := s.startAdmittedPi(ctx, admission, connState, req)
+	if err != nil && claim.isFresh {
+		s.runtimeIdentities.release(req.SessionID, rpc.AgentRuntimePi)
+	}
+	return result, err
 }
 
 func validatePiStart(req rpc.PiStartParams) error {
@@ -245,6 +256,9 @@ func (s *Service) stopClaim(ctx context.Context, claim *session.StopClaim) error
 	}
 	err := s.stopProcess(claim.Process())
 	s.piSessions.CompleteStop(claim, err)
+	if err == nil {
+		s.runtimeIdentities.release(claim.Process().ID(), rpc.AgentRuntimePi)
+	}
 	return err
 }
 

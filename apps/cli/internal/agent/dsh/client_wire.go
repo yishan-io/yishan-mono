@@ -24,6 +24,7 @@ type rpcEnvelope struct {
 	Method  string          `json:"method"`
 	Result  json.RawMessage `json:"result"`
 	Error   *rpcServerError `json:"error"`
+	Params  json.RawMessage `json:"params"`
 }
 
 func writeRequest(process *runtimeProcess, id uint64, method string, params any) error {
@@ -114,11 +115,11 @@ func (s *Supervisor) drainOutput(process *runtimeProcess) {
 func (s *Supervisor) routeOutput(process *runtimeProcess, line []byte) {
 	frame, err := parseRPCEnvelope(line)
 	if err != nil {
-		s.diagnose(fmt.Sprintf("decode DSH stdout: %v", err))
+		s.handleMalformedEnvelope(process, line, err)
 		return
 	}
 	if frame.ID == nil {
-		s.diagnose("DSH notification: " + frame.Method)
+		s.routeNotification(process, frame)
 		return
 	}
 	if frame.Method != "" {
@@ -126,6 +127,24 @@ func (s *Supervisor) routeOutput(process *runtimeProcess, line []byte) {
 		return
 	}
 	process.routeResponse(frame)
+}
+
+func (s *Supervisor) handleMalformedEnvelope(process *runtimeProcess, line []byte, cause error) {
+	s.diagnose(fmt.Sprintf("decode DSH stdout: %v", cause))
+	method, ok := extractEnvelopeMethod(line)
+	if !ok || !isKnownNotification(method) {
+		return
+	}
+	s.invalidateProcess(process, fmt.Errorf("malformed DSH notification %s: %w", method, cause))
+}
+
+func extractEnvelopeMethod(line []byte) (string, bool) {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(line, &fields) != nil || fields == nil {
+		return "", false
+	}
+	method, ok := rawString(fields["method"])
+	return method, ok && method != ""
 }
 
 func parseRPCEnvelope(line []byte) (rpcEnvelope, error) {
@@ -188,7 +207,7 @@ func parseRPCNotification(fields map[string]json.RawMessage) (rpcEnvelope, error
 	if !hasExactKeys(fields, "jsonrpc", "method") && !hasExactKeys(fields, "jsonrpc", "method", "params") {
 		return rpcEnvelope{}, errors.New("notification has unsupported fields")
 	}
-	return rpcEnvelope{JSONRPC: "2.0", Method: method}, nil
+	return rpcEnvelope{JSONRPC: "2.0", Method: method, Params: fields["params"]}, nil
 }
 
 func responseKey(hasError bool) string {

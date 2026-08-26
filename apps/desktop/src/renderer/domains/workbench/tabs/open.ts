@@ -63,6 +63,7 @@ export function buildTabDataByInput<T extends OpenTabInput>(input: T): Workbench
     return {
       cwd: input.cwd || "",
       sessionId: input.sessionId || undefined,
+      runtime: input.runtime,
       sessionView: input.sessionView ?? "full",
       subagentAgentId: input.subagentAgentId || undefined,
       subagentParentSessionId: input.subagentParentSessionId || undefined,

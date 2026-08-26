@@ -2,10 +2,8 @@ import { PassThrough, Writable } from "node:stream";
 
 import { Context, Service } from "@deepseek-ai/cordis";
 import * as agentSpine from "@deepseek-ai/dsh-agent-spine-demo";
-import { SessionId } from "@deepseek-ai/dsh-session";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ResumedSessionOwner } from "./runtimeServer";
 import * as runtimeServer from "./runtimeServer";
 
 class FakeSessionQuery extends Service {
@@ -37,6 +35,9 @@ type Harness = {
 async function mountRuntime(): Promise<Harness> {
   const ctx = new Context();
   await ctx.plugin(agentSpine, { workspaceContext: false });
+  ctx.provide("sessionPersistence", {
+    readFrom: async () => [],
+  });
   await ctx.plugin(FakeSessionQuery);
   const input = new PassThrough();
   const frames: Record<string, unknown>[] = [];
@@ -71,38 +72,10 @@ async function waitForFrame(harness: Harness, id: number): Promise<Record<string
 afterEach(() => vi.unstubAllEnvs());
 
 describe("Yishan runtime server", () => {
-  it("coalesces resume ownership and routes prompts to the retained agent", async () => {
-    const followup = vi.fn();
-    const dispose = vi.fn(async () => undefined);
-    const handle = { agent: { followup }, dispose };
-    const resume = vi.fn(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      return handle;
-    });
-    const ctx = { agents: { get: vi.fn(() => undefined), resume } } as unknown as Context;
-    const owner = new ResumedSessionOwner(ctx);
-
-    await Promise.all([owner.resume(SessionId("session-1")), owner.resume(SessionId("session-1"))]);
-    expect(resume).toHaveBeenCalledTimes(1);
-    await expect(
-      owner.prompt({ sessionId: "session-1", contentBlocks: [{ type: "text", text: "continue" }] }),
-    ).resolves.toEqual({ messageId: expect.any(String) });
-    expect(followup).toHaveBeenCalledTimes(1);
-    await expect(owner.disposeSession(SessionId("session-1"))).resolves.toBe(true);
-    expect(dispose).toHaveBeenCalledTimes(1);
-    await owner.dispose();
-  });
-
-  it("routes prompts to an already-live agent without cold resume", async () => {
-    const followup = vi.fn();
-    const agent = { followup };
-    const ctx = { agents: { get: vi.fn(() => agent), resume: vi.fn() } } as unknown as Context;
-    const owner = new ResumedSessionOwner(ctx);
-
-    await expect(
-      owner.prompt({ sessionId: "session-1", contentBlocks: [{ type: "text", text: "continue" }] }),
-    ).resolves.toEqual({ messageId: expect.any(String) });
-    expect(followup).toHaveBeenCalledTimes(1);
+  it("declares each runtime service it accesses for injection", () => {
+    expect(runtimeServer.inject).toEqual(
+      expect.arrayContaining(["agents", "sessionQuery", "sessions", "sessionPersistence"]),
+    );
   });
 
   it("mounts stock initialize and Yishan session list on one transport", async () => {
@@ -128,6 +101,42 @@ describe("Yishan runtime server", () => {
         result: {
           sessions: [{ sessionId: "session-1", createdAt: 1, live: false, persisted: true }],
         },
+      });
+    } finally {
+      await harness.ctx.fiber.dispose();
+    }
+  });
+
+  it("delegates non-text prompts for stock-owned sessions without Yishan parsing", async () => {
+    vi.stubEnv("DEEPSEEK_API_KEY", "test-key");
+    const harness = await mountRuntime();
+    try {
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 5, method: "initialize", params: { cwd: "/workspace", provider: "deepseek-official", model: "test-model" } })}\n`,
+      );
+      await waitForFrame(harness, 5);
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 6, method: "session/prompt", params: { sessionId: "stock-session", contentBlocks: [{ type: "reasoning", text: "context" }] } })}\n`,
+      );
+
+      await expect(waitForFrame(harness, 6)).resolves.toMatchObject({ result: { messageId: expect.any(String) } });
+    } finally {
+      await harness.ctx.fiber.dispose();
+    }
+  });
+
+  it("keeps inspection available but rejects execution extensions until initialize succeeds", async () => {
+    const harness = await mountRuntime();
+    try {
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 3, method: "yishan.v1.session.list", params: { cwd: "/workspace" } })}\n`,
+      );
+      await expect(waitForFrame(harness, 3)).resolves.toMatchObject({ result: { sessions: expect.any(Array) } });
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 4, method: "yishan.v1.session.start", params: { cwd: "/workspace", sessionId: "one" } })}\n`,
+      );
+      await expect(waitForFrame(harness, 4)).resolves.toMatchObject({
+        error: { message: "initialize must succeed before session execution" },
       });
     } finally {
       await harness.ctx.fiber.dispose();

@@ -35,6 +35,12 @@ type DSHSessions interface {
 	ReadSession(context.Context, dsh.SessionReadRequest) (dsh.SessionReadResult, error)
 	ResumeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionResumeResult, error)
 	DisposeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionDisposeResult, error)
+	StartSession(context.Context, dsh.SessionStartRequest) (dsh.SessionStartResult, error)
+	PromptSession(context.Context, dsh.SessionPromptRequest) (dsh.SessionPromptResult, error)
+	CancelSession(context.Context, dsh.SessionCancelRequest) (dsh.SessionCancelResult, error)
+	SubscribeSession(context.Context, dsh.SessionSubscribeRequest) (dsh.SessionSubscription, error)
+	FlushSession(context.Context, dsh.SessionFlushRequest) (dsh.DurableCursor, error)
+	Health() dsh.Health
 }
 
 // Deps are the explicit dependencies of the agent application service.
@@ -76,6 +82,10 @@ type Service struct {
 	// piSessions owns the pi agent session registry (maps + mutexes live in
 	// internal/agent/session); the service only coordinates through it.
 	piSessions *session.Registry
+	// dshSessions owns ephemeral DSH live-session routing state.
+	dshSessions *dshLiveRegistry
+	// runtimeIdentities owns atomic runtime-scoped session-id reservations.
+	runtimeIdentities *runtimeIdentityRegistry
 	// stopProcess is overridden by focused tests to exercise cleanup failures.
 	stopProcess func(*agentmanager.Session) error
 	// afterProcessStart is a focused-test barrier for the manager/register gap.
@@ -94,6 +104,8 @@ type Service struct {
 	afterStartStopConflict func()
 	// afterWorkspaceStopWaiter is a focused-test barrier for a coalesced caller.
 	afterWorkspaceStopWaiter func()
+	// publishDSHUpdateError lets focused tests simulate frontend notification failures.
+	publishDSHUpdateError error
 
 	workspaceStopsMu sync.Mutex
 	workspaceStops   map[string]*workspaceStop
@@ -117,11 +129,13 @@ func NewService(deps Deps) *Service {
 		deps.AgentLifecycleCtx = context.Background()
 	}
 	return &Service{
-		deps:           deps,
-		piSessions:     session.NewRegistry(),
-		stopProcess:    func(proc *agentmanager.Session) error { return proc.Close() },
-		desktopConns:   make(map[*rpc.Connection]struct{}),
-		workspaceStops: make(map[string]*workspaceStop),
+		deps:              deps,
+		piSessions:        session.NewRegistry(),
+		dshSessions:       newDSHLiveRegistry(),
+		runtimeIdentities: newRuntimeIdentityRegistry(),
+		stopProcess:       func(proc *agentmanager.Session) error { return proc.Close() },
+		desktopConns:      make(map[*rpc.Connection]struct{}),
+		workspaceStops:    make(map[string]*workspaceStop),
 	}
 }
 

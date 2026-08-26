@@ -184,6 +184,15 @@ export type ComputerPermissionStatus = {
 /** Identifies the execution runtime selected by runtime-neutral agent procedures. */
 export type AgentRuntime = "pi" | "dsh";
 
+/** Reports which daemon-owned agent runtimes can start new sessions. */
+export type AgentCapabilities = {
+  dsh: {
+    configured: boolean;
+    ready: boolean;
+    incarnation?: string;
+  };
+};
+
 /** Starts a runtime-neutral agent session. */
 export type AgentStartRequest = {
   runtime: AgentRuntime;
@@ -202,6 +211,8 @@ export type AgentAttachRequest = {
   tabId?: string;
   workspaceId: string;
   cwd: string;
+  /** DSH replay cursor; a first DSH attach must use -1. */
+  afterSeq?: number;
 };
 
 /** Sends one runtime-neutral prompt to an agent session. */
@@ -290,6 +301,9 @@ export type AgentDSHSessionMetadata = {
 export type AgentDSHHistory = {
   session: AgentDSHSessionMetadata;
   events: unknown[];
+  incarnation: string;
+  asOfSeq: number;
+  durableThroughSeq: number;
 };
 
 /** Returns Pi durable history for a Pi runtime request. */

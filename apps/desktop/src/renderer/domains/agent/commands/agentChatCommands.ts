@@ -1,14 +1,21 @@
-import { tabStore } from "@renderer/domains/workbench";
+import { bindAgentChatTabRuntime, tabStore } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "@shared/async/delay";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import { isAgentSessionBusy } from "../chat/agentChatTypes";
-import { renamePiCompatibilitySession, sendPiCompatibilityCommand } from "../daemon/daemonAgentProcedures";
+import {
+  getAgentCapabilities,
+  renamePiCompatibilitySession,
+  sendPiCompatibilityCommand,
+} from "../daemon/daemonAgentProcedures";
+import type { AgentRuntime } from "../daemon/daemonAgentTypes";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
+import { normalizeAgentChatRuntime, selectNewAgentChatRuntime } from "../runtime/agentRuntimeSelection";
 import {
   abortAgentSession,
   clearPiSessionHandle,
+  ensureAgentSession,
   ensurePiSession,
   fetchPiAgentMessagesCompatibility,
   fetchPiAgentModelsCompatibility,
@@ -17,6 +24,7 @@ import {
   promptAgentSession,
   reattachPiSession,
   recoverAgentSessionAfterReconnect,
+  retryDSHTranscript,
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
@@ -27,7 +35,14 @@ import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } f
 // state-hydration sends. These command wrappers keep the public command surface
 // stable for UI callers and the AgentCommands contract.
 
-export { ensurePiSession, findTabWithSession, clearPiSessionHandle, reattachPiSession, stopPiSession };
+export {
+  ensurePiSession,
+  findTabWithSession,
+  clearPiSessionHandle,
+  reattachPiSession,
+  retryDSHTranscript,
+  stopPiSession,
+};
 export {
   fetchPiAgentStateCompatibility,
   fetchPiAgentMessagesCompatibility,
@@ -45,15 +60,20 @@ export async function startAgentChatSession(opts: {
   workspaceId: string;
   cwd: string;
   sessionId?: string;
+  runtime?: AgentRuntime;
   sessionView: AgentChatSessionView;
   paneId?: string;
   subagentParentSessionId?: string;
 }): Promise<void> {
   const isReadOnlySubagentDetail = opts.sessionView === "subagent-detail";
+  const runtime = await resolveAgentChatRuntime(opts);
+  bindAgentChatTabRuntime({ tabId: opts.tabId, runtime });
 
   if (isReadOnlySubagentDetail) {
     const childSessionId = opts.sessionId?.trim() || opts.tabId;
-    const parentTabId = opts.subagentParentSessionId ? findTabWithSession(opts.subagentParentSessionId) : undefined;
+    const parentTabId = opts.subagentParentSessionId
+      ? findTabWithSession(opts.subagentParentSessionId, "pi")
+      : undefined;
     const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
     const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
     const isChildFinished = parentSession?.finishedSubagents.some(
@@ -76,7 +96,8 @@ export async function startAgentChatSession(opts: {
   }
 
   try {
-    const { sessionId: startedSessionId, attached } = await ensurePiSession({
+    const { sessionId: startedSessionId, attached } = await ensureAgentSession({
+      runtime,
       tabId: opts.tabId,
       workspaceId: opts.workspaceId,
       cwd: opts.cwd,
@@ -90,13 +111,39 @@ export async function startAgentChatSession(opts: {
     // An attach means the process is still alive, so rows stay live.
     agentChatStore.getState().setSubagentSessionEndedAt(opts.tabId, attached ? null : Date.now());
 
-    await fetchPiAgentStateCompatibility({ tabId: opts.tabId, sessionId: startedSessionId });
-    await fetchPiAgentMessagesCompatibility({ tabId: opts.tabId, sessionId: startedSessionId });
-    await fetchPiAgentModelsCompatibility({ tabId: opts.tabId, sessionId: startedSessionId });
-    await refreshPiAgentSessionStatsCompatibility(startedSessionId);
+    if (runtime === "pi") {
+      await fetchPiAgentStateCompatibility({ tabId: opts.tabId, sessionId: startedSessionId });
+      await fetchPiAgentMessagesCompatibility({ tabId: opts.tabId, sessionId: startedSessionId });
+      await fetchPiAgentModelsCompatibility({ tabId: opts.tabId, sessionId: startedSessionId });
+      await refreshPiAgentSessionStatsCompatibility(startedSessionId);
+    } else {
+      const session = agentChatStore.getState().sessionsByTabId[opts.tabId];
+      agentChatStore.getState().replaceMessages(opts.tabId, session?.messages ?? []);
+      agentChatStore.getState().setAvailableModels(opts.tabId, []);
+      agentChatStore.getState().markStateLoaded(opts.tabId);
+      if (agentChatStore.getState().sessionsByTabId[opts.tabId]?.state === "starting") {
+        agentChatStore.getState().setSessionState(opts.tabId, "idle");
+      }
+    }
   } catch (error) {
-    agentChatStore.getState().initSession(opts.tabId, opts.tabId);
+    agentChatStore.getState().initSession(opts.tabId, opts.sessionId?.trim() || opts.tabId);
     agentChatStore.getState().setSessionError(opts.tabId, getErrorMessage(error));
+  }
+}
+
+/** Resolves explicit and persisted identity before querying capabilities for a new top-level tab. */
+async function resolveAgentChatRuntime(opts: {
+  runtime?: AgentRuntime;
+  sessionId?: string;
+  sessionView: AgentChatSessionView;
+}): Promise<AgentRuntime> {
+  if (opts.runtime || opts.sessionId || opts.sessionView === "subagent-detail") {
+    return normalizeAgentChatRuntime(opts);
+  }
+  try {
+    return selectNewAgentChatRuntime(await getAgentCapabilities());
+  } catch {
+    return "pi";
   }
 }
 
@@ -320,7 +367,8 @@ export async function openChatFileTab(input: {
 export async function renameAgentChatSessionByTab(tabId: string, title: string): Promise<void> {
   const tab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
   const sessionId = tab?.kind === "agent-chat" ? tab.data.sessionId?.trim() : undefined;
-  if (!sessionId) {
+  const runtime = tab?.kind === "agent-chat" ? (tab.data.runtime ?? "pi") : undefined;
+  if (!sessionId || runtime !== "pi") {
     return;
   }
   await renamePiCompatibilitySession({ sessionId, title });

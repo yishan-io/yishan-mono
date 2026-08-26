@@ -29,6 +29,7 @@ describe("SessionHistoryMenu", () => {
   it("returns the selected session summary including its authoritative workspace path", async () => {
     const session = {
       sessionId: "session-1",
+      runtime: "dsh" as const,
       createdAt: Date.parse("2026-07-13T10:00:00.000Z"),
       previewText: "Recover this chat",
       cwd: "/tmp/listing-project",
@@ -54,7 +55,7 @@ describe("SessionHistoryMenu", () => {
 
     fireEvent.click(screen.getByText("Recover this chat"));
 
-    expect(onSelectSession).toHaveBeenCalledWith(session, "Recover this chat");
+    expect(onSelectSession).toHaveBeenCalledWith(expect.objectContaining({ runtime: "dsh" }), "Recover this chat");
     expect(onClose).toHaveBeenCalled();
   });
 });

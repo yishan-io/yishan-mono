@@ -19,9 +19,15 @@ describe("parseDurableCursor", () => {
     });
   });
 
-  it("rejects negative watermarks", () => {
-    expect(() =>
+  it("accepts -1 as the empty-session durable watermark", () => {
+    expect(
       parseDurableCursor({ sessionId: "session-1", durableThroughSeq: -1, incarnation: "runtime-1" }),
-    ).toThrow("durableThroughSeq must be a non-negative safe integer");
+    ).toMatchObject({ durableThroughSeq: -1 });
+  });
+
+  it("rejects watermarks below the empty-session sentinel", () => {
+    expect(() =>
+      parseDurableCursor({ sessionId: "session-1", durableThroughSeq: -2, incarnation: "runtime-1" }),
+    ).toThrow("durableThroughSeq must be a safe integer greater than or equal to -1");
   });
 });

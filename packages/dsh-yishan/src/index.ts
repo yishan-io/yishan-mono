@@ -18,12 +18,44 @@ export {
 } from "./capabilityRequest";
 export { parseDurableCursor, type DurableCursor } from "./durableCursor";
 export {
+  parseSessionCancelRequest,
+  parseSessionCancelResult,
+  parseSessionFlushRequest,
+  parseSessionFlushResult,
+  parseSessionPromptRequest,
+  parseSessionPromptResult,
+  parseSessionStartRequest,
+  parseSessionStartResult,
+  parseSessionSubscribeRequest,
+  parseSessionSubscribeResult,
+  parseTranscriptResetNotification,
+  type SessionCancelRequest,
+  type SessionCancelResult,
+  type SessionExecutionRequest,
+  type SessionFlushRequest,
+  type SessionPromptRequest,
+  type SessionPromptResult,
+  type SessionStartRequest,
+  type SessionStartResult,
+  type SessionSubscribeRequest,
+  type SessionSubscribeResult,
+  type SequencedSessionEvent,
+  type TextPromptContentBlock,
+  type TranscriptResetNotification,
+} from "./executionContracts";
+export {
   parseInteractionRequest,
   type InteractionKind,
   type InteractionRequest,
 } from "./interactionRequest";
 export { parseInteractionResponse, type InteractionResponse } from "./interactionResponse";
 export { createRequestRouter, type JsonRpcRequestHandler } from "./requestRouter";
+export {
+  YishanSessionExecutionError,
+  YishanSessionExecutionOwner,
+  type DurableSessionSnapshot,
+  type YishanSessionExecutionDependencies,
+} from "./sessionExecutionOwner";
 export {
   apply,
   inject,

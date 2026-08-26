@@ -1,20 +1,20 @@
 import type { Readable, Writable } from "node:stream";
 
 import type { Context } from "@deepseek-ai/cordis";
-import type { AgentHandle } from "@deepseek-ai/dsh-agent";
-import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { HarnessSdkJsonRpcServer } from "@deepseek-ai/dsh-sdk-jsonrpc-server";
 import { JsonRpcLineTransport } from "@deepseek-ai/dsh-sdk-protocol";
-import type { SessionPromptParams } from "@deepseek-ai/dsh-sdk-protocol";
 import type { SessionId } from "@deepseek-ai/dsh-session";
 
+import { parseStockSessionPromptRequest } from "./executionContracts";
+import { YISHAN_METHODS } from "./protocol";
 import { createRequestRouter } from "./requestRouter";
+import { YishanSessionExecutionOwner } from "./sessionExecutionOwner";
 import { createSessionHandler } from "./sessionHandler";
 
 /** Cordis plugin name for the Yishan-owned SDK JSON-RPC stdio server. */
 export const name = "yishan-sdk-jsonrpc-server";
 /** Session history and agent lifecycle services are required at activation. */
-export const inject = ["agents", "sessionQuery"];
+export const inject = ["agents", "sessionQuery", "sessions", "sessionPersistence"];
 
 /** Runtime-only stream hooks used by packaged launchers and tests. */
 export type YishanRuntimeServerConfig = {
@@ -23,62 +23,6 @@ export type YishanRuntimeServerConfig = {
   exit?: (code: number) => void;
 };
 
-export class ResumedSessionOwner {
-  private readonly handles = new Map<string, AgentHandle>();
-  private readonly tasks = new Map<string, Promise<void>>();
-
-  constructor(private readonly ctx: Context) {}
-
-  async resume(sessionId: SessionId): Promise<void> {
-    if (this.ctx.agents.get(sessionId) !== undefined) return;
-    const key = String(sessionId);
-    const active = this.tasks.get(key);
-    if (active !== undefined) return active;
-    const task = this.resumeOwned(sessionId, key);
-    this.tasks.set(key, task);
-    return task;
-  }
-
-  async disposeSession(sessionId: SessionId): Promise<boolean> {
-    const key = String(sessionId);
-    await this.tasks.get(key);
-    const handle = this.handles.get(key);
-    if (handle === undefined) return false;
-    this.handles.delete(key);
-    await handle.dispose();
-    return true;
-  }
-
-  async prompt(params: SessionPromptParams): Promise<{ messageId: string } | undefined> {
-    const agent = this.handles.get(params.sessionId)?.agent ?? this.ctx.agents.get(params.sessionId as SessionId);
-    if (agent === undefined) return undefined;
-    const message = createUserMessage({ content: params.contentBlocks, source: { kind: "user" } });
-    agent.followup(message);
-    return { messageId: message.id };
-  }
-
-  async dispose(): Promise<void> {
-    const taskResults = await Promise.allSettled(this.tasks.values());
-    const handles = [...this.handles.values()];
-    this.handles.clear();
-    const handleResults = await Promise.allSettled(handles.map(async (handle) => await handle.dispose()));
-    const failures = [...taskResults, ...handleResults]
-      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
-      .map((result) => result.reason as unknown);
-    if (failures.length === 1) throw failures[0];
-    if (failures.length > 1) throw new AggregateError(failures, "failed to dispose resumed DSH sessions");
-  }
-
-  private async resumeOwned(sessionId: SessionId, key: string): Promise<void> {
-    try {
-      const handle = await this.ctx.agents.resume({ resumeSessionId: sessionId });
-      this.handles.set(key, handle);
-    } finally {
-      this.tasks.delete(key);
-    }
-  }
-}
-
 /** Mounts stock SDK methods and Yishan session extensions on one stdio owner. */
 export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): void {
   const input = config.input ?? process.stdin;
@@ -86,32 +30,60 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
   const exit = config.exit ?? ((code: number): void => process.exit(code));
   const transport = new JsonRpcLineTransport(input, output);
   const stock = new HarnessSdkJsonRpcServer(ctx, transport);
-  const resumed = new ResumedSessionOwner(ctx);
+  const owner = new YishanSessionExecutionOwner({
+    agents: {
+      get: (sessionId) => ctx.agents.get(sessionId as SessionId),
+      create: async (options) => await ctx.agents.create({ ...options, sessionId: options.sessionId as SessionId }),
+      resume: async (options) =>
+        await ctx.agents.resume({ ...options, resumeSessionId: options.resumeSessionId as SessionId }),
+    },
+    sessions: {
+      get: (sessionId) => ctx.sessions.get(sessionId as SessionId),
+      flush: async (session) => await ctx.sessions.flush(session as never),
+    },
+    sessionPersistence: {
+      readFrom: async (sessionId, fromSeq) => await ctx.sessionPersistence.readFrom(sessionId as SessionId, fromSeq),
+    },
+    notify: (method, params) => transport.notify(method as never, params as never),
+  });
   let shutdownTask: Promise<Record<string, never>> | undefined;
+  let isInitialized = false;
 
   const sessions = createSessionHandler({
     sessionQuery: ctx.sessionQuery,
-    resumeSession: async (sessionId) => await resumed.resume(sessionId),
-    disposeSession: async (sessionId) => await resumed.disposeSession(sessionId),
+    resumeSession: async (sessionId) => await owner.resume({ sessionId, cwd: "" }),
+    disposeSession: async (sessionId) => await owner.disposeSession({ sessionId, cwd: "" }),
+    execution: owner,
   });
   const route = createRequestRouter(async (method, params) => {
     if (method === "session/prompt") {
-      const result = await resumed.prompt(params as unknown as SessionPromptParams);
-      if (result !== undefined) return result;
+      const sessionId = typeof params.sessionId === "string" ? params.sessionId : "";
+      if (sessionId !== "" && owner.owns(sessionId)) {
+        const prompt = parseStockSessionPromptRequest(params);
+        return await owner.stockPrompt(prompt.sessionId, prompt.contentBlocks);
+      }
     }
     return await stock.handleRequest(method, params);
   }, sessions);
 
+  ctx.on("session/event", (session, event) => owner.handleSessionEvent(session, event));
+
   transport.onRequest(async (method, params) => {
     if (method === "initialize") {
       await ctx.get("loader")?.await();
-      return await stock.handleRequest(method, params);
+      const result = await stock.handleRequest(method, params);
+      owner.setInitializeOptions(getInitializeOptions(params));
+      isInitialized = true;
+      return result;
     }
     if (method === "shutdown") {
-      shutdownTask ??= shutdownRuntime(resumed, stock);
+      shutdownTask ??= shutdownRuntime(owner, stock);
       const result = await shutdownTask;
       setImmediate(() => void disposeAndExit(ctx, transport, exit));
       return result;
+    }
+    if (!isInitialized && isExecutionExtension(method)) {
+      throw new Error("initialize must succeed before session execution");
     }
     return await route(method, params);
   });
@@ -119,7 +91,7 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
   ctx.effect(() => {
     transport.start();
     return async () => {
-      shutdownTask ??= shutdownRuntime(resumed, stock);
+      shutdownTask ??= shutdownRuntime(owner, stock);
       await shutdownTask;
       transport.close();
     };
@@ -127,10 +99,10 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
 }
 
 async function shutdownRuntime(
-  resumed: ResumedSessionOwner,
+  owner: YishanSessionExecutionOwner,
   stock: HarnessSdkJsonRpcServer,
 ): Promise<Record<string, never>> {
-  const results = await Promise.allSettled([resumed.dispose(), stock.shutdown()]);
+  const results = await Promise.allSettled([owner.dispose(), stock.shutdown()]);
   const failures = results
     .filter((result): result is PromiseRejectedResult => result.status === "rejected")
     .map((result) => result.reason as unknown);
@@ -147,4 +119,28 @@ async function disposeAndExit(
   await Promise.allSettled([transport.flush()]);
   await Promise.allSettled([ctx.root.fiber.dispose()]);
   exit(0);
+}
+
+function getInitializeOptions(params: Record<string, unknown>): {
+  provider?: string;
+  model?: string;
+  maxTokens?: number;
+} {
+  return {
+    ...(typeof params.provider === "string" ? { provider: params.provider } : {}),
+    ...(typeof params.model === "string" ? { model: params.model } : {}),
+    ...(typeof params.maxTokens === "number" ? { maxTokens: params.maxTokens } : {}),
+  };
+}
+
+function isExecutionExtension(method: string): boolean {
+  return new Set<string>([
+    YISHAN_METHODS.start,
+    YISHAN_METHODS.prompt,
+    YISHAN_METHODS.cancel,
+    YISHAN_METHODS.subscribe,
+    YISHAN_METHODS.flush,
+    YISHAN_METHODS.resume,
+    YISHAN_METHODS.dispose,
+  ]).has(method);
 }

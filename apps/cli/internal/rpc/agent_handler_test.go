@@ -18,6 +18,9 @@ func (s *recordingAgentFacade) called(method string) (any, error) {
 	return AgentAckResult{Runtime: AgentRuntimePi, OK: true}, nil
 }
 
+func (s *recordingAgentFacade) AgentGetCapabilities(context.Context) (any, error) {
+	return s.called(MethodAgentGetCapabilities)
+}
 func (s *recordingAgentFacade) AgentStart(context.Context, *Connection, AgentStartParams) (any, error) {
 	return s.called(MethodAgentStart)
 }

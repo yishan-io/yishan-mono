@@ -6,7 +6,7 @@ import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { abortAgent, sendAgentPrompt } from "../commands/agentChatCommands";
 import { agentChatStore } from "../state/agentChatStore";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
-import { ensurePiSession, stopPiSession } from "./agentSessionRuntime";
+import { ensureAgentSession, ensurePiSession, stopAgentSession, stopPiSession } from "./agentSessionRuntime";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -44,6 +44,7 @@ vi.mock("../subscriptions/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
   attachAgentSession: mocks.attachAgent,
   abortAgentSession: mocks.abortAgent,
   disposeAgentSession: mocks.disposeAgent,
@@ -69,6 +70,84 @@ afterEach(() => {
   mocks.disposeAgent.mockReset();
   vi.clearAllMocks();
 });
+describe.each(["pi", "dsh"] as const)("agentSessionRuntime pre-start close (%s)", (runtime) => {
+  it("defers close through prior teardown and disposes the eventual backend start exactly once", async () => {
+    const sessionId = `${runtime}-pre-start`;
+    mocks.startAgent.mockResolvedValue({ runtime, sessionId });
+    await ensureAgentSession({
+      runtime,
+      tabId: `${runtime}-old`,
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId,
+    });
+
+    let resolvePriorDispose: (() => void) | undefined;
+    mocks.disposeAgent.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePriorDispose = resolve;
+        }),
+    );
+    const priorStop = stopAgentSession(`${runtime}-old`);
+    await vi.waitFor(() => expect(mocks.disposeAgent).toHaveBeenCalledTimes(1));
+
+    const ensurePromise = ensureAgentSession({
+      runtime,
+      tabId: `${runtime}-new`,
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId,
+    });
+    const stopPromise = stopAgentSession(`${runtime}-new`);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mocks.startAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.disposeAgent).toHaveBeenCalledTimes(1);
+
+    resolvePriorDispose?.();
+    await priorStop;
+    await ensurePromise;
+    await stopPromise;
+
+    expect(mocks.startAgent).toHaveBeenCalledTimes(2);
+    expect(mocks.disposeAgent).toHaveBeenCalledTimes(2);
+    expect(mocks.disposeAgent).toHaveBeenLastCalledWith(expect.objectContaining({ runtime, sessionId }));
+  });
+});
+
+describe("agentSessionRuntime Pi router wait", () => {
+  it("defers close until router readiness permits the backend start", async () => {
+    let resolveRouterReady: (() => void) | undefined;
+    vi.mocked(ensureAgentChatEventRouterReady).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRouterReady = resolve;
+        }),
+    );
+    mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "pi-router-wait" });
+
+    const ensurePromise = ensurePiSession({
+      tabId: "tab-router-wait",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId: "pi-router-wait",
+    });
+    const stopPromise = stopPiSession("tab-router-wait");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mocks.startAgent).not.toHaveBeenCalled();
+    expect(mocks.disposeAgent).not.toHaveBeenCalled();
+
+    resolveRouterReady?.();
+    await ensurePromise;
+    await stopPromise;
+
+    expect(mocks.startAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.disposeAgent).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("agentSessionRuntime.ensurePiSession", () => {
   it("uses neutral agent procedures for production Pi start, prompt, abort, and dispose", async () => {
     mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "neutral-session" });

@@ -69,8 +69,11 @@ type SessionHeader struct {
 
 // SessionReadResult is the response to a session read request.
 type SessionReadResult struct {
-	Session SessionHeader     `json:"session"`
-	Events  []json.RawMessage `json:"events"`
+	Session           SessionHeader     `json:"session"`
+	Events            []json.RawMessage `json:"events"`
+	Incarnation       string            `json:"incarnation"`
+	AsOfSeq           int64             `json:"asOfSeq"`
+	DurableThroughSeq int64             `json:"durableThroughSeq"`
 }
 
 // SessionResumeResult is the response to a session resume request.
@@ -138,18 +141,26 @@ func (s *Supervisor) ResumeSession(ctx context.Context, request SessionReadReque
 }
 
 func (s *Supervisor) call(ctx context.Context, method string, params any, target any) error {
+	_, err := s.callWithProcess(ctx, method, params, target)
+	return err
+}
+
+func (s *Supervisor) callWithProcess(ctx context.Context, method string, params any, target any) (*runtimeProcess, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return nil, err
 	}
 	process, id, response, remove, err := s.prepareRequest()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer remove()
 	if err := writeRequest(process, id, method, params); err != nil {
-		return err
+		return nil, err
 	}
-	return waitForResponse(ctx, response, method, target)
+	if err := waitForResponse(ctx, response, method, target); err != nil {
+		return nil, err
+	}
+	return process, nil
 }
 
 func (s *Supervisor) prepareRequest() (*runtimeProcess, uint64, <-chan rpcResponse, func(), error) {

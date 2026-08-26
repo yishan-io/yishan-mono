@@ -1,0 +1,1 @@
+{"sessionId":"session","tabId":"tab","workspaceId":"workspace","incarnation":"inc","update":{"event":{"sessionId":"session","seq":0,"event":{"type":"user/message","seq":0,"time":1,"data":{"message":{"id":"user","role":"user","content":[{"type":"text","text":"hello"}],"source":{"kind":"user"}}},"surfaceOp":"append"}}}}

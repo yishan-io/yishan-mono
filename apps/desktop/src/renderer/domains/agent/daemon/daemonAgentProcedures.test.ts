@@ -9,6 +9,7 @@ import {
   abortAgentSession,
   attachAgentSession,
   disposeAgentSession,
+  getAgentCapabilities,
   listAgentRuntimeSessions,
   promptAgentSession,
   readAgentRuntimeHistory,
@@ -16,6 +17,15 @@ import {
 } from "./daemonAgentProcedures";
 
 describe("runtime-neutral agent daemon procedures", () => {
+  it("gets the daemon-owned DSH capability without a renderer flag", async () => {
+    mocks.request.mockResolvedValue({ dsh: { configured: true, ready: true, incarnation: "run-1" } });
+
+    await expect(getAgentCapabilities()).resolves.toEqual({
+      dsh: { configured: true, ready: true, incarnation: "run-1" },
+    });
+    expect(mocks.request).toHaveBeenCalledWith("agent.getCapabilities", {});
+  });
+
   beforeEach(() => {
     mocks.request.mockReset();
   });
@@ -56,7 +66,13 @@ describe("runtime-neutral agent daemon procedures", () => {
   it("returns runtime-tagged session and history results without interpreting DSH events", async () => {
     mocks.request.mockResolvedValueOnce({ runtime: "dsh", sessions: [] }).mockResolvedValueOnce({
       runtime: "dsh",
-      dsh: { session: { sessionId: "session-1", createdAt: 1 }, events: [{ type: "message" }] },
+      dsh: {
+        session: { sessionId: "session-1", createdAt: 1 },
+        events: [{ type: "message", seq: 0, time: 1, data: {} }],
+        incarnation: "run-1",
+        asOfSeq: 0,
+        durableThroughSeq: 0,
+      },
     });
 
     await expect(
@@ -74,7 +90,13 @@ describe("runtime-neutral agent daemon procedures", () => {
       }),
     ).resolves.toEqual({
       runtime: "dsh",
-      dsh: { session: { sessionId: "session-1", createdAt: 1 }, events: [{ type: "message" }] },
+      dsh: {
+        session: { sessionId: "session-1", createdAt: 1 },
+        events: [{ type: "message", seq: 0, time: 1, data: {} }],
+        incarnation: "run-1",
+        asOfSeq: 0,
+        durableThroughSeq: 0,
+      },
     });
 
     expect(mocks.request.mock.calls).toEqual([

@@ -15,7 +15,10 @@ import {
 const mocks = vi.hoisted(() => ({ sendPiCompatibilityCommand: vi.fn() }));
 const initialAgentChatStoreState = agentChatStore.getState();
 
-vi.mock("../daemon/daemonAgentProcedures", () => ({ sendPiCompatibilityCommand: mocks.sendPiCompatibilityCommand }));
+vi.mock("../daemon/daemonAgentProcedures", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
+  sendPiCompatibilityCommand: mocks.sendPiCompatibilityCommand,
+}));
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);

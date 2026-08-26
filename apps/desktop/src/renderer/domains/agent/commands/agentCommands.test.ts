@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
   listAgentDetectionStatuses: mocks.listDetectionStatuses,
   listAgentModels: mocks.listModels,
 }));

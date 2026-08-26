@@ -59,6 +59,7 @@ export type {
   AgentThinkingSignatureSummary,
 } from "./chat";
 
+export type { AgentRuntime } from "./daemon/daemonAgentTypes";
 export { agentChatStore, type AgentChatStoreState } from "./state/agentChatStore";
 export { chatStore, type ChatStoreState, type WorkspaceAgentStatus, type WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.
@@ -81,7 +82,12 @@ export {
 } from "./features/select-model";
 export { ProviderMark } from "./ui/ProviderMark";
 
-export { findTabWithSession, renameAgentChatSessionByTab, stopPiSession } from "./commands/agentChatCommands";
+export {
+  findTabWithSession,
+  renameAgentChatSessionByTab,
+  retryDSHTranscript,
+  stopPiSession,
+} from "./commands/agentChatCommands";
 export {
   fetchAgentSessionFilePath,
   listActivePiSessions,

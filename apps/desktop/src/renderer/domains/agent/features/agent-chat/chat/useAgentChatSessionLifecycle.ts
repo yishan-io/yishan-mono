@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { subscribeDaemonConnectionStatus } from "../../../../../domains/session";
 import { recoverAgentSessionAfterReconnect, startAgentChatSession } from "../../../commands/agentChatCommands";
 
+import type { AgentRuntime } from "../../../daemon/daemonAgentTypes";
 import { agentChatStore } from "../../../state/agentChatStore";
 
 type UseAgentChatSessionLifecycleOptions = {
@@ -10,6 +11,7 @@ type UseAgentChatSessionLifecycleOptions = {
   workspaceId: string;
   cwd: string;
   sessionId?: string;
+  runtime?: AgentRuntime;
   sessionView: AgentChatSessionView;
   paneId?: string;
   subagentParentSessionId?: string;
@@ -25,6 +27,7 @@ export function useAgentChatSessionLifecycle({
   workspaceId,
   cwd,
   sessionId,
+  runtime,
   sessionView,
   paneId,
   subagentParentSessionId,
@@ -41,6 +44,7 @@ export function useAgentChatSessionLifecycle({
       workspaceId,
       cwd,
       sessionId: startupSessionIdRef.current,
+      runtime,
       sessionView,
       paneId: startupPaneIdRef.current,
       subagentParentSessionId,
@@ -53,7 +57,7 @@ export function useAgentChatSessionLifecycle({
     return () => {
       isDisposed = true;
     };
-  }, [cwd, sessionView, subagentParentSessionId, tabId, workspaceId]);
+  }, [cwd, runtime, sessionView, subagentParentSessionId, tabId, workspaceId]);
 
   useEffect(() => {
     let hasObservedConnectedState = false;
@@ -83,11 +87,12 @@ export function useAgentChatSessionLifecycle({
             workspaceId,
             cwd,
             sessionId: liveSessionId,
+            runtime,
             sessionView,
             paneId: startupPaneIdRef.current,
           });
         }
       }
     });
-  }, [cwd, isReadOnlySubagentDetail, sessionView, tabId, workspaceId]);
+  }, [cwd, isReadOnlySubagentDetail, runtime, sessionView, tabId, workspaceId]);
 }

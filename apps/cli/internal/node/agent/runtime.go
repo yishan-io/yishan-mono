@@ -24,7 +24,7 @@ func (s *Service) AgentStart(ctx context.Context, connection *rpc.Connection, re
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "sessionId and tabId are required")
 	}
 	if req.Runtime == rpc.AgentRuntimeDSH {
-		return nil, dshExecutionUnsupported()
+		return s.startDSH(ctx, connection, req)
 	}
 	_, err = s.Start(ctx, connection, rpc.PiStartParams{
 		SessionID: req.SessionID, TabID: req.TabID, PaneID: req.PaneID, WorkspaceID: req.WorkspaceID, CWD: workspaceInstance.Path, Resume: req.Resume,
@@ -38,12 +38,15 @@ func (s *Service) AgentStart(ctx context.Context, connection *rpc.Connection, re
 // AgentAttach attaches a connection after atomically checking ownership of the
 // live Pi session. Waiting for a concurrent start preserves Pi's attach race.
 func (s *Service) AgentAttach(ctx context.Context, connection *rpc.Connection, req rpc.AgentAttachParams) (any, error) {
+	if req.Runtime == rpc.AgentRuntimeDSH && req.AfterSeqProvided && (req.AfterSeq < -1 || req.AfterSeq >= maxDSHAfterSeq) {
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "afterSeq must be between -1 and MAX_SAFE_INTEGER - 1")
+	}
 	workspaceInstance, err := s.resolveAgentSessionWorkspace(req.Runtime, req.SessionID, req.WorkspaceID, req.CWD)
 	if err != nil {
 		return nil, err
 	}
 	if req.Runtime == rpc.AgentRuntimeDSH {
-		return nil, dshExecutionUnsupported()
+		return s.attachDSH(ctx, connection, req)
 	}
 	if err := s.waitForPiStart(ctx, req.SessionID); err != nil {
 		return nil, err
@@ -56,6 +59,9 @@ func (s *Service) AgentAttach(ctx context.Context, connection *rpc.Connection, r
 
 // AgentPrompt encodes semantic prompt data into Pi's command wire format.
 func (s *Service) AgentPrompt(ctx context.Context, req rpc.AgentPromptParams) (any, error) {
+	if req.Runtime == rpc.AgentRuntimeDSH {
+		return s.promptDSH(ctx, req)
+	}
 	admission, err := s.admitNeutralAgentWorkspace(req.SessionID, req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -68,10 +74,7 @@ func (s *Service) AgentPrompt(ctx context.Context, req rpc.AgentPromptParams) (a
 	if len(req.Message) == 0 || !json.Valid(req.Message) {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "message must be valid JSON")
 	}
-	if req.Runtime == rpc.AgentRuntimeDSH {
-		return nil, dshExecutionUnsupported()
-	}
-	command, err := buildAgentPromptCommand(req.Message, req.StreamingBehavior)
+	command, err := buildAgentPromptCommand(req.Runtime, req.Message, req.StreamingBehavior)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +90,9 @@ func (s *Service) AgentPrompt(ctx context.Context, req rpc.AgentPromptParams) (a
 
 // AgentAbort interrupts the current Pi turn while leaving its session live.
 func (s *Service) AgentAbort(ctx context.Context, req rpc.AgentAbortParams) (any, error) {
+	if req.Runtime == rpc.AgentRuntimeDSH {
+		return s.abortDSH(ctx, req)
+	}
 	admission, err := s.admitNeutralAgentWorkspace(req.SessionID, req.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -95,9 +101,6 @@ func (s *Service) AgentAbort(ctx context.Context, req rpc.AgentAbortParams) (any
 	workspaceInstance, err := s.resolveAgentSessionWorkspace(req.Runtime, req.SessionID, req.WorkspaceID, req.CWD)
 	if err != nil {
 		return nil, err
-	}
-	if req.Runtime == rpc.AgentRuntimeDSH {
-		return nil, dshExecutionUnsupported()
 	}
 	owned, err := s.ownedLivePiProcess(req.SessionID, req.WorkspaceID, workspaceInstance.Path)
 	if err != nil {
@@ -111,12 +114,12 @@ func (s *Service) AgentAbort(ctx context.Context, req rpc.AgentAbortParams) (any
 
 // AgentDispose releases a Pi session and its runtime resources.
 func (s *Service) AgentDispose(ctx context.Context, req rpc.AgentDisposeParams) (any, error) {
+	if req.Runtime == rpc.AgentRuntimeDSH {
+		return s.disposeDSH(ctx, req)
+	}
 	workspaceInstance, err := s.resolveAgentSessionWorkspace(req.Runtime, req.SessionID, req.WorkspaceID, req.CWD)
 	if err != nil {
 		return nil, err
-	}
-	if req.Runtime == rpc.AgentRuntimeDSH {
-		return nil, dshExecutionUnsupported()
 	}
 	claim, err := s.ownedPiStopClaim(req.SessionID, req.WorkspaceID, workspaceInstance.Path)
 	if err != nil {
@@ -165,7 +168,8 @@ func (s *Service) AgentReadHistory(ctx context.Context, req rpc.AgentReadHistory
 		}
 		return rpc.AgentHistoryResult{Runtime: req.Runtime, DSH: &rpc.AgentDSHHistory{
 			Session: rpc.AgentDSHSessionMetadata{SessionID: history.Session.SessionID, CreatedAt: history.Session.CreatedAt, ParentSession: history.Session.ParentSession, AgentPreset: history.Session.AgentPreset},
-			Events:  history.Events,
+			Events:  history.Events, Incarnation: history.Incarnation, AsOfSeq: history.AsOfSeq,
+			DurableThroughSeq: history.DurableThroughSeq,
 		}}, nil
 	}
 	history, err := s.GetSessionFile(ctx, rpc.PiGetSessionFileParams{CWD: workspaceInstance.Path, SessionID: req.SessionID})
@@ -264,12 +268,15 @@ func (s *Service) attachOwnedPiSession(connection *rpc.Connection, req rpc.Agent
 	return rpc.NewRPCError(rpc.CodeServerError, err.Error())
 }
 
-func buildAgentPromptCommand(message json.RawMessage, streamingBehavior string) (json.RawMessage, error) {
+func buildAgentPromptCommand(runtime rpc.AgentRuntime, message json.RawMessage, streamingBehavior string) (json.RawMessage, error) {
 	command := struct {
 		Type              string          `json:"type"`
 		Message           json.RawMessage `json:"message"`
 		StreamingBehavior string          `json:"streamingBehavior,omitempty"`
-	}{Type: "prompt", Message: message, StreamingBehavior: streamingBehavior}
+	}{Type: "prompt", Message: message}
+	if runtime == rpc.AgentRuntimePi {
+		command.StreamingBehavior = streamingBehavior
+	}
 	encoded, err := json.Marshal(command)
 	if err != nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, err.Error())
@@ -315,8 +322,4 @@ func validateAgentRuntime(runtime rpc.AgentRuntime) error {
 		return rpc.NewRPCError(rpc.CodeInvalidParams, "runtime must be pi or dsh")
 	}
 	return nil
-}
-
-func dshExecutionUnsupported() error {
-	return rpc.NewRPCError(rpc.CodeInvalidParams, "dsh runtime execution is not supported")
 }

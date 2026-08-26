@@ -175,3 +175,20 @@ func TestService_DSHSessionMethodsRejectClosedWorkspaceBeforeRuntimeCall(t *test
 		t.Fatal("runtime was called for a closed workspace")
 	}
 }
+
+func (r *recordingDSHSessions) StartSession(_ context.Context, request dsh.SessionStartRequest) (dsh.SessionStartResult, error) {
+	return dsh.SessionStartResult{SessionID: request.SessionID, Incarnation: "test-incarnation"}, nil
+}
+func (r *recordingDSHSessions) PromptSession(context.Context, dsh.SessionPromptRequest) (dsh.SessionPromptResult, error) {
+	return dsh.SessionPromptResult{}, nil
+}
+func (r *recordingDSHSessions) CancelSession(_ context.Context, request dsh.SessionCancelRequest) (dsh.SessionCancelResult, error) {
+	return dsh.SessionCancelResult{SessionID: request.SessionID, Cancelled: true}, nil
+}
+func (r *recordingDSHSessions) SubscribeSession(context.Context, dsh.SessionSubscribeRequest) (dsh.SessionSubscription, error) {
+	return dsh.SessionSubscription{Updates: make(chan dsh.SessionUpdate), Unsubscribe: func() {}}, nil
+}
+func (r *recordingDSHSessions) FlushSession(_ context.Context, request dsh.SessionFlushRequest) (dsh.DurableCursor, error) {
+	return dsh.DurableCursor{SessionID: request.SessionID}, nil
+}
+func (r *recordingDSHSessions) Health() dsh.Health { return dsh.Health{IsReady: true} }

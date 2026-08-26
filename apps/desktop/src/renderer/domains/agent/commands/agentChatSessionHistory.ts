@@ -1,5 +1,7 @@
 import { workspaceStore } from "@renderer/domains/workspace";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import {
+  getAgentCapabilities,
   listActivePiCompatibilitySessions as listActivePiSessionsProcedure,
   listAgentRuntimeSessions as listAgentRuntimeSessionsProcedure,
   readAgentRuntimeHistory as readAgentRuntimeHistoryProcedure,
@@ -26,9 +28,28 @@ export async function readAgentSessionHistory(
   return await readAgentRuntimeHistoryProcedure({ runtime, sessionId, workspaceId, cwd });
 }
 
-/** Fetches past Pi session summaries for the current working directory. */
-export async function fetchSessionHistory(cwd: string): Promise<Rpc.AgentSessionSummary[]> {
-  return await listAgentSessionHistory(cwd);
+/** A durable agent session summary with an explicit runtime identity for UI selection. */
+export type RuntimeAgentSessionSummary = Rpc.AgentSessionSummary & { runtime: Rpc.AgentRuntime };
+
+/** Fetches Pi history and ready DSH history for the current working directory. */
+export async function fetchSessionHistory(cwd: string): Promise<RuntimeAgentSessionSummary[]> {
+  const piSessions = (await listAgentSessionHistory(cwd, "pi")).map((session) => ({
+    ...session,
+    runtime: "pi" as const,
+  }));
+  try {
+    const capabilities = await getAgentCapabilities();
+    if (!capabilities.dsh.configured || !capabilities.dsh.ready) return piSessions;
+
+    const dshSessions = (await listAgentSessionHistory(cwd, "dsh")).map((session) => ({
+      ...session,
+      runtime: "dsh" as const,
+    }));
+    return [...piSessions, ...dshSessions].sort((left, right) => right.createdAt - left.createdAt);
+  } catch (error) {
+    console.warn("Failed to load DSH session history; showing Pi history", getErrorMessage(error));
+    return piSessions;
+  }
 }
 
 /** Resolves the transcript file path for one Pi session. Empty when no transcript exists yet. */

@@ -70,6 +70,63 @@ func TestSupervisor_RestartsUnexpectedExitWithinBound(t *testing.T) {
 	waitFor(t, func() bool { return !supervisor.Health().IsReady })
 }
 
+func TestSupervisor_RestartInvalidatesAndTerminatesSubscriptions(t *testing.T) {
+	supervisor := newTestSupervisor(Config{
+		Command: helperCommand("rpc-subscribe-exit"), RestartLimit: 1, RestartBackoff: time.Millisecond,
+	})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	subscription, err := supervisor.SubscribeSession(context.Background(), SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
+	if err != nil {
+		t.Fatalf("SubscribeSession: %v", err)
+	}
+	_, _ = supervisor.PromptSession(context.Background(), SessionPromptRequest{
+		CWD: "/workspace", SessionID: "session", ContentBlocks: []TextPromptContentBlock{{Type: "text", Text: "exit"}},
+	})
+	assertSubscriptionResetAndClosed(t, subscription.Updates)
+	waitFor(t, func() bool { return supervisor.Health().RestartCount == 1 && supervisor.Health().IsReady })
+}
+
+func assertSubscriptionResetAndClosed(t *testing.T, updates <-chan SessionUpdate) {
+	t.Helper()
+	initial := <-updates
+	if initial.Cursor == nil {
+		t.Fatalf("initial update = %#v", initial)
+	}
+	status := <-updates
+	if status.Status == nil || status.Status.Status != "idle" {
+		t.Fatalf("initial status = %#v", status)
+	}
+	select {
+	case update, ok := <-updates:
+		if !ok || update.Reset == nil {
+			t.Fatalf("terminal update = %#v, open = %t", update, ok)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("subscription was not terminated")
+	}
+	if _, ok := <-updates; ok {
+		t.Fatal("subscription remained open after process exit")
+	}
+}
+
+func TestSupervisor_CloseTerminatesSubscriptions(t *testing.T) {
+	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc")})
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	subscription, err := supervisor.SubscribeSession(context.Background(), SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
+	if err != nil {
+		t.Fatalf("SubscribeSession: %v", err)
+	}
+	if err := supervisor.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	assertSubscriptionResetAndClosed(t, subscription.Updates)
+}
+
 func TestSupervisor_Close_CancelsInitializeInFlight(t *testing.T) {
 	started := make(chan string, 1)
 	supervisor := newTestSupervisor(Config{
@@ -179,7 +236,7 @@ func runHelperMode(mode string, input *bufio.Reader) {
 	case "stderr":
 		_, _ = os.Stderr.WriteString("runtime diagnostic\n")
 		writeShutdownResponse(input)
-	case "rpc", "rpc-notify", "rpc-exit":
+	case "rpc", "rpc-notify", "rpc-exit", "rpc-invalid-notify", "rpc-subscribe-exit":
 		handleRPCRequests(mode, input)
 	case "exit":
 		return
@@ -224,6 +281,13 @@ func handleRPCRequests(mode string, input *bufio.Reader) {
 		if mode == "rpc-exit" {
 			return
 		}
+		if mode == "rpc-invalid-notify" && request.Params.SessionID == "wait" {
+			_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"session.event","params":{"sessionId":"wait","event":{"seq":-1}}}` + "\n")
+			continue
+		}
+		if mode == "rpc-subscribe-exit" && request.Method == yishanSessionPromptMethod {
+			return
+		}
 		writeRPCResponse(request)
 	}
 }
@@ -236,16 +300,72 @@ func writeRPCResponse(request struct {
 		SessionID string `json:"sessionId"`
 	} `json:"params"`
 }) {
+	if writeExceptionalRPCResponse(request) {
+		return
+	}
+	writeSessionRPCResponse(request)
+}
+
+func writeExceptionalRPCResponse(request struct {
+	ID     uint64 `json:"id"`
+	Method string `json:"method"`
+	Params struct {
+		CWD       string `json:"cwd"`
+		SessionID string `json:"sessionId"`
+	} `json:"params"`
+}) bool {
 	if request.Params.SessionID == "wait" {
 		_, _ = os.Stderr.WriteString("waiting request\n")
-		return
+		return true
 	}
 	if request.Params.SessionID == "server-error" {
 		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"error":{"code":9,"message":"denied"}}`+"\n", request.ID)
+		return true
+	}
+	if request.Method != yishanSessionListMethod {
+		return false
+	}
+	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessions":[{"sessionId":"%s","createdAt":1,"live":false,"persisted":true}]}}`+"\n", request.ID, request.Params.CWD)
+	return true
+}
+
+func writeSessionRPCResponse(request struct {
+	ID     uint64 `json:"id"`
+	Method string `json:"method"`
+	Params struct {
+		CWD       string `json:"cwd"`
+		SessionID string `json:"sessionId"`
+	} `json:"params"`
+}) {
+	if request.Method == yishanSessionStartMethod {
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","incarnation":"run"}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
-	if request.Method == yishanSessionListMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessions":[{"sessionId":"%s","createdAt":1,"live":false,"persisted":true}]}}`+"\n", request.ID, request.Params.CWD)
+	if request.Method == yishanSessionPromptMethod {
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"messageId":"message"}}`+"\n", request.ID)
+		return
+	}
+	writeSessionControlResponse(request)
+}
+
+func writeSessionControlResponse(request struct {
+	ID     uint64 `json:"id"`
+	Method string `json:"method"`
+	Params struct {
+		CWD       string `json:"cwd"`
+		SessionID string `json:"sessionId"`
+	} `json:"params"`
+}) {
+	if request.Method == yishanSessionCancelMethod {
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","cancelled":true}}`+"\n", request.ID, request.Params.SessionID)
+		return
+	}
+	if request.Method == yishanSessionFlushMethod {
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","durableThroughSeq":-1,"incarnation":"run"}}`+"\n", request.ID, request.Params.SessionID)
+		return
+	}
+	if request.Method == yishanSessionSubscribeMethod {
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","incarnation":"run","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
 	if request.Method == yishanSessionDisposeMethod {

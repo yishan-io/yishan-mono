@@ -1,0 +1,253 @@
+import { readFileSync } from "node:fs";
+
+import { describe, expect, it, vi } from "vitest";
+import {
+  type DSHTranscriptActions,
+  DSHTranscriptController,
+  agentChatStore,
+  event,
+  handleFixtureEvents,
+  parseDSHFrontendPayload,
+  setup,
+} from "./dshTranscriptController.testSupport";
+
+describe("DSHTranscriptController stream handling", () => {
+  it("accepts the contiguous rc.2 fixture sequence", () => {
+    const events: unknown[] = JSON.parse(
+      readFileSync(new URL("./fixtures/dshRc2Events.json", import.meta.url), "utf8"),
+    );
+    const { controller, actions } = setup();
+    for (const event of events) {
+      const payload = parseDSHFrontendPayload({
+        sessionId: "session",
+        tabId: "tab",
+        workspaceId: "workspace",
+        incarnation: "inc",
+        update: { event: { sessionId: "session", seq: (event as { seq: number }).seq, event } },
+      });
+      expect(payload).not.toBeNull();
+      if (payload) controller.handle(payload);
+    }
+    expect(actions.setSessionState).not.toHaveBeenCalledWith("tab", "error");
+    expect(actions.replaceMessages).toHaveBeenLastCalledWith("tab", expect.any(Array));
+  });
+  it("replaces an rc.2 synthetic chunk stream with its canonical assistant message", () => {
+    agentChatStore.getState().initSession("tab", "session");
+    const controller = new DSHTranscriptController(
+      "tab",
+      "session",
+      agentChatStore.getState(),
+      async () => ({
+        session: { sessionId: "session", createdAt: 0 },
+        events: [],
+        incarnation: "inc",
+        asOfSeq: -1,
+        durableThroughSeq: -1,
+      }),
+      () => {},
+    );
+    controller.handle({
+      sessionId: "session",
+      tabId: "tab",
+      workspaceId: "workspace",
+      incarnation: "inc",
+      update: { status: { sessionId: "session", status: "running" } },
+    });
+
+    handleFixtureEvents(controller);
+
+    const session = agentChatStore.getState().sessionsByTabId.tab;
+    expect(session?.streamingMessage).toBeNull();
+    expect(session?.messages.map((message) => message.id)).toEqual([
+      "user-0",
+      "assistant-0",
+      "result-1",
+      "assistant-1",
+    ]);
+  });
+  it("starts a second response stream without text from the first response", () => {
+    const { controller, actions } = setup();
+    const handleEvent = (seq: number, type: string, data: Record<string, unknown>, surfaceOp?: "append") =>
+      controller.handle({
+        sessionId: "session",
+        tabId: "tab",
+        workspaceId: "workspace",
+        incarnation: "inc",
+        update: { event: { type, seq, time: seq, data, ...(surfaceOp ? { surfaceOp } : {}) } },
+      });
+
+    handleEvent(0, "turn/start", { turn: 0 });
+    handleEvent(1, "step/start", { turn: 0, step: 0 });
+    handleEvent(2, "assistant/chunk", { turn: 0, step: 0, chunk: { type: "text-delta", text: "first" } });
+    handleEvent(
+      3,
+      "assistant/message",
+      {
+        turn: 0,
+        step: 0,
+        message: {
+          id: "first",
+          role: "assistant",
+          content: [{ type: "text", text: "first" }],
+          source: { kind: "model", provider: "provider", model: "model" },
+        },
+      },
+      "append",
+    );
+    handleEvent(4, "turn/end", { turn: 0, reason: { kind: "completed" } });
+    handleEvent(5, "turn/start", { turn: 1 });
+    handleEvent(6, "step/start", { turn: 1, step: 0 });
+    handleEvent(7, "assistant/chunk", { turn: 1, step: 0, chunk: { type: "text-delta", text: "second" } });
+
+    expect(actions.updateStreamingMessage).toHaveBeenLastCalledWith(
+      "tab",
+      expect.objectContaining({ content: [{ type: "text", text: "second" }] }),
+    );
+  });
+  it("blocks unrecoverably on a gap and does not apply later events", () => {
+    const { controller, actions } = setup();
+    controller.handle(event(0));
+    controller.handle(event(2));
+    controller.handle(event(1));
+    expect(actions.replaceMessages).toHaveBeenLastCalledWith("tab", []);
+    expect(actions.setSessionState).toHaveBeenLastCalledWith("tab", "starting");
+  });
+  it("only advances cursor monotonically and removes speculative events on reset", () => {
+    const { controller, actions } = setup();
+    controller.handle(event(0));
+    controller.handle({
+      sessionId: "session",
+      tabId: "tab",
+      workspaceId: "workspace",
+      incarnation: "inc",
+      update: { cursor: { sessionId: "session", incarnation: "inc", durableThroughSeq: 0 } },
+    });
+    controller.handle({
+      sessionId: "session",
+      tabId: "tab",
+      workspaceId: "workspace",
+      incarnation: "inc",
+      update: { cursor: { sessionId: "session", incarnation: "inc", durableThroughSeq: -1 } },
+    });
+    controller.handle({
+      sessionId: "session",
+      tabId: "tab",
+      workspaceId: "workspace",
+      incarnation: "inc",
+      update: { reset: { sessionId: "session", incarnation: "next", headSeq: -1 } },
+    });
+    expect(actions.replaceMessages).toHaveBeenLastCalledWith("tab", expect.any(Array));
+    expect(actions.setSessionState).toHaveBeenLastCalledWith("tab", "starting");
+  });
+  it("reloads the durable prefix after reset and removes speculative events", async () => {
+    let resolveSnapshot:
+      | ((snapshot: {
+          session: { sessionId: string; createdAt: number };
+          events: unknown[];
+          incarnation: string;
+          asOfSeq: number;
+          durableThroughSeq: number;
+        }) => void)
+      | undefined;
+    const loader = vi.fn(
+      () =>
+        new Promise<{
+          session: { sessionId: string; createdAt: number };
+          events: unknown[];
+          incarnation: string;
+          asOfSeq: number;
+          durableThroughSeq: number;
+        }>((resolve) => {
+          resolveSnapshot = resolve;
+        }),
+    );
+    const actions: DSHTranscriptActions = {
+      replaceMessages: vi.fn(),
+      updateStreamingMessage: vi.fn(),
+      clearStreamingMessage: vi.fn(),
+      setSessionState: vi.fn(),
+      setSessionError: vi.fn(),
+      setDSHTranscriptRetryAvailable: vi.fn(),
+      setTurnActive: vi.fn(),
+    };
+    const controller = new DSHTranscriptController("tab", "session", actions, loader, () => {});
+    controller.handle(event(0));
+    controller.handle(event(1));
+    controller.handle({ ...event(1), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 0 } } });
+    expect(actions.replaceMessages).toHaveBeenLastCalledWith("tab", expect.any(Array));
+    resolveSnapshot?.({
+      session: { sessionId: "session", createdAt: 0 },
+      events: [event(0).update.event],
+      incarnation: "inc",
+      asOfSeq: 0,
+      durableThroughSeq: 0,
+    });
+    await vi.waitFor(() => expect(controller.getDurableThroughSeq()).toBe(0));
+    expect(actions.replaceMessages).toHaveBeenLastCalledWith(
+      "tab",
+      expect.arrayContaining([expect.objectContaining({ id: "u0" })]),
+    );
+  });
+
+  it("reloads persisted user and assistant surface events with optional event roots", async () => {
+    const { actions } = setup();
+    const controller = new DSHTranscriptController(
+      "tab",
+      "session",
+      actions,
+      async () => ({
+        session: { sessionId: "session", createdAt: 0 },
+        events: [
+          {
+            type: "user/message",
+            seq: 0,
+            time: 0,
+            data: {
+              message: {
+                id: "user-1",
+                role: "user",
+                content: [{ type: "text", text: "Hello" }],
+                source: { kind: "user" },
+              },
+            },
+            ignorable: true,
+            surfaceOp: "append",
+          },
+          {
+            type: "assistant/message",
+            seq: 1,
+            time: 1,
+            data: {
+              turn: 0,
+              step: 0,
+              message: {
+                id: "assistant-1",
+                role: "assistant",
+                content: [{ type: "text", text: "Hi" }],
+                source: { kind: "model", provider: "test", model: "test" },
+              },
+            },
+            sourceEventSeqs: [],
+            surfaceOp: "append",
+          },
+        ],
+        incarnation: "inc",
+        asOfSeq: 1,
+        durableThroughSeq: 1,
+      }),
+      () => {},
+    );
+
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: -1 } } });
+
+    await vi.waitFor(() =>
+      expect(actions.replaceMessages).toHaveBeenLastCalledWith(
+        "tab",
+        expect.arrayContaining([
+          expect.objectContaining({ id: "user-1" }),
+          expect.objectContaining({ id: "assistant-1" }),
+        ]),
+      ),
+    );
+  });
+});

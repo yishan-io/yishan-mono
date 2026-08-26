@@ -1,15 +1,17 @@
 import { Box, Menu, MenuItem, Typography } from "@mui/material";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchSessionHistory } from "../../../../../domains/agent/commands/agentChatSessionHistory";
-import type * as Rpc from "../../../daemon/daemonAgentTypes";
+import {
+  type RuntimeAgentSessionSummary,
+  fetchSessionHistory,
+} from "../../../../../domains/agent/commands/agentChatSessionHistory";
 import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
 
 type SessionHistoryMenuProps = {
   cwd: string;
   anchorEl: HTMLElement | null;
   onClose: () => void;
-  onSelectSession?: (session: Rpc.AgentSessionSummary, title: string) => void;
+  onSelectSession?: (session: RuntimeAgentSessionSummary, title: string) => void;
 };
 
 /** Formats a timestamp as a relative label (e.g. "2h ago", "yesterday"). */
@@ -32,7 +34,7 @@ function relativeTime(createdAt: number): string {
 
 /** Popover menu listing past session summaries for one workspace. */
 export function SessionHistoryMenu({ cwd, anchorEl, onClose, onSelectSession }: SessionHistoryMenuProps) {
-  const [sessions, setSessions] = useState<Rpc.AgentSessionSummary[]>([]);
+  const [sessions, setSessions] = useState<RuntimeAgentSessionSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
@@ -107,7 +109,7 @@ export function SessionHistoryMenu({ cwd, anchorEl, onClose, onSelectSession }: 
 
         return (
           <MenuItem
-            key={session.sessionId}
+            key={`${session.runtime}:${session.sessionId}`}
             onClick={() => {
               onSelectSession?.(session, formattedTitle);
               onClose();

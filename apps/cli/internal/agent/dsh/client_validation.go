@@ -63,15 +63,21 @@ type sessionReadWireResult struct {
 		ParentSession string `json:"parentSession,omitempty"`
 		AgentPreset   string `json:"agentPreset,omitempty"`
 	} `json:"session"`
-	Events []json.RawMessage `json:"events"`
+	Events            []json.RawMessage `json:"events"`
+	Incarnation       string            `json:"incarnation"`
+	AsOfSeq           *int64            `json:"asOfSeq"`
+	DurableThroughSeq *int64            `json:"durableThroughSeq"`
 }
 
 func (response sessionReadWireResult) validate(request SessionReadRequest) (SessionReadResult, error) {
-	if response.Session.SessionID != request.SessionID || response.Session.CreatedAt == nil || *response.Session.CreatedAt < 0 || response.Events == nil {
+	if response.Session.SessionID != request.SessionID || response.Session.CreatedAt == nil || *response.Session.CreatedAt < 0 || response.Events == nil || response.Incarnation == "" || response.AsOfSeq == nil || response.DurableThroughSeq == nil {
 		return SessionReadResult{}, errors.New("invalid DSH session read response")
 	}
-	for _, event := range response.Events {
-		if !validJSONObject(event) {
+	if !isSafeSequence(*response.AsOfSeq, -1) || !isSafeSequence(*response.DurableThroughSeq, -1) || *response.AsOfSeq != *response.DurableThroughSeq || int64(len(response.Events))-1 != *response.AsOfSeq {
+		return SessionReadResult{}, errors.New("invalid DSH session read cursor")
+	}
+	for sequence, event := range response.Events {
+		if !validJSONObject(event) || !hasSequence(event, int64(sequence)) {
 			return SessionReadResult{}, errors.New("invalid DSH session event")
 		}
 	}
@@ -80,8 +86,15 @@ func (response sessionReadWireResult) validate(request SessionReadRequest) (Sess
 			SessionID: response.Session.SessionID, CreatedAt: *response.Session.CreatedAt,
 			ParentSession: response.Session.ParentSession, AgentPreset: response.Session.AgentPreset,
 		},
-		Events: response.Events,
+		Events: response.Events, Incarnation: response.Incarnation, AsOfSeq: *response.AsOfSeq, DurableThroughSeq: *response.DurableThroughSeq,
 	}, nil
+}
+
+func hasSequence(value json.RawMessage, expected int64) bool {
+	var event struct {
+		Seq *int64 `json:"seq"`
+	}
+	return json.Unmarshal(value, &event) == nil && event.Seq != nil && *event.Seq == expected
 }
 
 func validJSONObject(value json.RawMessage) bool {
@@ -94,7 +107,7 @@ func validJSONObject(value json.RawMessage) bool {
 	if json.Unmarshal(value, &event) != nil {
 		return false
 	}
-	return event.Type != "" && event.Seq != nil && *event.Seq >= 0 && event.Time != nil && *event.Time >= 0 && event.Data != nil
+	return event.Type != "" && event.Seq != nil && isSafeSequence(*event.Seq, 0) && event.Time != nil && *event.Time >= 0 && event.Data != nil
 }
 
 func decodeStrictJSON(value json.RawMessage, target any) error {

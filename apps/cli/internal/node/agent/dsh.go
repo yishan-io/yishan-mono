@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"yishan/apps/cli/internal/agent/dsh"
+	"yishan/apps/cli/internal/rpc"
 )
 
 // ListDSHSessions lists durable DSH sessions for an open workspace.
@@ -57,27 +58,49 @@ func (s *Service) stopDSHWorkspaceSessions(ctx context.Context, workspaceID stri
 	if err != nil {
 		return err
 	}
+	disposed := s.disposeRegisteredDSHSessions(ctx, workspaceID)
 	listed, err := s.deps.DSH.ListSessions(ctx, dsh.SessionListRequest{CWD: workspacePath})
 	if errors.Is(err, dsh.ErrRuntimeUnavailable) {
-		return nil
+		return disposed
 	}
 	if err != nil {
-		return err
+		return errors.Join(disposed, err)
 	}
+	return errors.Join(disposed, s.disposeListedDSHSessions(ctx, workspacePath, listed.Sessions))
+}
+
+func (s *Service) disposeRegisteredDSHSessions(ctx context.Context, workspaceID string) error {
 	var result error
-	for _, session := range listed.Sessions {
-		if !session.Live {
-			continue
+	for _, entry := range s.dshSessions.workspaceEntries(workspaceID) {
+		disposed, err := s.deps.DSH.DisposeSession(ctx, dsh.SessionReadRequest{CWD: entry.cwd, SessionID: entry.sessionID})
+		if err == nil && !disposed.Disposed {
+			err = fmt.Errorf("DSH registered session %q was not disposed", entry.sessionID)
 		}
-		disposed, disposeErr := s.deps.DSH.DisposeSession(ctx, dsh.SessionReadRequest{CWD: workspacePath, SessionID: session.SessionID})
-		if disposeErr == nil && !disposed.Disposed {
-			disposeErr = fmt.Errorf("DSH session %q is live but not owned for disposal", session.SessionID)
+		if err == nil && s.dshSessions.remove(entry) {
+			s.runtimeIdentities.release(entry.sessionID, rpc.AgentRuntimeDSH)
 		}
-		result = errors.Join(result, disposeErr)
+		result = errors.Join(result, err)
 	}
 	return result
 }
 
+func (s *Service) disposeListedDSHSessions(ctx context.Context, cwd string, sessions []dsh.SessionListEntry) error {
+	var result error
+	for _, listed := range sessions {
+		if !listed.Live {
+			continue
+		}
+		disposed, err := s.deps.DSH.DisposeSession(ctx, dsh.SessionReadRequest{CWD: cwd, SessionID: listed.SessionID})
+		if err == nil && !disposed.Disposed {
+			err = fmt.Errorf("DSH session %q is live but not owned for disposal", listed.SessionID)
+		}
+		if err == nil {
+			s.runtimeIdentities.release(listed.SessionID, rpc.AgentRuntimeDSH)
+		}
+		result = errors.Join(result, err)
+	}
+	return result
+}
 func (s *Service) resolveDSHWorkspacePath(workspaceID string) (string, error) {
 	workspaceInstance, err := s.deps.Workspace.GetWorkspace(workspaceID)
 	if err != nil {
