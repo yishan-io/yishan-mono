@@ -110,66 +110,84 @@ export function LocalTaskTemplateControls({ description, onDescriptionChange, di
   }
 
   return (
-    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
       {templateError ? <Alert severity="error">{templateError}</Alert> : null}
-      <FormControl size="small" sx={{ minWidth: 180, flex: "1 1 180px" }}>
-        <Select
-          value={selectedTemplate.id}
-          disabled={isDisabled}
-          onChange={(event) => handleTemplateChange(event.target.value)}
-          inputProps={{ "aria-label": t("localTask.templates.select") }}
-        >
-          {templates.map((template) => {
-            const isAgentDefault = template.id === agentDefaultId;
-            const isBuiltIn = template.id === DEFAULT_LOCAL_TASK_TEMPLATE.id;
-            return (
-              <MenuItem key={template.id} value={template.id} sx={{ display: "flex", gap: 0.5 }}>
-                <Box sx={{ flexGrow: 1 }}>{template.name}</Box>
-                {isAgentDefault ? (
-                  <Tooltip title={t("localTask.templates.agentDefault")}>
-                    <Box component="span" aria-label={t("localTask.templates.agentDefault")}>★</Box>
-                  </Tooltip>
-                ) : null}
-                {!isBuiltIn ? (
-                  <Tooltip title={t("localTask.templates.setAgentDefault")}>
-                    <Box component="span">
+      <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+        <FormControl size="small" sx={{ flex: "1 1 0", minWidth: 0 }}>
+          <Select
+            value={selectedTemplate.id}
+            disabled={isDisabled}
+            onChange={(event) => handleTemplateChange(event.target.value)}
+            inputProps={{ "aria-label": t("localTask.templates.select") }}
+          >
+            {templates.map((template) => {
+              const isAgentDefault = template.id === agentDefaultId;
+              const isBuiltIn = template.id === DEFAULT_LOCAL_TASK_TEMPLATE.id;
+              return (
+                <MenuItem
+                  key={template.id}
+                  value={template.id}
+                  sx={{ display: "flex", alignItems: "center", flexWrap: "nowrap", gap: 0.5 }}
+                >
+                  <Box sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {template.name}
+                  </Box>
+                  {isAgentDefault ? (
+                    <Tooltip title={t("localTask.templates.agentDefault")}>
+                      <Box
+                        component="span"
+                        aria-label={t("localTask.templates.agentDefault")}
+                        sx={{ flexShrink: 0, lineHeight: 1 }}
+                      >
+                        ★
+                      </Box>
+                    </Tooltip>
+                  ) : null}
+                  {!isBuiltIn ? (
+                    <Tooltip title={t("localTask.templates.setAgentDefault")}>
                       <IconButton
                         size="small"
                         disabled={isDisabled}
                         aria-label={t("localTask.templates.setAgentDefault")}
+                        sx={{ flexShrink: 0, p: 0.25 }}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
                           void handleSetAgentDefault(template.id);
                         }}
                       >
-                        <Box component="span">☆</Box>
+                        ☆
                       </IconButton>
-                    </Box>
-                  </Tooltip>
-                ) : null}
-              </MenuItem>
-            );
-          })}
-        </Select>
-      </FormControl>
-      <TextField
-        size="small"
-        value={templateName}
-        disabled={isDisabled}
-        placeholder={t("localTask.templates.name")}
-        slotProps={{ htmlInput: { "aria-label": t("localTask.templates.name") } }}
-        onChange={(event) => setTemplateName(event.target.value)}
-        sx={{ flex: "2 1 180px" }}
-      />
-      <Button disabled={isDisabled || !templateName.trim() || !description.trim()} onClick={handleSave}>
-        {t("localTask.templates.save")}
-      </Button>
-      {!isBuiltInTemplate ? (
-        <Button color="error" disabled={isDisabled} onClick={handleDelete}>
-          {t("localTask.templates.delete")}
+                    </Tooltip>
+                  ) : null}
+                </MenuItem>
+              );
+            })}
+          </Select>
+        </FormControl>
+        <TextField
+          size="small"
+          value={templateName}
+          disabled={isDisabled}
+          placeholder={t("localTask.templates.name")}
+          slotProps={{ htmlInput: { "aria-label": t("localTask.templates.name") } }}
+          onChange={(event) => setTemplateName(event.target.value)}
+          sx={{ flex: "2 1 0", minWidth: 0 }}
+        />
+        <Button
+          size="small"
+          disabled={isDisabled || !templateName.trim() || !description.trim()}
+          onClick={handleSave}
+          sx={{ flexShrink: 0 }}
+        >
+          {t("localTask.templates.save")}
         </Button>
-      ) : null}
+        {!isBuiltInTemplate ? (
+          <Button color="error" size="small" disabled={isDisabled} onClick={handleDelete} sx={{ flexShrink: 0 }}>
+            {t("localTask.templates.delete")}
+          </Button>
+        ) : null}
+      </Box>
     </Box>
   );
 }
