@@ -48,6 +48,7 @@ type WorkspaceTaskMetadataSidebarProps = {
   showLocationMetadata: boolean;
   showStatusAndPriority: boolean;
   showTags: boolean;
+  isSticky: boolean;
   isMutationLoading: boolean;
   tagCatalog: LocalTaskTagCatalogEntry[];
   onStatusChange: (status: LocalTaskStatus) => void;
@@ -69,6 +70,7 @@ export function WorkspaceTaskMetadataSidebar({
   showLocationMetadata,
   showStatusAndPriority,
   showTags,
+  isSticky,
   isMutationLoading,
   tagCatalog,
   onStatusChange,
@@ -102,7 +104,7 @@ export function WorkspaceTaskMetadataSidebar({
     <Stack
       data-testid="local-task-details-sidebar"
       spacing={3}
-      sx={{ minWidth: 0, position: "sticky", top: 0, alignSelf: "start" }}
+      sx={{ minWidth: 0, position: isSticky ? "sticky" : "static", top: 0, alignSelf: "start" }}
     >
       {showStatusAndPriority ? (
         <>

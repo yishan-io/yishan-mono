@@ -212,6 +212,7 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
               showLocationMetadata={false}
               showStatusAndPriority={false}
               showTagsAboveDescription
+              layout="stacked"
               isMutationLoading={isMutationLoading}
               onStatusChange={handleDetailStatus}
               onPriorityChange={handleDetailPriority}

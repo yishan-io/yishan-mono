@@ -303,7 +303,7 @@ describe("WorkspaceTaskDetails", () => {
     expect(getComputedStyle(sidebar).top).toBe("0px");
   });
 
-  it("uses a fixed sidebar on wide containers and stacks at narrow widths", () => {
+  it("keeps the default side-by-side layout on wide containers and stacks at narrow widths", () => {
     renderDetails();
 
     const layout = screen.getByTestId("local-task-detail-layout");
