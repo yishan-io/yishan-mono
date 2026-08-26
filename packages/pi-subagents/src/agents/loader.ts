@@ -4,7 +4,12 @@ import { fileURLToPath } from "node:url";
 
 import { CONFIG_DIR_NAME, getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
 
-import type { AgentDefinition, AgentDefinitionDiagnostic, AgentRegistrySnapshot } from "./types";
+import type {
+  AgentDefinition,
+  AgentDefinitionDiagnostic,
+  AgentRegistrySnapshot,
+  InvalidAgentDefinition,
+} from "./types";
 import type { AgentFrontmatter } from "./validation";
 import { validateAgentDefinition } from "./validation";
 
@@ -32,36 +37,44 @@ export interface LoadAgentDefinitionsOptions {
  */
 export function loadAgentDefinitions(options: LoadAgentDefinitionsOptions): AgentRegistrySnapshot {
   const diagnostics: AgentDefinitionDiagnostic[] = [];
-  const builtinAgents = loadAgentDefinitionsFromDir({
+  const builtinAgents = loadAgentDefinitionEntriesFromDir({
     dir: options.builtinAgentsDir ?? BUILTIN_AGENTS_DIR,
     source: "builtin",
     allowedToolNames: options.allowedToolNames,
   });
   diagnostics.push(...builtinAgents.diagnostics);
 
-  const userAgents = loadAgentDefinitionsFromDir({
+  const userAgents = loadAgentDefinitionEntriesFromDir({
     dir: options.userAgentsDir ?? join(getAgentDir(), "agents"),
     source: "user",
     allowedToolNames: options.allowedToolNames,
   });
   diagnostics.push(...userAgents.diagnostics);
 
-  const userResolvedAgents = resolveAgentDefinitionOverrides(builtinAgents.agents, userAgents.agents, []);
-
   const resolvedProjectAgentsDir =
     options.projectAgentsDir === undefined ? findNearestProjectAgentsDir(options.cwd) : options.projectAgentsDir;
   const projectAgents =
     resolvedProjectAgentsDir === null
-      ? { agents: [], diagnostics: [] }
-      : loadAgentDefinitionsFromDir({
+      ? emptyLoadedAgentDefinitionResult()
+      : loadAgentDefinitionEntriesFromDir({
           dir: resolvedProjectAgentsDir,
           source: "project",
           allowedToolNames: options.allowedToolNames,
         });
   diagnostics.push(...projectAgents.diagnostics);
 
-  const agents = resolveAgentDefinitionOverrides(userResolvedAgents, [], projectAgents.agents);
-  return { agents, diagnostics };
+  const resolvedDefinitions = resolveAgentDefinitionEntries(builtinAgents, userAgents, projectAgents);
+  return {
+    agents: resolvedDefinitions.agents,
+    diagnostics,
+    invalidAgentsByName: new Map(
+      resolvedDefinitions.invalidAgents.map((invalidAgent) => [normalizeAgentName(invalidAgent.name), invalidAgent]),
+    ),
+  };
+}
+
+function emptyLoadedAgentDefinitionResult(): LoadedAgentDefinitionsFromDirResult {
+  return { agents: [], invalidAgents: [], diagnostics: [], entries: [] };
 }
 
 /** Input for loading agent files from one directory. */
@@ -74,7 +87,18 @@ export interface LoadAgentDefinitionsFromDirOptions {
 /** Result of loading agent definitions from one directory. */
 export interface LoadAgentDefinitionsFromDirResult {
   agents: AgentDefinition[];
+  /** Invalid named definitions, when the loader supports invalid-definition reporting. */
+  invalidAgents?: InvalidAgentDefinition[];
   diagnostics: AgentDefinitionDiagnostic[];
+}
+
+type AgentDefinitionEntry = AgentDefinition | InvalidAgentDefinition;
+
+interface LoadedAgentDefinitionsFromDirResult {
+  agents: AgentDefinition[];
+  invalidAgents: InvalidAgentDefinition[];
+  diagnostics: AgentDefinitionDiagnostic[];
+  entries: AgentDefinitionEntry[];
 }
 
 /**
@@ -83,15 +107,27 @@ export interface LoadAgentDefinitionsFromDirResult {
 export function loadAgentDefinitionsFromDir(
   options: LoadAgentDefinitionsFromDirOptions,
 ): LoadAgentDefinitionsFromDirResult {
+  const definitions = loadAgentDefinitionEntriesFromDir(options);
+  return {
+    agents: definitions.agents,
+    invalidAgents: definitions.invalidAgents,
+    diagnostics: definitions.diagnostics,
+  };
+}
+
+function loadAgentDefinitionEntriesFromDir(
+  options: LoadAgentDefinitionsFromDirOptions,
+): LoadedAgentDefinitionsFromDirResult {
   if (!existsSync(options.dir)) {
-    return { agents: [], diagnostics: [] };
+    return emptyLoadedAgentDefinitionResult();
   }
 
   const diagnostics: AgentDefinitionDiagnostic[] = [];
   const agents: AgentDefinition[] = [];
-  const directoryEntries = readMarkdownEntries(options.dir);
+  const invalidAgents: InvalidAgentDefinition[] = [];
+  const entries: AgentDefinitionEntry[] = [];
 
-  for (const fileName of directoryEntries) {
+  for (const fileName of readMarkdownEntries(options.dir)) {
     const filePath = join(options.dir, fileName);
     const loadedAgent = loadAgentDefinitionFile({
       filePath,
@@ -102,10 +138,15 @@ export function loadAgentDefinitionsFromDir(
     diagnostics.push(...loadedAgent.diagnostics);
     if (loadedAgent.agent) {
       agents.push(loadedAgent.agent);
+      entries.push(loadedAgent.agent);
+    }
+    if (loadedAgent.invalidAgent) {
+      invalidAgents.push(loadedAgent.invalidAgent);
+      entries.push(loadedAgent.invalidAgent);
     }
   }
 
-  return { agents, diagnostics };
+  return { agents, invalidAgents, diagnostics, entries };
 }
 
 /** Input for loading one agent definition file. */
@@ -118,6 +159,7 @@ export interface LoadAgentDefinitionFileOptions {
 /** Result of loading one agent definition file. */
 export interface LoadAgentDefinitionFileResult {
   agent?: AgentDefinition;
+  invalidAgent?: InvalidAgentDefinition;
   diagnostics: AgentDefinitionDiagnostic[];
 }
 
@@ -153,21 +195,37 @@ export function resolveAgentDefinitionOverrides(
 ): AgentDefinition[] {
   const agentDefinitionsByName = new Map<string, AgentDefinition>();
 
-  for (const agentDefinition of builtinAgents) {
-    agentDefinitionsByName.set(normalizeAgentName(agentDefinition.name), agentDefinition);
-  }
-
-  for (const agentDefinition of userAgents) {
-    agentDefinitionsByName.set(normalizeAgentName(agentDefinition.name), agentDefinition);
-  }
-
-  for (const agentDefinition of projectAgents) {
+  for (const agentDefinition of [...builtinAgents, ...userAgents, ...projectAgents]) {
     agentDefinitionsByName.set(normalizeAgentName(agentDefinition.name), agentDefinition);
   }
 
   return Array.from(agentDefinitionsByName.values()).sort((leftAgent, rightAgent) =>
     leftAgent.name.localeCompare(rightAgent.name),
   );
+}
+
+function resolveAgentDefinitionEntries(
+  builtinDefinitions: LoadedAgentDefinitionsFromDirResult,
+  userDefinitions: LoadedAgentDefinitionsFromDirResult,
+  projectDefinitions: LoadedAgentDefinitionsFromDirResult,
+): LoadedAgentDefinitionsFromDirResult {
+  const definitionsByName = new Map<string, AgentDefinitionEntry>();
+
+  for (const definitions of [builtinDefinitions, userDefinitions, projectDefinitions]) {
+    for (const definition of definitions.entries) {
+      definitionsByName.set(normalizeAgentName(definition.name), definition);
+    }
+  }
+
+  const entries = Array.from(definitionsByName.values());
+  return {
+    agents: entries
+      .filter((definition): definition is AgentDefinition => "description" in definition)
+      .sort((leftAgent, rightAgent) => leftAgent.name.localeCompare(rightAgent.name)),
+    invalidAgents: entries.filter((definition): definition is InvalidAgentDefinition => "diagnostics" in definition),
+    diagnostics: [],
+    entries,
+  };
 }
 
 /**

@@ -1,11 +1,16 @@
 import { type LoadAgentDefinitionsOptions, loadAgentDefinitions, normalizeAgentName } from "./loader";
-import type { AgentDefinition, AgentDefinitionDiagnostic, AgentRegistrySnapshot } from "./types";
+import type {
+  AgentDefinition,
+  AgentDefinitionDiagnostic,
+  AgentRegistrySnapshot,
+  InvalidAgentDefinition,
+} from "./types";
 
 /**
  * In-memory registry of all resolved agent definitions visible to the package.
  */
 export class AgentRegistry {
-  private snapshot: AgentRegistrySnapshot = { agents: [], diagnostics: [] };
+  private snapshot: AgentRegistrySnapshot = { agents: [], diagnostics: [], invalidAgentsByName: new Map() };
 
   constructor(private readonly options: LoadAgentDefinitionsOptions) {}
 
@@ -23,6 +28,11 @@ export class AgentRegistry {
   /** Returns all load diagnostics gathered during the latest reload. */
   getDiagnostics(): AgentDefinitionDiagnostic[] {
     return [...this.snapshot.diagnostics];
+  }
+
+  /** Looks up validation errors that shadow the requested agent name. */
+  getInvalidByName(name: string): InvalidAgentDefinition | undefined {
+    return this.snapshot.invalidAgentsByName?.get(normalizeAgentName(name));
   }
 
   /** Looks up one agent definition by case-insensitive name. */

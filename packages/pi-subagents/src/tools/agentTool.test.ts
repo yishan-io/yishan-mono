@@ -78,6 +78,28 @@ describe("registerAgentTool", () => {
     });
   });
 
+  it("reports validation diagnostics when the requested agent is shadowed by an invalid definition", async () => {
+    const { pi, getRegisteredTool } = createToolHarness();
+    const registry = {
+      reload: vi.fn(),
+      getByName: vi.fn(() => undefined),
+      getInvalidByName: vi.fn(() => ({
+        name: "Explore",
+        source: "user",
+        diagnostics: [{ message: "Agent field `tools` contains unknown tools: web_fetch" }],
+      })),
+    };
+
+    registerAgentTool(pi as never, registry as never, { run: vi.fn() } as never);
+
+    await expect(
+      getRegisteredTool().execute("tool-1", { agent: "Explore", prompt: "Inspect auth" }, undefined, undefined, {
+        cwd: "/tmp/project",
+        sessionManager: {},
+      }),
+    ).rejects.toThrow("Agent `Explore` is invalid: Agent field `tools` contains unknown tools: web_fetch");
+  });
+
   it("runs the requested agent through the shared manager and forwards parent session metadata", async () => {
     const { pi, getRegisteredTool } = createToolHarness();
     const appendCustomEntryMock = vi.fn();

@@ -4,6 +4,9 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { LoadAgentDefinitionsFromDirResult } from "./loader";
+import type { AgentRegistrySnapshot } from "./types";
+
 import {
   findNearestProjectAgentsDir,
   loadAgentDefinitionFile,
@@ -230,6 +233,85 @@ Prompt body`,
     expect(result.diagnostics).toEqual([]);
   });
 
+  it("shadows a builtin agent with an invalid higher-precedence definition", () => {
+    const tempDir = createTempDir();
+    const builtinAgentsDir = join(tempDir, "builtin-agents");
+    const userAgentsDir = join(tempDir, "user-agents");
+
+    writeAgentFile(
+      builtinAgentsDir,
+      "Explore.md",
+      `---
+name: Explore
+description: Search the codebase
+tools:
+  - read
+---
+
+Builtin prompt`,
+    );
+    const userFilePath = writeAgentFile(
+      userAgentsDir,
+      "Explore.md",
+      `---
+name: Explore
+description: Search the web and codebase
+tools:
+  - read
+  - web_fetch
+---
+
+User prompt`,
+    );
+
+    const result = loadAgentDefinitions({
+      cwd: tempDir,
+      builtinAgentsDir,
+      userAgentsDir,
+      projectAgentsDir: null,
+    });
+
+    expect(result.agents).toEqual([]);
+    expect(result.invalidAgentsByName?.get("explore")).toEqual({
+      name: "Explore",
+      source: "user",
+      sourcePath: userFilePath,
+      diagnostics: [{ message: "Agent field `tools` contains unknown tools: web_fetch", path: userFilePath }],
+    });
+  });
+
+  it("allows a valid higher-precedence definition to override a builtin agent", () => {
+    const tempDir = createTempDir();
+    const builtinAgentsDir = join(tempDir, "builtin-agents");
+    const userAgentsDir = join(tempDir, "user-agents");
+
+    writeAgentFile(
+      builtinAgentsDir,
+      "Explore.md",
+      `---
+name: Explore
+description: Builtin
+---
+
+Builtin prompt`,
+    );
+    writeAgentFile(
+      userAgentsDir,
+      "Explore.md",
+      `---
+name: Explore
+description: User
+---
+
+User prompt`,
+    );
+
+    const result = loadAgentDefinitions({ cwd: tempDir, builtinAgentsDir, userAgentsDir, projectAgentsDir: null });
+
+    expect(result.agents).toEqual([expect.objectContaining({ name: "Explore", description: "User", source: "user" })]);
+    expect(result.invalidAgentsByName?.size).toBe(0);
+  });
+
   it("loads conflicting read_only frontmatter but emits a diagnostic", () => {
     const tempDir = createTempDir();
     const filePath = writeAgentFile(
@@ -303,11 +385,84 @@ describe("loadAgentDefinitionsFromDir", () => {
       source: "user",
     });
 
-    expect(result).toEqual({ agents: [], diagnostics: [] });
+    expect(result).toEqual({ agents: [], invalidAgents: [], diagnostics: [] });
+  });
+});
+
+describe("public loader result compatibility", () => {
+  it("accepts snapshots produced before invalid definition metadata was added", () => {
+    const legacySnapshot: AgentRegistrySnapshot = { agents: [], diagnostics: [] };
+    const legacyDirectoryResult: LoadAgentDefinitionsFromDirResult = { agents: [], diagnostics: [] };
+
+    expect(legacySnapshot.agents).toEqual([]);
+    expect(legacyDirectoryResult.agents).toEqual([]);
   });
 });
 
 describe("loadAgentDefinitions", () => {
+  it("allows a later valid file to override an earlier invalid file with the same name", () => {
+    const tempDir = createTempDir();
+    const builtinAgentsDir = join(tempDir, "builtin-agents");
+
+    writeAgentFile(
+      builtinAgentsDir,
+      "A.md",
+      "---\nname: Explore\ndescription: Invalid\ntools: web_fetch\n---\n\nInvalid prompt",
+    );
+    writeAgentFile(builtinAgentsDir, "B.md", "---\nname: Explore\ndescription: Valid\n---\n\nValid prompt");
+
+    const result = loadAgentDefinitions({
+      cwd: tempDir,
+      builtinAgentsDir,
+      userAgentsDir: join(tempDir, "missing-user-agents"),
+      projectAgentsDir: null,
+    });
+
+    expect(result.agents).toEqual([expect.objectContaining({ name: "Explore", description: "Valid" })]);
+    expect(result.invalidAgentsByName?.size).toBe(0);
+  });
+
+  it("allows a later invalid file to shadow an earlier valid file with the same name", () => {
+    const tempDir = createTempDir();
+    const builtinAgentsDir = join(tempDir, "builtin-agents");
+
+    writeAgentFile(builtinAgentsDir, "A.md", "---\nname: Explore\ndescription: Valid\n---\n\nValid prompt");
+    writeAgentFile(
+      builtinAgentsDir,
+      "B.md",
+      "---\nname: Explore\ndescription: Invalid\ntools: web_fetch\n---\n\nInvalid prompt",
+    );
+
+    const result = loadAgentDefinitions({
+      cwd: tempDir,
+      builtinAgentsDir,
+      userAgentsDir: join(tempDir, "missing-user-agents"),
+      projectAgentsDir: null,
+    });
+
+    expect(result.agents).toEqual([]);
+    expect(result.invalidAgentsByName?.get("explore")).toMatchObject({ name: "Explore", source: "builtin" });
+  });
+
+  it("allows an invalid project definition to shadow valid user and builtin definitions", () => {
+    const tempDir = createTempDir();
+    const builtinAgentsDir = join(tempDir, "builtin-agents");
+    const userAgentsDir = join(tempDir, "user-agents");
+    const projectAgentsDir = join(tempDir, "project-agents");
+
+    writeAgentFile(builtinAgentsDir, "Explore.md", "---\nname: Explore\ndescription: Builtin\n---\n\nBuiltin prompt");
+    writeAgentFile(userAgentsDir, "Explore.md", "---\nname: Explore\ndescription: User\n---\n\nUser prompt");
+    writeAgentFile(
+      projectAgentsDir,
+      "Explore.md",
+      "---\nname: Explore\ndescription: Project\ntools: web_fetch\n---\n\nProject prompt",
+    );
+
+    const result = loadAgentDefinitions({ cwd: tempDir, builtinAgentsDir, userAgentsDir, projectAgentsDir });
+
+    expect(result.agents).toEqual([]);
+    expect(result.invalidAgentsByName?.get("explore")).toMatchObject({ name: "Explore", source: "project" });
+  });
   it("applies project over user over builtin precedence", () => {
     const tempDir = createTempDir();
     const builtinDir = join(tempDir, "builtin-agents");

@@ -1,6 +1,11 @@
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 
-import type { AgentDefinition, AgentDefinitionDiagnostic, AgentDefinitionSource } from "./types";
+import type {
+  AgentDefinition,
+  AgentDefinitionDiagnostic,
+  AgentDefinitionSource,
+  InvalidAgentDefinition,
+} from "./types";
 import { WRITE_CAPABLE_TOOL_NAMES } from "./workspaceAccess";
 
 const ALLOWED_THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
@@ -45,6 +50,7 @@ export interface ValidateAgentDefinitionOptions {
 /** Result of validating one agent definition file. */
 export interface ValidateAgentDefinitionResult {
   agent?: AgentDefinition;
+  invalidAgent?: InvalidAgentDefinition;
   diagnostics: AgentDefinitionDiagnostic[];
 }
 
@@ -78,7 +84,12 @@ export function validateAgentDefinition(options: ValidateAgentDefinitionOptions)
   }
 
   if (!name || !description || systemPrompt.length === 0 || diagnostics.length > 0) {
-    return { diagnostics };
+    return {
+      invalidAgent: name
+        ? { name, source: options.source, sourcePath: path, diagnostics: [...diagnostics] }
+        : undefined,
+      diagnostics,
+    };
   }
 
   if (tools && readOnly !== undefined) {

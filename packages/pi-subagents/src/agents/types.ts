@@ -47,6 +47,14 @@ export interface AgentDefinition {
   sourcePath?: string;
 }
 
+/** A definition with a valid name but validation errors that prevents execution. */
+export interface InvalidAgentDefinition {
+  name: string;
+  source: AgentDefinitionSource;
+  sourcePath?: string;
+  diagnostics: AgentDefinitionDiagnostic[];
+}
+
 /** Input required to start one managed sub-agent run. */
 export interface AgentTask {
   agentName: string;
@@ -111,6 +119,7 @@ export interface AgentDefinitionDiagnostic {
 export interface AgentRegistrySnapshot {
   agents: AgentDefinition[];
   diagnostics: AgentDefinitionDiagnostic[];
+  invalidAgentsByName?: Map<string, InvalidAgentDefinition>;
 }
 
 /** Shared empty usage value for agent initialization paths. */
