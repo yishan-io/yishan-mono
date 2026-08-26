@@ -5,7 +5,12 @@ import { renamePiCompatibilitySession } from "../../../domains/agent/daemon/daem
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
-import { openChatFileTab, renameAgentChatSessionByTab, startAgentChatSession } from "./agentChatCommands";
+import {
+  openChatFileTab,
+  refreshDshSubagentLineage,
+  renameAgentChatSessionByTab,
+  startAgentChatSession,
+} from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -32,6 +37,7 @@ const mocks = vi.hoisted(() => ({
   getDetectionStatuses: vi.fn(),
   listDetectionStatuses: vi.fn(),
   getCapabilities: vi.fn(),
+  listSessionLineage: vi.fn(),
 }));
 
 vi.mock("@shared/ids/generateId", () => ({
@@ -55,6 +61,7 @@ vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),
   listActivePiCompatibilitySessions: mocks.listActiveSessions ?? vi.fn(),
   listAgentDetectionStatuses: mocks.listDetectionStatuses ?? vi.fn(),
+  listAgentSessionLineage: mocks.listSessionLineage,
   listAgentModels: mocks.listModels ?? vi.fn(),
   listPiProviders: mocks.listProviders ?? vi.fn(),
   removePiProvider: mocks.removeProvider ?? vi.fn(),
