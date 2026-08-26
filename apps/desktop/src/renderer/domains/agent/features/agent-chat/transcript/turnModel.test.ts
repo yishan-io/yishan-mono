@@ -920,7 +920,7 @@ describe("formatTurnDuration", () => {
   });
 
   it("formats one hour or more as hours and minutes", () => {
-    expect(formatTurnDuration(60 * 60_000)).toBe("1H0M");
-    expect(formatTurnDuration(65 * 60_000)).toBe("1H5M");
+    expect(formatTurnDuration(60 * 60_000)).toBe("1h0m");
+    expect(formatTurnDuration(65 * 60_000)).toBe("1h5m");
   });
 });

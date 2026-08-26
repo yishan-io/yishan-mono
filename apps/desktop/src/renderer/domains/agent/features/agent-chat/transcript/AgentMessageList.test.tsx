@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { displaySettingsStore } from "@renderer/domains/settings";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessage as AgentMessageType } from "../../../../../domains/agent/chat/agentChatTypes";
@@ -62,6 +63,17 @@ afterEach(() => {
 });
 
 describe("AgentMessageList", () => {
+  it("keeps the scrollbar's parent pane-wide while constraining fixed-mode transcript content", () => {
+    displaySettingsStore.setState({ agentChatWidth: "fixed" });
+    const messages: AgentMessageType[] = [{ id: "user-1", role: "user", content: "Prompt" }];
+
+    render(<AgentMessageList tabId="tab-fixed-width" isActive messages={messages} />);
+
+    expect(getComputedStyle(screen.getByTestId("agent-message-scroll-container")).width).toBe("100%");
+    expect(getComputedStyle(screen.getByTestId("agent-message-list-content")).maxWidth).toBe("960px");
+    expect(getComputedStyle(screen.getByTestId("agent-message-list-content")).marginLeft).toBe("auto");
+  });
+
   it("top-aligns short transcripts", () => {
     const messages: AgentMessageType[] = [{ id: "user-1", role: "user", content: "Prompt" }];
 

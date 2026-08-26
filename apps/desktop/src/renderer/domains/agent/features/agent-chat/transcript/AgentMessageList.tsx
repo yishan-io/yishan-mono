@@ -1,4 +1,5 @@
 import { Box, CircularProgress, IconButton, Typography } from "@mui/material";
+import { displaySettingsStore } from "@renderer/domains/settings";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,6 +9,7 @@ import type {
   AgentMessage as AgentMessageType,
   AgentQueueState,
 } from "../../../../../domains/agent/chat/agentChatTypes";
+import { AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX } from "../chat/AgentChatContentLayout";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentChatEmptyState } from "./AgentChatEmptyState";
 import { AgentTurn } from "./AgentTurn";
@@ -161,6 +163,7 @@ function AgentMessageListComponent({
   emptyHelpLines,
   emptyHelpPrefix,
 }: AgentMessageListProps) {
+  const agentChatWidth = displaySettingsStore((state) => state.agentChatWidth);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
   const wasActiveRef = useRef(false);
@@ -361,6 +364,7 @@ function AgentMessageListComponent({
         onScroll={updateSavedScrollState}
         sx={{
           height: "100%",
+          width: "100%",
           overflowY: "auto",
           overflowX: "hidden",
           px: 2,
@@ -375,6 +379,13 @@ function AgentMessageListComponent({
             flexDirection: "column",
             justifyContent: "flex-start",
             gap: 1,
+            ...(agentChatWidth === "fixed"
+              ? {
+                  maxWidth: AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX,
+                  mx: "auto",
+                  width: "100%",
+                }
+              : {}),
           }}
         >
           <Box sx={{ height: virtualMessageTotalSize, position: "relative", width: "100%" }}>

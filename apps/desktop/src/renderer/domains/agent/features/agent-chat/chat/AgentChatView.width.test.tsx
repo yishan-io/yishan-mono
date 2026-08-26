@@ -53,16 +53,14 @@ afterEach(() => {
 });
 
 describe("AgentChatView content width", () => {
-  it("uses a centered 960px content column in fixed mode", () => {
+  it("keeps the fixed-mode scroll parent at the full pane width", () => {
     seedEmptySession();
     renderChat();
 
     const contentColumn = screen.getByTestId("agent-chat-content-column");
 
     expect(contentColumn.getAttribute("data-width-mode")).toBe("fixed");
-    expect(getComputedStyle(contentColumn).marginLeft).toBe("auto");
-    expect(getComputedStyle(contentColumn).marginRight).toBe("auto");
-    expect(getComputedStyle(contentColumn).maxWidth).toBe("960px");
+    expect(getComputedStyle(contentColumn).maxWidth).toBe("none");
     expect(getComputedStyle(contentColumn).width).toBe("100%");
   });
 
@@ -131,7 +129,7 @@ describe("AgentChatView content width", () => {
     expect(screen.getByTestId("agent-chat-empty-state")).toBeTruthy();
     expect(getComputedStyle(shell).height).toBe("100%");
     expect(getComputedStyle(shell).width).toBe("100%");
-    expect(getComputedStyle(contentColumn).maxWidth).toBe("960px");
+    expect(getComputedStyle(contentColumn).maxWidth).toBe("none");
     expect(getComputedStyle(contentColumn).width).toBe("100%");
   });
 });
