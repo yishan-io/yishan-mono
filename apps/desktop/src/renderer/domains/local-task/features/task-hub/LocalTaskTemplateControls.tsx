@@ -119,6 +119,7 @@ export function LocalTaskTemplateControls({ description, onDescriptionChange, di
             disabled={isDisabled}
             onChange={(event) => handleTemplateChange(event.target.value)}
             inputProps={{ "aria-label": t("localTask.templates.select") }}
+            renderValue={(value) => templates.find((template) => template.id === value)?.name ?? ""}
           >
             {templates.map((template) => {
               const isAgentDefault = template.id === agentDefaultId;
