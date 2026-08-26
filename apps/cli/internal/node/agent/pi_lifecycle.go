@@ -55,6 +55,12 @@ func workspaceClosingError(workspaceID string) error {
 	return rpc.NewRPCError(rpc.CodeNotFound, "workspace is closing: "+workspaceID)
 }
 
+// SetAfterWorkspaceCleanupAdmissionClosedForTest installs a focused-test hook
+// that runs after a workspace close blocks new agent admissions.
+func (s *Service) SetAfterWorkspaceCleanupAdmissionClosedForTest(hook func()) {
+	s.piSessions.SetAfterWorkspaceCleanupMarkerInstalledForTest(hook)
+}
+
 func (s *Service) startAdmittedPi(ctx context.Context, admission *session.Admission, connState *rpc.Connection, req rpc.PiStartParams) (any, error) {
 	defer s.piSessions.ReleaseAdmission(admission)
 	if err := s.rejectEndedTaskRun(req.SessionID); err != nil {
