@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/daemon"
-	"yishan/apps/cli/internal/rpc"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/spf13/cobra"
