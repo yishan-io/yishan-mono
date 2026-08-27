@@ -1,6 +1,21 @@
 import type { NotificationEventType } from "../notifications/notificationPreferences";
 import type { AppActionPayload } from "./actions";
 
+/** Optional interactive task-run completion metadata is either complete or absent. */
+type WorkspaceCreateTaskRunCompletionMetadata =
+  | {
+      taskRunSessionId?: never;
+      taskRunTabId?: never;
+      taskRunRuntime?: never;
+      taskRunTitle?: never;
+    }
+  | {
+      taskRunSessionId: string;
+      taskRunTabId: string;
+      taskRunRuntime: "pi" | "dsh";
+      taskRunTitle: string;
+    };
+
 export type RpcSchema = {
   toFrontend: {
     messages: {
@@ -75,10 +90,7 @@ export type RpcSchema = {
         worktreePath: string;
         lifecycleScriptWarnings?: unknown[];
         taskRunStatus?: "started" | "failed";
-        /** Present when the task run started as a Pi session (agent chat tab). */
-        taskRunSessionId?: string;
-        taskRunTitle?: string;
-      };
+      } & WorkspaceCreateTaskRunCompletionMetadata;
       workspaceCreateFailed: {
         workspaceId: string;
         message: string;

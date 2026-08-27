@@ -328,6 +328,60 @@ describe("normalizeBackendEvent", () => {
     expect(normalized.source).toBe("workspaceCreateStarted");
   });
 
+  it("normalizes complete interactive task-run completion metadata", () => {
+    const normalized = assertNormalized(
+      normalizeBackendEvent(
+        createEnvelope({
+          method: "workspaceCreateCompleted",
+          payload: {
+            workspaceId: "workspace-1",
+            worktreePath: "/tmp/worktree",
+            taskRunStatus: "started",
+            taskRunSessionId: "session-1",
+            taskRunTabId: "tab-1",
+            taskRunTitle: "Task: investigate bug",
+            taskRunRuntime: "dsh",
+          },
+        }),
+      ),
+    );
+
+    expect(normalized.source).toBe("workspaceCreateCompleted");
+  });
+
+  it.each([
+    [
+      "session id is not a string, so tab startup cannot call trim",
+      { taskRunSessionId: 1, taskRunTabId: "tab-1", taskRunTitle: "Task", taskRunRuntime: "pi" },
+    ],
+    [
+      "runtime is unsupported",
+      { taskRunSessionId: "session-1", taskRunTabId: "tab-1", taskRunTitle: "Task", taskRunRuntime: "terminal" },
+    ],
+    ["metadata tuple is incomplete", { taskRunSessionId: "session-1" }],
+    [
+      "title is blank",
+      { taskRunSessionId: "session-1", taskRunTabId: "tab-1", taskRunTitle: " ", taskRunRuntime: "pi" },
+    ],
+    [
+      "tab id exceeds the metadata bound",
+      { taskRunSessionId: "session-1", taskRunTabId: "x".repeat(257), taskRunTitle: "Task", taskRunRuntime: "pi" },
+    ],
+  ])("rejects workspace-create completion when %s", (_reason, taskRunMetadata) => {
+    const normalized = normalizeBackendEvent(
+      createEnvelope({
+        method: "workspaceCreateCompleted",
+        payload: {
+          workspaceId: "workspace-1",
+          worktreePath: "/tmp/worktree",
+          ...taskRunMetadata,
+        },
+      }),
+    );
+
+    expect(normalized).toBeNull();
+  });
+
   it("normalizes workspace pull request updated events", () => {
     const normalized = assertNormalized(
       normalizeBackendEvent(

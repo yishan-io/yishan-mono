@@ -17,6 +17,11 @@ type recordingDSHSessions struct {
 	resumeCWD        string
 	disposeCWD       string
 	startRequest     dsh.SessionStartRequest
+	promptRequest    dsh.SessionPromptRequest
+	startErr         error
+	promptErr        error
+	subscribeErr     error
+	disposeCount     int
 	listResult       dsh.SessionListResult
 	listErr          error
 	readErr          error
@@ -55,6 +60,7 @@ func (r *recordingDSHSessions) ResumeSession(_ context.Context, request dsh.Sess
 
 func (r *recordingDSHSessions) DisposeSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionDisposeResult, error) {
 	r.disposeCWD = request.CWD
+	r.disposeCount++
 	return dsh.SessionDisposeResult{SessionID: request.SessionID, Disposed: true}, nil
 }
 
@@ -198,16 +204,17 @@ func TestService_DSHSessionMethodsRejectClosedWorkspaceBeforeRuntimeCall(t *test
 
 func (r *recordingDSHSessions) StartSession(_ context.Context, request dsh.SessionStartRequest) (dsh.SessionStartResult, error) {
 	r.startRequest = request
-	return dsh.SessionStartResult{SessionID: request.SessionID, Incarnation: "test-incarnation"}, nil
+	return dsh.SessionStartResult{SessionID: request.SessionID, Incarnation: "test-incarnation"}, r.startErr
 }
-func (r *recordingDSHSessions) PromptSession(context.Context, dsh.SessionPromptRequest) (dsh.SessionPromptResult, error) {
-	return dsh.SessionPromptResult{}, nil
+func (r *recordingDSHSessions) PromptSession(_ context.Context, request dsh.SessionPromptRequest) (dsh.SessionPromptResult, error) {
+	r.promptRequest = request
+	return dsh.SessionPromptResult{}, r.promptErr
 }
 func (r *recordingDSHSessions) CancelSession(_ context.Context, request dsh.SessionCancelRequest) (dsh.SessionCancelResult, error) {
 	return dsh.SessionCancelResult{SessionID: request.SessionID, Cancelled: true}, nil
 }
 func (r *recordingDSHSessions) SubscribeSession(context.Context, dsh.SessionSubscribeRequest) (dsh.SessionSubscription, error) {
-	return dsh.SessionSubscription{Updates: make(chan dsh.SessionUpdate), Unsubscribe: func() {}}, nil
+	return dsh.SessionSubscription{Updates: make(chan dsh.SessionUpdate), Unsubscribe: func() {}}, r.subscribeErr
 }
 func (r *recordingDSHSessions) FlushSession(_ context.Context, request dsh.SessionFlushRequest) (dsh.DurableCursor, error) {
 	return dsh.DurableCursor{SessionID: request.SessionID}, nil

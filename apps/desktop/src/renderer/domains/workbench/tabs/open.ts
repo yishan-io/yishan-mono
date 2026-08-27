@@ -365,13 +365,15 @@ export function openTabState(
     }
   }
 
-  const nextTab = createTabFromOpenInput(input, targetWorkspaceId, nextTabId);
+  const requestedTabId = input.kind === "terminal" || input.kind === "agent-chat" ? input.tabId?.trim() : "";
+  const createdTabId = requestedTabId || nextTabId;
+  const nextTab = createTabFromOpenInput(input, targetWorkspaceId, createdTabId);
   return {
     tabs: [...state.tabs, nextTab],
-    selectedTabId: nextTabId,
+    selectedTabId: createdTabId,
     selectedTabIdByWorkspaceId: {
       ...state.selectedTabIdByWorkspaceId,
-      [targetWorkspaceId]: nextTabId,
+      [targetWorkspaceId]: createdTabId,
     },
   };
 }

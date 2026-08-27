@@ -60,6 +60,8 @@ export type {
 } from "./chat";
 
 export type { AgentRuntime } from "./daemon/daemonAgentTypes";
+export { getAgentCapabilities } from "./daemon/daemonAgentProcedures";
+export { selectNewAgentChatRuntime } from "./runtime/agentRuntimeSelection";
 export { agentChatStore, type AgentChatStoreState } from "./state/agentChatStore";
 export { chatStore, type ChatStoreState, type WorkspaceAgentStatus, type WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.

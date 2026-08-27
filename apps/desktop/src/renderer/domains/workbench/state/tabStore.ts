@@ -147,7 +147,10 @@ export const tabStore = create<TabStoreState>()(
         return removedTabIds;
       },
       openTab: (input, options) => {
-        const nextTabId = input.kind === "terminal" ? (input.tabId ?? createClientTabId()) : createClientTabId();
+        const nextTabId =
+          input.kind === "terminal" || input.kind === "agent-chat"
+            ? (input.tabId ?? createClientTabId())
+            : createClientTabId();
         set(
           (state) =>
             openTabState(state, input, nextTabId, {

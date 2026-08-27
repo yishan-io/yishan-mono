@@ -8,9 +8,11 @@ import {
   isOptionalNotificationEventType,
   isOptionalNotificationObserverStatusPayload,
   isOptionalString,
+  isOptionalWorkspaceCreateTaskRunStatus,
   isRecord,
   isRpcFrontendMessageKey,
   isSupportedNotificationEventType,
+  isWorkspaceCreateTaskRunMetadata,
 } from "./backendEventGuards";
 
 export type BackendEventName =
@@ -257,7 +259,12 @@ export function normalizeBackendEvent(envelope: DesktopEventEnvelope): Normalize
   }
 
   if (envelope.method === "workspaceCreateCompleted") {
-    if (typeof payload.workspaceId !== "string" || typeof payload.worktreePath !== "string") {
+    if (
+      typeof payload.workspaceId !== "string" ||
+      typeof payload.worktreePath !== "string" ||
+      !isOptionalWorkspaceCreateTaskRunStatus(payload.taskRunStatus) ||
+      !isWorkspaceCreateTaskRunMetadata(payload)
+    ) {
       return null;
     }
 

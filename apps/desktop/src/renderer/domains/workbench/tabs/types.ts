@@ -192,4 +192,6 @@ export type OpenTabInput =
       sessionView?: AgentChatSessionView;
       subagentAgentId?: string;
       subagentParentSessionId?: string;
+      /** Caller-provided stable identity for daemon-created agent-chat tabs. */
+      tabId?: string;
     };
