@@ -63,6 +63,43 @@ describe("agentChatDSHEventRouter", () => {
     dispose();
   });
 
+  it("routes valid lifecycle and resync hints without malformed recovery", () => {
+    const onLifecycleUpdate = vi.fn();
+    const onMalformedPayload = vi.fn();
+    const dispose = registerAgentChatDSHEventRouter({
+      ...validEnvelope,
+      onEvent: vi.fn(),
+      onLifecycleUpdate,
+      onMalformedPayload,
+    });
+    const lifecycle = {
+      version: 1,
+      parentSessionId: "session-a",
+      incarnation: "inc-a",
+      revision: 0,
+      event: "started",
+      runId: "run-a",
+      childSessionId: "child-a",
+      provider: "pi",
+      local: true,
+    };
+
+    emitDSHEvent({ ...validEnvelope, update: { lifecycle } });
+    emitDSHEvent({
+      ...validEnvelope,
+      update: {
+        lifecycleResync: {
+          parentSessionId: "session-a",
+          incarnation: "inc-a",
+          revision: 0,
+        },
+      },
+    });
+
+    expect(onLifecycleUpdate).toHaveBeenCalledTimes(2);
+    expect(onMalformedPayload).not.toHaveBeenCalled();
+    dispose();
+  });
   it("starts durable recovery when a matching malformed payload reaches the controller", async () => {
     const loader = vi.fn().mockResolvedValue({
       session: { sessionId: "session-a", createdAt: 0 },

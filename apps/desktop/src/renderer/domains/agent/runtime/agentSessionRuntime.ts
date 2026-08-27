@@ -30,6 +30,7 @@ type AgentRuntimeSessionRecord = {
   workspaceId: string;
   cwd: string;
   ownsSessionOnClose: boolean;
+  sessionView: AgentChatSessionView;
   unsubscribe: (() => void) | null;
   state: "starting" | "running" | "closing";
   closeRequested: boolean;
@@ -85,6 +86,7 @@ export async function ensureAgentSession(opts: EnsureAgentSessionOptions): Promi
     workspaceId: opts.workspaceId,
     cwd: opts.cwd,
     ownsSessionOnClose: opts.sessionView !== "subagent-detail",
+    sessionView: opts.sessionView ?? "full",
     unsubscribe: null,
     state: "starting",
     closeRequested: false,
@@ -92,7 +94,7 @@ export async function ensureAgentSession(opts: EnsureAgentSessionOptions): Promi
     dshTranscriptController: null,
   };
   record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
-  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController);
+  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
   const deferredStart = createDeferred<void>();
   record.startPromise = deferredStart.promise;
   // This promise can reject when startup fails without a concurrent stop.
@@ -288,6 +290,7 @@ function registerRuntimeRouter(
   tabId: string,
   sessionId: string,
   controller: DSHTranscriptController | null,
+  record: AgentRuntimeSessionRecord,
 ): () => void {
   if (runtime === "pi") return registerPiRouter(tabId, sessionId);
   if (!controller) throw new Error("DSH transcript controller is required");
@@ -295,9 +298,25 @@ function registerRuntimeRouter(
     tabId,
     sessionId,
     onEvent: (payload) => controller.handle(payload),
+    onLifecycleUpdate: () => refreshDshSubagentLineageForLifecycle(record, tabId),
     onMalformedPayload: () => controller.handleMalformedPayload(),
   });
 }
+function refreshDshSubagentLineageForLifecycle(record: AgentRuntimeSessionRecord, tabId: string): void {
+  if (record.sessionView !== "full") return;
+  // fire-and-forget: lineage is supplementary and must not delay DSH event handling.
+  void import("../commands/agentChatCommands")
+    .then(({ refreshDshSubagentLineage }) =>
+      refreshDshSubagentLineage({
+        tabId,
+        workspaceId: record.workspaceId,
+        cwd: record.cwd,
+        rootSessionId: record.sessionId,
+      }),
+    )
+    .catch((error: unknown) => console.warn("Failed to load DSH subagent lineage refresh", getErrorMessage(error)));
+}
+
 function createDSHTranscriptController(
   record: AgentRuntimeSessionRecord,
   tabId: string,
@@ -376,6 +395,7 @@ async function adoptExistingChatSession(
     workspaceId: opts.workspaceId,
     cwd: opts.cwd,
     ownsSessionOnClose: true,
+    sessionView: opts.sessionView ?? "full",
     unsubscribe: null,
     state: "running",
     closeRequested: false,
@@ -383,7 +403,7 @@ async function adoptExistingChatSession(
     dshTranscriptController: null,
   };
   record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
-  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController);
+  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
   runtimeSessionRecords.set(opts.tabId, record);
   activeSessions.set(opts.tabId, record);
   return { sessionId, attached: true, runtime };

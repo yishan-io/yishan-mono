@@ -5,6 +5,7 @@ type RouterEntry = {
   sessionId: string;
   token: number;
   onEvent: (payload: DSHFrontendPayload) => void;
+  onLifecycleUpdate?: () => void;
   onMalformedPayload: () => void;
 };
 const routerMap = new Map<string, RouterEntry>();
@@ -16,6 +17,7 @@ export function registerAgentChatDSHEventRouter(options: {
   tabId: string;
   sessionId: string;
   onEvent: (payload: DSHFrontendPayload) => void;
+  onLifecycleUpdate?: () => void;
   onMalformedPayload: () => void;
 }): () => void {
   const token = nextToken++;
@@ -23,6 +25,7 @@ export function registerAgentChatDSHEventRouter(options: {
     sessionId: options.sessionId,
     token,
     onEvent: options.onEvent,
+    onLifecycleUpdate: options.onLifecycleUpdate,
     onMalformedPayload: options.onMalformedPayload,
   });
   ensureTransport();
@@ -42,7 +45,10 @@ function ensureTransport(): void {
     const payload = parseDSHFrontendPayload(envelope.payload);
     if (payload) {
       const entry = routerMap.get(payload.tabId);
-      if (entry?.sessionId === payload.sessionId) entry.onEvent(payload);
+      if (entry?.sessionId === payload.sessionId) {
+        entry.onEvent(payload);
+        if (payload.update.lifecycle || payload.update.lifecycleResync) entry.onLifecycleUpdate?.();
+      }
       return;
     }
     const identity = parseDSHFrontendRouteIdentity(envelope.payload);

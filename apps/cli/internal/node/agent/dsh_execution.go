@@ -306,14 +306,21 @@ func (s *Service) forwardDSHUpdates(entry *dshLiveSession, generation uint64, up
 }
 
 func (s *Service) publishDSHUpdate(route dshRoute, update dsh.SessionUpdate) error {
-	projected, err := projectDSHUpdate(update)
-	if err != nil {
-		return err
+	if update.Event != nil {
+		projected, err := projectDSHUpdate(update)
+		if err != nil {
+			return err
+		}
+		update = projected
 	}
+	return s.notifyDSHUpdate(route, update)
+}
+
+func (s *Service) notifyDSHUpdate(route dshRoute, update dsh.SessionUpdate) error {
 	if s.publishDSHUpdateError != nil {
 		return s.publishDSHUpdateError
 	}
-	payload := dshFrontendEvent{SessionID: route.sessionID, TabID: route.tabID, WorkspaceID: route.workspaceID, Incarnation: route.incarnation, Update: projected}
+	payload := dshFrontendEvent{SessionID: route.sessionID, TabID: route.tabID, WorkspaceID: route.workspaceID, Incarnation: route.incarnation, Update: update}
 	return route.connection.Notify(rpc.MethodFrontendEventsStream, map[string]any{"topic": dshEventTopic, "payload": payload})
 }
 

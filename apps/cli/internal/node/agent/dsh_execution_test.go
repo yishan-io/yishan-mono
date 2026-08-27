@@ -44,6 +44,7 @@ type executionDSH struct {
 	listResult                                                          dsh.SessionListResult
 	health                                                              dsh.Health
 	subscribeSnapshot                                                   dsh.SessionSubscribeResult
+	subscribeIncarnation                                                string
 	readResult                                                          dsh.SessionReadResult
 	reads                                                               int
 }
@@ -112,7 +113,7 @@ func (f *executionDSH) SubscribeSession(_ context.Context, req dsh.SessionSubscr
 	f.subscriptions = append(f.subscriptions, updates)
 	f.mu.Unlock()
 	var once sync.Once
-	subscription := dsh.SessionSubscription{Updates: updates, Unsubscribe: func() { once.Do(func() { close(updates) }) }}
+	subscription := dsh.SessionSubscription{Updates: updates, Incarnation: f.subscribeIncarnation, Unsubscribe: func() { once.Do(func() { close(updates) }) }}
 	f.mu.Lock()
 	subscription.Snapshot = f.subscribeSnapshot
 	f.mu.Unlock()

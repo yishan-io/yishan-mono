@@ -35,8 +35,23 @@ export type DSHUpdate = {
   status?: { sessionId: string; status: "idle" | "running" };
   cursor?: { sessionId: string; durableThroughSeq: number; incarnation: string };
   reset?: { sessionId: string; incarnation: string; headSeq: number };
+  lifecycle?: DSHLifecycle;
+  lifecycleResync?: DSHLifecycleResync;
   unavailable?: true;
 };
+export type DSHLifecycle = {
+  version: 1;
+  parentSessionId: string;
+  incarnation: string;
+  revision: number;
+  event: "started" | "finished";
+  runId: string;
+  childSessionId: string;
+  provider: string;
+  local: boolean;
+  stopReason?: "completed" | "aborted" | "error" | "max-tokens" | "refusal";
+};
+export type DSHLifecycleResync = { parentSessionId: string; incarnation: string; revision: number };
 export type DSHFrontendRouteIdentity = { sessionId: string; tabId: string };
 export type DSHFrontendPayload = {
   sessionId: string;
@@ -119,6 +134,14 @@ function parseUpdate(input: unknown, sessionId: string, incarnation: string): DS
     const reset = parseReset(update.reset, sessionId, incarnation);
     return reset ? { reset } : null;
   }
+  if ("lifecycle" in update) {
+    const lifecycle = parseLifecycle(update.lifecycle, sessionId, incarnation);
+    return lifecycle ? { lifecycle } : null;
+  }
+  if ("lifecycleResync" in update) {
+    const lifecycleResync = parseLifecycleResync(update.lifecycleResync, sessionId, incarnation);
+    return lifecycleResync ? { lifecycleResync } : null;
+  }
   return update.unavailable === true ? { unavailable: true } : null;
 }
 function parseEventWrapper(input: unknown, outerSessionId: string): DSHEvent | null {
@@ -194,6 +217,65 @@ function parseReset(
   const sequence = reset && safeSequence(reset.headSeq, -1);
   return reset && reset.sessionId === sessionId && reset.incarnation === incarnation && sequence !== null
     ? { sessionId, incarnation, headSeq: sequence }
+    : null;
+}
+function parseLifecycle(input: unknown, sessionId: string, incarnation: string): DSHLifecycle | null {
+  const lifecycle = asRecord(input);
+  if (!lifecycle) return null;
+  const hasStopReason = "stopReason" in lifecycle;
+  if (
+    !hasExactKeys(
+      lifecycle,
+      hasStopReason
+        ? [
+            "version",
+            "parentSessionId",
+            "incarnation",
+            "revision",
+            "event",
+            "runId",
+            "childSessionId",
+            "provider",
+            "local",
+            "stopReason",
+          ]
+        : [
+            "version",
+            "parentSessionId",
+            "incarnation",
+            "revision",
+            "event",
+            "runId",
+            "childSessionId",
+            "provider",
+            "local",
+          ],
+    )
+  )
+    return null;
+  const isIdentityMatch = lifecycle.parentSessionId === sessionId && lifecycle.incarnation === incarnation;
+  const hasRequiredValues =
+    lifecycle.version === 1 &&
+    safeSequence(lifecycle.revision, 0) !== null &&
+    ["runId", "childSessionId", "provider"].every((key) => requiredString(lifecycle, key)) &&
+    typeof lifecycle.local === "boolean";
+  if (!isIdentityMatch || !hasRequiredValues) return null;
+  if (lifecycle.event === "started" && !hasStopReason) return lifecycle as DSHLifecycle;
+  if (
+    lifecycle.event === "finished" &&
+    typeof lifecycle.stopReason === "string" &&
+    ["completed", "aborted", "error", "max-tokens", "refusal"].includes(lifecycle.stopReason)
+  )
+    return lifecycle as DSHLifecycle;
+  return null;
+}
+function parseLifecycleResync(input: unknown, sessionId: string, incarnation: string): DSHLifecycleResync | null {
+  const resync = exactRecord(input, ["parentSessionId", "incarnation", "revision"]);
+  return resync &&
+    resync.parentSessionId === sessionId &&
+    resync.incarnation === incarnation &&
+    safeSequence(resync.revision, 0) !== null
+    ? (resync as DSHLifecycleResync)
     : null;
 }
 function parseSurfaceOp(input: unknown): SurfaceOp | null {

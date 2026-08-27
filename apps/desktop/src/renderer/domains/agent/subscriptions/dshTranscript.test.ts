@@ -171,6 +171,63 @@ describe("DSH transcript", () => {
       }),
     ).not.toBeNull();
   });
+  it("accepts exact lifecycle hints only when their parent and incarnation match the envelope", () => {
+    const envelope = { sessionId: "parent", tabId: "tab", workspaceId: "workspace", incarnation: "inc" };
+    const lifecycle = {
+      version: 1,
+      parentSessionId: "parent",
+      incarnation: "inc",
+      revision: 7,
+      event: "started",
+      runId: "run",
+      childSessionId: "child",
+      provider: "pi",
+      local: true,
+    };
+    expect(parseDSHFrontendPayload({ ...envelope, update: { lifecycle } })).toMatchObject({ update: { lifecycle } });
+    expect(
+      parseDSHFrontendPayload({
+        ...envelope,
+        update: { lifecycle: { ...lifecycle, event: "finished", stopReason: "completed" } },
+      }),
+    ).not.toBeNull();
+    expect(
+      parseDSHFrontendPayload({
+        ...envelope,
+        update: { lifecycleResync: { parentSessionId: "parent", incarnation: "inc", revision: 7 } },
+      }),
+    ).not.toBeNull();
+    expect(
+      parseDSHFrontendPayload({ ...envelope, update: { lifecycle: { ...lifecycle, parentSessionId: "other" } } }),
+    ).toBeNull();
+    expect(
+      parseDSHFrontendPayload({ ...envelope, update: { lifecycle: { ...lifecycle, incarnation: "other" } } }),
+    ).toBeNull();
+    expect(
+      parseDSHFrontendPayload({
+        ...envelope,
+        update: { lifecycle: { ...lifecycle, revision: Number.MAX_SAFE_INTEGER + 1 } },
+      }),
+    ).toBeNull();
+    expect(
+      parseDSHFrontendPayload({
+        ...envelope,
+        update: { lifecycle: { ...lifecycle, event: "started", stopReason: "completed" } },
+      }),
+    ).toBeNull();
+    expect(
+      parseDSHFrontendPayload({ ...envelope, update: { lifecycle: { ...lifecycle, event: "finished" } } }),
+    ).toBeNull();
+    expect(
+      parseDSHFrontendPayload({ ...envelope, update: { lifecycle: { ...lifecycle, unexpected: true } } }),
+    ).toBeNull();
+    expect(
+      parseDSHFrontendPayload({
+        ...envelope,
+        update: { lifecycle, lifecycleResync: { parentSessionId: "parent", incarnation: "inc", revision: 7 } },
+      }),
+    ).toBeNull();
+  });
   it("strictly validates the frontend envelope and safe sequence", () => {
     expect(
       parseDSHFrontendPayload({
