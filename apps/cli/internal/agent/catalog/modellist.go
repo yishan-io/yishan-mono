@@ -35,6 +35,10 @@ func NewService() *Service {
 			cli:    piFetcher{},
 			static: newStaticFetcher("pi", piStaticModels),
 		},
+		"dsh": {
+			cli:    nil,
+			static: newDSHStaticFetcher(),
+		},
 		"copilot": {
 			cli:    copilotFetcher{},
 			static: newStaticFetcher("copilot", copilotStaticModels),

@@ -32,6 +32,7 @@ import {
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
 import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } from "../subscriptions/agentChatPiEventShared";
+import { listAgentModels } from "./agentCommands";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the
@@ -142,18 +143,29 @@ export async function startAgentChatSession(opts: {
   }
 }
 
-/** Populates the model selector for a DSH session from daemon capabilities. DSH uses one
- * globally-configured provider/model; the list contains only that entry. */
+/** Populates the model selector for a DSH session from agent.listModels("dsh") and capabilities. */
 export async function loadDSHSessionModels(tabId: string, cachedCapabilities?: Awaited<ReturnType<typeof getAgentCapabilities>>): Promise<void> {
   try {
-    const capabilities = cachedCapabilities ?? await getAgentCapabilities().catch(() => null);
-    if (capabilities?.dsh.provider && capabilities?.dsh.model) {
-      const model = {
-        id: capabilities.dsh.model,
-        name: capabilities.dsh.model,
-        provider: capabilities.dsh.provider,
-        ...(capabilities.dsh.credentialRef ? { credentialRef: capabilities.dsh.credentialRef } : {}),
-      };
+    const [modelsResult, capabilities] = await Promise.all([
+      listAgentModels("dsh").catch(() => null),
+      cachedCapabilities ? Promise.resolve(cachedCapabilities) : getAgentCapabilities().catch(() => null),
+    ]);
+    const provider = capabilities?.dsh.provider;
+    const credentialRef = capabilities?.dsh.credentialRef;
+    const configuredModelId = capabilities?.dsh.model;
+    const models = (modelsResult?.models ?? []).map((m) => ({
+      id: m.id,
+      name: m.name,
+      provider,
+      ...(credentialRef ? { credentialRef } : {}),
+    }));
+    if (models.length > 0) {
+      agentChatStore.getState().setAvailableModels(tabId, models);
+      const currentModel = models.find((m) => m.id === configuredModelId) ?? models[0];
+      if (currentModel) agentChatStore.getState().setCurrentModel(tabId, currentModel);
+    } else if (provider && configuredModelId) {
+      // Fallback: use the single configured model if the list is empty.
+      const model = { id: configuredModelId, name: configuredModelId, provider, ...(credentialRef ? { credentialRef } : {}) };
       agentChatStore.getState().setAvailableModels(tabId, [model]);
       agentChatStore.getState().setCurrentModel(tabId, model);
     } else {

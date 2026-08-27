@@ -89,3 +89,15 @@ var copilotStaticModels = []string{
 var cursorStaticModels = []string{
 	"auto",
 }
+
+// dshStaticModels lists the known deepseek-official models from the DSH bundle.
+var dshStaticModels = []ModelInfo{
+	{ID: "deepseek-chat", Name: "DeepSeek Chat"},
+	{ID: "deepseek-v4-flash", Name: "DeepSeek-V4-Flash"},
+	{ID: "deepseek-v4-pro", Name: "DeepSeek-V4-Pro"},
+	{ID: "deepseek-v4-flash-vision-exp", Name: "DeepSeek-V4-Flash-Vision-Exp"},
+}
+
+func newDSHStaticFetcher() staticFetcher {
+	return staticFetcher{agentKind: "dsh", models: dshStaticModels}
+}
