@@ -9,7 +9,7 @@ import { spawn } from "node:child_process";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const desktopDirectory = resolve(scriptDirectory, "..");
-const runtimePath = resolve(desktopDirectory, ".dsh-smoke", "dsh-runtime-smoke.mjs");
+const runtimePath = resolve(desktopDirectory, "dist", "resources", "dsh-runtime.mjs");
 const cwd = "/dsh-runtime-smoke";
 const sessionId = "smoke-session";
 const binding = {
@@ -24,11 +24,26 @@ const rpcDeadlineMilliseconds = 10_000;
 const terminationGraceMilliseconds = 2_000;
 const terminationKillDeadlineMilliseconds = 2_000;
 const replayText = "deterministic replay response";
+const testReplayEnvironmentVariable = "YISHAN_DSH_TEST_REPLAY";
 const require = createRequire(import.meta.url);
 const electronBinary = require("electron");
 
+function createRuntimeEnvironment(dataDirectory, isReplayEnabled) {
+  const environment = Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([environmentVariable]) => environmentVariable.toLowerCase() !== testReplayEnvironmentVariable.toLowerCase(),
+    ),
+  );
+  return {
+    ...environment,
+    ELECTRON_RUN_AS_NODE: "1",
+    YISHAN_DSH_DATA_DIR: dataDirectory,
+    ...(isReplayEnabled ? { [testReplayEnvironmentVariable]: "1" } : {}),
+  };
+}
+
 class JsonRpcChild {
-  constructor(dataDirectory) {
+  constructor(dataDirectory, isReplayEnabled) {
     this.nextId = 1;
     this.pending = new Map();
     this.notifications = [];
@@ -37,7 +52,7 @@ class JsonRpcChild {
     this.stderr = "";
     this.exitResult = undefined;
     this.child = spawn(electronBinary, [runtimePath], {
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", YISHAN_DSH_DATA_DIR: dataDirectory },
+      env: createRuntimeEnvironment(dataDirectory, isReplayEnabled),
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.exit = once(this.child, "exit").then(([code, signal]) => ({ code, signal }));
@@ -227,8 +242,24 @@ async function initialize(client) {
   assert.equal(result.serverInfo.name, "deepseek-harness-sdk-runtime");
 }
 
+async function assertProductionRuntimeInitializeFailsWithNoAdapter(dataDirectory) {
+  const client = new JsonRpcChild(dataDirectory, false);
+  try {
+    await assert.rejects(() => initialize(client), (error) => {
+      assert.ok(error instanceof Error);
+      const response = JSON.parse(error.message);
+      assert.equal(response.code, -32603);
+      assert.equal(response.message, 'no adapter registered for provider "smoke-replay"');
+      return true;
+    });
+    await client.shutdown();
+  } finally {
+    await client.terminate();
+  }
+}
+
 async function startAndPersist(dataDirectory) {
-  const client = new JsonRpcChild(dataDirectory);
+  const client = new JsonRpcChild(dataDirectory, true);
   try {
     await initialize(client);
     const started = await client.request("yishan.v1.session.start", { cwd, sessionId, binding });
@@ -284,7 +315,7 @@ async function startAndPersist(dataDirectory) {
 }
 
 async function resumeAndVerify(dataDirectory, expectedEvents) {
-  const client = new JsonRpcChild(dataDirectory);
+  const client = new JsonRpcChild(dataDirectory, true);
   try {
     await initialize(client);
     const resumed = await client.request("yishan.v1.session.resume", { cwd, sessionId });
@@ -311,6 +342,7 @@ async function resumeAndVerify(dataDirectory, expectedEvents) {
 
 const dataDirectory = await mkdtemp(resolve(tmpdir(), "yishan-dsh-smoke-"));
 try {
+  await assertProductionRuntimeInitializeFailsWithNoAdapter(dataDirectory);
   const initialEvents = await startAndPersist(dataDirectory);
   const sessionFiles = await readdir(resolve(dataDirectory, "sessions"), { recursive: true });
   const jsonlFile = sessionFiles.find((fileName) => fileName.endsWith("session.jsonl.zstd"));

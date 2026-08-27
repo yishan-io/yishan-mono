@@ -11,6 +11,7 @@ export type DaemonCliEnvironment = NodeJS.ProcessEnv;
 const timeoutMs = 30_000;
 const terminateGraceMs = 1_000;
 const forceKillWaitMs = 1_000;
+const dshTestReplayEnvironmentVariable = "YISHAN_DSH_TEST_REPLAY";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
@@ -81,8 +82,13 @@ function resolveDshRuntimePath(): string {
 
 /** Builds the environment that tells the daemon to launch the packaged DSH resource with Electron's Node runtime. */
 export function resolveDaemonCliEnvironment(): DaemonCliEnvironment {
+  const environment = Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([environmentVariable]) => environmentVariable.toLowerCase() !== dshTestReplayEnvironmentVariable.toLowerCase(),
+    ),
+  );
   return {
-    ...process.env,
+    ...environment,
     YISHAN_DAEMON_DSH_ENABLED: process.env.YISHAN_DSH_ENABLED ?? process.env.YISHAN_DAEMON_DSH_ENABLED,
     YISHAN_DAEMON_DSH_NODE_PATH: process.execPath,
     YISHAN_DAEMON_DSH_RUNTIME_PATH: resolveDshRuntimePath(),

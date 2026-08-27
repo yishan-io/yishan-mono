@@ -14,7 +14,7 @@ import (
 const runtimeContractCWD = "/dsh-runtime-smoke"
 
 func TestSupervisor_StartSession_BundledRuntimeRequiresAndPersistsBinding(t *testing.T) {
-	runtimePath := buildSmokeRuntime(t)
+	runtimePath := buildProductionRuntime(t)
 	supervisor := NewSupervisor(Config{
 		Command:         bundledRuntimeCommand(runtimePath, t.TempDir()),
 		Initialize:      InitializeConfig{CWD: runtimeContractCWD, Provider: "smoke-replay", Model: "smoke-model"},
@@ -31,15 +31,15 @@ func TestSupervisor_StartSession_BundledRuntimeRequiresAndPersistsBinding(t *tes
 	assertExactBindingPersisted(t, supervisor)
 }
 
-func buildSmokeRuntime(t *testing.T) string {
+func buildProductionRuntime(t *testing.T) string {
 	t.Helper()
 	desktopDirectory := repositoryDesktopDirectory(t)
-	command := exec.Command("bun", "run", "dsh:smoke:build")
+	command := exec.Command("bun", "run", "dsh:build")
 	command.Dir = desktopDirectory
 	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("build DSH smoke runtime: %v\n%s", err, output)
+		t.Fatalf("build production DSH runtime: %v\n%s", err, output)
 	}
-	return filepath.Join(desktopDirectory, ".dsh-smoke", "dsh-runtime-smoke.mjs")
+	return filepath.Join(desktopDirectory, "dist", "resources", "dsh-runtime.mjs")
 }
 
 func repositoryDesktopDirectory(t *testing.T) string {
@@ -54,7 +54,7 @@ func repositoryDesktopDirectory(t *testing.T) string {
 func bundledRuntimeCommand(runtimePath, dataDirectory string) CommandFactory {
 	return func(ctx context.Context) (*exec.Cmd, error) {
 		command := exec.CommandContext(ctx, "node", runtimePath)
-		command.Env = append(os.Environ(), "YISHAN_DSH_DATA_DIR="+dataDirectory)
+		command.Env = append(os.Environ(), "YISHAN_DSH_DATA_DIR="+dataDirectory, "YISHAN_DSH_TEST_REPLAY=1")
 		return command, nil
 	}
 }

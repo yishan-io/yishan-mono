@@ -1,3 +1,6 @@
-import { runYishanRuntime } from "./runtime";
+import { createYishanRuntime, installRuntimeShutdownHandlers } from "./runtime";
+import { installYishanDshTestReplayAdapter, isYishanDshTestReplayEnabled } from "./testReplayAdapter";
 
-await runYishanRuntime();
+const runtime = await createYishanRuntime();
+if (isYishanDshTestReplayEnabled()) installYishanDshTestReplayAdapter(runtime.context);
+installRuntimeShutdownHandlers(runtime);

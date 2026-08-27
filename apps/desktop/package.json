@@ -26,8 +26,8 @@
     "electron:dev": "cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 wait-on tcp:5173 file:dist/electron/main.cjs file:dist/electron/preload.js file:dist/resources/dsh-runtime.mjs && cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron dist/electron/main.cjs",
     "check": "tsc --noEmit -p tsconfig.json",
     "dsh:build": "node scripts/buildDshRuntime.mjs",
-    "dsh:smoke:build": "node scripts/buildDshRuntimeSmoke.mjs",
-    "dsh:smoke": "bun run dsh:smoke:build && node scripts/dshRuntimeSmoke.mjs"
+    "dsh:smoke:production": "bun run dsh:build && node scripts/dshRuntimeSmoke.mjs",
+    "dsh:smoke": "bun run dsh:smoke:production"
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",

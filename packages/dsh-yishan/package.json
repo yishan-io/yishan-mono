@@ -6,7 +6,6 @@
   "files": [
     "src",
     "!src/**/*.test.ts",
-    "!src/runtimeSmokeEntry.ts",
     "LICENSE",
     "README.md"
   ],

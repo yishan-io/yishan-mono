@@ -3,11 +3,12 @@ package dsh
 import (
 	"context"
 	"path/filepath"
-	"slices"
+	"strings"
 	"testing"
 )
 
 func TestNewCommandFactory_BuildsBundledRuntimeCommand(t *testing.T) {
+	t.Setenv("yishan_dsh_test_replay", "1")
 	nodePath := filepath.Join(t.TempDir(), "node")
 	runtimePath := filepath.Join(t.TempDir(), "dsh-runtime.mjs")
 	dataDir := filepath.Join(t.TempDir(), "account-dsh")
@@ -30,6 +31,9 @@ func TestNewCommandFactory_BuildsBundledRuntimeCommand(t *testing.T) {
 	}
 	if !hasEnvironment(command.Env, "YISHAN_DSH_DATA_DIR", dataDir) {
 		t.Fatalf("command env = %#v, want account DSH data directory", command.Env)
+	}
+	if hasEnvironmentKey(command.Env, dshTestReplayEnvKey) {
+		t.Fatalf("command env = %#v, must not forward the test-only replay switch", command.Env)
 	}
 }
 
@@ -57,5 +61,20 @@ func TestNewCommandFactory_RejectsMissingExplicitPaths(t *testing.T) {
 }
 
 func hasEnvironment(environment []string, key string, want string) bool {
-	return slices.Contains(environment, key+"="+want)
+	for _, variable := range environment {
+		if variable == key+"="+want {
+			return true
+		}
+	}
+	return false
+}
+
+func hasEnvironmentKey(environment []string, key string) bool {
+	for _, variable := range environment {
+		environmentKey, _, _ := strings.Cut(variable, "=")
+		if strings.EqualFold(environmentKey, key) {
+			return true
+		}
+	}
+	return false
 }

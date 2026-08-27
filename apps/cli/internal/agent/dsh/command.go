@@ -12,6 +12,7 @@ import (
 const (
 	electronRunAsNodeEnvKey = "ELECTRON_RUN_AS_NODE"
 	dshDataDirEnvKey        = "YISHAN_DSH_DATA_DIR"
+	dshTestReplayEnvKey     = "YISHAN_DSH_TEST_REPLAY"
 )
 
 // NewCommandFactory builds commands for the explicitly bundled Node runtime.
@@ -22,7 +23,7 @@ func NewCommandFactory(nodePath string, runtimePath string, dataDir string) Comm
 			return nil, err
 		}
 		command := exec.CommandContext(ctx, nodePath, runtimePath)
-		command.Env = append(os.Environ(), electronRunAsNodeEnvKey+"=1", dshDataDirEnvKey+"="+dataDir)
+		command.Env = append(environmentWithout(os.Environ(), dshTestReplayEnvKey), electronRunAsNodeEnvKey+"=1", dshDataDirEnvKey+"="+dataDir)
 		return command, nil
 	}
 }
@@ -42,4 +43,15 @@ func validateCommandPaths(nodePath string, runtimePath string, dataDir string) e
 
 func isAbsolutePath(path string) bool {
 	return strings.TrimSpace(path) != "" && filepath.IsAbs(path)
+}
+
+func environmentWithout(environment []string, key string) []string {
+	filtered := make([]string, 0, len(environment))
+	for _, variable := range environment {
+		environmentKey, _, _ := strings.Cut(variable, "=")
+		if !strings.EqualFold(environmentKey, key) {
+			filtered = append(filtered, variable)
+		}
+	}
+	return filtered
 }

@@ -48,6 +48,19 @@ describe("resolveCliInvocation", () => {
     });
   });
 
+  it.each(["YISHAN_DSH_TEST_REPLAY", "yishan_dsh_test_replay"])(
+    "does not forward the test-only replay switch to daemon launches regardless of casing",
+    (environmentVariable) => {
+      vi.stubEnv(environmentVariable, "1");
+
+      expect(
+        Object.keys(resolveDaemonCliEnvironment()).some(
+          (key) => key.toLowerCase() === "yishan_dsh_test_replay",
+        ),
+      ).toBe(false);
+    },
+  );
+
   it("uses the built development DSH resource in desktop development mode", () => {
     mocks.isDevMode.mockReturnValue(true);
     vi.spyOn(process, "cwd").mockReturnValue("/repo/apps/desktop");
