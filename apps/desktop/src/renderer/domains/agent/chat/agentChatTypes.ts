@@ -111,6 +111,8 @@ export type AgentModel = {
   reasoning?: boolean;
   /** Per-level provider mapping; a null value marks the level as unsupported. */
   thinkingLevelMap?: Record<string, string | null>;
+  /** For DSH sessions: the env-var ref name for the provider's API key. */
+  credentialRef?: string;
 };
 
 /** Streaming delta event from pi RPC. */

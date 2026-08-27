@@ -122,6 +122,20 @@ export async function removePiProvider(input: { provider: string }): Promise<{ o
   return (await request("pi.removeProvider", input)) as { ok: boolean };
 }
 
+// ─── dsh credentials ─────────────────────────────────────────────────────────
+
+export async function listDSHCredentials(): Promise<{ refs: string[] }> {
+  return (await request("dsh.listCredentials", {})) as { refs: string[] };
+}
+
+export async function saveDSHCredential(input: { ref: string; value: string }): Promise<{ ok: boolean }> {
+  return (await request("dsh.saveCredential", input)) as { ok: boolean };
+}
+
+export async function removeDSHCredential(input: { ref: string }): Promise<{ ok: boolean }> {
+  return (await request("dsh.removeCredential", input)) as { ok: boolean };
+}
+
 // ─── runtime-neutral agent ───────────────────────────────────────────────────
 
 const DSH_TRANSCRIPT_PROTOCOL_VERSION = 2;
@@ -137,13 +151,14 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
   }
   const { dsh } = payload as { dsh: unknown };
   if (typeof dsh !== "object" || dsh === null) throw new TypeError("invalid agent capabilities");
-  const { configured, ready, incarnation, transcriptProtocolVersion, provider, model } = dsh as {
+  const { configured, ready, incarnation, transcriptProtocolVersion, provider, model, credentialRef } = dsh as {
     configured: unknown;
     ready: unknown;
     incarnation?: unknown;
     transcriptProtocolVersion?: unknown;
     provider?: unknown;
     model?: unknown;
+    credentialRef?: unknown;
   };
   if (typeof configured !== "boolean" || typeof ready !== "boolean") {
     throw new TypeError("invalid agent capabilities");
@@ -162,6 +177,7 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
       transcriptProtocolVersion,
       ...(typeof provider === "string" && provider ? { provider } : {}),
       ...(typeof model === "string" && model ? { model } : {}),
+      ...(typeof credentialRef === "string" && credentialRef ? { credentialRef } : {}),
     },
   };
 }

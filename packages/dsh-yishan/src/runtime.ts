@@ -11,6 +11,7 @@ import SqliteSessionQueryEngine from "@deepseek-ai/dsh-session-query-sqlite";
 import { SubagentRuntime } from "@deepseek-ai/dsh-subagent";
 
 import * as runtimeServer from "./runtimeServer";
+import { installCredentialsPlugin } from "./credentialsService";
 
 const DATA_DIRECTORY_ENVIRONMENT_VARIABLE = "YISHAN_DSH_DATA_DIR";
 const DEFAULT_DATA_DIRECTORY = join(homedir(), ".yishan", "dsh");
@@ -58,6 +59,7 @@ export async function createYishanRuntime(config: YishanRuntimeConfig = {}): Pro
   await context.plugin(JsonlSessionPersistence, { root: sessionDirectory });
   await context.plugin(sessionCheckpointPolicy);
   await context.plugin(SqliteSessionQueryEngine, { path: join(dataDirectory, SESSION_QUERY_DATABASE_NAME) });
+  installCredentialsPlugin(context, dataDirectory);
   await context.plugin(runtimeServer, config);
 
   return { context, shutdown: async () => await context.fiber.dispose() };

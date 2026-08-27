@@ -148,7 +148,12 @@ export async function loadDSHSessionModels(tabId: string, cachedCapabilities?: A
   try {
     const capabilities = cachedCapabilities ?? await getAgentCapabilities().catch(() => null);
     if (capabilities?.dsh.provider && capabilities?.dsh.model) {
-      const model = { id: capabilities.dsh.model, name: capabilities.dsh.model, provider: capabilities.dsh.provider };
+      const model = {
+        id: capabilities.dsh.model,
+        name: capabilities.dsh.model,
+        provider: capabilities.dsh.provider,
+        ...(capabilities.dsh.credentialRef ? { credentialRef: capabilities.dsh.credentialRef } : {}),
+      };
       agentChatStore.getState().setAvailableModels(tabId, [model]);
       agentChatStore.getState().setCurrentModel(tabId, model);
     } else {

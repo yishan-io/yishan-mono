@@ -11,6 +11,13 @@ import (
 // typed service method; the service implementation owns all pi session and
 // setup state. Handlers construct no services and hold no mutable state.
 
+// DSHCredentialService backs the dsh.* credential RPC methods.
+type DSHCredentialService interface {
+	DSHListCredentials(ctx context.Context) (any, error)
+	DSHSaveCredential(ctx context.Context, req DSHSaveCredentialParams) (any, error)
+	DSHRemoveCredential(ctx context.Context, req DSHRemoveCredentialParams) (any, error)
+}
+
 // PiService backs the pi.* RPC methods. PiStart and PiAttach are
 // connection-bound: the calling WebSocket becomes the session's event sink.
 type PiService interface {
@@ -82,6 +89,7 @@ type AgentHandler struct {
 	Agent     AgentService
 	Catalog   AgentCatalogService
 	Pi        PiService
+	DSH       DSHCredentialService
 	Skill     SkillService
 	Customize CustomizeService
 }
@@ -93,6 +101,8 @@ func (h *AgentHandler) Call(ctx context.Context, connection *Connection, method 
 		return h.callAgent(ctx, connection, method, params)
 	case strings.HasPrefix(method, "pi."):
 		return h.callPi(ctx, connection, method, params)
+	case strings.HasPrefix(method, "dsh."):
+		return h.callDSH(ctx, method, params)
 	case strings.HasPrefix(method, "skill."):
 		return h.callSkill(ctx, method, params)
 	case strings.HasPrefix(method, "customize."):
@@ -366,5 +376,26 @@ func (h *AgentHandler) callCustomizeAgents(ctx context.Context, method string, p
 		return h.Customize.AgentsRestore(ctx, req)
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "unknown customize method: "+method)
+	}
+}
+
+func (h *AgentHandler) callDSH(ctx context.Context, method string, params json.RawMessage) (any, error) {
+	switch method {
+	case MethodDSHListCredentials:
+		return h.DSH.DSHListCredentials(ctx)
+	case MethodDSHSaveCredential:
+		var req DSHSaveCredentialParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.DSH.DSHSaveCredential(ctx, req)
+	case MethodDSHRemoveCredential:
+		var req DSHRemoveCredentialParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.DSH.DSHRemoveCredential(ctx, req)
+	default:
+		return nil, NewRPCError(CodeMethodNotFound, "unknown dsh method: "+method)
 	}
 }

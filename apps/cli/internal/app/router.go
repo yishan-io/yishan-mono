@@ -34,5 +34,6 @@ func buildNamespaceRouter(agentSvc *nodeagent.Service, backgroundJobSvc *nodebac
 	router.Register("pi", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
 	router.Register("skill", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
 	router.Register("customize", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
+	router.Register("dsh", &rpc.AgentHandler{DSH: agentSvc})
 	return router
 }

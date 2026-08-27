@@ -233,6 +233,7 @@ type AgentDSHCapabilities struct {
 	TranscriptProtocolVersion int    `json:"transcriptProtocolVersion"`
 	Provider                  string `json:"provider,omitempty"`
 	Model                     string `json:"model,omitempty"`
+	CredentialRef             string `json:"credentialRef,omitempty"`
 }
 
 // AgentAckResult is the stable acknowledgement for session mutations.
@@ -370,6 +371,17 @@ type PiSaveProviderParams struct {
 
 type PiRemoveProviderParams struct {
 	Provider string `json:"provider"`
+}
+
+// ---- dsh credentials ----
+
+type DSHSaveCredentialParams struct {
+	Ref   string `json:"ref"`
+	Value string `json:"value"`
+}
+
+type DSHRemoveCredentialParams struct {
+	Ref string `json:"ref"`
 }
 
 // ---- skill namespace ----

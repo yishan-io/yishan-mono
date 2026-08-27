@@ -28,6 +28,13 @@ type WorkspaceResolver interface {
 	GetWorkspace(workspaceID string) (workspace.Workspace, error)
 }
 
+// DSHCredentialStore manages the DSH .credentials.yaml file.
+type DSHCredentialStore interface {
+	List() ([]string, error)
+	Save(ref, value string) error
+	Remove(ref string) error
+}
+
 // DSHSessions is the internal DSH runtime boundary used by workspace-scoped
 // session operations. It is intentionally not exposed through the RPC layer.
 type DSHSessions interface {
@@ -66,6 +73,8 @@ type Deps struct {
 
 	// DSH serves account-scoped DSH session operations when the feature is enabled.
 	DSH DSHSessions
+	// DSHCredentials manages the DSH .credentials.yaml store.
+	DSHCredentials DSHCredentialStore
 	// OwnerNodeID identifies this daemon in authoritative DSH session bindings.
 	OwnerNodeID string
 	// DSHProvider and DSHModel are the configured DSH runtime provider and model.
@@ -136,6 +145,11 @@ type Service struct {
 	// through the same path rpc.Server uses for live connections). Production
 	// composes the router in internal/app and leaves this nil.
 	router *rpc.Router
+}
+
+// NewDSHCredentialStore returns a DSHCredentialStore backed by the given DSH data dir.
+func NewDSHCredentialStore(dshDataDir string) DSHCredentialStore {
+	return dsh.NewCredentialStore(dshDataDir)
 }
 
 // NewService builds the agent application service.

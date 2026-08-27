@@ -37,7 +37,24 @@ func (s *Service) AgentGetCapabilities(context.Context) (any, error) {
 	}
 	result.DSH.Provider = s.deps.DSHProvider
 	result.DSH.Model = s.deps.DSHModel
+	result.DSH.CredentialRef = dshProviderCredentialRef(s.deps.DSHProvider)
 	return result, nil
+}
+
+// dshProviderCredentialRef returns the env-var ref name that the DSH LLM
+// adapter expects for the given provider's API key. The mapping mirrors the
+// DEFAULT_API_KEY_ENV constants in each adapter bundle.
+func dshProviderCredentialRef(provider string) string {
+	switch provider {
+	case "deepseek-official":
+		return "DEEPSEEK_API_KEY"
+	case "anthropic":
+		return "ANTHROPIC_API_KEY"
+	case "openai":
+		return "OPENAI_API_KEY"
+	default:
+		return ""
+	}
 }
 
 func (s *Service) startDSH(ctx context.Context, connection *rpc.Connection, req rpc.AgentStartParams) (any, error) {

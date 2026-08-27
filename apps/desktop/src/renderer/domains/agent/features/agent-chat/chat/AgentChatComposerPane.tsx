@@ -10,6 +10,7 @@ import { type AgentModel, isAgentSessionBusy } from "../../../chat/agentChatType
 import { getCompactContextPercent } from "../../../chat/agentChatUsageSummary";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { ProviderCredentialDialog } from "../../provider-credentials/ProviderCredentialDialog";
+import { DSHCredentialDialog } from "../../provider-credentials/DSHCredentialDialog";
 import { AgentModelSelector } from "../../select-model/AgentModelSelector";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
@@ -165,7 +166,7 @@ function AgentChatComposerPaneComponent({
     consumeTabFocus(tabId);
   }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
 
-  const { openAddProviderDialog, providerCredentialDialogProps } = useAgentChatProviderAdd({
+  const { openAddProviderDialog, providerCredentialDialogProps, dshCredentialDialogProps } = useAgentChatProviderAdd({
     tabId,
     workspaceId,
     cwd,
@@ -173,6 +174,8 @@ function AgentChatComposerPaneComponent({
     sessionId,
     sessionState,
     runtime: agentChatTab?.data.runtime,
+    dshCredentialRef: currentModel?.credentialRef ?? "",
+    dshProviderName: currentModel?.provider ?? "Provider",
   });
 
   return (
@@ -249,6 +252,7 @@ function AgentChatComposerPaneComponent({
         onVoiceText={handleVoiceText}
       />
       <ProviderCredentialDialog {...providerCredentialDialogProps} />
+      <DSHCredentialDialog {...dshCredentialDialogProps} />
     </Box>
   );
 }

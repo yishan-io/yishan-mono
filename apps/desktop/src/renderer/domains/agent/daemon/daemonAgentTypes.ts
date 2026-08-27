@@ -193,6 +193,7 @@ export type AgentCapabilities = {
     transcriptProtocolVersion: number;
     provider?: string;
     model?: string;
+    credentialRef?: string;
   };
 };
 

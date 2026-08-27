@@ -270,6 +270,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	agentSvc = nodeagent.NewService(nodeagent.Deps{
 		Workspace:         workspaceSvc,
 		DSH:               dshSessionsFor(dshSupervisor),
+		DSHCredentials:    nodeagent.NewDSHCredentialStore(cfg.DSHDataDir),
 		OwnerNodeID:       cfg.NodeID,
 		DSHProvider:       cfg.DSHProvider,
 		DSHModel:          cfg.DSHModel,
