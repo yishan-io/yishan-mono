@@ -32,7 +32,6 @@ import {
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
 import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } from "../subscriptions/agentChatPiEventShared";
-import { listAgentModels } from "./agentCommands";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the
@@ -143,19 +142,17 @@ export async function startAgentChatSession(opts: {
   }
 }
 
-/** Loads available models from the Pi catalog and sets currentModel from DSH capabilities for a DSH session. */
+/** Populates the model selector for a DSH session from daemon capabilities. DSH uses one
+ * globally-configured provider/model; the list contains only that entry. */
 export async function loadDSHSessionModels(tabId: string, cachedCapabilities?: Awaited<ReturnType<typeof getAgentCapabilities>>): Promise<void> {
   try {
-    const [modelsResult, capabilities] = await Promise.all([
-      listAgentModels("pi").catch(() => null),
-      cachedCapabilities ? Promise.resolve(cachedCapabilities) : getAgentCapabilities().catch(() => null),
-    ]);
-    const models = (modelsResult?.models ?? []).map((m) => ({ id: m.id, name: m.name, reasoning: m.reasoning, thinkingLevelMap: m.thinkingLevelMap }));
-    agentChatStore.getState().setAvailableModels(tabId, models);
+    const capabilities = cachedCapabilities ?? await getAgentCapabilities().catch(() => null);
     if (capabilities?.dsh.provider && capabilities?.dsh.model) {
-      const currentModel = models.find((m) => m.id === capabilities.dsh.model) ??
-        { id: capabilities.dsh.model, name: capabilities.dsh.model, provider: capabilities.dsh.provider };
-      agentChatStore.getState().setCurrentModel(tabId, { ...currentModel, provider: capabilities.dsh.provider });
+      const model = { id: capabilities.dsh.model, name: capabilities.dsh.model, provider: capabilities.dsh.provider };
+      agentChatStore.getState().setAvailableModels(tabId, [model]);
+      agentChatStore.getState().setCurrentModel(tabId, model);
+    } else {
+      agentChatStore.getState().setAvailableModels(tabId, []);
     }
   } catch {
     agentChatStore.getState().setAvailableModels(tabId, []);
