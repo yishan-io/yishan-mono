@@ -35,6 +35,8 @@ func (s *Service) AgentGetCapabilities(context.Context) (any, error) {
 	if health.IsReady {
 		result.DSH.Incarnation = health.Incarnation
 	}
+	result.DSH.Provider = s.deps.DSHProvider
+	result.DSH.Model = s.deps.DSHModel
 	return result, nil
 }
 

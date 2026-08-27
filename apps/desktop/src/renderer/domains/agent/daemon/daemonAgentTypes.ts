@@ -191,6 +191,8 @@ export type AgentCapabilities = {
     ready: boolean;
     incarnation?: string;
     transcriptProtocolVersion: number;
+    provider?: string;
+    model?: string;
   };
 };
 

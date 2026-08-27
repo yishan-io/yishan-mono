@@ -129,12 +129,10 @@ describe("agentSessionRuntime.DSH recovery", () => {
           seq: 0,
           time: 0,
           data: {
-            message: {
-              id: "recovery-attach-user",
-              role: "user",
-              content: [{ type: "text", text: "Recovered from attach" }],
-              source: { kind: "user" },
-            },
+            id: "recovery-attach-user",
+            role: "user",
+            content: [{ type: "text", text: "Recovered from attach" }],
+            source: { kind: "user" },
           },
           surfaceOp: "append",
         },

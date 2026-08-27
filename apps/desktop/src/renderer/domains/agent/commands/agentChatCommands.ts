@@ -32,6 +32,7 @@ import {
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
 import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } from "../subscriptions/agentChatPiEventShared";
+import { listAgentModels } from "./agentCommands";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the
@@ -65,7 +66,7 @@ export async function startAgentChatSession(opts: {
   subagentParentSessionId?: string;
 }): Promise<void> {
   const isReadOnlySubagentDetail = opts.sessionView === "subagent-detail";
-  const runtime = await resolveAgentChatRuntime(opts);
+  const { runtime, capabilities: resolvedCapabilities } = await resolveAgentChatRuntime(opts);
   bindAgentChatTabRuntime({ tabId: opts.tabId, runtime });
 
   if (isReadOnlySubagentDetail) {
@@ -123,6 +124,8 @@ export async function startAgentChatSession(opts: {
       if (agentChatStore.getState().sessionsByTabId[opts.tabId]?.state === "starting") {
         agentChatStore.getState().setSessionState(opts.tabId, "idle");
       }
+      // Load Pi models (shared credentials system) and set currentModel from DSH capabilities.
+      void loadDSHSessionModels(opts.tabId, resolvedCapabilities);
     }
 
     if (runtime === "dsh" && opts.sessionView === "full") {
@@ -140,7 +143,24 @@ export async function startAgentChatSession(opts: {
   }
 }
 
-/** Refreshes the DSH-native direct-child snapshot for one usable parent session. */
+/** Loads available models from the Pi catalog and sets currentModel from DSH capabilities for a DSH session. */
+export async function loadDSHSessionModels(tabId: string, cachedCapabilities?: Awaited<ReturnType<typeof getAgentCapabilities>>): Promise<void> {
+  try {
+    const [modelsResult, capabilities] = await Promise.all([
+      listAgentModels("pi").catch(() => null),
+      cachedCapabilities ? Promise.resolve(cachedCapabilities) : getAgentCapabilities().catch(() => null),
+    ]);
+    const models = (modelsResult?.models ?? []).map((m) => ({ id: m.id, name: m.name, reasoning: m.reasoning, thinkingLevelMap: m.thinkingLevelMap }));
+    agentChatStore.getState().setAvailableModels(tabId, models);
+    if (capabilities?.dsh.provider && capabilities?.dsh.model) {
+      const currentModel = models.find((m) => m.id === capabilities.dsh.model) ??
+        { id: capabilities.dsh.model, name: capabilities.dsh.model, provider: capabilities.dsh.provider };
+      agentChatStore.getState().setCurrentModel(tabId, { ...currentModel, provider: capabilities.dsh.provider });
+    }
+  } catch {
+    agentChatStore.getState().setAvailableModels(tabId, []);
+  }
+}
 export async function refreshDshSubagentLineage(opts: {
   tabId: string;
   workspaceId: string;
@@ -205,14 +225,15 @@ async function resolveAgentChatRuntime(opts: {
   runtime?: AgentRuntime;
   sessionId?: string;
   sessionView: AgentChatSessionView;
-}): Promise<AgentRuntime> {
+}): Promise<{ runtime: AgentRuntime; capabilities?: Awaited<ReturnType<typeof getAgentCapabilities>> }> {
   if (opts.runtime || opts.sessionId || opts.sessionView === "subagent-detail") {
-    return normalizeAgentChatRuntime(opts);
+    return { runtime: normalizeAgentChatRuntime(opts) };
   }
   try {
-    return selectNewAgentChatRuntime(await getAgentCapabilities());
+    const capabilities = await getAgentCapabilities();
+    return { runtime: selectNewAgentChatRuntime(capabilities), capabilities };
   } catch {
-    return "pi";
+    return { runtime: "pi" };
   }
 }
 

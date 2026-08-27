@@ -165,7 +165,9 @@ describe("agentChatCommands.startAgentChatSession", () => {
     });
 
     expect(mocks.startAgent).toHaveBeenNthCalledWith(2, expect.objectContaining({ runtime: "dsh" }));
-    expect(mocks.getCapabilities).toHaveBeenCalledTimes(1);
+    // getCapabilities is called once for runtime selection on the first attempt,
+    // and once for DSH model loading on the second (successful) attempt.
+    expect(mocks.getCapabilities).toHaveBeenCalledTimes(2);
   });
 
   it("preserves a requested restored session ID when start initialization fails", async () => {

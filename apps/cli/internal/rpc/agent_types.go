@@ -231,6 +231,8 @@ type AgentDSHCapabilities struct {
 	Ready                     bool   `json:"ready"`
 	Incarnation               string `json:"incarnation,omitempty"`
 	TranscriptProtocolVersion int    `json:"transcriptProtocolVersion"`
+	Provider                  string `json:"provider,omitempty"`
+	Model                     string `json:"model,omitempty"`
 }
 
 // AgentAckResult is the stable acknowledgement for session mutations.

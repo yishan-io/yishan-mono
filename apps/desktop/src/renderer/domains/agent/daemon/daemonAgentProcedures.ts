@@ -137,11 +137,13 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
   }
   const { dsh } = payload as { dsh: unknown };
   if (typeof dsh !== "object" || dsh === null) throw new TypeError("invalid agent capabilities");
-  const { configured, ready, incarnation, transcriptProtocolVersion } = dsh as {
+  const { configured, ready, incarnation, transcriptProtocolVersion, provider, model } = dsh as {
     configured: unknown;
     ready: unknown;
     incarnation?: unknown;
     transcriptProtocolVersion?: unknown;
+    provider?: unknown;
+    model?: unknown;
   };
   if (typeof configured !== "boolean" || typeof ready !== "boolean") {
     throw new TypeError("invalid agent capabilities");
@@ -158,6 +160,8 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
       ready,
       ...(incarnation === undefined ? {} : { incarnation }),
       transcriptProtocolVersion,
+      ...(typeof provider === "string" && provider ? { provider } : {}),
+      ...(typeof model === "string" && model ? { model } : {}),
     },
   };
 }

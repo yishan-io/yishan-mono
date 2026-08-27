@@ -172,6 +172,7 @@ function AgentChatComposerPaneComponent({
     paneId,
     sessionId,
     sessionState,
+    runtime: agentChatTab?.data.runtime,
   });
 
   return (

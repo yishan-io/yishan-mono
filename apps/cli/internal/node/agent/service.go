@@ -68,6 +68,9 @@ type Deps struct {
 	DSH DSHSessions
 	// OwnerNodeID identifies this daemon in authoritative DSH session bindings.
 	OwnerNodeID string
+	// DSHProvider and DSHModel are the configured DSH runtime provider and model.
+	DSHProvider string
+	DSHModel    string
 
 	// AgentLifecycleCtx bounds pi agent process lifetimes.
 	AgentLifecycleCtx context.Context

@@ -271,6 +271,8 @@ func Bootstrap(cfg Config) (*App, error) {
 		Workspace:         workspaceSvc,
 		DSH:               dshSessionsFor(dshSupervisor),
 		OwnerNodeID:       cfg.NodeID,
+		DSHProvider:       cfg.DSHProvider,
+		DSHModel:          cfg.DSHModel,
 		AgentMgr:          agentMgr,
 		PIAuth:            piAuth,
 		ModelList:         modelList,

@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { isAgentSessionBusy } from "../../../chat/agentChatTypes";
 import type { AgentSessionState } from "../../../chat/agentChatTypes";
-import { fetchPiAgentModelsCompatibility, restartAgentSessionForProvider } from "../../../commands/agentChatCommands";
+import type { AgentRuntime } from "../../../daemon/daemonAgentTypes";
+import { fetchPiAgentModelsCompatibility, loadDSHSessionModels, restartAgentSessionForProvider } from "../../../commands/agentChatCommands";
 
 type UseAgentChatProviderAddParams = {
   tabId: string;
@@ -10,6 +11,7 @@ type UseAgentChatProviderAddParams = {
   paneId?: string;
   sessionId: string | null;
   sessionState: AgentSessionState;
+  runtime?: AgentRuntime;
 };
 
 /**
@@ -24,16 +26,20 @@ export function useAgentChatProviderAdd({
   paneId,
   sessionId,
   sessionState,
+  runtime,
 }: UseAgentChatProviderAddParams) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleProviderSaved = useCallback(
     async (providerId?: string) => {
       setIsOpen(false);
-      if (!sessionId) {
+      if (!sessionId) return;
+      // DSH: credentials are picked up on the next request; just reload the models list.
+      if (runtime === "dsh") {
+        await loadDSHSessionModels(tabId);
         return;
       }
-      // The credential is saved; a busy session is left running and the
+      // Pi: the credential is saved; a busy session is left running and the
       // provider applies to new sessions.
       if (!providerId || isAgentSessionBusy(sessionState)) {
         await fetchPiAgentModelsCompatibility({ tabId, sessionId });
@@ -48,7 +54,7 @@ export function useAgentChatProviderAdd({
         providerId,
       });
     },
-    [cwd, paneId, sessionId, sessionState, tabId, workspaceId],
+    [cwd, paneId, runtime, sessionId, sessionState, tabId, workspaceId],
   );
 
   return {
