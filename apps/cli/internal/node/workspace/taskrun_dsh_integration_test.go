@@ -21,40 +21,60 @@ import (
 )
 
 func TestTaskRunDSHIntegration_CreatedSessionAttachesCancelsAndCleansUpOnWorkspaceClose(t *testing.T) {
+	fixture := newTaskRunDSHFixture(t)
+	attachTaskRunDSHSession(t, fixture.agents, fixture.sessionID, fixture.workspaceID, fixture.workspacePath)
+	abortTaskRunDSHSession(t, fixture.agents, fixture.sessionID, fixture.workspaceID, fixture.workspacePath)
+	assertTaskRunUsesOnlyDSH(t, fixture.agentManager, fixture.terminals, fixture.sessionID)
+	if _, err := fixture.service.CloseLocal(context.Background(), workspaceDomain.CloseRequest{WorkspaceID: fixture.workspaceID}); err != nil {
+		t.Fatalf("close workspace: %v", err)
+	}
+	assertClosedTaskRunDSHSession(t, fixture.agents, fixture.sessionID, fixture.workspaceID, fixture.workspacePath)
+	assertTaskRunDSHOperations(t, fixture.operationsPath, fixture.sessionID, fixture.workspaceID, fixture.workspacePath)
+}
+
+func TestTaskRunDSHIntegration_CreatedSessionDisposesExplicitly(t *testing.T) {
+	fixture := newTaskRunDSHFixture(t)
+	attachTaskRunDSHSession(t, fixture.agents, fixture.sessionID, fixture.workspaceID, fixture.workspacePath)
+	abortTaskRunDSHSession(t, fixture.agents, fixture.sessionID, fixture.workspaceID, fixture.workspacePath)
+	disposeTaskRunDSHSession(t, fixture.agents, fixture.sessionID, fixture.workspaceID, fixture.workspacePath)
+	assertDisposedTaskRunDSHSession(t, fixture.agents, fixture.sessionID, fixture.workspaceID, fixture.workspacePath)
+	assertTaskRunUsesOnlyDSH(t, fixture.agentManager, fixture.terminals, fixture.sessionID)
+	assertDisposedTaskRunDSHOperations(t, fixture.operationsPath, fixture.sessionID, fixture.workspaceID, fixture.workspacePath)
+}
+
+type taskRunDSHFixture struct {
+	service        *Service
+	agents         *nodeagent.Service
+	agentManager   *agentmanager.Manager
+	terminals      *terminal.Manager
+	operationsPath string
+	workspaceID    string
+	workspacePath  string
+	sessionID      string
+}
+
+func newTaskRunDSHFixture(t *testing.T) taskRunDSHFixture {
+	t.Helper()
 	service := newTestService(t, nil, "node-1")
-	workspacePath := t.TempDir()
 	workspaceID := "task-run-workspace"
-	openLocalWorkspace(t, service, workspaceID, workspacePath)
+	openLocalWorkspace(t, service, workspaceID, t.TempDir())
 	created, err := service.GetWorkspace(workspaceID)
 	if err != nil {
 		t.Fatalf("get created workspace: %v", err)
 	}
-	workspacePath = created.Path
-
 	operationsPath := filepath.Join(t.TempDir(), "operations.jsonl")
-	supervisor := newTaskRunDSHSupervisor(t, operationsPath, workspacePath)
+	supervisor := newTaskRunDSHSupervisor(t, operationsPath, created.Path)
 	if err := supervisor.Start(context.Background()); err != nil {
 		t.Fatalf("start DSH supervisor: %v", err)
 	}
 	t.Cleanup(func() { _ = supervisor.Close() })
-
 	agents, agentManager, terminals := newTaskRunDSHAgents(service, supervisor)
 	t.Cleanup(agents.Shutdown)
 	wireRealAgentCleanup(service, agents)
-
 	agents.PublishWorkspaceCreateCompleted(application.CreatePlan{LocalCreate: &workspaceDomain.CreateRequest{
 		TaskRun: &workspaceDomain.TaskRunConfig{Runtime: workspaceDomain.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "inspect lifecycle"},
 	}}, created, nil)
-
-	sessionID := "task-" + workspaceID
-	attachTaskRunDSHSession(t, agents, sessionID, workspaceID, workspacePath)
-	abortTaskRunDSHSession(t, agents, sessionID, workspaceID, workspacePath)
-	assertTaskRunUsesOnlyDSH(t, agentManager, terminals, sessionID)
-	if _, err := service.CloseLocal(context.Background(), workspaceDomain.CloseRequest{WorkspaceID: workspaceID}); err != nil {
-		t.Fatalf("close workspace: %v", err)
-	}
-	assertClosedTaskRunDSHSession(t, agents, sessionID, workspaceID, workspacePath)
-	assertTaskRunDSHOperations(t, operationsPath, sessionID, workspaceID, workspacePath)
+	return taskRunDSHFixture{service, agents, agentManager, terminals, operationsPath, workspaceID, created.Path, "task-" + workspaceID}
 }
 
 func newTaskRunDSHAgents(service *Service, supervisor *dsh.Supervisor) (*nodeagent.Service, *agentmanager.Manager, *terminal.Manager) {
@@ -108,6 +128,14 @@ func abortTaskRunDSHSession(t *testing.T, agents *nodeagent.Service, sessionID, 
 	}
 }
 
+func disposeTaskRunDSHSession(t *testing.T, agents *nodeagent.Service, sessionID, workspaceID, cwd string) {
+	t.Helper()
+	_, err := agents.AgentDispose(context.Background(), rpc.AgentDisposeParams{Runtime: rpc.AgentRuntimeDSH, SessionID: sessionID, WorkspaceID: workspaceID, CWD: cwd})
+	if err != nil {
+		t.Fatalf("dispose task run: %v", err)
+	}
+}
+
 func assertTaskRunUsesOnlyDSH(t *testing.T, manager *agentmanager.Manager, terminals *terminal.Manager, sessionID string) {
 	t.Helper()
 	if _, exists := manager.Session(sessionID); exists {
@@ -126,6 +154,17 @@ func assertClosedTaskRunDSHSession(t *testing.T, agents *nodeagent.Service, sess
 	})
 	if err == nil {
 		t.Fatal("workspace close retained task-run DSH session")
+	}
+}
+
+func assertDisposedTaskRunDSHSession(t *testing.T, agents *nodeagent.Service, sessionID, workspaceID, cwd string) {
+	t.Helper()
+	_, err := agents.AgentAttach(context.Background(), nil, rpc.AgentAttachParams{
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion,
+		SessionID: sessionID, WorkspaceID: workspaceID, CWD: cwd, AfterSeq: -1,
+	})
+	if err == nil {
+		t.Fatal("disposed task-run DSH session remained attachable")
 	}
 }
 
@@ -164,6 +203,25 @@ func assertTaskRunDSHOperations(t *testing.T, path, sessionID, workspaceID, cwd 
 	}
 	if operation := operations[6]; operation.Method != "yishan.v1.session.list" || operation.Params.CWD != cwd {
 		t.Fatalf("cleanup list = %#v, want workspace-scoped DSH list", operation)
+	}
+}
+
+func assertDisposedTaskRunDSHOperations(t *testing.T, path, sessionID, workspaceID, cwd string) {
+	t.Helper()
+	operations := readTaskRunDSHOperations(t, path)
+	if len(operations) != 6 {
+		t.Fatalf("DSH operations = %#v, want start, two subscriptions, prompt, cancel, dispose", operations)
+	}
+	assertTaskRunDSHStartBinding(t, operations[0], sessionID, workspaceID, cwd)
+	for _, index := range []int{1, 3} {
+		if operation := operations[index]; operation.Method != "yishan.v1.session.subscribe" || operation.Params.SessionID != sessionID || operation.Params.CWD != cwd {
+			t.Fatalf("operation %d = %#v, want task-run subscription", index, operation)
+		}
+	}
+	for index, wantMethod := range map[int]string{2: "yishan.v1.session.prompt", 4: "yishan.v1.session.cancel", 5: "yishan.v1.session.dispose"} {
+		if operation := operations[index]; operation.Method != wantMethod || operation.Params.SessionID != sessionID || operation.Params.CWD != cwd {
+			t.Fatalf("operation %d = %#v, want %s for task run", index, operation, wantMethod)
+		}
 	}
 }
 

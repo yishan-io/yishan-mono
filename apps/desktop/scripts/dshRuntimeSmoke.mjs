@@ -12,6 +12,7 @@ const desktopDirectory = resolve(scriptDirectory, "..");
 const runtimePath = resolve(desktopDirectory, "dist", "resources", "dsh-runtime.mjs");
 const cwd = "/dsh-runtime-smoke";
 const sessionId = "smoke-session";
+const restartSessionId = "smoke-restart-session";
 const binding = {
   version: 1,
   workspaceId: "smoke-workspace",
@@ -143,11 +144,15 @@ class JsonRpcChild {
     if (this.exitResult !== undefined) return;
     this.child.kill("SIGTERM");
     try {
-      await this.waitForExit(terminationGraceMilliseconds, "SIGTERM termination");
+      await this.waitForExit(terminationGraceMilliseconds, "graceful SIGTERM shutdown");
     } catch {
       this.child.kill("SIGKILL");
       await this.waitForExit(terminationKillDeadlineMilliseconds, "SIGKILL termination");
     }
+  }
+
+  async shutdownForRestart() {
+    await this.terminate();
   }
 
   async waitForExit(deadlineMilliseconds, description) {
@@ -314,6 +319,79 @@ async function startAndPersist(dataDirectory) {
   }
 }
 
+function assertDurableReplayAfterGracefulRestart(events) {
+  const assistantChunk = events.find(
+    (event) => event.type === "assistant/chunk" && event.data?.chunk?.text === replayText,
+  );
+  assert.ok(assistantChunk);
+
+  const terminalTurn = events.findLast((event) => event.type === "turn/end");
+  assert.equal(terminalTurn?.type, "turn/end");
+  assert.deepEqual(terminalTurn?.data.reason, { kind: "interrupted" });
+}
+
+async function startGracefulRestartReplay(dataDirectory) {
+  const client = new JsonRpcChild(dataDirectory, true);
+  let shouldTerminate = true;
+  try {
+    await initialize(client);
+    const started = await client.request("yishan.v1.session.start", { cwd, sessionId: restartSessionId, binding });
+    assert.equal(started.sessionId, restartSessionId);
+
+    const prompt = await client.request("yishan.v1.session.prompt", {
+      cwd,
+      sessionId: restartSessionId,
+      contentBlocks: [{ type: "text", text: "replay this deterministically" }],
+    });
+    assert.equal(typeof prompt.messageId, "string");
+    await client.waitForNotification(
+      (notification) => {
+        const event = getEvent(notification);
+        return event?.type === "assistant/chunk" && event.data?.chunk?.text === replayText;
+      },
+      "deterministic assistant chunk before graceful restart",
+    );
+
+    const cursor = await client.request("yishan.v1.session.flush", { cwd, sessionId: restartSessionId });
+    assert.equal(cursor.sessionId, restartSessionId);
+    assert.ok(cursor.durableThroughSeq >= 0);
+    shouldTerminate = false;
+    return client;
+  } finally {
+    if (shouldTerminate) await client.terminate();
+  }
+}
+
+async function resumeAfterGracefulRestart(dataDirectory) {
+  const client = new JsonRpcChild(dataDirectory, true);
+  try {
+    await initialize(client);
+    const resumed = await client.request("yishan.v1.session.resume", { cwd, sessionId: restartSessionId });
+    assert.deepEqual(resumed, { sessionId: restartSessionId });
+
+    const reattached = await client.request("yishan.v1.session.subscribe", { cwd, sessionId: restartSessionId, afterSeq: -1 });
+    const replayedEvents = getEvents(reattached);
+    assertContiguous(replayedEvents);
+    assertDurableReplayAfterGracefulRestart(replayedEvents);
+
+    const disposed = await client.request("yishan.v1.session.dispose", { cwd, sessionId: restartSessionId });
+    assert.deepEqual(disposed, { sessionId: restartSessionId, disposed: true });
+    await client.shutdown();
+  } finally {
+    await client.terminate();
+  }
+}
+
+async function assertGracefulRestartReplaysDurableOutput(dataDirectory) {
+  const taskRun = await startGracefulRestartReplay(dataDirectory);
+  try {
+    await taskRun.shutdownForRestart();
+    await resumeAfterGracefulRestart(dataDirectory);
+  } finally {
+    await taskRun.terminate();
+  }
+}
+
 async function resumeAndVerify(dataDirectory, expectedEvents) {
   const client = new JsonRpcChild(dataDirectory, true);
   try {
@@ -349,6 +427,7 @@ try {
   assert.notEqual(jsonlFile, undefined);
   assert.ok((await stat(resolve(dataDirectory, "sessions", jsonlFile))).size > 0);
   await resumeAndVerify(dataDirectory, initialEvents);
+  await assertGracefulRestartReplaysDurableOutput(dataDirectory);
 } finally {
   await rm(dataDirectory, { recursive: true, force: true });
 }
