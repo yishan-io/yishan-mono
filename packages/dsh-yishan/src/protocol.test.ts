@@ -27,6 +27,7 @@ describe("yishanMethod", () => {
       start: "yishan.v1.session.start",
       prompt: "yishan.v1.session.prompt",
       subscribe: "yishan.v1.session.subscribe",
+      subagentInterrupt: "yishan.v1.subagent.interrupt",
     });
   });
 

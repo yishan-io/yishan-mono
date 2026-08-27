@@ -241,3 +241,20 @@ func rawStringEquals(value json.RawMessage, expected string) bool {
 	actual, ok := rawString(value)
 	return ok && actual == expected
 }
+
+type subagentInterruptWireResult struct {
+	ParentSessionID    string `json:"parentSessionId"`
+	ChildSessionID     string `json:"childSessionId"`
+	InterruptRequested *bool  `json:"interruptRequested"`
+}
+
+func (response subagentInterruptWireResult) validate(request SubagentInterruptRequest) (SubagentInterruptResult, error) {
+	if response.ParentSessionID != request.ParentSessionID || response.ChildSessionID != request.ChildSessionID || response.InterruptRequested == nil || !*response.InterruptRequested {
+		return SubagentInterruptResult{}, errors.New("invalid DSH subagent interrupt response")
+	}
+	return SubagentInterruptResult{
+		ParentSessionID:    response.ParentSessionID,
+		ChildSessionID:     response.ChildSessionID,
+		InterruptRequested: *response.InterruptRequested,
+	}, nil
+}

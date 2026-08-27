@@ -114,3 +114,14 @@ export {
   type YishanRuntime,
   type YishanRuntimeConfig,
 } from "./runtime";
+
+export {
+  parseSubagentInterruptRequest,
+  type SubagentInterruptRequest,
+  type SubagentInterruptResult,
+} from "./subagentInterruptContracts";
+export {
+  createSubagentInterruptHandler,
+  YishanSubagentInterruptError,
+  type YishanSubagentInterruptDependencies,
+} from "./subagentInterruptHandler";

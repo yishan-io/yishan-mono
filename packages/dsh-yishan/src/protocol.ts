@@ -16,6 +16,7 @@ export const YISHAN_METHODS = {
   prompt: yishanMethod("session.prompt"),
   subscribe: yishanMethod("session.subscribe"),
   interactionRespond: yishanMethod("interaction.respond"),
+  subagentInterrupt: yishanMethod("subagent.interrupt"),
 } as const;
 
 /** Runtime-to-daemon requests sent over the bidirectional JSON-RPC peer. */

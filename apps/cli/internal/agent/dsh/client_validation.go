@@ -121,3 +121,10 @@ func decodeStrictJSON(value json.RawMessage, target any) error {
 	}
 	return nil
 }
+
+func validateSubagentInterruptRequest(request SubagentInterruptRequest) error {
+	if request.CWD == "" || request.ParentSessionID == "" || request.ChildSessionID == "" {
+		return errors.New("DSH subagent interrupt requires cwd, parentSessionId, and childSessionId")
+	}
+	return nil
+}

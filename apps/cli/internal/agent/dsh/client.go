@@ -8,10 +8,11 @@ import (
 )
 
 const (
-	yishanSessionDisposeMethod = "yishan.v1.session.dispose"
-	yishanSessionListMethod    = "yishan.v1.session.list"
-	yishanSessionReadMethod    = "yishan.v1.session.read"
-	yishanSessionResumeMethod  = "yishan.v1.session.resume"
+	yishanSessionDisposeMethod    = "yishan.v1.session.dispose"
+	yishanSessionListMethod       = "yishan.v1.session.list"
+	yishanSessionReadMethod       = "yishan.v1.session.read"
+	yishanSessionResumeMethod     = "yishan.v1.session.resume"
+	yishanSubagentInterruptMethod = "yishan.v1.subagent.interrupt"
 )
 
 var (
@@ -85,6 +86,32 @@ type SessionResumeResult struct {
 type SessionDisposeResult struct {
 	SessionID string `json:"sessionId"`
 	Disposed  bool   `json:"disposed"`
+}
+
+// SubagentInterruptRequest identifies one direct child of a Yishan-owned parent.
+type SubagentInterruptRequest struct {
+	CWD             string `json:"cwd"`
+	ParentSessionID string `json:"parentSessionId"`
+	ChildSessionID  string `json:"childSessionId"`
+}
+
+// SubagentInterruptResult reports whether the runtime accepted interrupt dispatch.
+type SubagentInterruptResult struct {
+	ParentSessionID    string `json:"parentSessionId"`
+	ChildSessionID     string `json:"childSessionId"`
+	InterruptRequested bool   `json:"interruptRequested"`
+}
+
+// InterruptSubagent asks DSH to interrupt one authorized direct subagent.
+func (s *Supervisor) InterruptSubagent(ctx context.Context, request SubagentInterruptRequest) (SubagentInterruptResult, error) {
+	if err := validateSubagentInterruptRequest(request); err != nil {
+		return SubagentInterruptResult{}, err
+	}
+	var response subagentInterruptWireResult
+	if err := s.call(ctx, yishanSubagentInterruptMethod, request, &response); err != nil {
+		return SubagentInterruptResult{}, err
+	}
+	return response.validate(request)
 }
 
 // DisposeSession stops one resumed live session after DSH verifies its cwd.

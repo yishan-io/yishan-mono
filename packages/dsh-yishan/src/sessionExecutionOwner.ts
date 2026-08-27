@@ -223,6 +223,11 @@ export class YishanSessionExecutionOwner {
     if (failures.length > 1) throw new AggregateError(failures, "failed to shut down Yishan sessions");
   }
 
+  /** Returns an owned live session, excluding sessions being created or disposed. */
+  getOwnedLiveSession(sessionId: string): LiveSession | undefined {
+    return this.handles.get(sessionId)?.agent.session;
+  }
+
   /** Returns whether this runtime owns a live, creating, or disposing agent identity. */
   owns(sessionId: string): boolean {
     return this.handles.has(sessionId) || this.creations.has(sessionId) || this.disposals.has(sessionId);

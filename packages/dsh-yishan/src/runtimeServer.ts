@@ -11,6 +11,7 @@ import { YISHAN_METHODS } from "./protocol";
 import { createRequestRouter } from "./requestRouter";
 import { YishanSessionExecutionOwner } from "./sessionExecutionOwner";
 import { createSessionHandler } from "./sessionHandler";
+import { createSubagentInterruptHandler } from "./subagentInterruptHandler";
 
 /** Cordis plugin name for the Yishan-owned SDK JSON-RPC stdio server. */
 export const name = "yishan-sdk-jsonrpc-server";
@@ -57,6 +58,11 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
     subagents: ctx.subagents,
     execution: owner,
   });
+  const interruptSubagent = createSubagentInterruptHandler({
+    execution: owner,
+    sessionQuery: ctx.sessionQuery,
+    subagents: ctx.subagents,
+  });
   const route = createRequestRouter(async (method, params) => {
     if (method === "session/prompt") {
       const sessionId = typeof params.sessionId === "string" ? params.sessionId : "";
@@ -87,6 +93,7 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
     if (!isInitialized && isExecutionExtension(method)) {
       throw new Error("initialize must succeed before session execution");
     }
+    if (method === YISHAN_METHODS.subagentInterrupt) return await interruptSubagent(params);
     return await route(method, params);
   });
 
@@ -144,5 +151,6 @@ function isExecutionExtension(method: string): boolean {
     YISHAN_METHODS.flush,
     YISHAN_METHODS.resume,
     YISHAN_METHODS.dispose,
+    YISHAN_METHODS.subagentInterrupt,
   ]).has(method);
 }
