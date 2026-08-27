@@ -52,6 +52,11 @@ const (
 	MethodProjectSetListPreferences = "project.setListPreferences"
 	MethodNodeList                  = "node.list"
 
+	MethodBackgroundJobCreate = "backgroundJob.create"
+	MethodBackgroundJobGet    = "backgroundJob.get"
+	MethodBackgroundJobList   = "backgroundJob.list"
+	MethodBackgroundJobCancel = "backgroundJob.cancel"
+
 	MethodLocalTaskCreate                    = "localTask.create"
 	MethodLocalTaskGet                       = "localTask.get"
 	MethodLocalTaskGetDetails                = "localTask.getDetails"

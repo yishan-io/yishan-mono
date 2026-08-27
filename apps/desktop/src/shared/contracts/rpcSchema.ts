@@ -174,6 +174,18 @@ export type RpcSchema = {
         taskId?: string;
         change?: "created" | "updated";
       };
+      backgroundJobChanged: {
+        id: string;
+        workspaceId: string;
+        prompt: string;
+        model: string;
+        status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+        result: { text?: string; errorCode?: string; errorMessage?: string };
+        createdAt: string;
+        updatedAt: string;
+        startedAt?: string;
+        finishedAt?: string;
+      };
     };
   };
 };

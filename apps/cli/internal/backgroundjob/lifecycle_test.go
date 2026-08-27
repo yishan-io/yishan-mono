@@ -2,6 +2,7 @@ package backgroundjob
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -132,5 +133,79 @@ func TestService_Run_WorkspaceCloseWinsAdmissionRaceAndCancelsQueuedJob(t *testi
 	job, _ = repository.Get(context.Background(), "id")
 	if job.Status != StatusCancelled {
 		t.Fatalf("job after close sweep = %s, want cancelled", job.Status)
+	}
+}
+
+type queuedCancelRaceRepository struct {
+	*memoryRepository
+	once sync.Once
+}
+
+func (r *queuedCancelRaceRepository) CompareAndSwapStatus(ctx context.Context, id string, from, to Status, outcome Outcome) (Job, bool, error) {
+	if from == StatusQueued && to == StatusCancelled {
+		r.once.Do(func() {
+			r.mu.Lock()
+			job := r.jobs[id]
+			job.Status = StatusRunning
+			r.jobs[id] = job
+			r.mu.Unlock()
+		})
+	}
+	return r.memoryRepository.CompareAndSwapStatus(ctx, id, from, to, outcome)
+}
+
+func TestService_Cancel_QueuedClaimRaceStopsRunningJob(t *testing.T) {
+	repository := &queuedCancelRaceRepository{memoryRepository: newMemoryRepository(testRunnerJob(StatusQueued))}
+	execution := &fakeExecution{}
+	service := NewService(repository, testWorkspaceResolver{}, execution, "node", nil)
+	if err := service.Cancel(context.Background(), "id"); err != nil {
+		t.Fatal(err)
+	}
+	job, _ := repository.Get(context.Background(), "id")
+	if job.Status != StatusCancelled || execution.cancelled != 1 {
+		t.Fatalf("job = %#v, cancelled = %d", job, execution.cancelled)
+	}
+}
+
+func TestService_CreateAndCancelWorkspace_CancelsJobAdmittedBeforeClose(t *testing.T) {
+	repository := newMemoryRepository()
+	repository.createStarted = make(chan struct{})
+	createRelease := make(chan struct{})
+	repository.createRelease = createRelease
+	service := NewService(repository, testWorkspaceResolver{}, &fakeExecution{}, "node", nil)
+	job := testRunnerJob(StatusQueued)
+	created := make(chan error, 1)
+	go func() { _, err := service.Create(context.Background(), job); created <- err }()
+	<-repository.createStarted
+	closed := make(chan error, 1)
+	go func() { closed <- service.CancelWorkspace(context.Background(), job.WorkspaceID) }()
+	close(createRelease)
+	if err := <-created; err != nil {
+		t.Fatal(err)
+	}
+	if err := <-closed; err != nil {
+		t.Fatal(err)
+	}
+	persisted, _ := service.Get(context.Background(), job.ID)
+	if persisted.Status != StatusCancelled {
+		t.Fatalf("job status = %s, want cancelled", persisted.Status)
+	}
+}
+
+func TestService_CreateRejectsWorkspaceAfterCloseAdmissionBegins(t *testing.T) {
+	repository := newMemoryRepository()
+	repository.listStarted = make(chan struct{})
+	listRelease := make(chan struct{})
+	repository.listRelease = listRelease
+	service := NewService(repository, testWorkspaceResolver{}, &fakeExecution{}, "node", nil)
+	closeDone := make(chan error, 1)
+	go func() { closeDone <- service.CancelWorkspace(context.Background(), "workspace") }()
+	<-repository.listStarted
+	if _, err := service.Create(context.Background(), testRunnerJob(StatusQueued)); !errors.Is(err, errWorkspaceClosing) {
+		t.Fatalf("create error = %v", err)
+	}
+	close(listRelease)
+	if err := <-closeDone; err != nil {
+		t.Fatal(err)
 	}
 }

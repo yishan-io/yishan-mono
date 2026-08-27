@@ -32,7 +32,7 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 	localTaskService := nodelocaltask.NewService(nodelocaltask.Deps{
 		Repository: sqlite.NewLocalTaskStore(database), WorkspaceStore: sqlite.NewStore(workspaceStore),
 	})
-	router := buildNamespaceRouter(nil, nil, nil, nil, nil, localTaskService)
+	router := buildNamespaceRouter(nil, nil, nil, nil, nil, nil, localTaskService)
 
 	createdValue, err := router.Call(context.Background(), &rpc.Connection{}, rpc.MethodLocalTaskCreate, json.RawMessage(`{"id":"../../caller-id","title":"Routed"}`))
 	if err != nil {

@@ -2,21 +2,31 @@ package backgroundjob
 
 import (
 	"context"
+	"sync"
 )
 
 // Cancel atomically cancels queued jobs or stops an admitted running job.
 func (s *Service) Cancel(ctx context.Context, jobID string) error {
-	job, err := s.repository.Get(ctx, jobID)
-	if err != nil || !s.isLocalJob(job) {
-		return err
+	for {
+		job, err := s.repository.Get(ctx, jobID)
+		if err != nil || !s.isLocalJob(job) {
+			return err
+		}
+		if job.Status == StatusQueued {
+			_, swapped, err := s.transition(ctx, job.ID, StatusQueued, StatusCancelled, Outcome{})
+			if err != nil || swapped {
+				return err
+			}
+			continue
+		}
+		if job.Status != StatusRunning {
+			return nil
+		}
+		return s.cancelRunning(job)
 	}
-	if job.Status == StatusQueued {
-		_, _, err = s.transition(ctx, job.ID, StatusQueued, StatusCancelled, Outcome{})
-		return err
-	}
-	if job.Status != StatusRunning {
-		return nil
-	}
+}
+
+func (s *Service) cancelRunning(job Job) error {
 	if s.cancelLease(job.WorkspaceID, job.ID) {
 		return nil
 	}
@@ -113,14 +123,27 @@ func (s *Service) Close(ctx context.Context) error {
 		s.cancel()
 	}
 	s.mu.Unlock()
-	done := make(chan struct{})
-	go func() { s.waitGroup.Wait(); close(done) }()
-	select {
-	case <-done:
-	case <-ctx.Done():
-		return ctx.Err()
+	if err := waitForWaitGroup(ctx, &s.schedulerWaitGroup); err != nil {
+		return err
+	}
+	if err := waitForWaitGroup(ctx, &s.waitGroup); err != nil {
+		return err
 	}
 	persistCtx, cancel := context.WithTimeout(ctx, s.cleanupTimeout)
 	defer cancel()
 	return s.persistPendingTerminals(persistCtx)
+}
+
+func waitForWaitGroup(ctx context.Context, waitGroup *sync.WaitGroup) error {
+	done := make(chan struct{})
+	go func() {
+		waitGroup.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

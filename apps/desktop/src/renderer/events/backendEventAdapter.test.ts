@@ -49,6 +49,7 @@ describe("BACKEND_EVENT_NAME_BY_SOURCE", () => {
       terminalAgentChanged: "terminal.agent.changed",
       agentPiEvent: "agent.pi.event",
       localTaskChanged: "localTask.changed",
+      backgroundJobChanged: "backgroundJob.changed",
     });
   });
 });
@@ -422,6 +423,29 @@ describe("normalizeBackendEvent", () => {
 
     expect(normalized.name).toBe("workspace.snapshot.changed");
     expect(normalized.source).toBe("workspaceSnapshotChanged");
+  });
+
+  it("normalizes background job change events", () => {
+    const normalized = assertNormalized(
+      normalizeBackendEvent(
+        createEnvelope({
+          method: "backgroundJobChanged",
+          payload: {
+            id: "job-1",
+            workspaceId: "workspace-1",
+            prompt: "Review the change",
+            model: "model-1",
+            status: "queued",
+            result: {},
+            createdAt: "2026-03-01T00:00:00Z",
+            updatedAt: "2026-03-01T00:00:00Z",
+          },
+        }),
+      ),
+    );
+
+    expect(normalized.name).toBe("backgroundJob.changed");
+    expect(normalized.source).toBe("backgroundJobChanged");
   });
 
   it("normalizes app actions", () => {

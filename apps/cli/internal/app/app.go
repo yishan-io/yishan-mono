@@ -27,6 +27,7 @@ import (
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/memory"
 	nodeagent "yishan/apps/cli/internal/node/agent"
+	nodebackgroundjob "yishan/apps/cli/internal/node/backgroundjob"
 	"yishan/apps/cli/internal/node/context"
 	"yishan/apps/cli/internal/node/hook"
 	nodelocaltask "yishan/apps/cli/internal/node/localtask"
@@ -301,6 +302,11 @@ func Bootstrap(cfg Config) (*App, error) {
 		},
 	)
 	backgroundJobs := newBackgroundJobService(cfg, workspaceSvc, dshSupervisor, events)
+	backgroundJobSvc := nodebackgroundjob.NewService(nodebackgroundjob.Deps{
+		Jobs: backgroundJobs, Workspaces: workspaceSvc, OwnerNodeID: cfg.NodeID,
+		IsDSHConfigured: func() bool { return dshSupervisor != nil },
+		IsDSHReady:      func() bool { return dshSupervisor != nil && dshSupervisor.Health().IsReady },
+	})
 	workspaceSvc.SetBackgroundJobCleanup(backgroundJobs.CancelWorkspace, backgroundJobs.AbortWorkspaceClose)
 
 	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
@@ -387,7 +393,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		SettingsPath: cfg.SettingsPath,
 		ServerCtx:    context.Background(),
 	})
-	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
+	app.router = buildNamespaceRouter(agentSvc, backgroundJobSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
 	app.rpcServer = rpc.NewServer(appHandler{router: app.router, agent: agentSvc})
 	app.rpcServer.BinaryFrameHandler = terminalSvc
 	app.relay = relay.NewClient(relay.ClientConfig{
@@ -461,6 +467,6 @@ func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 
 // NewRouter builds the namespace routing table for the node services (test
 // and composition helper; Bootstrap wires it into the app).
-func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service) *rpc.Router {
-	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
+func NewRouter(agentSvc *nodeagent.Service, backgroundJobSvc *nodebackgroundjob.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service) *rpc.Router {
+	return buildNamespaceRouter(agentSvc, backgroundJobSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
 }

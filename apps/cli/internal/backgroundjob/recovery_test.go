@@ -136,3 +136,84 @@ func TestService_Close_WaitsForCancelledQueuedRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestService_Schedule_CapsDirectCreateRuns(t *testing.T) {
+	jobs := make([]Job, queuedRecoveryWorkerLimit+2)
+	for index := range jobs {
+		jobs[index] = testRunnerJob(StatusQueued)
+		jobs[index].ID = string(rune('a' + index))
+		jobs[index].SessionID = "job-" + jobs[index].ID
+	}
+	repository := newMemoryRepository(jobs...)
+	execution := newRecoveryExecution(queuedRecoveryWorkerLimit)
+	service := NewService(repository, testWorkspaceResolver{}, execution, "node", nil)
+	for _, job := range jobs {
+		err := service.Schedule(context.Background(), job.ID)
+		if err != nil && !errors.Is(err, errSchedulerFull) {
+			t.Fatal(err)
+		}
+	}
+	execution.waitForStarts(t)
+	if execution.maxConcurrentStarts() > queuedRecoveryWorkerLimit {
+		t.Fatalf("concurrent direct runs = %d, limit = %d", execution.maxConcurrentStarts(), queuedRecoveryWorkerLimit)
+	}
+	close(execution.releaseStarts)
+	for _, job := range jobs {
+		waitForStatus(t, repository, job.ID, StatusSucceeded)
+	}
+}
+
+func TestService_Close_HonorsContextWhileSchedulerWorkerIsRunning(t *testing.T) {
+	repository := newMemoryRepository(testRunnerJob(StatusQueued))
+	execution := newRecoveryExecution(1)
+	service := NewService(repository, testWorkspaceResolver{}, execution, "node", nil)
+	if err := service.Schedule(context.Background(), "id"); err != nil {
+		t.Fatal(err)
+	}
+	<-execution.started
+	closeCtx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	if err := service.Close(closeCtx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("close error = %v, want deadline exceeded", err)
+	}
+	close(execution.releaseStarts)
+	if err := service.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestService_Schedule_BurstRetriesJobsRejectedByBoundedQueue(t *testing.T) {
+	const jobCount = schedulerQueueCapacity + queuedRecoveryWorkerLimit + 4
+	jobs := make([]Job, jobCount)
+	for index := range jobs {
+		jobs[index] = testRunnerJob(StatusQueued)
+		jobs[index].ID = string(rune('a' + index))
+		jobs[index].SessionID = "job-" + jobs[index].ID
+	}
+	repository := newMemoryRepository(jobs...)
+	execution := newRecoveryExecution(jobCount)
+	service := NewService(repository, testWorkspaceResolver{}, execution, "node", nil)
+
+	fullSubmissions := 0
+	for _, job := range jobs {
+		err := service.Schedule(context.Background(), job.ID)
+		if errors.Is(err, errSchedulerFull) {
+			fullSubmissions++
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if fullSubmissions == 0 {
+		t.Fatal("burst did not fill the bounded scheduler")
+	}
+	execution.waitForStarts(t)
+	if execution.maxConcurrentStarts() > queuedRecoveryWorkerLimit {
+		t.Fatalf("concurrent runs = %d, limit = %d", execution.maxConcurrentStarts(), queuedRecoveryWorkerLimit)
+	}
+	close(execution.releaseStarts)
+	for _, job := range jobs {
+		waitForStatus(t, repository, job.ID, StatusSucceeded)
+	}
+}

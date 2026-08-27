@@ -2,7 +2,10 @@ package backgroundjob
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	"github.com/rs/zerolog/log"
 )
 
 // RecoverRunning durably interrupts local jobs that were running before daemon startup.
@@ -55,35 +58,81 @@ func queuedLocalJobIDs(service *Service, jobs []Job) []string {
 	return jobIDs
 }
 
-func (s *Service) scheduleQueuedRecovery(jobIDs []string) {
-	workers := min(queuedRecoveryWorkerLimit, len(jobIDs))
-	if workers == 0 {
+// Schedule attempts to queue a local durable job without blocking its caller.
+// If the bounded scheduler is full, the persisted queued job is admitted after another run completes.
+func (s *Service) Schedule(ctx context.Context, jobID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !s.startScheduler() {
+		return errServiceClosed
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.isClosed {
+		return errServiceClosed
+	}
+	if s.scheduled[jobID] {
+		return nil
+	}
+	select {
+	case s.schedulerJobs <- jobID:
+		s.scheduled[jobID] = true
+		return nil
+	default:
+		return errSchedulerFull
+	}
+}
+
+func (s *Service) startScheduler() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.isClosed {
+		return false
+	}
+	s.schedulerOnce.Do(func() {
+		for range queuedRecoveryWorkerLimit {
+			s.schedulerWaitGroup.Add(1)
+			go s.runScheduledJobs()
+		}
+	})
+	return true
+}
+
+func (s *Service) runScheduledJobs() {
+	defer s.schedulerWaitGroup.Done()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case jobID := <-s.schedulerJobs:
+			s.Run(s.ctx, jobID)
+			s.releaseScheduled(jobID)
+			s.retryScheduledJobs()
+		}
+	}
+}
+
+func (s *Service) releaseScheduled(jobID string) {
+	s.mu.Lock()
+	delete(s.scheduled, jobID)
+	s.mu.Unlock()
+}
+
+func (s *Service) retryScheduledJobs() {
+	jobs, err := s.repository.ListForStartupRecovery(s.ctx)
+	if err != nil {
+		if !errors.Is(err, context.Canceled) {
+			log.Error().Err(err).Msg("list queued background jobs for scheduler retry")
+		}
 		return
 	}
-	jobs := make(chan string)
-	for range workers {
-		if !s.enter() {
-			close(jobs)
-			return
-		}
-		go s.runQueuedRecoveryWorker(jobs)
-	}
-	go s.dispatchQueuedRecovery(jobs, jobIDs)
+	s.scheduleQueuedRecovery(queuedLocalJobIDs(s, jobs))
 }
 
-func (s *Service) runQueuedRecoveryWorker(jobs <-chan string) {
-	defer s.waitGroup.Done()
-	for jobID := range jobs {
-		s.Run(s.ctx, jobID)
-	}
-}
-
-func (s *Service) dispatchQueuedRecovery(jobs chan<- string, jobIDs []string) {
-	defer close(jobs)
+func (s *Service) scheduleQueuedRecovery(jobIDs []string) {
 	for _, jobID := range jobIDs {
-		select {
-		case jobs <- jobID:
-		case <-s.ctx.Done():
+		if err := s.Schedule(s.ctx, jobID); err != nil {
 			return
 		}
 	}

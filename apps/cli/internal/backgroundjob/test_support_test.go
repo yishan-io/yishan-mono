@@ -3,6 +3,7 @@ package backgroundjob
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -24,6 +25,8 @@ func (testWorkspaceResolver) GetWorkspace(string) (workspace.Workspace, error) {
 type memoryRepository struct {
 	mu                sync.Mutex
 	jobs              map[string]Job
+	createStarted     chan struct{}
+	createRelease     <-chan struct{}
 	getStarted        chan struct{}
 	getRelease        <-chan struct{}
 	recoveryStarted   chan struct{}
@@ -41,7 +44,23 @@ func newMemoryRepository(jobs ...Job) *memoryRepository {
 	}
 	return &memoryRepository{jobs: entries}
 }
-func (r *memoryRepository) Create(context.Context, Job) (Job, error) { panic("unused") }
+func (r *memoryRepository) Create(ctx context.Context, job Job) (Job, error) {
+	if r.createStarted != nil {
+		close(r.createStarted)
+		select {
+		case <-r.createRelease:
+		case <-ctx.Done():
+			return Job{}, ctx.Err()
+		}
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, exists := r.jobs[job.ID]; exists {
+		return Job{}, errors.New("duplicate job")
+	}
+	r.jobs[job.ID] = job
+	return job, nil
+}
 func (r *memoryRepository) Get(ctx context.Context, id string) (Job, error) {
 	if r.getStarted != nil {
 		close(r.getStarted)

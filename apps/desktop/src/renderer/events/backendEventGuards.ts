@@ -22,6 +22,7 @@ const FRONTEND_MESSAGE_KEYS = [
   "terminalSessionChanged",
   "terminalAgentChanged",
   "agentPiEvent",
+  "backgroundJobChanged",
 ] as const satisfies readonly RpcFrontendMessageKey[];
 
 const FRONTEND_MESSAGE_KEY_SET = new Set<string>(FRONTEND_MESSAGE_KEYS);

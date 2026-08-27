@@ -21,12 +21,14 @@ const (
 	interruptedMessage        = "DSH runtime became unavailable"
 	cleanupTimeout            = 5 * time.Second
 	queuedRecoveryWorkerLimit = 4
+	schedulerQueueCapacity    = queuedRecoveryWorkerLimit
 )
 
 var (
 	errServiceClosed      = errors.New("background job service is closed")
 	errWorkspaceClosing   = errors.New("background job workspace is closing")
 	errRunAlreadyAdmitted = errors.New("background job run is already admitted")
+	errSchedulerFull      = errors.New("background job scheduler is full")
 )
 
 // WorkspaceResolver resolves active local workspaces without crossing RPC.
@@ -56,20 +58,24 @@ type workspaceLease struct {
 
 // Service runs durable local DSH jobs. It owns no frontend/session product state.
 type Service struct {
-	repository       Repository
-	workspaces       WorkspaceResolver
-	execution        Execution
-	ownerNodeID      string
-	publish          Publisher
-	ctx              context.Context
-	cancel           context.CancelFunc
-	mu               sync.Mutex
-	isClosed         bool
-	closing          map[string]bool
-	leases           map[string]map[string]*workspaceLease
-	pendingTerminals map[string]pendingTerminal
-	waitGroup        sync.WaitGroup
-	cleanupTimeout   time.Duration
+	repository         Repository
+	workspaces         WorkspaceResolver
+	execution          Execution
+	ownerNodeID        string
+	publish            Publisher
+	ctx                context.Context
+	cancel             context.CancelFunc
+	mu                 sync.Mutex
+	isClosed           bool
+	closing            map[string]bool
+	leases             map[string]map[string]*workspaceLease
+	scheduled          map[string]bool
+	pendingTerminals   map[string]pendingTerminal
+	waitGroup          sync.WaitGroup
+	schedulerOnce      sync.Once
+	schedulerJobs      chan string
+	schedulerWaitGroup sync.WaitGroup
+	cleanupTimeout     time.Duration
 }
 
 type pendingTerminal struct {
@@ -81,7 +87,7 @@ type pendingTerminal struct {
 // NewService constructs the daemon-owned job runner.
 func NewService(repository Repository, workspaces WorkspaceResolver, execution Execution, ownerNodeID string, publish Publisher) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Service{repository: repository, workspaces: workspaces, execution: execution, ownerNodeID: ownerNodeID, publish: publish, ctx: ctx, cancel: cancel, closing: make(map[string]bool), leases: make(map[string]map[string]*workspaceLease), pendingTerminals: make(map[string]pendingTerminal), cleanupTimeout: cleanupTimeout}
+	return &Service{repository: repository, workspaces: workspaces, execution: execution, ownerNodeID: ownerNodeID, publish: publish, ctx: ctx, cancel: cancel, closing: make(map[string]bool), leases: make(map[string]map[string]*workspaceLease), scheduled: make(map[string]bool), pendingTerminals: make(map[string]pendingTerminal), schedulerJobs: make(chan string, schedulerQueueCapacity), cleanupTimeout: cleanupTimeout}
 }
 
 // Run claims and executes one queued local job. It holds a workspace lease before it can claim the job.

@@ -27,7 +27,7 @@ func newBackgroundJobService(cfg Config, workspaces *nodeworkspace.Service, supe
 	service := backgroundjob.NewService(
 		sqlite.NewBackgroundJobStore(cfg.Database), workspaces, dshSessionsFor(supervisor), cfg.NodeID,
 		func(job backgroundjob.Job) {
-			events.Publish(eventbus.Event{Topic: "backgroundJobChanged", Payload: job})
+			events.Publish(eventbus.Event{Topic: "backgroundJobChanged", Payload: backgroundjob.PublicJobFrom(job)})
 		},
 	)
 	registerBackgroundJobRecovery(supervisor, service)
