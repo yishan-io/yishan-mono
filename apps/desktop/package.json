@@ -27,7 +27,8 @@
     "check": "tsc --noEmit -p tsconfig.json",
     "dsh:build": "node scripts/buildDshRuntime.mjs",
     "dsh:smoke:production": "bun run dsh:build && node scripts/dshRuntimeSmoke.mjs",
-    "dsh:smoke": "bun run dsh:smoke:production"
+    "dsh:smoke": "bun run dsh:smoke:production",
+    "dsh:smoke:daemon": "bun run cli:build && bun run dsh:build && node scripts/taskRunDshDaemonSmoke.mjs"
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",

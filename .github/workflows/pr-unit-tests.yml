@@ -22,6 +22,7 @@ jobs:
       run_bun: ${{ steps.build-matrix.outputs.run_bun }}
       run_cli: ${{ steps.build-matrix.outputs.run_cli }}
       run_dsh_smoke: ${{ steps.build-matrix.outputs.run_dsh_smoke }}
+      run_dsh_daemon_smoke: ${{ steps.build-matrix.outputs.run_dsh_daemon_smoke }}
       run_relay: ${{ steps.build-matrix.outputs.run_relay }}
     steps:
       - name: Detect changed paths
@@ -39,12 +40,17 @@ jobs:
             desktop:
               - 'apps/desktop/**'
             desktop_dsh_runtime:
+              - 'bun.lock'
+              - 'package.json'
               - 'apps/desktop/package.json'
+              - 'apps/desktop/scripts/beforePack.mjs'
+              - 'apps/desktop/scripts/buildCliBinary.mjs'
               - 'apps/desktop/scripts/buildDshRuntime.mjs'
               - 'apps/desktop/scripts/buildDshRuntimeSmoke.mjs'
               - 'apps/desktop/scripts/dshRuntimeSmoke.mjs'
-              - 'apps/desktop/src/main/daemon/daemonCliInvocation.ts'
-              - 'apps/desktop/src/main/daemon/daemonCliInvocation.test.ts'
+              - 'apps/desktop/scripts/packageApp.mjs'
+              - 'apps/desktop/scripts/taskRunDshDaemonSmoke.mjs'
+              - 'apps/desktop/src/main/daemon/**'
             design_tokens:
               - 'packages/design-tokens/**'
             dsh_yishan:
@@ -177,6 +183,7 @@ jobs:
             `run_bun=${bunTargets.length > 0}`,
             `run_cli=${has('CLI_CHANGED') || has('DSH_YISHAN_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
             `run_dsh_smoke=${has('DSH_YISHAN_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_dsh_daemon_smoke=${has('CLI_CHANGED') || has('DSH_YISHAN_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
             `run_relay=${has('RELAY_CHANGED')}`,
           ];
 
@@ -265,3 +272,31 @@ jobs:
       - name: Smoke test DSH runtime
         working-directory: apps/desktop
         run: bun run dsh:smoke:production
+
+
+  dsh-daemon-smoke:
+    name: Linux local daemon DSH desktop-artifact smoke (Electron dev runtime)
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.run_dsh_daemon_smoke == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/cli/go.mod
+          cache-dependency-path: apps/cli/go.sum
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --linker hoisted
+
+      - name: Smoke test local DSH daemon with desktop artifacts and Electron dev runtime
+        working-directory: apps/desktop
+        run: bun run dsh:smoke:daemon
