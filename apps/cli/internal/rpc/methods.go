@@ -84,6 +84,7 @@ const (
 	MethodAgentDispose               = "agent.dispose"
 	MethodAgentListSessions          = "agent.listSessions"
 	MethodAgentListSessionLineage    = "agent.listSessionLineage"
+	MethodAgentCancelSubagent        = "agent.cancelSubagent"
 	MethodAgentReadHistory           = "agent.readHistory"
 	MethodPiStart                    = "pi.start"
 	MethodPiAttach                   = "pi.attach"

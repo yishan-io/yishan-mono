@@ -286,6 +286,23 @@ export type AgentSessionLineageResult = {
   children: AgentSessionLineageEntry[];
 };
 
+/** Requests interruption of one direct DSH subagent. */
+export type AgentCancelSubagentRequest = {
+  runtime: "dsh";
+  workspaceId: string;
+  cwd: string;
+  parentSessionId: string;
+  childSessionId: string;
+};
+
+/** Reports whether the DSH runtime accepted an interrupt request. */
+export type AgentCancelSubagentResult = {
+  runtime: "dsh";
+  parentSessionId: string;
+  childSessionId: string;
+  interruptRequested: boolean;
+};
+
 /** Returns the runtime and session identity after a successful start. */
 export type AgentStartResult = {
   runtime: AgentRuntime;

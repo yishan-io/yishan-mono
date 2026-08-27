@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
-import type { AgentDSHHistory, AgentSessionLineageResult } from "./daemonAgentTypes";
+import type { AgentCancelSubagentResult, AgentDSHHistory, AgentSessionLineageResult } from "./daemonAgentTypes";
 
 const mocks = vi.hoisted(() => ({ request: vi.fn() }));
 
@@ -8,6 +8,7 @@ vi.mock("@renderer/rpc", () => ({ request: mocks.request }));
 import {
   abortAgentSession,
   attachAgentSession,
+  cancelAgentSubagent,
   disposeAgentSession,
   getAgentCapabilities,
   listAgentRuntimeSessions,
@@ -196,6 +197,26 @@ describe("runtime-neutral agent daemon procedures", () => {
 
     await expect(listAgentSessionLineage(request)).resolves.toEqual(response);
     expect(mocks.request).toHaveBeenCalledExactlyOnceWith("agent.listSessionLineage", request);
+  });
+
+  it("cancels a DSH direct child with the exact RPC payload and typed receipt", async () => {
+    const request = {
+      runtime: "dsh" as const,
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      parentSessionId: "parent-1",
+      childSessionId: "child-1",
+    };
+    const receipt: AgentCancelSubagentResult = {
+      runtime: "dsh",
+      parentSessionId: "parent-1",
+      childSessionId: "child-1",
+      interruptRequested: true,
+    };
+    mocks.request.mockResolvedValue(receipt);
+
+    await expect(cancelAgentSubagent(request)).resolves.toEqual(receipt);
+    expect(mocks.request).toHaveBeenCalledExactlyOnceWith("agent.cancelSubagent", request);
   });
 
   it("rejects malformed DSH session lineage results", async () => {

@@ -105,6 +105,40 @@ type AgentReadHistoryParams struct {
 	TranscriptProtocolVersion int          `json:"transcriptProtocolVersion,omitempty"`
 }
 
+// AgentCancelSubagentParams requests interruption of one direct DSH subagent.
+type AgentCancelSubagentParams struct {
+	Runtime         AgentRuntime `json:"runtime"`
+	WorkspaceID     string       `json:"workspaceId"`
+	CWD             string       `json:"cwd"`
+	ParentSessionID string       `json:"parentSessionId"`
+	ChildSessionID  string       `json:"childSessionId"`
+}
+
+// UnmarshalJSON rejects fields outside the subagent-interrupt RPC contract.
+func (p *AgentCancelSubagentParams) UnmarshalJSON(raw []byte) error {
+	type wire AgentCancelSubagentParams
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode((*wire)(p)); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return fmt.Errorf("unexpected trailing JSON value")
+		}
+		return err
+	}
+	return nil
+}
+
+// AgentCancelSubagentResult reports accepted interruption of a DSH subagent.
+type AgentCancelSubagentResult struct {
+	Runtime            AgentRuntime `json:"runtime"`
+	ParentSessionID    string       `json:"parentSessionId"`
+	ChildSessionID     string       `json:"childSessionId"`
+	InterruptRequested bool         `json:"interruptRequested"`
+}
+
 // AgentSessionLineageMode selects direct children or all descendants.
 type AgentSessionLineageMode string
 

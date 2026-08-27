@@ -12,17 +12,20 @@ import (
 )
 
 type recordingDSHSessions struct {
-	listCWD        string
-	readCWD        string
-	resumeCWD      string
-	disposeCWD     string
-	startRequest   dsh.SessionStartRequest
-	listResult     dsh.SessionListResult
-	listErr        error
-	readErr        error
-	lineageRequest dsh.SessionLineageRequest
-	lineageResult  dsh.SessionLineageResult
-	lineageErr     error
+	listCWD          string
+	readCWD          string
+	resumeCWD        string
+	disposeCWD       string
+	startRequest     dsh.SessionStartRequest
+	listResult       dsh.SessionListResult
+	listErr          error
+	readErr          error
+	lineageRequest   dsh.SessionLineageRequest
+	lineageResult    dsh.SessionLineageResult
+	lineageErr       error
+	interruptRequest dsh.SubagentInterruptRequest
+	interruptResult  dsh.SubagentInterruptResult
+	interruptErr     error
 }
 
 func (r *recordingDSHSessions) ListSessions(_ context.Context, request dsh.SessionListRequest) (dsh.SessionListResult, error) {
@@ -33,6 +36,11 @@ func (r *recordingDSHSessions) ListSessions(_ context.Context, request dsh.Sessi
 func (r *recordingDSHSessions) ListSessionLineage(_ context.Context, request dsh.SessionLineageRequest) (dsh.SessionLineageResult, error) {
 	r.lineageRequest = request
 	return r.lineageResult, r.lineageErr
+}
+
+func (r *recordingDSHSessions) InterruptSubagent(_ context.Context, request dsh.SubagentInterruptRequest) (dsh.SubagentInterruptResult, error) {
+	r.interruptRequest = request
+	return r.interruptResult, r.interruptErr
 }
 
 func (r *recordingDSHSessions) ReadSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionReadResult, error) {

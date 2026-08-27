@@ -99,7 +99,17 @@ export function useAgentChatSubagentActions({
   );
   const handleCancelSubagent = useCallback(
     async (subagent: RunningSubagentSummary) => {
-      if (!sessionId || subagent.runtime === "dsh") return;
+      if (!sessionId) return;
+      if (subagent.runtime === "dsh") {
+        await cancelSubagentRun({
+          tabId,
+          sessionId,
+          rowKey: subagent.childSessionId ?? subagent.rowId,
+          runtime: "dsh",
+          childSessionId: subagent.childSessionId,
+        });
+        return;
+      }
       // Prefer the row's real ids; a live run whose lifecycle entry has not
       // reached the store yet resolves its target from a unique progress-widget
       // match (the manager's real agentId). Nothing is silently dropped: rows
@@ -119,6 +129,7 @@ export function useAgentChatSubagentActions({
         tabId,
         sessionId,
         rowKey: subagent.childSessionId ?? subagent.rowId,
+        runtime: subagent.runtime,
         agentId,
         agentName: subagent.agentName,
         childSessionId,

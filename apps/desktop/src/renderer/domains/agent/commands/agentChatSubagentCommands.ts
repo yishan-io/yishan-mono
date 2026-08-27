@@ -17,6 +17,7 @@ import { buildAgentRuntimeSessionKey } from "../runtime/agentSessionIdentity";
 import { promptAgentSession } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
 import { findTabWithSession } from "./agentChatCommands";
+import { cancelDshSubagentRun } from "./agentChatDshSubagentCancellation";
 
 const SUBAGENT_SPLIT_DIRECTION = "horizontal";
 const SUBAGENT_SPLIT_PLACEMENT = "second";
@@ -222,10 +223,16 @@ export async function cancelSubagentRun(opts: {
   sessionId: string;
   /** Row identity for cancel feedback: childSessionId ?? rowId. */
   rowKey: string;
+  runtime?: AgentRuntime;
   agentId?: string;
   agentName?: string;
   childSessionId?: string;
 }): Promise<void> {
+  if (opts.runtime === "dsh") {
+    await cancelDshSubagentRun(opts);
+    return;
+  }
+
   const stopTarget = opts.childSessionId?.trim() || opts.agentId?.trim();
   if (!stopTarget) {
     agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, {

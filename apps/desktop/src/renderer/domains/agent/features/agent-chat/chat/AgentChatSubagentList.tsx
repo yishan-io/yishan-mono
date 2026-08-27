@@ -54,10 +54,11 @@ export function AgentChatSubagentList({
         const hasUniqueLiveTarget =
           subagentProgressTargets.filter((target) => target.agentName === subagent.agentName).length === 1;
         const canCancel =
-          subagent.runtime !== "dsh" &&
           subagent.state === "running" &&
           !isInterrupted &&
-          Boolean(subagent.agentId || subagent.childSessionId || hasUniqueLiveTarget);
+          (subagent.runtime === "dsh"
+            ? Boolean(subagent.childSessionId)
+            : Boolean(subagent.agentId || subagent.childSessionId || hasUniqueLiveTarget));
 
         return (
           <AgentChatSubagentRow

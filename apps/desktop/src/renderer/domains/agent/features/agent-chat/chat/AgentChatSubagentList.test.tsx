@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AgentChatSubagentList } from "./AgentChatSubagentList";
 
 describe("AgentChatSubagentList", () => {
-  it("does not allow DSH snapshot rows to enter the Pi cancellation path", () => {
+  it("allows DSH direct-child snapshot rows to use the runtime-neutral cancellation path", () => {
     const onCancelSubagent = vi.fn();
     render(
       <AgentChatSubagentList
@@ -29,8 +29,8 @@ describe("AgentChatSubagentList", () => {
     );
 
     const cancelButton = screen.getByRole("button", { name: "Cancel sub-agent DSH child" });
-    expect(cancelButton).toHaveProperty("disabled", true);
+    expect(cancelButton).toHaveProperty("disabled", false);
     fireEvent.click(cancelButton);
-    expect(onCancelSubagent).not.toHaveBeenCalled();
+    expect(onCancelSubagent).toHaveBeenCalledOnce();
   });
 });

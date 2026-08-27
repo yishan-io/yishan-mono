@@ -11,7 +11,7 @@ import {
   renamePiCompatibilitySession,
   sendPiCompatibilityCommand,
 } from "../daemon/daemonAgentProcedures";
-import type { AgentRuntime } from "../daemon/daemonAgentTypes";
+import type { AgentRuntime, AgentSessionLineageResult } from "../daemon/daemonAgentTypes";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import { normalizeAgentChatRuntime, selectNewAgentChatRuntime } from "../runtime/agentRuntimeSelection";
 import {
@@ -144,10 +144,10 @@ export async function refreshDshSubagentLineage(opts: {
   workspaceId: string;
   cwd: string;
   rootSessionId: string;
-}): Promise<void> {
-  if (!isCurrentDshLineageParent(opts.tabId, opts.rootSessionId)) return;
+}): Promise<AgentSessionLineageResult | null> {
+  if (!isCurrentDshLineageParent(opts.tabId, opts.rootSessionId)) return null;
   const generation = agentChatStore.getState().beginDshSubagentLineageRefresh(opts.tabId, opts.rootSessionId);
-  if (generation === null) return;
+  if (generation === null) return null;
 
   try {
     const lineage = await listAgentSessionLineage({
@@ -157,15 +157,17 @@ export async function refreshDshSubagentLineage(opts: {
       rootSessionId: opts.rootSessionId,
       mode: "children",
     });
-    if (!isCurrentDshLineageParent(opts.tabId, opts.rootSessionId)) return;
+    if (!isCurrentDshLineageParent(opts.tabId, opts.rootSessionId)) return null;
     agentChatStore.getState().applyDshSubagentLineageRefresh({
       tabId: opts.tabId,
       parentSessionId: opts.rootSessionId,
       generation,
       rows: projectDshLineageSubagents(lineage),
     });
+    return lineage;
   } catch (error) {
     console.warn("Failed to refresh DSH subagent lineage", getErrorMessage(error));
+    return null;
   }
 }
 

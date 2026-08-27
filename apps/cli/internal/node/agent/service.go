@@ -48,6 +48,11 @@ type DSHSessionLineage interface {
 	ListSessionLineage(context.Context, dsh.SessionLineageRequest) (dsh.SessionLineageResult, error)
 }
 
+// DSHSubagentInterrupt exposes the DSH-native direct-subagent interrupt operation.
+type DSHSubagentInterrupt interface {
+	InterruptSubagent(context.Context, dsh.SubagentInterruptRequest) (dsh.SubagentInterruptResult, error)
+}
+
 // Deps are the explicit dependencies of the agent application service.
 type Deps struct {
 	// Workspace resolves workspace-scoped handles (skill active workspace).

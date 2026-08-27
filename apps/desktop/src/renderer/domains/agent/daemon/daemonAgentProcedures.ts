@@ -1,6 +1,7 @@
 import { subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport } from "@renderer/events/desktopRpcEventBus";
 import { request } from "@renderer/rpc";
 import { parseAgentAttachResult } from "./daemonAgentAttachParser";
+import { parseAgentCancelSubagentResult } from "./daemonAgentCancelSubagentParser";
 import { parseAgentHistoryResult } from "./daemonAgentHistoryParser";
 import { parseAgentSessionLineageResult } from "./daemonAgentSessionLineageParser";
 import type {
@@ -8,6 +9,8 @@ import type {
   AgentAckResult,
   AgentAttachRequest,
   AgentAttachResult,
+  AgentCancelSubagentRequest,
+  AgentCancelSubagentResult,
   AgentCapabilities,
   AgentDefinitionCreateInput,
   AgentDefinitionDetail,
@@ -194,6 +197,11 @@ export async function listAgentSessionLineage(
   input: AgentListSessionLineageRequest,
 ): Promise<AgentSessionLineageResult> {
   return parseAgentSessionLineageResult(await request("agent.listSessionLineage", input), input);
+}
+
+/** Requests interruption of one direct DSH subagent. */
+export async function cancelAgentSubagent(input: AgentCancelSubagentRequest): Promise<AgentCancelSubagentResult> {
+  return parseAgentCancelSubagentResult(await request("agent.cancelSubagent", input), input);
 }
 
 /** Reads durable history without interpreting runtime-specific event payloads. */

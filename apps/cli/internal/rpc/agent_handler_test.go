@@ -44,6 +44,9 @@ func (s *recordingAgentFacade) AgentListSessionLineage(_ context.Context, params
 	s.lineageParams = params
 	return s.called(MethodAgentListSessionLineage)
 }
+func (s *recordingAgentFacade) AgentCancelSubagent(context.Context, AgentCancelSubagentParams) (any, error) {
+	return s.called(MethodAgentCancelSubagent)
+}
 func (s *recordingAgentFacade) AgentReadHistory(context.Context, AgentReadHistoryParams) (any, error) {
 	return s.called(MethodAgentReadHistory)
 }
@@ -57,6 +60,7 @@ func TestAgentHandler_RoutesRuntimeNeutralMethods(t *testing.T) {
 		{MethodAgentDispose, `{"runtime":"pi","sessionId":"s","workspaceId":"w","cwd":"/w"}`},
 		{MethodAgentListSessions, `{"runtime":"pi","workspaceId":"w","cwd":"/w"}`},
 		{MethodAgentListSessionLineage, `{"runtime":"dsh","workspaceId":"w","cwd":"/w","rootSessionId":"s","mode":"children"}`},
+		{MethodAgentCancelSubagent, `{"runtime":"dsh","workspaceId":"w","cwd":"/w","parentSessionId":"parent","childSessionId":"child"}`},
 		{MethodAgentReadHistory, `{"runtime":"pi","sessionId":"s","workspaceId":"w","cwd":"/w"}`},
 	}
 	for _, test := range tests {
@@ -126,5 +130,16 @@ func TestAgentHandler_DecodesSessionLineageParams(t *testing.T) {
 	}
 	if facade.lineageParams != (AgentListSessionLineageParams{Runtime: AgentRuntimeDSH, WorkspaceID: "w", CWD: "/w", RootSessionID: "root", Mode: AgentSessionLineageDescendants}) {
 		t.Fatalf("lineage params = %#v", facade.lineageParams)
+	}
+}
+
+func TestAgentHandler_RejectsUnknownCancelSubagentParams(t *testing.T) {
+	facade := &recordingAgentFacade{}
+	handler := &AgentHandler{Agent: facade}
+	_, err := handler.Call(context.Background(), &Connection{}, MethodAgentCancelSubagent,
+		json.RawMessage(`{"runtime":"dsh","workspaceId":"w","cwd":"/w","parentSessionId":"parent","childSessionId":"child","unexpected":true}`))
+	var rpcErr *Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams || facade.calls != 0 {
+		t.Fatalf("Call error = %v, calls = %d", err, facade.calls)
 	}
 }
