@@ -67,6 +67,7 @@ type Supervisor struct {
 	isClosing          bool
 	isRestartScheduled bool
 	health             Health
+	readyListeners     []func()
 	nextID             uint64
 	runtimeIncarnation uint64
 }
@@ -279,7 +280,11 @@ func (s *Supervisor) markReady(process *runtimeProcess, serverVersion string) er
 	s.health.ServerVersion = serverVersion
 	s.health.Incarnation = fmt.Sprintf("dsh-%d", s.runtimeIncarnation)
 	s.health.LastError = ""
+	readyListeners := append([]func(){}, s.readyListeners...)
 	s.mu.Unlock()
+	for _, listener := range readyListeners {
+		go listener()
+	}
 	go s.drainOutput(process)
 	go s.awaitExit(process)
 	return nil
@@ -340,6 +345,20 @@ func (s *Supervisor) stopFailedProcess(process *runtimeProcess) {
 		_ = process.command.Process.Kill()
 	}
 	<-process.done
+}
+
+// OnReady registers a callback for each successful DSH initialization.
+func (s *Supervisor) OnReady(listener func()) {
+	if listener == nil {
+		return
+	}
+	s.mu.Lock()
+	s.readyListeners = append(s.readyListeners, listener)
+	isReady := s.health.IsReady
+	s.mu.Unlock()
+	if isReady {
+		go listener()
+	}
 }
 
 // Health returns a consistent snapshot suitable for daemon health reporting.

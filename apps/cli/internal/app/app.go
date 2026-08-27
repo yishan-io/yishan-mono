@@ -34,7 +34,6 @@ import (
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
-	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/tokenusage"
@@ -138,11 +137,15 @@ type App struct {
 	relay *relay.Client
 	// dsh supervises the experimental SDK JSON-RPC runtime when enabled.
 	dsh *dsh.Supervisor
+	// backgroundJobs owns daemon-only local DSH task execution.
+	backgroundJobs backgroundJobRunner
 
-	cleanupCtx           context.Context
-	cancelCleanup        context.CancelFunc
-	cancelAgentLifecycle context.CancelFunc
-	fileCacheSubID       uint64
+	cleanupCtx                  context.Context
+	cancelCleanup               context.CancelFunc
+	backgroundJobRecoveryCtx    context.Context
+	cancelBackgroundJobRecovery context.CancelFunc
+	cancelAgentLifecycle        context.CancelFunc
+	fileCacheSubID              uint64
 }
 
 // Bootstrap composes the daemon's service graph for one account. It mirrors
@@ -204,6 +207,7 @@ func Bootstrap(cfg Config) (*App, error) {
 
 	agentLifecycleCtx, cancelAgentLifecycle := context.WithCancel(context.Background())
 	cleanupCtx, cancelCleanup := context.WithCancel(context.Background())
+	backgroundJobRecoveryCtx, cancelBackgroundJobRecovery := context.WithCancel(context.Background())
 
 	computerSvc := nodesystem.NewDefaultComputerService()
 	modelList := modellist.NewService()
@@ -296,6 +300,9 @@ func Bootstrap(cfg Config) (*App, error) {
 			}
 		},
 	)
+	backgroundJobs := newBackgroundJobService(cfg, workspaceSvc, dshSupervisor, events)
+	workspaceSvc.SetBackgroundJobCleanup(backgroundJobs.CancelWorkspace, backgroundJobs.AbortWorkspaceClose)
+
 	terminalSvc := nodeterminal.NewService(nodeterminal.Deps{
 		Workspace: workspaceSvc,
 		Terminals: terminals,
@@ -313,37 +320,40 @@ func Bootstrap(cfg Config) (*App, error) {
 	})
 
 	app := &App{
-		registry:             registry,
-		store:                store,
-		files:                filesService,
-		git:                  gitService,
-		terminals:            terminals,
-		memory:               memorySvc,
-		computer:             computerSvc,
-		modelList:            modelList,
-		agentMgr:             agentMgr,
-		piAuth:               piAuth,
-		tokenUsage:           tokenUsage,
-		events:               events,
-		watchers:             watchers,
-		prTracker:            prTracker,
-		cleanupStore:         cleanupStore,
-		contextStore:         contextStore,
-		database:             cfg.Database,
-		Session:              cfg.Session,
-		NodeID:               cfg.NodeID,
-		logFilePath:          cfg.LogFilePath,
-		settingsPath:         cfg.SettingsPath,
-		serverCtx:            context.Background(),
-		agentLifecycleCtx:    agentLifecycleCtx,
-		cancelAgentLifecycle: cancelAgentLifecycle,
-		cleanupCtx:           cleanupCtx,
-		cancelCleanup:        cancelCleanup,
-		agentSvc:             agentSvc,
-		workspaceSvc:         workspaceSvc,
-		localTaskSvc:         localTaskSvc,
-		hookIngress:          hookIngress,
-		dsh:                  dshSupervisor,
+		registry:                    registry,
+		store:                       store,
+		files:                       filesService,
+		git:                         gitService,
+		terminals:                   terminals,
+		memory:                      memorySvc,
+		computer:                    computerSvc,
+		modelList:                   modelList,
+		agentMgr:                    agentMgr,
+		piAuth:                      piAuth,
+		tokenUsage:                  tokenUsage,
+		events:                      events,
+		watchers:                    watchers,
+		prTracker:                   prTracker,
+		cleanupStore:                cleanupStore,
+		contextStore:                contextStore,
+		database:                    cfg.Database,
+		Session:                     cfg.Session,
+		NodeID:                      cfg.NodeID,
+		logFilePath:                 cfg.LogFilePath,
+		settingsPath:                cfg.SettingsPath,
+		serverCtx:                   context.Background(),
+		agentLifecycleCtx:           agentLifecycleCtx,
+		cancelAgentLifecycle:        cancelAgentLifecycle,
+		cleanupCtx:                  cleanupCtx,
+		cancelCleanup:               cancelCleanup,
+		backgroundJobRecoveryCtx:    backgroundJobRecoveryCtx,
+		cancelBackgroundJobRecovery: cancelBackgroundJobRecovery,
+		agentSvc:                    agentSvc,
+		workspaceSvc:                workspaceSvc,
+		localTaskSvc:                localTaskSvc,
+		hookIngress:                 hookIngress,
+		dsh:                         dshSupervisor,
+		backgroundJobs:              backgroundJobs,
 	}
 
 	// Computer feature config comes from settings.yaml.
@@ -410,68 +420,26 @@ func (a *App) Start() {
 	a.StartHealthMonitor()
 }
 
-// applyComputerSettings loads the computer-use feature config from
-// settings.yaml. A missing/empty settings path leaves the defaults.
-func (a *App) applyComputerSettings() error {
-	if a.settingsPath == "" || a.computer == nil {
-		return nil
+// Close stops the service graph without tearing down DSH or SQLite until
+// background runners have quiesced.
+func (a *App) Close() error {
+	a.stopCloseSubscriptions()
+	if a.cancelBackgroundJobRecovery != nil {
+		a.cancelBackgroundJobRecovery()
 	}
-	cfg, err := config.LoadSettings(a.settingsPath, nil)
-	if err != nil {
-		return fmt.Errorf("load computer settings: %w", err)
+	if err := a.closeBackgroundJobs(); err != nil {
+		return err
 	}
-	a.computer.UpdateConfig(computer.FeatureConfig{
-		Enabled:            cfg.ComputerUse.Enabled,
-		Observe:            cfg.ComputerUse.Observe,
-		Capture:            cfg.ComputerUse.Capture,
-		Inspect:            cfg.ComputerUse.Inspect,
-		Actions:            cfg.ComputerUse.Actions,
-		Mouse:              cfg.ComputerUse.Mouse,
-		Keyboard:           cfg.ComputerUse.Keyboard,
-		ClipboardRead:      cfg.ComputerUse.ClipboardRead,
-		ClipboardWrite:     cfg.ComputerUse.ClipboardWrite,
-		ApplicationControl: cfg.ComputerUse.ApplicationControl,
-	})
-	return nil
+	return a.closeDependencies()
 }
 
-// Close stops the service graph in the daemon's historical shutdown order:
-// event hub subscription → PR tracker → token usage → memory → agent
-// lifecycle → agent manager → model list shell → cleanup/health background
-// tasks → local database.
-func (a *App) Close() error {
+func (a *App) stopCloseSubscriptions() {
 	if a.events != nil {
 		a.events.Unsubscribe(a.fileCacheSubID)
 	}
 	if a.prTracker != nil {
 		a.prTracker.Stop()
 	}
-	if a.dsh != nil {
-		if err := a.dsh.Close(); err != nil {
-			log.Warn().Err(err).Msg("failed to close DSH supervisor")
-		}
-	}
-	if a.tokenUsage != nil {
-		a.tokenUsage.Close()
-	}
-	if a.memory != nil {
-		if err := a.memory.Close(); err != nil {
-			log.Warn().Err(err).Msg("failed to close memory service")
-		}
-	}
-	if a.agentSvc != nil {
-		a.agentSvc.Shutdown()
-	}
-	modellist.ShutdownShell()
-	if a.cancelCleanup != nil {
-		a.cancelCleanup()
-	}
-	if a.database != nil {
-		if err := a.database.Close(); err != nil {
-			log.Warn().Err(err).Msg("failed to close local database")
-		}
-	}
-	return nil
 }
 
 // RPCServer exposes the JSON-RPC/WebSocket transport server to the daemon

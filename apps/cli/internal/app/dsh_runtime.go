@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"yishan/apps/cli/internal/agent/dsh"
 	nodeagent "yishan/apps/cli/internal/node/agent"
@@ -29,13 +30,47 @@ func newDSHSupervisor(cfg Config) *dsh.Supervisor {
 }
 
 func (a *App) startDSHSupervisor() error {
-	if a.dsh == nil {
-		return nil
+	var startErr error
+	if a.dsh != nil {
+		if err := a.dsh.Start(context.Background()); err != nil {
+			startErr = fmt.Errorf("start DSH supervisor: %w", err)
+		}
 	}
-	if err := a.dsh.Start(context.Background()); err != nil {
-		return fmt.Errorf("start DSH supervisor: %w", err)
+	a.recoverRunningBackgroundJobs()
+	return startErr
+}
+
+func (a *App) recoverRunningBackgroundJobs() {
+	if a.backgroundJobs == nil {
+		return
 	}
-	return nil
+	ctx := a.backgroundJobRecoveryCtx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	go func() {
+		for {
+			if err := a.backgroundJobs.RecoverRunning(ctx); err == nil {
+				return
+			} else {
+				log.Error().Err(err).Msg("recover running background jobs")
+			}
+			if !waitForBackgroundJobRecoveryRetry(ctx) {
+				return
+			}
+		}
+	}()
+}
+
+func waitForBackgroundJobRecoveryRetry(ctx context.Context) bool {
+	timer := time.NewTimer(time.Second)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
+	}
 }
 
 // DSHHealth returns the experimental runtime state when it is configured.

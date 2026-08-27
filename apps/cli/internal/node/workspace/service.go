@@ -60,6 +60,10 @@ type Deps struct {
 	// the set of resolvable local workspaces.
 	WorkspaceAvailabilityChanged func()
 
+	// BackgroundJobCleanup cancels daemon-owned jobs before workspace teardown.
+	BackgroundJobCleanup      func(context.Context, string) error
+	AbortBackgroundJobCleanup func(string)
+
 	// Agent cleanup callbacks are attached by app after the agent service is
 	// composed. Their handles stay opaque outside node/agent.
 	BeginAgentCleanup  func(context.Context, string) (any, error)
@@ -107,6 +111,12 @@ func NewService(deps Deps) *Service {
 // server). The composition root owns relay enablement.
 func (s *Service) SetRelayClient(client *relay.Client) {
 	s.relayClient = client
+}
+
+// SetBackgroundJobCleanup attaches daemon-owned background-job teardown.
+func (s *Service) SetBackgroundJobCleanup(cleanup func(context.Context, string) error, abort func(string)) {
+	s.deps.BackgroundJobCleanup = cleanup
+	s.deps.AbortBackgroundJobCleanup = abort
 }
 
 // SetAgentCleanupLifecycle attaches the agent cleanup callbacks after both
