@@ -253,62 +253,48 @@ describe("agentSessionRuntime.DSH", () => {
     });
     expect(agentChatStore.getState().sessionsByTabId["dsh-lifecycle-tab"]?.messages).toEqual([]);
   });
-  it("refreshes and confirms cancellation when a new lifecycle incarnation restarts its revision", async () => {
+  it("confirms a cancelling DSH child only after its matching finished lifecycle refresh", async () => {
     tabStore.setState({
       tabs: [
         {
-          id: "dsh-new-incarnation-tab",
+          id: "dsh-cancellation-tab",
           workspaceId: "workspace-1",
           title: "DSH",
           pinned: false,
           kind: "agent-chat",
-          data: { cwd: "/workspace", sessionId: "dsh-new-incarnation", runtime: "dsh" },
+          data: { cwd: "/workspace", sessionId: "dsh-cancellation-parent", runtime: "dsh" },
         },
       ],
     });
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-new-incarnation" });
-    mocks.listSessionLineage.mockResolvedValue({
-      runtime: "dsh",
-      rootSessionId: "dsh-new-incarnation",
-      mode: "children",
-      children: [],
-    });
+    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-cancellation-parent" });
     await ensureAgentSession({
       runtime: "dsh",
-      tabId: "dsh-new-incarnation-tab",
+      tabId: "dsh-cancellation-tab",
       workspaceId: "workspace-1",
       cwd: "/workspace",
-      sessionId: "dsh-new-incarnation",
+      sessionId: "dsh-cancellation-parent",
       sessionView: "full",
     });
-    agentChatStore.getState().setSubagentCancelState("dsh-new-incarnation-tab", "dsh-child", { status: "cancelling" });
+    agentChatStore.getState().setDshRunningSubagents("dsh-cancellation-tab", [
+      {
+        rowId: "dsh:dsh-child",
+        runtime: "dsh",
+        agentName: "Worker",
+        childSessionId: "dsh-child",
+        title: "Worker",
+        promptSummary: "Worker",
+        state: "running",
+      },
+    ]);
+    agentChatStore.getState().setSubagentCancelState("dsh-cancellation-tab", "dsh-child", { status: "cancelling" });
 
     mocks.dshLifecycleHandler?.(
       lifecyclePayload(
         {
           lifecycle: {
             version: 1,
-            parentSessionId: "dsh-new-incarnation",
-            incarnation: "old-run",
-            revision: 99,
-            event: "started",
-            runId: "old-child-run",
-            childSessionId: "old-child",
-            provider: "pi",
-            local: true,
-          },
-        },
-        "dsh-new-incarnation",
-        "dsh-new-incarnation-tab",
-      ),
-    );
-    mocks.dshLifecycleHandler?.(
-      lifecyclePayload(
-        {
-          lifecycle: {
-            version: 1,
-            parentSessionId: "dsh-new-incarnation",
-            incarnation: "new-run",
+            parentSessionId: "stale-parent",
+            incarnation: "stale-run",
             revision: 0,
             event: "finished",
             runId: "dsh-child-run",
@@ -318,35 +304,63 @@ describe("agentSessionRuntime.DSH", () => {
             stopReason: "aborted",
           },
         },
-        "dsh-new-incarnation",
-        "dsh-new-incarnation-tab",
+        "dsh-cancellation-parent",
+        "dsh-cancellation-tab",
       ),
+    );
+
+    expect(mocks.listSessionLineage).not.toHaveBeenCalled();
+    expect(agentChatStore.getState().sessionsByTabId["dsh-cancellation-tab"]?.subagentCancelStates).toEqual({
+      "dsh-child": { status: "cancelling" },
+    });
+
+    let resolveLineage!: (lineage: { runtime: "dsh"; rootSessionId: string; mode: "children"; children: [] }) => void;
+    mocks.listSessionLineage.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveLineage = resolve;
+        }),
     );
     mocks.dshLifecycleHandler?.(
       lifecyclePayload(
         {
           lifecycle: {
             version: 1,
-            parentSessionId: "dsh-new-incarnation",
-            incarnation: "old-run",
-            revision: 100,
+            parentSessionId: "dsh-cancellation-parent",
+            incarnation: "active-run",
+            revision: 0,
             event: "finished",
-            runId: "old-child-run",
-            childSessionId: "old-child",
+            runId: "dsh-child-run",
+            childSessionId: "dsh-child",
             provider: "pi",
             local: true,
             stopReason: "aborted",
           },
         },
-        "dsh-new-incarnation",
-        "dsh-new-incarnation-tab",
+        "dsh-cancellation-parent",
+        "dsh-cancellation-tab",
       ),
     );
 
-    await vi.waitFor(() => expect(mocks.listSessionLineage).toHaveBeenCalledTimes(2));
-    await vi.waitFor(() =>
-      expect(agentChatStore.getState().sessionsByTabId["dsh-new-incarnation-tab"]?.subagentCancelStates).toEqual({}),
-    );
+    await vi.waitFor(() => expect(mocks.listSessionLineage).toHaveBeenCalledOnce());
+    expect(mocks.listSessionLineage).toHaveBeenCalledWith({
+      runtime: "dsh",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      rootSessionId: "dsh-cancellation-parent",
+      mode: "children",
+    });
+    expect(agentChatStore.getState().sessionsByTabId["dsh-cancellation-tab"]?.dshRunningSubagents).toHaveLength(1);
+    expect(agentChatStore.getState().sessionsByTabId["dsh-cancellation-tab"]?.subagentCancelStates).toEqual({
+      "dsh-child": { status: "cancelling" },
+    });
+
+    resolveLineage({ runtime: "dsh", rootSessionId: "dsh-cancellation-parent", mode: "children", children: [] });
+
+    await vi.waitFor(() => {
+      expect(agentChatStore.getState().sessionsByTabId["dsh-cancellation-tab"]?.dshRunningSubagents).toEqual([]);
+      expect(agentChatStore.getState().sessionsByTabId["dsh-cancellation-tab"]?.subagentCancelStates).toEqual({});
+    });
   });
 
   it("uses lifecycle resync revisions as the lifecycle watermark", async () => {

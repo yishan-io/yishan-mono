@@ -16,12 +16,100 @@ import (
 	"yishan/apps/cli/internal/rpc"
 )
 
+func TestDSHIntegration_ForwardsCommittedLifecycle(t *testing.T) {
+	supervisor := newLifecycleForwardingSupervisor(t)
+	startDSHSupervisor(t, supervisor)
+	service := newDSHExecutionService(supervisor)
+	connection, client := newTestWSConnState(t)
+	startDSHExecutionOnConnection(t, service, connection)
+	if _, err := service.AgentPrompt(context.Background(), rpc.AgentPromptParams{Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", Message: json.RawMessage(`"lifecycle"`)}); err != nil {
+		t.Fatalf("prompt: %v", err)
+	}
+	assertCommittedLifecycleForwarding(t, client)
+}
+
+func newLifecycleForwardingSupervisor(t *testing.T) *dsh.Supervisor {
+	t.Helper()
+	return dsh.NewSupervisor(dsh.Config{
+		Command: func(context.Context) (*exec.Cmd, error) {
+			return newAgentDSHIntegrationCommand("lifecycle", ""), nil
+		},
+		Initialize: dsh.InitializeConfig{CWD: "/authoritative", Provider: "deepseek-official", Model: "deepseek-chat"},
+	})
+}
+
+type lifecycleForwardingExpectation struct {
+	revision   int64
+	event      string
+	stopReason string
+}
+
+type lifecycleForwardingNotification struct {
+	Params struct {
+		Topic   string `json:"topic"`
+		Payload struct {
+			SessionID   string            `json:"sessionId"`
+			TabID       string            `json:"tabId"`
+			WorkspaceID string            `json:"workspaceId"`
+			Incarnation string            `json:"incarnation"`
+			Update      dsh.SessionUpdate `json:"update"`
+		} `json:"payload"`
+	} `json:"params"`
+}
+
+func assertCommittedLifecycleForwarding(t *testing.T, client interface {
+	ReadJSON(any) error
+	SetReadDeadline(time.Time) error
+}) {
+	t.Helper()
+	expected := []lifecycleForwardingExpectation{
+		{revision: 0, event: "started"},
+		{revision: 1, event: "finished", stopReason: "completed"},
+	}
+	for _, want := range expected {
+		notification := readForwardedLifecycle(t, client)
+		assertLifecycleForwardingEnvelope(t, notification)
+		assertForwardedLifecycle(t, notification.Params.Payload.Update.Lifecycle, want)
+	}
+}
+
+func readForwardedLifecycle(t *testing.T, client interface {
+	ReadJSON(any) error
+	SetReadDeadline(time.Time) error
+}) lifecycleForwardingNotification {
+	t.Helper()
+	for range 3 {
+		var notification lifecycleForwardingNotification
+		readCrashFlowNotification(t, client, &notification)
+		if notification.Params.Payload.Update.Lifecycle != nil {
+			return notification
+		}
+	}
+	t.Fatal("lifecycle was not forwarded")
+	return lifecycleForwardingNotification{}
+}
+
+func assertLifecycleForwardingEnvelope(t *testing.T, notification lifecycleForwardingNotification) {
+	t.Helper()
+	payload := notification.Params.Payload
+	if notification.Params.Topic != dshEventTopic || payload.SessionID != "s" || payload.TabID != "tab" || payload.WorkspaceID != "w" || payload.Incarnation != "runtime-1" {
+		t.Fatalf("notification envelope = %#v", notification.Params)
+	}
+}
+
+func assertForwardedLifecycle(t *testing.T, lifecycle *dsh.SubagentLifecycle, want lifecycleForwardingExpectation) {
+	t.Helper()
+	if lifecycle.ParentSessionID != "s" || lifecycle.ChildSessionID != "child-1" || lifecycle.RunID != "run-1" || lifecycle.Incarnation != "runtime-1" || lifecycle.Revision != want.revision || lifecycle.Event != want.event || lifecycle.StopReason != want.stopReason {
+		t.Fatalf("lifecycle = %#v, want revision=%d event=%q stopReason=%q", lifecycle, want.revision, want.event, want.stopReason)
+	}
+}
+
 func TestDSHIntegration_CrashResetResumesBeforeReplayOnRestartedSupervisor(t *testing.T) {
 	backoffStarted := make(chan struct{}, 1)
 	releaseRestart := make(chan struct{})
 	operationsPath := filepath.Join(t.TempDir(), "operations")
 	supervisor := newCrashFlowSupervisor(t, operationsPath, backoffStarted, releaseRestart)
-	startCrashFlowSupervisor(t, supervisor)
+	startDSHSupervisor(t, supervisor)
 	service := newDSHExecutionService(supervisor)
 	connection, client := newTestWSConnState(t)
 	startDSHExecutionOnConnection(t, service, connection)
@@ -61,7 +149,7 @@ func newAgentDSHIntegrationCommand(mode, operationsPath string) *exec.Cmd {
 	return command
 }
 
-func startCrashFlowSupervisor(t *testing.T, supervisor *dsh.Supervisor) {
+func startDSHSupervisor(t *testing.T, supervisor *dsh.Supervisor) {
 	t.Helper()
 	if err := supervisor.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -137,7 +225,7 @@ func assertCrashFlowReset(t *testing.T, client interface {
 func readCrashFlowNotification(t *testing.T, client interface {
 	ReadJSON(any) error
 	SetReadDeadline(time.Time) error
-}, notification *crashFlowNotification) {
+}, notification any) {
 	t.Helper()
 	if err := client.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
 		t.Fatalf("SetReadDeadline: %v", err)
@@ -208,6 +296,9 @@ func runAgentIntegrationScenario(input *bufio.Scanner, mode, operationsPath stri
 		if mode == "crash" && request.Method == "yishan.v1.session.prompt" {
 			return
 		}
+		if mode == "lifecycle" && request.Method == "yishan.v1.session.prompt" {
+			writeAgentCommittedLifecycle()
+		}
 		writeAgentIntegrationMethodResponse(request, mode)
 		if request.Method == "shutdown" {
 			return
@@ -263,6 +354,11 @@ func writeAgentSpeculativeEvent() {
 	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"session.event","params":{"sessionId":"s","event":{"seq":0,"type":"turn/end"}}}` + "\n")
 }
 
+func writeAgentCommittedLifecycle() {
+	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"s","incarnation":"runtime-1","revision":0,"event":"started","runId":"run-1","childSessionId":"child-1","provider":"spawn","local":true}}` + "\n")
+	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"s","incarnation":"runtime-1","revision":1,"event":"finished","runId":"run-1","childSessionId":"child-1","provider":"spawn","local":true,"stopReason":"completed"}}` + "\n")
+}
+
 func writeAgentIntegrationMethodResponse(request agentIntegrationRequest, mode string) {
 	result := `{"sessionId":"s"}`
 	if request.Method == "yishan.v1.session.start" {
@@ -270,6 +366,9 @@ func writeAgentIntegrationMethodResponse(request agentIntegrationRequest, mode s
 	}
 	if request.Method == "yishan.v1.session.resume" {
 		result = `{"sessionId":"s"}`
+	}
+	if request.Method == "yishan.v1.session.prompt" {
+		result = `{"messageId":"message-1"}`
 	}
 	if request.Method == "yishan.v1.session.subscribe" {
 		result = agentSubscribeResult(mode)
