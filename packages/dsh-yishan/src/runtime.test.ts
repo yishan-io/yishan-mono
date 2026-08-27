@@ -6,7 +6,12 @@ import { PassThrough, Writable } from "node:stream";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createYishanRuntime, installRuntimeShutdownHandlers } from "./runtime";
+import {
+  YISHAN_AGENT_SPINE_CONFIG,
+  YISHAN_RUNTIME_MCP_ENABLED,
+  createYishanRuntime,
+  installRuntimeShutdownHandlers,
+} from "./runtime";
 
 async function waitForFrame(frames: Record<string, unknown>[], id: number): Promise<Record<string, unknown>> {
   const deadline = Date.now() + 5_000;
@@ -35,6 +40,18 @@ async function expectShutdownEdge(edge: "end" | "SIGINT" | "SIGTERM", exitCode: 
 }
 
 describe("Yishan production runtime", () => {
+  it("uses the fixed disabled capability composition without MCP", () => {
+    expect(YISHAN_RUNTIME_MCP_ENABLED).toBe(false);
+    expect(YISHAN_AGENT_SPINE_CONFIG).toEqual({
+      workspaceContext: false,
+      skills: { enabled: false },
+      toolBash: false,
+      toolJobs: false,
+      goals: false,
+    });
+    expect(YISHAN_AGENT_SPINE_CONFIG).not.toHaveProperty("mcp");
+  });
+
   it("drains the runtime on EOF", async () => {
     await expectShutdownEdge("end", 0);
   });
@@ -82,8 +99,41 @@ describe("Yishan production runtime", () => {
         result: { serverInfo: { name: "deepseek-harness-sdk-runtime" } },
       });
 
-      input.write(`${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "shutdown", params: {} })}\n`);
-      await expect(waitForFrame(frames, 2)).resolves.toMatchObject({ result: {} });
+      input.write(
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "yishan.v1.session.start",
+          params: {
+            cwd: "/workspace",
+            sessionId: "owned-session",
+            binding: {
+              version: 1,
+              workspaceId: "workspace-1",
+              projectId: "project-1",
+              organizationId: "organization-1",
+              ownerNodeId: "node-1",
+              cwd: "/workspace",
+            },
+          },
+        })}\n`,
+      );
+      await expect(waitForFrame(frames, 2)).resolves.toMatchObject({
+        result: { sessionId: "owned-session", incarnation: expect.any(String) },
+      });
+
+      input.write(
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          method: "session/prompt",
+          params: { sessionId: "owned-session", contentBlocks: [{ type: "text", text: "hello" }] },
+        })}\n`,
+      );
+      await expect(waitForFrame(frames, 3)).resolves.toMatchObject({ result: { messageId: expect.any(String) } });
+
+      input.write(`${JSON.stringify({ jsonrpc: "2.0", id: 4, method: "shutdown", params: {} })}\n`);
+      await expect(waitForFrame(frames, 4)).resolves.toMatchObject({ result: {} });
       await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
     } finally {
       await runtime.shutdown();

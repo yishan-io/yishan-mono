@@ -63,7 +63,13 @@ export {
   type InteractionRequest,
 } from "./interactionRequest";
 export { parseInteractionResponse, type InteractionResponse } from "./interactionResponse";
-export { createRequestRouter, type JsonRpcRequestHandler } from "./requestRouter";
+export {
+  createRequestRouter,
+  YishanRequestPolicyError,
+  YISHAN_REQUEST_POLICY_DENIAL_MESSAGE,
+  type JsonRpcRequestHandler,
+  type YishanRequestPolicyErrorCode,
+} from "./requestRouter";
 export {
   YishanSessionExecutionError,
   YishanSessionExecutionOwner,
@@ -111,6 +117,8 @@ export {
 export {
   createYishanRuntime,
   installRuntimeShutdownHandlers,
+  YISHAN_AGENT_SPINE_CONFIG,
+  YISHAN_RUNTIME_MCP_ENABLED,
   runYishanRuntime,
   type YishanRuntime,
   type YishanRuntimeConfig,

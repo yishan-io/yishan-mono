@@ -17,6 +17,18 @@ const DEFAULT_DATA_DIRECTORY = join(homedir(), ".yishan", "dsh");
 const SESSION_LOG_DIRECTORY_NAME = "sessions";
 const SESSION_QUERY_DATABASE_NAME = "session-query.sqlite";
 
+/** Production policy: MCP capability and provider composition is disabled. */
+export const YISHAN_RUNTIME_MCP_ENABLED = false;
+
+/** Fixed agent-spine settings for the production single-authority runtime. */
+export const YISHAN_AGENT_SPINE_CONFIG = {
+  workspaceContext: false,
+  skills: { enabled: false },
+  toolBash: false,
+  toolJobs: false,
+  goals: false,
+} as const;
+
 /** Configuration for the programmatic Yishan production DSH runtime. */
 export type YishanRuntimeConfig = runtimeServer.YishanRuntimeServerConfig & {
   /** Directory that owns durable JSONL session logs and the derived SQLite query index. */
@@ -40,13 +52,7 @@ export async function createYishanRuntime(config: YishanRuntimeConfig = {}): Pro
   await mkdir(dataDirectory, { recursive: true });
 
   const context = new Context();
-  await context.plugin(agentSpine, {
-    workspaceContext: false,
-    skills: { enabled: false },
-    toolBash: false,
-    toolJobs: false,
-    goals: false,
-  });
+  await context.plugin(agentSpine, YISHAN_AGENT_SPINE_CONFIG);
   new SessionProjectionRegistry(context);
   new SubagentRuntime(context);
   await context.plugin(JsonlSessionPersistence, { root: sessionDirectory });

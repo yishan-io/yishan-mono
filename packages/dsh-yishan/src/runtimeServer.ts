@@ -68,16 +68,17 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
     sessionQuery: ctx.sessionQuery,
     subagents: ctx.subagents,
   });
-  const route = createRequestRouter(async (method, params) => {
-    if (method === "session/prompt") {
-      const sessionId = typeof params.sessionId === "string" ? params.sessionId : "";
-      if (sessionId !== "" && owner.owns(sessionId)) {
+  const route = createRequestRouter(
+    async (method, params) => {
+      if (method === "session/prompt" && typeof params.sessionId === "string" && owner.owns(params.sessionId)) {
         const prompt = parseStockSessionPromptRequest(params);
         return await owner.stockPrompt(prompt.sessionId, prompt.contentBlocks);
       }
-    }
-    return await stock.handleRequest(method, params);
-  }, sessions);
+      return await stock.handleRequest(method, params);
+    },
+    sessions,
+    (sessionId) => owner.owns(sessionId),
+  );
 
   ctx.on("session/event", (session, event) => owner.handleSessionEvent(session, event));
 

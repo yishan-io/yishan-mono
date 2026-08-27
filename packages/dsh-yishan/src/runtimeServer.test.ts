@@ -4,6 +4,7 @@ import { Context, Service } from "@deepseek-ai/cordis";
 import * as agentSpine from "@deepseek-ai/dsh-agent-spine-demo";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { YISHAN_REQUEST_POLICY_DENIAL_MESSAGE } from "./requestRouter";
 import * as runtimeServer from "./runtimeServer";
 
 class FakeSessionQuery extends Service {
@@ -111,7 +112,7 @@ describe("Yishan runtime server", () => {
     }
   });
 
-  it("delegates non-text prompts for stock-owned sessions without Yishan parsing", async () => {
+  it("returns the stable policy message over the runtime JSON-RPC transport", async () => {
     vi.stubEnv("DEEPSEEK_API_KEY", "test-key");
     const harness = await mountRuntime();
     try {
@@ -119,11 +120,26 @@ describe("Yishan runtime server", () => {
         `${JSON.stringify({ jsonrpc: "2.0", id: 5, method: "initialize", params: { cwd: "/workspace", provider: "deepseek-official", model: "test-model" } })}\n`,
       );
       await waitForFrame(harness, 5);
-      harness.input.write(
-        `${JSON.stringify({ jsonrpc: "2.0", id: 6, method: "session/prompt", params: { sessionId: "stock-session", contentBlocks: [{ type: "reasoning", text: "context" }] } })}\n`,
-      );
 
-      await expect(waitForFrame(harness, 6)).resolves.toMatchObject({ result: { messageId: expect.any(String) } });
+      harness.input.write(`${JSON.stringify({ jsonrpc: "2.0", id: 6, method: "session/new", params: {} })}\n`);
+      await expect(waitForFrame(harness, 6)).resolves.toEqual({
+        jsonrpc: "2.0",
+        id: 6,
+        error: {
+          code: -32603,
+          message: `${YISHAN_REQUEST_POLICY_DENIAL_MESSAGE}: stock DSH session execution is denied by Yishan policy: session/new`,
+        },
+      });
+
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 7, method: "session/prompt", params: { sessionId: "stock-session", contentBlocks: [{ type: "reasoning", text: "context" }] } })}\n`,
+      );
+      await expect(waitForFrame(harness, 7)).resolves.toMatchObject({
+        error: {
+          code: -32603,
+          message: `${YISHAN_REQUEST_POLICY_DENIAL_MESSAGE}: stock DSH session execution is denied by Yishan policy: session/prompt`,
+        },
+      });
     } finally {
       await harness.ctx.fiber.dispose();
     }
