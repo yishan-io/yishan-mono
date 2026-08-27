@@ -5,7 +5,7 @@ export function validRecognizedData(type: string, data: JsonRecord): boolean {
   if (type === "turn/end")
     return hasExactKeys(data, ["turn", "reason"]) && isNonNegativeInteger(data.turn) && validTurnEndReason(data.reason);
   if (type === "step/start" || type === "step/end") return exactNumbers(data, ["turn", "step"]);
-  if (type === "user/message") return hasExactKeys(data, ["message"]) && validMessage(data.message, "user");
+  if (type === "user/message") return validMessage(data, "user");
   if (type === "assistant/chunk") return exactStepData(data, ["chunk"]) && validChunk(data.chunk);
   if (type === "assistant/message")
     return (

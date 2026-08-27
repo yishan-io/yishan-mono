@@ -19,6 +19,8 @@ export type DSHTranscriptActions = {
   clearStreamingMessage(tabId: string): void;
   setSessionState(tabId: string, state: "starting" | "running" | "compacting" | "idle" | "error"): void;
   setSessionError(tabId: string, error: string): void;
+  setTurnError(tabId: string, error: string): void;
+  clearTurnError(tabId: string): void;
   setDSHTranscriptRetryAvailable(tabId: string, available: boolean): void;
   setTurnActive(tabId: string, active: boolean): void;
 };
@@ -249,7 +251,19 @@ export class DSHTranscriptController {
     }
     this.events.push(event);
     this.nextSeq++;
-    if (event.type === "turn/start" || event.type === "turn/end") this.clearActiveTextStream();
+    if (event.type === "turn/start") {
+      this.clearActiveTextStream();
+      this.actions.clearTurnError(this.tabId);
+    }
+    if (event.type === "turn/end") {
+      this.clearActiveTextStream();
+      const reason = typeof event.data.reason === "object" && event.data.reason !== null ? event.data.reason as Record<string, unknown> : null;
+      if (reason?.kind === "error") {
+        const error = typeof reason.error === "object" && reason.error !== null ? reason.error as Record<string, unknown> : null;
+        const message = typeof error?.message === "string" ? error.message : "Agent turn failed";
+        this.actions.setTurnError(this.tabId, message);
+      }
+    }
     if (event.type === "assistant/message") this.clearActiveTextStreamFor(event);
     this.projectEvents();
     if (event.type === "assistant/chunk") this.applyChunk(event);

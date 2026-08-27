@@ -293,9 +293,12 @@ function parseSourceEventSeqs(input: unknown, canBeEmpty: boolean): number[] | n
     : (sequences as number[]);
 }
 function projectSurfaceMessage(event: DSHEvent): AgentMessage {
+  if (event.type === "user/message") {
+    const data = event.data;
+    if (typeof data.id !== "string") throw new Error("DSH message is malformed");
+    return { id: data.id, role: "user", content: contentText(data), timestamp: event.time };
+  }
   const message = requiredMessage(event.data);
-  if (event.type === "user/message")
-    return { id: message.id, role: "user", content: contentText(message), timestamp: event.time };
   if (event.type === "assistant/message")
     return {
       id: message.id,

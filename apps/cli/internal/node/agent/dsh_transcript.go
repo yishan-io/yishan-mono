@@ -49,13 +49,16 @@ func projectDSHEventRaw(raw json.RawMessage, expectedSequence int64) (json.RawMe
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return nil, errDSHTranscriptProtocolUnavailable
 	}
-	if !strings.HasPrefix(envelope.Type, "yishan/") {
-		return bytes.Clone(raw), nil
+	if isHiddenDSHEventType(envelope.Type) {
+		if envelope.Seq == nil || envelope.Time == nil || (expectedSequence >= 0 && *envelope.Seq != expectedSequence) {
+			return nil, errDSHTranscriptProtocolUnavailable
+		}
+		return marshalHiddenDSHEvent(*envelope.Seq, *envelope.Time)
 	}
-	if !isHiddenDSHEventType(envelope.Type) || envelope.Seq == nil || envelope.Time == nil || (expectedSequence >= 0 && *envelope.Seq != expectedSequence) {
+	if strings.HasPrefix(envelope.Type, "yishan/") {
 		return nil, errDSHTranscriptProtocolUnavailable
 	}
-	return marshalHiddenDSHEvent(*envelope.Seq, *envelope.Time)
+	return bytes.Clone(raw), nil
 }
 
 type transcriptEventEnvelope struct {
@@ -65,7 +68,8 @@ type transcriptEventEnvelope struct {
 }
 
 func isHiddenDSHEventType(eventType string) bool {
-	return eventType == "yishan/session-bound.v1" || eventType == "yishan/session-summary.v1" || eventType == "yishan/session-title.v1"
+	return eventType == "yishan/session-bound.v1" || eventType == "yishan/session-summary.v1" || eventType == "yishan/session-title.v1" ||
+		eventType == "session/title" || eventType == "session/title-llm-request"
 }
 
 func marshalHiddenDSHEvent(sequence int64, eventTime json.RawMessage) (json.RawMessage, error) {

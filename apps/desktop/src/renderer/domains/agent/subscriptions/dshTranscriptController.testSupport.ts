@@ -12,6 +12,8 @@ export function setup() {
     clearStreamingMessage: vi.fn(),
     setSessionState: vi.fn(),
     setSessionError: vi.fn(),
+    setTurnError: vi.fn(),
+    clearTurnError: vi.fn(),
     setDSHTranscriptRetryAvailable: vi.fn(),
     setTurnActive: vi.fn(),
   };
@@ -65,9 +67,7 @@ export function event(seq: number) {
         type: "user/message",
         seq,
         time: seq,
-        data: {
-          message: { id: `u${seq}`, role: "user", content: [{ type: "text", text: "hi" }], source: { kind: "user" } },
-        },
+        data: { id: `u${seq}`, role: "user", content: [{ type: "text", text: "hi" }], source: { kind: "user" } },
         surfaceOp: "append" as const,
       },
     },

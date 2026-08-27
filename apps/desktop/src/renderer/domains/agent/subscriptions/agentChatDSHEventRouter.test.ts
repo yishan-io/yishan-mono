@@ -114,6 +114,8 @@ describe("agentChatDSHEventRouter", () => {
       clearStreamingMessage: vi.fn(),
       setSessionState: vi.fn(),
       setSessionError: vi.fn(),
+      setTurnError: vi.fn(),
+      clearTurnError: vi.fn(),
       setDSHTranscriptRetryAvailable: vi.fn(),
       setTurnActive: vi.fn(),
     };

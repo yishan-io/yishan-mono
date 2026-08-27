@@ -276,6 +276,8 @@ describe("DSHTranscriptController stream handling", () => {
       clearStreamingMessage: vi.fn(),
       setSessionState: vi.fn(),
       setSessionError: vi.fn(),
+      setTurnError: vi.fn(),
+      clearTurnError: vi.fn(),
       setDSHTranscriptRetryAvailable: vi.fn(),
       setTurnActive: vi.fn(),
     };
@@ -312,12 +314,10 @@ describe("DSHTranscriptController stream handling", () => {
             seq: 0,
             time: 0,
             data: {
-              message: {
-                id: "user-1",
-                role: "user",
-                content: [{ type: "text", text: "Hello" }],
-                source: { kind: "user" },
-              },
+              id: "user-1",
+              role: "user",
+              content: [{ type: "text", text: "Hello" }],
+              source: { kind: "user" },
             },
             ignorable: true,
             surfaceOp: "append",

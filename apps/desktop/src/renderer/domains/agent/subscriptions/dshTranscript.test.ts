@@ -14,7 +14,7 @@ const assistant = {
 describe("DSH transcript", () => {
   it("projects surface replacements, tool calls, and usage", () => {
     const result = projectDSHTranscript([
-      { type: "user/message", seq: 0, time: 1, data: { message: user }, surfaceOp: "append" },
+      { type: "user/message", seq: 0, time: 1, data: user, surfaceOp: "append" },
       {
         type: "assistant/message",
         seq: 1,
@@ -54,7 +54,7 @@ describe("DSH transcript", () => {
   it("rejects a replacement whose provenance omits a replaced surface event", () => {
     expect(() =>
       projectDSHTranscript([
-        { type: "user/message", seq: 0, time: 1, data: { message: user }, surfaceOp: "append" },
+        { type: "user/message", seq: 0, time: 1, data: user, surfaceOp: "append" },
         {
           type: "assistant/message",
           seq: 1,
@@ -160,12 +160,10 @@ describe("DSH transcript", () => {
         seq: 0,
         time: 0,
         data: {
-          message: {
-            id: "injected",
-            role: "user",
-            content: [{ type: "text", text: "Injected context" }],
-            source: { kind: "model", provider: "deepseek", model: "deepseek-chat" },
-          },
+          id: "injected",
+          role: "user",
+          content: [{ type: "text", text: "Injected context" }],
+          source: { kind: "model", provider: "deepseek", model: "deepseek-chat" },
         },
         surfaceOp: "append",
       }),
@@ -310,7 +308,7 @@ describe("DSH transcript", () => {
               type: "user/message",
               seq: 3,
               time: 3,
-              data: { message: user },
+              data: user,
               surfaceOp: "append",
               sourceEventSeqs: [],
             },
