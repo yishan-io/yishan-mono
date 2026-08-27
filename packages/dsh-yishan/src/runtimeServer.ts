@@ -12,6 +12,7 @@ import { createRequestRouter } from "./requestRouter";
 import { YishanSessionExecutionOwner } from "./sessionExecutionOwner";
 import { createSessionHandler } from "./sessionHandler";
 import { createSubagentInterruptHandler } from "./subagentInterruptHandler";
+import { installSubagentLifecycleNotifications } from "./subagentLifecycle";
 
 /** Cordis plugin name for the Yishan-owned SDK JSON-RPC stdio server. */
 export const name = "yishan-sdk-jsonrpc-server";
@@ -47,6 +48,10 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
       readFrom: async (sessionId, fromSeq) => await ctx.sessionPersistence.readFrom(sessionId as SessionId, fromSeq),
     },
     notify: (method, params) => transport.notify(method as never, params as never),
+  });
+  installSubagentLifecycleNotifications(ctx, {
+    incarnation: owner.getIncarnation(),
+    notify: (method, payload) => transport.notify(method as never, payload as never),
   });
   let shutdownTask: Promise<Record<string, never>> | undefined;
   let isInitialized = false;

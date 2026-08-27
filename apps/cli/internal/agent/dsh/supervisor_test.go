@@ -260,7 +260,7 @@ func runHelperMode(mode string, input *bufio.Reader) {
 	case "stderr":
 		_, _ = os.Stderr.WriteString("runtime diagnostic\n")
 		writeShutdownResponse(input)
-	case "rpc", "rpc-notify", "rpc-exit", "rpc-invalid-notify", "rpc-subscribe-exit":
+	case "rpc", "rpc-notify", "rpc-exit", "rpc-invalid-notify", "rpc-subscribe-exit", "rpc-subscribe-lifecycle-gap":
 		handleRPCRequests(mode, input)
 	case "exit":
 		return
@@ -314,7 +314,30 @@ func handleRPCRequests(mode string, input *bufio.Reader) {
 		if mode == "rpc-subscribe-exit" && request.Method == yishanSessionPromptMethod {
 			return
 		}
+		if mode == "rpc-subscribe-lifecycle-gap" {
+			writeLifecycleGapResponse(request)
+			continue
+		}
 		writeRPCResponse(request)
+	}
+}
+
+func writeLifecycleGapResponse(request struct {
+	ID     uint64 `json:"id"`
+	Method string `json:"method"`
+	Params struct {
+		CWD           string `json:"cwd"`
+		SessionID     string `json:"sessionId"`
+		RootSessionID string `json:"rootSessionId"`
+		Mode          string `json:"mode"`
+	} `json:"params"`
+}) {
+	if request.Method == yishanSessionSubscribeMethod {
+		_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"parent","incarnation":"run","revision":0,"event":"started","runId":"child","childSessionId":"child","provider":"spawn","local":true}}` + "\n")
+	}
+	writeSessionRPCResponse(request)
+	if request.Method == yishanSessionPromptMethod {
+		_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"parent","incarnation":"run","revision":1,"event":"finished","runId":"child","childSessionId":"child","provider":"spawn","local":true,"stopReason":"completed"}}` + "\n")
 	}
 }
 

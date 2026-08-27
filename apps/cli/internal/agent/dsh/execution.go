@@ -85,6 +85,28 @@ type TranscriptReset struct {
 	Incarnation string `json:"incarnation"`
 	HeadSeq     int64  `json:"headSeq"`
 }
+
+// SubagentLifecycle is one live-only child-run edge keyed by its parent session.
+type SubagentLifecycle struct {
+	Version         int    `json:"version"`
+	ParentSessionID string `json:"parentSessionId"`
+	Incarnation     string `json:"incarnation"`
+	Revision        int64  `json:"revision"`
+	Event           string `json:"event"`
+	RunID           string `json:"runId"`
+	ChildSessionID  string `json:"childSessionId"`
+	Provider        string `json:"provider"`
+	Local           bool   `json:"local"`
+	StopReason      string `json:"stopReason,omitempty"`
+}
+
+// LifecycleResync tells a newly attached subscriber to refresh live child lineage.
+type LifecycleResync struct {
+	ParentSessionID string `json:"parentSessionId"`
+	Incarnation     string `json:"incarnation"`
+	Revision        int64  `json:"revision"`
+}
+
 type SessionSubscribeResult struct {
 	SessionID         string
 	Incarnation       string
@@ -94,11 +116,13 @@ type SessionSubscribeResult struct {
 	HeadSeq           int64
 }
 type SessionUpdate struct {
-	Event       *SessionEvent    `json:"event,omitempty"`
-	Status      *SessionStatus   `json:"status,omitempty"`
-	Cursor      *DurableCursor   `json:"cursor,omitempty"`
-	Reset       *TranscriptReset `json:"reset,omitempty"`
-	Unavailable bool             `json:"unavailable,omitempty"`
+	Event           *SessionEvent      `json:"event,omitempty"`
+	Lifecycle       *SubagentLifecycle `json:"lifecycle,omitempty"`
+	LifecycleResync *LifecycleResync   `json:"lifecycleResync,omitempty"`
+	Status          *SessionStatus     `json:"status,omitempty"`
+	Cursor          *DurableCursor     `json:"cursor,omitempty"`
+	Reset           *TranscriptReset   `json:"reset,omitempty"`
+	Unavailable     bool               `json:"unavailable,omitempty"`
 }
 type SessionSubscription struct {
 	Updates     <-chan SessionUpdate

@@ -17,6 +17,7 @@ export {
   type CapabilityRequest,
 } from "./capabilityRequest";
 export { parseDurableCursor, type DurableCursor } from "./durableCursor";
+export { installSubagentLifecycleNotifications, type SubagentLifecycleNotification } from "./subagentLifecycle";
 export {
   isYishanSessionBoundEvent,
   isYishanSessionSummaryEvent,

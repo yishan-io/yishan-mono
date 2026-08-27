@@ -28,6 +28,7 @@ export const YISHAN_REVERSE_METHODS = {
 /** Durable/runtime notifications emitted in addition to stock SDK events. */
 export const YISHAN_NOTIFICATIONS = {
   durableCursor: yishanMethod("session.durable-cursor"),
+  subagentLifecycle: yishanMethod("subagent.lifecycle"),
   transcriptReset: yishanMethod("session.transcript-reset"),
 } as const;
 

@@ -7,10 +7,11 @@ import (
 )
 
 const (
-	sessionEventMethod    = "session.event"
-	sessionStatusMethod   = "session.status"
-	durableCursorMethod   = "yishan.v1.session.durable-cursor"
-	transcriptResetMethod = "yishan.v1.session.transcript-reset"
+	sessionEventMethod      = "session.event"
+	sessionStatusMethod     = "session.status"
+	durableCursorMethod     = "yishan.v1.session.durable-cursor"
+	transcriptResetMethod   = "yishan.v1.session.transcript-reset"
+	subagentLifecycleMethod = "yishan.v1.subagent.lifecycle"
 )
 
 func (s *Supervisor) routeNotification(process *runtimeProcess, frame rpcEnvelope) {
@@ -45,6 +46,12 @@ func (s *Supervisor) handleNotification(process *runtimeProcess, frame rpcEnvelo
 			err = process.replay.acceptCursor(cursor)
 		}
 		return err
+	case subagentLifecycleMethod:
+		lifecycle, err := parseSubagentLifecycleNotification(frame.Params)
+		if err == nil {
+			err = process.replay.recordLifecycle(lifecycle)
+		}
+		return err
 	case transcriptResetMethod:
 		reset, err := parseTranscriptResetNotification(frame.Params)
 		if err == nil {
@@ -56,7 +63,7 @@ func (s *Supervisor) handleNotification(process *runtimeProcess, frame rpcEnvelo
 	}
 }
 func isKnownNotification(method string) bool {
-	return method == sessionEventMethod || method == sessionStatusMethod || method == durableCursorMethod || method == transcriptResetMethod
+	return method == sessionEventMethod || method == sessionStatusMethod || method == durableCursorMethod || method == transcriptResetMethod || method == subagentLifecycleMethod
 }
 func parseSessionEventNotification(raw json.RawMessage) (SessionEvent, error) {
 	var fields map[string]json.RawMessage
@@ -88,6 +95,64 @@ func parseDurableCursorNotification(raw json.RawMessage) (DurableCursor, error) 
 	}
 	return cursor.validate(cursor.SessionID)
 }
+
+type subagentLifecycleWire struct {
+	Version         int    `json:"version"`
+	ParentSessionID string `json:"parentSessionId"`
+	Incarnation     string `json:"incarnation"`
+	Revision        int64  `json:"revision"`
+	Event           string `json:"event"`
+	RunID           string `json:"runId"`
+	ChildSessionID  string `json:"childSessionId"`
+	Provider        string `json:"provider"`
+	Local           *bool  `json:"local"`
+	StopReason      string `json:"stopReason,omitempty"`
+}
+
+func parseSubagentLifecycleNotification(raw json.RawMessage) (SubagentLifecycle, error) {
+	var wire subagentLifecycleWire
+	if err := parseExactNotification(raw, &wire, lifecycleKeys(raw)...); err != nil {
+		return SubagentLifecycle{}, err
+	}
+	if wire.Local == nil {
+		return SubagentLifecycle{}, errors.New("subagent lifecycle is invalid")
+	}
+	lifecycle := SubagentLifecycle{
+		Version: wire.Version, ParentSessionID: wire.ParentSessionID, Incarnation: wire.Incarnation,
+		Revision: wire.Revision, Event: wire.Event, RunID: wire.RunID, ChildSessionID: wire.ChildSessionID,
+		Provider: wire.Provider, Local: *wire.Local, StopReason: wire.StopReason,
+	}
+	if !isValidLifecycle(lifecycle) {
+		return SubagentLifecycle{}, errors.New("subagent lifecycle is invalid")
+	}
+	return lifecycle, nil
+}
+
+func lifecycleKeys(raw json.RawMessage) []string {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(raw, &fields) != nil {
+		return nil
+	}
+	if _, hasStopReason := fields["stopReason"]; hasStopReason {
+		return []string{"version", "parentSessionId", "incarnation", "revision", "event", "runId", "childSessionId", "provider", "local", "stopReason"}
+	}
+	return []string{"version", "parentSessionId", "incarnation", "revision", "event", "runId", "childSessionId", "provider", "local"}
+}
+
+func isValidLifecycle(lifecycle SubagentLifecycle) bool {
+	if lifecycle.Version != 1 || lifecycle.ParentSessionID == "" || lifecycle.Incarnation == "" || !isSafeSequence(lifecycle.Revision, 0) || lifecycle.RunID == "" || lifecycle.ChildSessionID == "" || lifecycle.Provider == "" {
+		return false
+	}
+	if lifecycle.Event == "started" {
+		return lifecycle.StopReason == ""
+	}
+	return lifecycle.Event == "finished" && isSubagentStopReason(lifecycle.StopReason)
+}
+
+func isSubagentStopReason(reason string) bool {
+	return reason == "completed" || reason == "aborted" || reason == "error" || reason == "max-tokens" || reason == "refusal"
+}
+
 func parseTranscriptResetNotification(raw json.RawMessage) (TranscriptReset, error) {
 	var reset TranscriptReset
 	if err := parseExactNotification(raw, &reset, "sessionId", "incarnation", "headSeq"); err != nil {

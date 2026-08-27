@@ -21,6 +21,7 @@ type replaySession struct {
 	subscribers    map[uint64]replaySubscriber
 	nextSubscriber uint64
 	isInvalid      bool
+	lifecycle      *SubagentLifecycle
 }
 type replaySubscriber struct {
 	updates        chan SessionUpdate
@@ -55,6 +56,50 @@ func (c *replayCoordinator) recordEvent(sessionID string, event SessionEvent) er
 	}
 	return nil
 }
+func (c *replayCoordinator) recordLifecycle(lifecycle SubagentLifecycle) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	entry := c.session(lifecycle.ParentSessionID)
+	isAccepted, isNew := recordReplayLifecycle(entry, lifecycle)
+	if !isAccepted {
+		c.invalidateSession(entry, lifecycle.ParentSessionID)
+		return ErrSessionReplayReset
+	}
+	if isNew {
+		publish(entry, lifecycle.ParentSessionID, SessionUpdate{Lifecycle: &lifecycle})
+	}
+	return nil
+}
+
+func recordReplayLifecycle(entry *replaySession, lifecycle SubagentLifecycle) (bool, bool) {
+	if entry.incarnation == "" {
+		entry.incarnation = lifecycle.Incarnation
+	}
+	if entry.incarnation != lifecycle.Incarnation {
+		return true, false
+	}
+	if entry.lifecycle == nil {
+		if lifecycle.Revision != 0 {
+			return false, false
+		}
+		entry.lifecycle = &lifecycle
+		return true, true
+	}
+	prior := *entry.lifecycle
+	if lifecycle.Revision == prior.Revision {
+		return sameLifecycle(prior, lifecycle), false
+	}
+	if lifecycle.Revision != prior.Revision+1 {
+		return false, false
+	}
+	entry.lifecycle = &lifecycle
+	return true, true
+}
+
+func sameLifecycle(left SubagentLifecycle, right SubagentLifecycle) bool {
+	return left == right
+}
+
 func recordReplayEvent(entry *replaySession, event SessionEvent, capacity int) (bool, bool) {
 	if len(entry.events) == 0 {
 		entry.events = append(entry.events, event)
@@ -104,6 +149,13 @@ func (c *replayCoordinator) subscribe(result SessionSubscribeResult, request Ses
 		status = *entry.status
 	}
 	initialUpdates = append(initialUpdates, SessionUpdate{Status: &status})
+	if entry.lifecycle != nil && entry.lifecycle.Incarnation == result.Incarnation {
+		initialUpdates = append(initialUpdates, SessionUpdate{LifecycleResync: &LifecycleResync{
+			ParentSessionID: request.SessionID,
+			Incarnation:     result.Incarnation,
+			Revision:        entry.lifecycle.Revision,
+		}})
+	}
 	normalCapacity := max(defaultReplayCapacity, len(initialUpdates))
 	channel := make(chan SessionUpdate, normalCapacity+1)
 	entry.subscribers[id] = replaySubscriber{updates: channel, normalCapacity: normalCapacity}
@@ -246,11 +298,13 @@ func (c *replayCoordinator) invalidate() {
 func (c *replayCoordinator) invalidateSession(entry *replaySession, sessionID string) {
 	entry.isInvalid = true
 	entry.events = nil
+	entry.lifecycle = nil
 	terminateSubscribers(entry, sessionID)
 }
 func resetReplaySession(entry *replaySession, incarnation string) {
 	entry.incarnation = incarnation
 	entry.events = nil
+	entry.lifecycle = nil
 	entry.isInvalid = false
 }
 func terminateSubscribers(entry *replaySession, sessionID string) {
