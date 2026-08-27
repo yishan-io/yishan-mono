@@ -4,12 +4,13 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 const agentMocks = vi.hoisted(() => ({
+  stopAgentSession: vi.fn(),
   stopPiSession: vi.fn(),
 }));
 
 vi.mock("../../../domains/agent/commands/agentChatCommands", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../domains/agent/commands/agentChatCommands")>();
-  return { ...actual, stopPiSession: agentMocks.stopPiSession };
+  return { ...actual, stopAgentSession: agentMocks.stopAgentSession, stopPiSession: agentMocks.stopPiSession };
 });
 
 import { chatStore } from "../../../domains/agent/state/chatStore";
@@ -84,13 +85,13 @@ describe("workspaceTabSync", () => {
     expect(removeWorkspaceTaskCounts).toHaveBeenCalledWith([removedWorkspace.id]);
   });
 
-  it("starts cleanup for every removed agent chat before removing tabs", async () => {
+  it("disposes removed workspace-create DSH Task Runs without restoring their tabs", async () => {
     let resolvePendingStop!: () => void;
     const pendingStop = new Promise<void>((resolve) => {
       resolvePendingStop = resolve;
     });
     const tabIdsVisibleWhenCleanupStarted: string[][] = [];
-    agentMocks.stopPiSession.mockImplementation(() => {
+    agentMocks.stopAgentSession.mockImplementation(() => {
       tabIdsVisibleWhenCleanupStarted.push(tabStore.getState().tabs.map((tab) => tab.id));
       return pendingStop;
     });
@@ -103,7 +104,7 @@ describe("workspaceTabSync", () => {
           title: "Owner",
           pinned: false,
           kind: "agent-chat",
-          data: { cwd: "/tmp/a", sessionId: "owner-session" },
+          data: { cwd: "/tmp/a", sessionId: "task-run-session-1", runtime: "dsh" },
         },
         {
           id: "subagent-tab",
@@ -111,7 +112,7 @@ describe("workspaceTabSync", () => {
           title: "Subagent",
           pinned: false,
           kind: "agent-chat",
-          data: { cwd: "/tmp/a", sessionId: "child-session", sessionView: "subagent-detail" },
+          data: { cwd: "/tmp/a", sessionId: "child-session", runtime: "dsh", sessionView: "subagent-detail" },
         },
         {
           id: "retained-tab",
@@ -119,7 +120,7 @@ describe("workspaceTabSync", () => {
           title: "Retained",
           pinned: false,
           kind: "agent-chat",
-          data: { cwd: "/tmp/b", sessionId: "retained-session" },
+          data: { cwd: "/tmp/b", sessionId: "task-run-session-other-workspace", runtime: "dsh" },
         },
       ],
       selectedTabId: "owner-tab",
@@ -128,9 +129,11 @@ describe("workspaceTabSync", () => {
 
     await syncTabStoreWithWorkspace([removedWorkspace, retainedWorkspace]);
 
-    expect(agentMocks.stopPiSession).toHaveBeenCalledTimes(2);
-    expect(agentMocks.stopPiSession).toHaveBeenCalledWith("owner-tab");
-    expect(agentMocks.stopPiSession).toHaveBeenCalledWith("subagent-tab");
+    expect(agentMocks.stopAgentSession).toHaveBeenCalledTimes(2);
+    expect(agentMocks.stopAgentSession).toHaveBeenCalledWith("owner-tab");
+    expect(agentMocks.stopAgentSession).toHaveBeenCalledWith("subagent-tab");
+    expect(agentMocks.stopAgentSession).not.toHaveBeenCalledWith("retained-tab");
+    expect(agentMocks.stopPiSession).not.toHaveBeenCalled();
     expect(tabIdsVisibleWhenCleanupStarted).toEqual([
       ["owner-tab", "subagent-tab", "retained-tab"],
       ["owner-tab", "subagent-tab", "retained-tab"],
@@ -140,8 +143,8 @@ describe("workspaceTabSync", () => {
     resolvePendingStop();
   });
 
-  it("removes tabs without waiting for or leaking a rejected Pi cleanup", async () => {
-    agentMocks.stopPiSession.mockRejectedValueOnce(new Error("Pi is already stopped"));
+  it("removes tabs without waiting for or leaking a rejected agent cleanup", async () => {
+    agentMocks.stopAgentSession.mockRejectedValueOnce(new Error("agent session is already stopped"));
     workspaceStore.setState({ workspaces: [] });
     tabStore.setState({
       tabs: [
@@ -161,6 +164,7 @@ describe("workspaceTabSync", () => {
     await syncTabStoreWithWorkspace([removedWorkspace]);
 
     expect(tabStore.getState().tabs).toEqual([]);
-    expect(agentMocks.stopPiSession).toHaveBeenCalledWith("removed-chat-tab");
+    expect(agentMocks.stopAgentSession).toHaveBeenCalledWith("removed-chat-tab");
+    await Promise.resolve();
   });
 });

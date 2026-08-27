@@ -88,6 +88,7 @@ export {
   findTabWithSession,
   renameAgentChatSessionByTab,
   retryDSHTranscript,
+  stopAgentSession,
   stopPiSession,
 } from "./commands/agentChatCommands";
 export {

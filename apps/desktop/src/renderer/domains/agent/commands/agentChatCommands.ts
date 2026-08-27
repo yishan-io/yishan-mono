@@ -27,6 +27,7 @@ import {
   reattachPiSession,
   recoverAgentSessionAfterReconnect as recoverAgentSessionRuntimeAfterReconnect,
   retryDSHTranscript,
+  stopAgentSession,
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
@@ -43,6 +44,7 @@ export {
   clearPiSessionHandle,
   reattachPiSession,
   retryDSHTranscript,
+  stopAgentSession,
   stopPiSession,
 };
 export { fetchPiAgentStateCompatibility, fetchPiAgentMessagesCompatibility, fetchPiAgentModelsCompatibility };

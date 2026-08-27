@@ -146,6 +146,28 @@ describe("agentSessionRuntime.DSH", () => {
     expect(registerAgentChatEventRouter).not.toHaveBeenCalled();
   });
 
+  it("disposes a workspace-create DSH Task Run with its exact session ownership", async () => {
+    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "task-run-session-1" });
+    mocks.disposeAgent.mockResolvedValue({ runtime: "dsh", ok: true });
+
+    await ensureAgentSession({
+      runtime: "dsh",
+      tabId: "task-run-tab-1",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/workspace-1",
+      sessionId: "task-run-session-1",
+    });
+    await stopAgentSession("task-run-tab-1");
+
+    expect(mocks.disposeAgent).toHaveBeenCalledWith({
+      runtime: "dsh",
+      sessionId: "task-run-session-1",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/workspace-1",
+    });
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
   it("omits Pi steering semantics from prompts while DSH is running", async () => {
     mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-running" });
     mocks.promptAgent.mockResolvedValue({ runtime: "dsh", ok: true });
