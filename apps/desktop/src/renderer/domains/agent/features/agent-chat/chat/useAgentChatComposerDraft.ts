@@ -25,11 +25,12 @@ type UseAgentChatComposerDraftInput = {
   /** Whether the tab was renamed by the user (suppresses the auto title rename). */
   userRenamed: boolean | undefined;
   slashCommands: RichComposerSlashCommand[];
+  runtime?: string;
 };
 
 /** Owns composer draft text, attachments, submit, and session-control actions. */
 export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput) {
-  const { tabId, workspaceId, sessionId, sessionState, messageCount, hasStreamingMessage, userRenamed, slashCommands } =
+  const { tabId, workspaceId, sessionId, sessionState, messageCount, hasStreamingMessage, userRenamed, slashCommands, runtime } =
     input;
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
@@ -159,13 +160,19 @@ export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput)
   const handleModelChange = useCallback(
     async (model: AgentModel) => {
       if (!sessionId) return;
+      // For DSH sessions: update the store only. The selected model will be used
+      // when the next session is started (per-session override via agent.start).
+      if (runtime === "dsh") {
+        agentChatStore.getState().setCurrentModel(tabId, model);
+        return;
+      }
       try {
         await setAgentModel({ tabId, sessionId, provider: model.provider ?? "", modelId: model.id });
       } catch (error) {
         agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       }
     },
-    [sessionId, tabId],
+    [runtime, sessionId, tabId],
   );
 
   const handleThinkingSelect = useCallback(

@@ -104,7 +104,7 @@ export class YishanSessionExecutionOwner {
   /** Creates one Yishan-owned session with the caller's exact workspace cwd. */
   async start(request: SessionStartRequest): Promise<SessionStartResult> {
     this.requireAdmitted();
-    await this.getOrCreate(request.sessionId, request.cwd, "start", request.binding);
+    await this.getOrCreate(request.sessionId, request.cwd, "start", request.binding, request.agentOptions);
     return { sessionId: request.sessionId, incarnation: this.incarnation };
   }
 
@@ -238,6 +238,7 @@ export class YishanSessionExecutionOwner {
     cwd: string,
     operation: "start" | "resume",
     binding?: SessionBoundData,
+    agentOptions?: { model?: string; provider?: string },
   ): Promise<AgentHandle> {
     const owned = this.handles.get(sessionId);
     if (owned !== undefined) {
@@ -258,7 +259,7 @@ export class YishanSessionExecutionOwner {
     ) {
       throw new YishanSessionExecutionError("session is owned by stock DSH", "YISHAN_SESSION_COLLISION");
     }
-    const task = this.createAndRetain(sessionId, cwd, operation, binding);
+    const task = this.createAndRetain(sessionId, cwd, operation, binding, agentOptions);
     this.creations.set(sessionId, { cwd, binding, task });
     try {
       return await task;
@@ -272,13 +273,15 @@ export class YishanSessionExecutionOwner {
     cwd: string,
     operation: "start" | "resume",
     binding?: SessionBoundData,
+    agentOptions?: { model?: string; provider?: string },
   ): Promise<AgentHandle> {
     if (operation === "resume") {
       const persisted = await this.dependencies.sessionPersistence.readFrom(sessionId, 0);
       this.requirePersistedCwd(persisted.meta.cwd, { sessionId, cwd });
     }
+    const mergedOptions = agentOptions ? { ...this.initializeOptions, ...agentOptions } : this.initializeOptions;
     const handle = await (operation === "start"
-      ? this.dependencies.agents.create({ sessionId, meta: { cwd }, agentOptions: this.initializeOptions })
+      ? this.dependencies.agents.create({ sessionId, meta: { cwd }, agentOptions: mergedOptions })
       : this.dependencies.agents.resume({ resumeSessionId: sessionId, agentOptions: this.initializeOptions }));
     try {
       this.requireAdmitted();

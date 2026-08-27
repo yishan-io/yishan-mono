@@ -34,9 +34,16 @@ type SessionBinding struct {
 
 // SessionStartRequest creates a session with its authoritative ownership binding.
 type SessionStartRequest struct {
-	CWD       string         `json:"cwd"`
-	SessionID string         `json:"sessionId"`
-	Binding   SessionBinding `json:"binding"`
+	CWD          string                `json:"cwd"`
+	SessionID    string                `json:"sessionId"`
+	Binding      SessionBinding        `json:"binding"`
+	AgentOptions *SessionAgentOptions  `json:"agentOptions,omitempty"`
+}
+
+// SessionAgentOptions carries optional per-session model/provider overrides.
+type SessionAgentOptions struct {
+	Model    string `json:"model,omitempty"`
+	Provider string `json:"provider,omitempty"`
 }
 type SessionCancelRequest = SessionExecutionRequest
 type SessionFlushRequest = SessionExecutionRequest

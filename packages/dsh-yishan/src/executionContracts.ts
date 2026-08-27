@@ -16,6 +16,8 @@ export type SessionExecutionRequest = {
 /** Exact request to start one identified DSH session. */
 export type SessionStartRequest = SessionExecutionRequest & {
   binding: SessionBoundData;
+  /** Optional per-session model/provider override; merged with the process-level initializeOptions. */
+  agentOptions?: { model?: string; provider?: string };
 };
 
 /** Exact request to cancel one identified DSH session. */
@@ -81,11 +83,21 @@ export type TranscriptResetNotification = {
 
 /** Parses the exact workspace-scoped request shape shared by start, cancel, and flush. */
 export function parseSessionStartRequest(payload: unknown): SessionStartRequest {
-  const request = requireExactRecord(payload, "session start request", ["cwd", "sessionId", "binding"]);
+  const request = requireExactRecord(payload, "session start request", ["cwd", "sessionId", "binding", "agentOptions"]);
   const cwd = requireNonEmptyString(request, "cwd");
   const binding = parseSessionBoundData(request.binding);
   if (binding.cwd !== cwd) throw new TypeError("binding.cwd must equal cwd");
-  return { cwd, sessionId: requireNonEmptyString(request, "sessionId"), binding };
+  const agentOptions = parseStartAgentOptions(request.agentOptions);
+  return { cwd, sessionId: requireNonEmptyString(request, "sessionId"), binding, ...(agentOptions ? { agentOptions } : {}) };
+}
+
+function parseStartAgentOptions(raw: unknown): { model?: string; provider?: string } | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const rec = raw as Record<string, unknown>;
+  const model = typeof rec.model === "string" && rec.model.trim() ? rec.model.trim() : undefined;
+  const provider = typeof rec.provider === "string" && rec.provider.trim() ? rec.provider.trim() : undefined;
+  return model || provider ? { ...(model ? { model } : {}), ...(provider ? { provider } : {}) } : undefined;
 }
 
 /** Parses the exact session-start receipt and checks its requested identity. */

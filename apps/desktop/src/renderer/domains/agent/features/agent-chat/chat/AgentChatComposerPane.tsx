@@ -122,6 +122,7 @@ function AgentChatComposerPaneComponent({
     hasStreamingMessage,
     userRenamed: agentChatTab?.data.userRenamed,
     slashCommands,
+    runtime: agentChatTab?.data.runtime,
   });
 
   const focusComposer = useCallback(() => {

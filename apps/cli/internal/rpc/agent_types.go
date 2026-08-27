@@ -27,6 +27,7 @@ type AgentStartParams struct {
 	WorkspaceID               string       `json:"workspaceId"`
 	CWD                       string       `json:"cwd"`
 	Resume                    bool         `json:"resume,omitempty"`
+	ModelID                   string       `json:"modelId,omitempty"`
 	TranscriptProtocolVersion int          `json:"transcriptProtocolVersion,omitempty"`
 }
 

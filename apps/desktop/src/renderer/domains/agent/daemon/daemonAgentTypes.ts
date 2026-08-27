@@ -206,6 +206,8 @@ export type AgentStartRequest = {
   workspaceId: string;
   cwd: string;
   resume?: boolean;
+  /** For DSH sessions: the selected model id to use for this session. */
+  modelId?: string;
 };
 
 /** Attaches the current daemon connection to an existing agent session. */

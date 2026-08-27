@@ -89,7 +89,11 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionReadRequest{SessionID: req.SessionID, CWD: cwd}); err != nil {
 			return nil, mapDSHExecutionError(err)
 		}
-	} else if _, err := s.dshRuntime().StartSession(ctx, dsh.SessionStartRequest{SessionID: req.SessionID, CWD: cwd, Binding: dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd}}); err != nil {
+	} else if _, err := s.dshRuntime().StartSession(ctx, dsh.SessionStartRequest{
+		SessionID: req.SessionID, CWD: cwd,
+		Binding:   dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd},
+		AgentOptions: dshAgentOptionsFrom(req.ModelID, s.deps.DSHProvider),
+	}); err != nil {
 		return nil, mapDSHExecutionError(err)
 	}
 	subscription, err := s.dshRuntime().SubscribeSession(ctx, dsh.SessionSubscribeRequest{SessionID: req.SessionID, CWD: cwd, AfterSeq: -1})
@@ -385,4 +389,14 @@ func dshRequestErrorCode(raw json.RawMessage) string {
 		return ""
 	}
 	return data.Code
+}
+
+// dshAgentOptionsFrom builds a per-session model override when a non-default
+// modelID is requested. Returns nil when the model is empty or matches the
+// daemon-configured default (no override needed).
+func dshAgentOptionsFrom(modelID, defaultProvider string) *dsh.SessionAgentOptions {
+	if modelID == "" {
+		return nil
+	}
+	return &dsh.SessionAgentOptions{Model: modelID, Provider: defaultProvider}
 }

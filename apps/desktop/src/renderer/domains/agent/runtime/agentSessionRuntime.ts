@@ -487,6 +487,9 @@ async function adoptExistingChatSession(
 }
 async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: EnsureAgentSessionOptions): Promise<void> {
   const shouldResumeDSH = record.runtime === "dsh" && Boolean(opts.sessionId?.trim());
+  const dshModelId = record.runtime === "dsh" && !shouldResumeDSH
+    ? agentChatStore.getState().sessionsByTabId[opts.tabId]?.currentModel?.id
+    : undefined;
   await startAgentSessionProcedure({
     runtime: record.runtime,
     sessionId: record.sessionId,
@@ -495,6 +498,7 @@ async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: Ensu
     workspaceId: record.workspaceId,
     cwd: record.cwd,
     ...(shouldResumeDSH ? { resume: true } : {}),
+    ...(dshModelId ? { modelId: dshModelId } : {}),
   });
 }
 async function attachRuntimeSession(record: AgentRuntimeSessionRecord, tabId: string): Promise<void> {
