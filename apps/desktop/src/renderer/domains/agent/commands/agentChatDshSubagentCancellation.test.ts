@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
+import { confirmDshSubagentCancellationFromLifecycle } from "./agentChatDshSubagentCancellation";
 import { cancelSubagentRun } from "./agentChatSubagentCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
@@ -180,7 +181,7 @@ describe("DSH subagent cancellation confirmation", () => {
     });
 
     const cancellation = cancelDsh();
-    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(1_000);
     await cancellation;
 
     expect(mocks.listSessionLineage).toHaveBeenCalledTimes(2);
@@ -198,6 +199,73 @@ describe("DSH subagent cancellation confirmation", () => {
     expect(mocks.listSessionLineage).toHaveBeenCalledOnce();
     expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.dshRunningSubagents).toEqual([]);
     expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.subagentCancelStates).toEqual({});
+  });
+
+  it("clears a pending cancellation when a matching finished lifecycle refresh confirms removal", () => {
+    setDshParent();
+    agentChatStore.getState().setSubagentCancelState("dsh-tab", "dsh-child", { status: "cancelling" });
+
+    confirmDshSubagentCancellationFromLifecycle({
+      tabId: "dsh-tab",
+      sessionId: "dsh-parent",
+      rowKey: "dsh-child",
+      childSessionId: "dsh-child",
+      lifecycle: { parentSessionId: "dsh-parent", childSessionId: "dsh-child", event: "finished" },
+      lineage: { ...lineage(), children: [] },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.subagentCancelStates).toEqual({});
+  });
+
+  it("does not complete cancellation for unrelated, old-parent, or non-finished lifecycle events", () => {
+    setDshParent();
+    agentChatStore.getState().setSubagentCancelState("dsh-tab", "dsh-child", { status: "cancelling" });
+    const pendingCancellation = { "dsh-child": { status: "cancelling" as const } };
+
+    confirmDshSubagentCancellationFromLifecycle({
+      tabId: "dsh-tab",
+      sessionId: "dsh-parent",
+      rowKey: "dsh-child",
+      childSessionId: "dsh-child",
+      lifecycle: { parentSessionId: "dsh-parent", childSessionId: "other-child", event: "finished" },
+      lineage: { ...lineage(), children: [] },
+    });
+    confirmDshSubagentCancellationFromLifecycle({
+      tabId: "dsh-tab",
+      sessionId: "dsh-parent",
+      rowKey: "dsh-child",
+      childSessionId: "dsh-child",
+      lifecycle: { parentSessionId: "dsh-parent", childSessionId: "dsh-child", event: "started" },
+      lineage: { ...lineage(), children: [] },
+    });
+    confirmDshSubagentCancellationFromLifecycle({
+      tabId: "dsh-tab",
+      sessionId: "dsh-parent",
+      rowKey: "dsh-child",
+      childSessionId: "dsh-child",
+      lifecycle: { parentSessionId: "old-parent", childSessionId: "dsh-child", event: "finished" },
+      lineage: { ...lineage(), children: [] },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.subagentCancelStates).toEqual(pendingCancellation);
+  });
+
+  it("retains cancellation state when the finished lifecycle refresh fails", () => {
+    setDshParent();
+    agentChatStore.getState().setSubagentCancelState("dsh-tab", "dsh-child", { status: "cancelling" });
+
+    confirmDshSubagentCancellationFromLifecycle({
+      tabId: "dsh-tab",
+      sessionId: "dsh-parent",
+      rowKey: "dsh-child",
+      childSessionId: "dsh-child",
+      lifecycle: { parentSessionId: "dsh-parent", childSessionId: "dsh-child", event: "finished" },
+      lineage: null,
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.subagentCancelStates).toEqual({
+      "dsh-child": { status: "cancelling" },
+    });
   });
 
   it("returns the row to retryable failure when the child remains live through the bounded window", async () => {
@@ -230,7 +298,7 @@ describe("DSH subagent cancellation confirmation", () => {
     await cancellation;
     await vi.runAllTimersAsync();
 
-    expect(mocks.listSessionLineage).toHaveBeenCalledOnce();
+    expect(mocks.listSessionLineage).not.toHaveBeenCalled();
     expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]).toBeUndefined();
   });
 
@@ -260,7 +328,7 @@ describe("DSH subagent cancellation confirmation", () => {
     await cancellation;
     await vi.runAllTimersAsync();
 
-    expect(mocks.listSessionLineage).toHaveBeenCalledOnce();
+    expect(mocks.listSessionLineage).not.toHaveBeenCalled();
     expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.sessionId).toBe("replacement-session");
     expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.subagentCancelStates).toEqual({});
   });

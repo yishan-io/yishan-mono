@@ -61,7 +61,7 @@ export async function cancelDshSubagentRun(opts: {
     return;
   }
 
-  await confirmDshSubagentCancelled({
+  await confirmDshSubagentCancelledFromFallback({
     ...opts,
     childSessionId,
     workspaceId: parentTab.workspaceId,
@@ -69,8 +69,8 @@ export async function cancelDshSubagentRun(opts: {
   });
 }
 
-/** Refreshes bounded authoritative lineage until the interrupted direct child is no longer live. */
-async function confirmDshSubagentCancelled(opts: {
+/** Uses bounded lineage polling only when the lifecycle completion event was missed. */
+async function confirmDshSubagentCancelledFromFallback(opts: {
   tabId: string;
   sessionId: string;
   rowKey: string;
@@ -78,6 +78,9 @@ async function confirmDshSubagentCancelled(opts: {
   workspaceId: string;
   cwd: string;
 }): Promise<void> {
+  const shouldBeginFallback = await waitForDshCancellationRetry(opts, DSH_CANCEL_LINEAGE_RETRY_INTERVAL_MS);
+  if (!shouldBeginFallback) return;
+
   for (let attempt = 0; attempt < DSH_CANCEL_LINEAGE_RETRY_ATTEMPTS; attempt += 1) {
     if (!isCurrentDshCancellation(opts)) return;
     const lineage = await refreshDshSubagentLineage({
@@ -99,6 +102,32 @@ async function confirmDshSubagentCancelled(opts: {
 
   if (isCurrentDshCancellation(opts)) {
     agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, { status: "failed", reason: "timeout" });
+  }
+}
+
+/**
+ * Completes a pending cancellation only after the matching finished lifecycle
+ * event's authoritative lineage refresh confirms that its direct child is inactive.
+ */
+export function confirmDshSubagentCancellationFromLifecycle(opts: {
+  tabId: string;
+  sessionId: string;
+  rowKey: string;
+  childSessionId: string;
+  lifecycle: { parentSessionId: string; childSessionId: string; event: "started" | "finished" };
+  lineage: AgentSessionLineageResult | null;
+}): void {
+  if (
+    opts.lifecycle.event !== "finished" ||
+    opts.lifecycle.parentSessionId !== opts.sessionId ||
+    opts.lifecycle.childSessionId !== opts.childSessionId ||
+    !opts.lineage ||
+    !isCurrentDshCancellation(opts)
+  ) {
+    return;
+  }
+  if (isDshChildInactiveOrGone(opts.lineage, opts.childSessionId)) {
+    agentChatStore.getState().clearSubagentCancelState(opts.tabId, opts.rowKey);
   }
 }
 

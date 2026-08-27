@@ -31,7 +31,7 @@ const mocks = vi.hoisted(() => ({
   getCapabilities: vi.fn(),
   listSessionLineage: vi.fn(),
   dshEventHandler: null as ((payload: DSHFrontendPayload) => void) | null,
-  dshLifecycleHandler: null as (() => void) | null,
+  dshLifecycleHandler: null as ((payload: DSHFrontendPayload) => void) | null,
 }));
 
 vi.mock("@shared/ids/generateId", () => ({
@@ -47,7 +47,7 @@ vi.mock("../subscriptions/agentChatDSHEventRouter", () => ({
   registerAgentChatDSHEventRouter: vi.fn(
     (options: {
       onEvent: (payload: DSHFrontendPayload) => void;
-      onLifecycleUpdate?: () => void;
+      onLifecycleUpdate?: (payload: DSHFrontendPayload) => void;
     }) => {
       mocks.dshEventHandler = options.onEvent;
       mocks.dshLifecycleHandler = options.onLifecycleUpdate ?? null;
@@ -78,6 +78,15 @@ vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   savePiProvider: mocks.saveProvider,
   sendPiCompatibilityCommand: mocks.send,
 }));
+
+function lifecyclePayload(
+  update: DSHFrontendPayload["update"],
+  sessionId = "dsh-lifecycle",
+  tabId = "dsh-lifecycle-tab",
+): DSHFrontendPayload {
+  const incarnation = update.lifecycle?.incarnation ?? update.lifecycleResync?.incarnation ?? "run-1";
+  return { sessionId, tabId, workspaceId: "workspace-1", incarnation, update };
+}
 
 afterEach(() => {
   resetDshTestState();
@@ -227,8 +236,12 @@ describe("agentSessionRuntime.DSH", () => {
       sessionView: "full",
     });
 
-    mocks.dshLifecycleHandler?.();
-    mocks.dshLifecycleHandler?.();
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload({ lifecycleResync: { parentSessionId: "dsh-lifecycle", incarnation: "run-1", revision: 0 } }),
+    );
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload({ lifecycleResync: { parentSessionId: "dsh-lifecycle", incarnation: "run-1", revision: 1 } }),
+    );
 
     await vi.waitFor(() => expect(mocks.listSessionLineage).toHaveBeenCalledTimes(2));
     expect(mocks.listSessionLineage).toHaveBeenCalledWith({
@@ -240,6 +253,156 @@ describe("agentSessionRuntime.DSH", () => {
     });
     expect(agentChatStore.getState().sessionsByTabId["dsh-lifecycle-tab"]?.messages).toEqual([]);
   });
+  it("refreshes and confirms cancellation when a new lifecycle incarnation restarts its revision", async () => {
+    tabStore.setState({
+      tabs: [
+        {
+          id: "dsh-new-incarnation-tab",
+          workspaceId: "workspace-1",
+          title: "DSH",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/workspace", sessionId: "dsh-new-incarnation", runtime: "dsh" },
+        },
+      ],
+    });
+    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-new-incarnation" });
+    mocks.listSessionLineage.mockResolvedValue({
+      runtime: "dsh",
+      rootSessionId: "dsh-new-incarnation",
+      mode: "children",
+      children: [],
+    });
+    await ensureAgentSession({
+      runtime: "dsh",
+      tabId: "dsh-new-incarnation-tab",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId: "dsh-new-incarnation",
+      sessionView: "full",
+    });
+    agentChatStore.getState().setSubagentCancelState("dsh-new-incarnation-tab", "dsh-child", { status: "cancelling" });
+
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload(
+        {
+          lifecycle: {
+            version: 1,
+            parentSessionId: "dsh-new-incarnation",
+            incarnation: "old-run",
+            revision: 99,
+            event: "started",
+            runId: "old-child-run",
+            childSessionId: "old-child",
+            provider: "pi",
+            local: true,
+          },
+        },
+        "dsh-new-incarnation",
+        "dsh-new-incarnation-tab",
+      ),
+    );
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload(
+        {
+          lifecycle: {
+            version: 1,
+            parentSessionId: "dsh-new-incarnation",
+            incarnation: "new-run",
+            revision: 0,
+            event: "finished",
+            runId: "dsh-child-run",
+            childSessionId: "dsh-child",
+            provider: "pi",
+            local: true,
+            stopReason: "aborted",
+          },
+        },
+        "dsh-new-incarnation",
+        "dsh-new-incarnation-tab",
+      ),
+    );
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload(
+        {
+          lifecycle: {
+            version: 1,
+            parentSessionId: "dsh-new-incarnation",
+            incarnation: "old-run",
+            revision: 100,
+            event: "finished",
+            runId: "old-child-run",
+            childSessionId: "old-child",
+            provider: "pi",
+            local: true,
+            stopReason: "aborted",
+          },
+        },
+        "dsh-new-incarnation",
+        "dsh-new-incarnation-tab",
+      ),
+    );
+
+    await vi.waitFor(() => expect(mocks.listSessionLineage).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(agentChatStore.getState().sessionsByTabId["dsh-new-incarnation-tab"]?.subagentCancelStates).toEqual({}),
+    );
+  });
+
+  it("uses lifecycle resync revisions as the lifecycle watermark", async () => {
+    tabStore.setState({
+      tabs: [
+        {
+          id: "dsh-resync-tab",
+          workspaceId: "workspace-1",
+          title: "DSH",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/workspace", sessionId: "dsh-resync", runtime: "dsh" },
+        },
+      ],
+    });
+    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-resync" });
+    mocks.listSessionLineage.mockResolvedValue({
+      runtime: "dsh",
+      rootSessionId: "dsh-resync",
+      mode: "children",
+      children: [],
+    });
+    await ensureAgentSession({
+      runtime: "dsh",
+      tabId: "dsh-resync-tab",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId: "dsh-resync",
+      sessionView: "full",
+    });
+
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload(
+        { lifecycleResync: { parentSessionId: "dsh-resync", incarnation: "run-1", revision: 0 } },
+        "dsh-resync",
+        "dsh-resync-tab",
+      ),
+    );
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload(
+        { lifecycleResync: { parentSessionId: "dsh-resync", incarnation: "run-1", revision: 1 } },
+        "dsh-resync",
+        "dsh-resync-tab",
+      ),
+    );
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload(
+        { lifecycleResync: { parentSessionId: "dsh-resync", incarnation: "run-1", revision: 1 } },
+        "dsh-resync",
+        "dsh-resync-tab",
+      ),
+    );
+
+    await vi.waitFor(() => expect(mocks.listSessionLineage).toHaveBeenCalledTimes(2));
+  });
+
   it("does not refresh lineage from a DSH child-detail lifecycle hint", async () => {
     tabStore.setState({
       tabs: [
@@ -263,7 +426,13 @@ describe("agentSessionRuntime.DSH", () => {
       sessionView: "subagent-detail",
     });
 
-    mocks.dshLifecycleHandler?.();
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload(
+        { lifecycleResync: { parentSessionId: "dsh-child", incarnation: "run-1", revision: 0 } },
+        "dsh-child",
+        "dsh-detail-tab",
+      ),
+    );
     await Promise.resolve();
 
     expect(mocks.listSessionLineage).not.toHaveBeenCalled();

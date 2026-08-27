@@ -19,6 +19,7 @@ import { registerAgentChatDSHEventRouter } from "../subscriptions/agentChatDSHEv
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
 import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
 import { clearAgentChatSessionStatsSequence } from "../subscriptions/agentChatPiEventShared";
+import type { DSHFrontendPayload } from "../subscriptions/dshTranscript";
 import { DSHTranscriptController } from "../subscriptions/dshTranscriptController";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 import { buildAgentRuntimeSessionKey } from "./agentSessionIdentity";
@@ -36,6 +37,8 @@ type AgentRuntimeSessionRecord = {
   closeRequested: boolean;
   startPromise: Promise<void> | null;
   dshTranscriptController: DSHTranscriptController | null;
+  lifecycleRevisionsByIncarnation: Map<string, number>;
+  currentLifecycleIncarnation: string | null;
 };
 
 const activeSessions = new Map<string, AgentRuntimeSessionRecord>();
@@ -92,6 +95,8 @@ export async function ensureAgentSession(opts: EnsureAgentSessionOptions): Promi
     closeRequested: false,
     startPromise: null,
     dshTranscriptController: null,
+    lifecycleRevisionsByIncarnation: new Map(),
+    currentLifecycleIncarnation: null,
   };
   record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
   record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
@@ -298,23 +303,93 @@ function registerRuntimeRouter(
     tabId,
     sessionId,
     onEvent: (payload) => controller.handle(payload),
-    onLifecycleUpdate: () => refreshDshSubagentLineageForLifecycle(record, tabId),
+    onLifecycleUpdate: (payload) => {
+      if (!advanceDshLifecycleWatermark(record, payload)) return;
+      refreshDshSubagentLineageForLifecycle(record, tabId, payload);
+    },
     onMalformedPayload: () => controller.handleMalformedPayload(),
   });
 }
-function refreshDshSubagentLineageForLifecycle(record: AgentRuntimeSessionRecord, tabId: string): void {
-  if (record.sessionView !== "full") return;
+function refreshDshSubagentLineageForLifecycle(
+  record: AgentRuntimeSessionRecord,
+  tabId: string,
+  payload: DSHFrontendPayload,
+): void {
+  if (
+    record.sessionView !== "full" ||
+    payload.sessionId !== record.sessionId ||
+    (payload.update.lifecycle?.parentSessionId ?? payload.update.lifecycleResync?.parentSessionId) !==
+      record.sessionId ||
+    !isCurrentDshRuntimeParent(record, tabId)
+  ) {
+    return;
+  }
   // fire-and-forget: lineage is supplementary and must not delay DSH event handling.
   void import("../commands/agentChatCommands")
-    .then(({ refreshDshSubagentLineage }) =>
-      refreshDshSubagentLineage({
+    .then(async ({ refreshDshSubagentLineage }) => {
+      const lineage = await refreshDshSubagentLineage({
         tabId,
         workspaceId: record.workspaceId,
         cwd: record.cwd,
         rootSessionId: record.sessionId,
-      }),
-    )
+      });
+      if (
+        !payload.update.lifecycle ||
+        !isCurrentDshLifecycleWatermark(record, payload) ||
+        !isCurrentDshRuntimeParent(record, tabId)
+      ) {
+        return;
+      }
+      const { confirmDshSubagentCancellationFromLifecycle } = await import(
+        "../commands/agentChatDshSubagentCancellation"
+      );
+      confirmDshSubagentCancellationFromLifecycle({
+        tabId,
+        sessionId: record.sessionId,
+        rowKey: payload.update.lifecycle.childSessionId,
+        childSessionId: payload.update.lifecycle.childSessionId,
+        lifecycle: payload.update.lifecycle,
+        lineage,
+      });
+    })
     .catch((error: unknown) => console.warn("Failed to load DSH subagent lineage refresh", getErrorMessage(error)));
+}
+
+/** Advances the current lifecycle incarnation only for a newer lifecycle or resync revision. */
+function advanceDshLifecycleWatermark(record: AgentRuntimeSessionRecord, payload: DSHFrontendPayload): boolean {
+  const lifecycleUpdate = payload.update.lifecycle ?? payload.update.lifecycleResync;
+  if (!lifecycleUpdate) return false;
+
+  const isNewIncarnation = record.currentLifecycleIncarnation !== lifecycleUpdate.incarnation;
+  if (isNewIncarnation && record.lifecycleRevisionsByIncarnation.has(lifecycleUpdate.incarnation)) return false;
+
+  const latestRevision = record.lifecycleRevisionsByIncarnation.get(lifecycleUpdate.incarnation);
+  if (latestRevision !== undefined && lifecycleUpdate.revision <= latestRevision) return false;
+
+  record.lifecycleRevisionsByIncarnation.set(lifecycleUpdate.incarnation, lifecycleUpdate.revision);
+  if (isNewIncarnation) record.currentLifecycleIncarnation = lifecycleUpdate.incarnation;
+  return true;
+}
+
+/** Returns whether an async lifecycle refresh still represents the active lifecycle revision. */
+function isCurrentDshLifecycleWatermark(record: AgentRuntimeSessionRecord, payload: DSHFrontendPayload): boolean {
+  const lifecycle = payload.update.lifecycle;
+  return (
+    lifecycle !== undefined &&
+    record.currentLifecycleIncarnation === lifecycle.incarnation &&
+    record.lifecycleRevisionsByIncarnation.get(lifecycle.incarnation) === lifecycle.revision
+  );
+}
+
+function isCurrentDshRuntimeParent(record: AgentRuntimeSessionRecord, tabId: string): boolean {
+  const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
+  const session = agentChatStore.getState().sessionsByTabId[tabId];
+  return (
+    tab?.kind === "agent-chat" &&
+    tab.data.runtime === "dsh" &&
+    tab.data.sessionId === record.sessionId &&
+    session?.sessionId === record.sessionId
+  );
 }
 
 function createDSHTranscriptController(
@@ -401,6 +476,8 @@ async function adoptExistingChatSession(
     closeRequested: false,
     startPromise: null,
     dshTranscriptController: null,
+    lifecycleRevisionsByIncarnation: new Map(),
+    currentLifecycleIncarnation: null,
   };
   record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
   record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);

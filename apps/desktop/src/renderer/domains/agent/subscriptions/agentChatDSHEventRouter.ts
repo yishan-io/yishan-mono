@@ -5,7 +5,7 @@ type RouterEntry = {
   sessionId: string;
   token: number;
   onEvent: (payload: DSHFrontendPayload) => void;
-  onLifecycleUpdate?: () => void;
+  onLifecycleUpdate?: (payload: DSHFrontendPayload) => void;
   onMalformedPayload: () => void;
 };
 const routerMap = new Map<string, RouterEntry>();
@@ -17,7 +17,7 @@ export function registerAgentChatDSHEventRouter(options: {
   tabId: string;
   sessionId: string;
   onEvent: (payload: DSHFrontendPayload) => void;
-  onLifecycleUpdate?: () => void;
+  onLifecycleUpdate?: (payload: DSHFrontendPayload) => void;
   onMalformedPayload: () => void;
 }): () => void {
   const token = nextToken++;
@@ -47,7 +47,7 @@ function ensureTransport(): void {
       const entry = routerMap.get(payload.tabId);
       if (entry?.sessionId === payload.sessionId) {
         entry.onEvent(payload);
-        if (payload.update.lifecycle || payload.update.lifecycleResync) entry.onLifecycleUpdate?.();
+        if (payload.update.lifecycle || payload.update.lifecycleResync) entry.onLifecycleUpdate?.(payload);
       }
       return;
     }
