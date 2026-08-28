@@ -41,6 +41,7 @@ type AgentService interface {
 	AgentAttach(ctx context.Context, connection *Connection, req AgentAttachParams) (any, error)
 	AgentPrompt(ctx context.Context, req AgentPromptParams) (any, error)
 	AgentAbort(ctx context.Context, req AgentAbortParams) (any, error)
+	AgentSetModel(ctx context.Context, req AgentSetModelParams) (any, error)
 	AgentDispose(ctx context.Context, req AgentDisposeParams) (any, error)
 	AgentListSessions(ctx context.Context, req AgentListSessionsParams) (any, error)
 	AgentListSessionLineage(ctx context.Context, req AgentListSessionLineageParams) (any, error)
@@ -148,6 +149,12 @@ func (h *AgentHandler) callAgent(ctx context.Context, connection *Connection, me
 			return nil, err
 		}
 		return h.Agent.AgentAbort(ctx, req)
+	case MethodAgentSetModel:
+		var req AgentSetModelParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentSetModel(ctx, req)
 	case MethodAgentDispose:
 		var req AgentDisposeParams
 		if err := DecodeParams(params, &req); err != nil {

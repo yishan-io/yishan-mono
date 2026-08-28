@@ -43,6 +43,7 @@ type DSHSessions interface {
 	ResumeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionResumeResult, error)
 	DisposeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionDisposeResult, error)
 	StartSession(context.Context, dsh.SessionStartRequest) (dsh.SessionStartResult, error)
+	SetModelSession(context.Context, dsh.SetModelRequest) error
 	PromptSession(context.Context, dsh.SessionPromptRequest) (dsh.SessionPromptResult, error)
 	CancelSession(context.Context, dsh.SessionCancelRequest) (dsh.SessionCancelResult, error)
 	SubscribeSession(context.Context, dsh.SessionSubscribeRequest) (dsh.SessionSubscription, error)

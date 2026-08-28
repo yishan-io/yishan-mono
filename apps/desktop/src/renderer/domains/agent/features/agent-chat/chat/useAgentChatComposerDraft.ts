@@ -4,7 +4,8 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import { useCallback, useEffect, useState } from "react";
 import type { AgentModel } from "../../../chat/agentChatTypes";
-import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
+import { abortAgent, compactAgent, sendAgentPrompt, startAgentChatSession } from "../../../commands/agentChatCommands";
+import { setAgentModelDSH } from "../../../daemon/daemonAgentProcedures";
 import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { setAgentModel, setAgentThinkingLevel } from "../../../subscriptions/agentChatPiEventShared";
@@ -18,6 +19,7 @@ const MAX_FILE_MENTION_RESULTS = 50;
 type UseAgentChatComposerDraftInput = {
   tabId: string;
   workspaceId: string;
+  cwd: string;
   sessionId: string | null;
   sessionState: string;
   messageCount: number;
@@ -30,7 +32,7 @@ type UseAgentChatComposerDraftInput = {
 
 /** Owns composer draft text, attachments, submit, and session-control actions. */
 export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput) {
-  const { tabId, workspaceId, sessionId, sessionState, messageCount, hasStreamingMessage, userRenamed, slashCommands, runtime } =
+  const { tabId, workspaceId, cwd, sessionId, sessionState, messageCount, hasStreamingMessage, userRenamed, slashCommands, runtime } =
     input;
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
@@ -160,11 +162,16 @@ export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput)
   const handleModelChange = useCallback(
     async (model: AgentModel) => {
       if (!sessionId) return;
-      // For DSH sessions: update the store only. The selected model will be used
-      // when the next session is started (per-session override via agent.start).
       if (runtime === "dsh") {
+        // Persist selection for next new session.
         agentChatStore.getState().setCurrentModel(tabId, model);
         tabStore.getState().setAgentChatTabDSHModel(tabId, model.id);
+        // Apply immediately to the live session via agent.setModel.
+        try {
+          await setAgentModelDSH({ sessionId, workspaceId, cwd, modelId: model.id, provider: model.provider });
+        } catch (error) {
+          agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+        }
         return;
       }
       try {
@@ -173,7 +180,7 @@ export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput)
         agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       }
     },
-    [runtime, sessionId, tabId],
+    [cwd, runtime, sessionId, tabId, workspaceId],
   );
 
   const handleThinkingSelect = useCallback(

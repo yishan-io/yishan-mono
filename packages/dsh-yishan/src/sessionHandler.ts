@@ -9,6 +9,7 @@ import {
   parseSessionPromptRequest,
   parseSessionStartRequest,
   parseSessionSubscribeRequest,
+  parseSetModelRequest,
 } from "./executionContracts";
 import { YISHAN_METHODS } from "./protocol";
 import {
@@ -107,6 +108,7 @@ export type YishanSessionHandlerDependencies = {
   execution?: {
     start(request: ReturnType<typeof parseSessionStartRequest>): Promise<unknown>;
     prompt(request: ReturnType<typeof parseSessionPromptRequest>): Promise<unknown>;
+    setModel(request: ReturnType<typeof parseSetModelRequest>): Promise<unknown>;
     cancel(request: ReturnType<typeof parseSessionCancelRequest>): Promise<unknown>;
     flushSession(request: ReturnType<typeof parseSessionFlushRequest>): Promise<unknown>;
     subscribe(request: ReturnType<typeof parseSessionSubscribeRequest>): Promise<unknown>;
@@ -139,6 +141,9 @@ export function createSessionHandler(dependencies: YishanSessionHandlerDependenc
         return await requireExecution(dependencies).flushSession(parseSessionFlushRequest(params));
       case YISHAN_METHODS.prompt:
         return await requireExecution(dependencies).prompt(parseSessionPromptRequest(params));
+      case YISHAN_METHODS.setModel:
+        await requireExecution(dependencies).setModel(parseSetModelRequest(params));
+        return { ok: true };
       case YISHAN_METHODS.start:
         return await requireExecution(dependencies).start(parseSessionStartRequest(params));
       case YISHAN_METHODS.subscribe:

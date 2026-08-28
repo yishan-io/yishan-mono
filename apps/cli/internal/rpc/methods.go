@@ -86,6 +86,7 @@ const (
 	MethodAgentAttach                = "agent.attach"
 	MethodAgentPrompt                = "agent.prompt"
 	MethodAgentAbort                 = "agent.abort"
+	MethodAgentSetModel              = "agent.setModel"
 	MethodAgentDispose               = "agent.dispose"
 	MethodAgentListSessions          = "agent.listSessions"
 	MethodAgentListSessionLineage    = "agent.listSessionLineage"

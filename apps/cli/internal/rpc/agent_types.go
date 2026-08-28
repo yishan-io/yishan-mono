@@ -79,6 +79,15 @@ type AgentPromptParams struct {
 	StreamingBehavior string          `json:"streamingBehavior,omitempty"`
 }
 
+// AgentSetModelParams switches the model for the next turn of a live DSH session.
+type AgentSetModelParams struct {
+	SessionID   string `json:"sessionId"`
+	WorkspaceID string `json:"workspaceId"`
+	CWD         string `json:"cwd"`
+	ModelID     string `json:"modelId"`
+	Provider    string `json:"provider,omitempty"`
+}
+
 // AgentAbortParams aborts a running agent session.
 type AgentAbortParams struct {
 	Runtime     AgentRuntime `json:"runtime"`

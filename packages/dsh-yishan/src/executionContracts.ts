@@ -290,3 +290,25 @@ function requireSubscribeConsistency(
     throw new TypeError("asOfSeq must equal the final event sequence");
   }
 }
+
+/** Sets the model/provider for the next turn of a live session. */
+export type SetModelRequest = SessionExecutionRequest & {
+  model: string;
+  provider?: string;
+};
+
+export function parseSetModelRequest(payload: unknown): SetModelRequest {
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new TypeError("set model request must be an object");
+  }
+  const rec = payload as Record<string, unknown>;
+  const allowed = new Set(["cwd", "sessionId", "model", "provider"]);
+  if (Object.keys(rec).some((k) => !allowed.has(k))) {
+    throw new TypeError("set model request has unsupported fields");
+  }
+  const model = typeof rec.model === "string" && rec.model.trim() ? rec.model.trim() : undefined;
+  if (!model) throw new TypeError("model is required");
+  const provider = typeof rec.provider === "string" && rec.provider.trim() ? rec.provider.trim() : undefined;
+  const base = parseSessionExecutionRequest(rec, "set model request");
+  return { ...base, model, ...(provider ? { provider } : {}) };
+}

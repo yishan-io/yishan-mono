@@ -118,6 +118,26 @@ func (s *Service) AgentAbort(ctx context.Context, req rpc.AgentAbortParams) (any
 	return rpc.AgentAckResult{Runtime: rpc.AgentRuntimePi, OK: true}, nil
 }
 
+// AgentSetModel switches the model for the next turn of a live DSH session.
+func (s *Service) AgentSetModel(ctx context.Context, req rpc.AgentSetModelParams) (any, error) {
+	if s.deps.DSH == nil {
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "dsh runtime unavailable")
+	}
+	workspaceInstance, err := s.resolveAgentSessionWorkspace(rpc.AgentRuntimeDSH, req.SessionID, req.WorkspaceID, req.CWD)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.deps.DSH.SetModelSession(ctx, dsh.SetModelRequest{
+		CWD:       workspaceInstance.Path,
+		SessionID: req.SessionID,
+		Model:     req.ModelID,
+		Provider:  req.Provider,
+	}); err != nil {
+		return nil, mapDSHExecutionError(err)
+	}
+	return rpc.AgentAckResult{Runtime: rpc.AgentRuntimeDSH, OK: true}, nil
+}
+
 // AgentDispose releases a Pi session and its runtime resources.
 func (s *Service) AgentDispose(ctx context.Context, req rpc.AgentDisposeParams) (any, error) {
 	if req.Runtime == rpc.AgentRuntimeDSH {

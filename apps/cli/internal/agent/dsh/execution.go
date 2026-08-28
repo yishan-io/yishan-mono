@@ -8,6 +8,7 @@ import (
 
 const (
 	yishanSessionStartMethod     = "yishan.v1.session.start"
+	yishanSessionSetModelMethod  = "yishan.v1.session.set-model"
 	yishanSessionPromptMethod    = "yishan.v1.session.prompt"
 	yishanSessionCancelMethod    = "yishan.v1.session.cancel"
 	yishanSessionFlushMethod     = "yishan.v1.session.flush"
@@ -44,6 +45,12 @@ type SessionStartRequest struct {
 type SessionAgentOptions struct {
 	Model    string `json:"model,omitempty"`
 	Provider string `json:"provider,omitempty"`
+}
+type SetModelRequest struct {
+	CWD       string `json:"cwd"`
+	SessionID string `json:"sessionId"`
+	Model     string `json:"model"`
+	Provider  string `json:"provider,omitempty"`
 }
 type SessionCancelRequest = SessionExecutionRequest
 type SessionFlushRequest = SessionExecutionRequest
@@ -167,6 +174,12 @@ func (s *Supervisor) PromptSession(ctx context.Context, request SessionPromptReq
 		return SessionPromptResult{}, err
 	}
 	return response.validate()
+}
+func (s *Supervisor) SetModelSession(ctx context.Context, request SetModelRequest) error {
+	if request.CWD == "" || request.SessionID == "" || request.Model == "" {
+		return errors.New("SetModelSession requires cwd, sessionId, and model")
+	}
+	return s.call(ctx, yishanSessionSetModelMethod, request, nil)
 }
 func (s *Supervisor) CancelSession(ctx context.Context, request SessionCancelRequest) (SessionCancelResult, error) {
 	if err := validateExecutionRequest(request); err != nil {

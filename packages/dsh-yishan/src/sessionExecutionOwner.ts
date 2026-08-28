@@ -16,6 +16,7 @@ import type {
   SessionStartResult,
   SessionSubscribeRequest,
   SessionSubscribeResult,
+  SetModelRequest,
   TextPromptContentBlock,
 } from "./executionContracts";
 import { YISHAN_NOTIFICATIONS } from "./protocol";
@@ -130,6 +131,17 @@ export class YishanSessionExecutionOwner {
     const handle = await this.requireOwnedHandle(sessionId);
     this.requireAuthoritativeCwd(handle.agent.session);
     return this.followup(handle, contentBlocks);
+  }
+
+  /** Updates the model for the next turn of a live session without restarting it. */
+  async setModel(request: SetModelRequest): Promise<void> {
+    this.requireAdmitted();
+    const handle = await this.requireOwnedHandle(request.sessionId);
+    this.requireCwd(handle.agent.session, request);
+    if (handle.agent.options) {
+      handle.agent.options.model = request.model;
+      if (request.provider) handle.agent.options.provider = request.provider;
+    }
   }
 
   /** Cancels an owned session while retaining its handle and queued inbox. */

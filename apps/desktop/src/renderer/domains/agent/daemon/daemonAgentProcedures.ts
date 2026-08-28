@@ -207,6 +207,17 @@ export async function disposeAgentSession(input: AgentDisposeRequest): Promise<A
   return (await request("agent.dispose", input)) as AgentAckResult;
 }
 
+/** Switches the model for the next turn of a live DSH session without restarting it. */
+export async function setAgentModelDSH(input: {
+  sessionId: string;
+  workspaceId: string;
+  cwd: string;
+  modelId: string;
+  provider?: string;
+}): Promise<AgentAckResult> {
+  return (await request("agent.setModel", input)) as AgentAckResult;
+}
+
 /** Lists durable agent sessions for one runtime and workspace. */
 export async function listAgentRuntimeSessions(input: AgentListSessionsRequest): Promise<AgentSessionsResult> {
   return (await request("agent.listSessions", input)) as AgentSessionsResult;

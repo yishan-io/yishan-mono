@@ -12,6 +12,7 @@ export const YISHAN_METHODS = {
   lineage: yishanMethod("session.lineage"),
   read: yishanMethod("session.read"),
   resume: yishanMethod("session.resume"),
+  setModel: yishanMethod("session.set-model"),
   start: yishanMethod("session.start"),
   prompt: yishanMethod("session.prompt"),
   subscribe: yishanMethod("session.subscribe"),

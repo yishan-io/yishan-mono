@@ -116,6 +116,7 @@ function AgentChatComposerPaneComponent({
   } = useAgentChatComposerDraft({
     tabId,
     workspaceId,
+    cwd,
     sessionId,
     sessionState,
     messageCount,
