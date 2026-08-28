@@ -25,7 +25,6 @@ const PINNED_PROVIDER_IDS = [
   "cerebras",
   "cloudflare-ai-gateway",
   "cloudflare-workers-ai",
-  "deepseek",
   "fireworks",
   "github-copilot",
   "google",
@@ -97,15 +96,17 @@ describe("PI_PROVIDER_CATALOG", () => {
     expect(apiKey).toHaveLength(PINNED_PROVIDER_IDS.length - oauthOnly.length - both.length);
   });
 
-  it("resolves known ids and falls back for unknown ids", () => {
-    expect(getPiProviderCatalogEntry("deepseek")?.name).toBe("DeepSeek");
-    expect(isKnownPiProviderId("deepseek")).toBe(true);
+  it("does not expose pi-ai DeepSeek, leaving it to the direct DSH route", () => {
+    expect(PI_PROVIDER_CATALOG.filter((entry) => entry.name === "DeepSeek")).toHaveLength(0);
+    expect(getPiProviderCatalogEntry("deepseek")).toBeUndefined();
+    expect(isKnownPiProviderId("deepseek")).toBe(false);
+    expect(getPiProviderDisplayName("deepseek")).toBe("deepseek");
     expect(getPiProviderDisplayName("not-a-provider")).toBe("not-a-provider");
     expect(isKnownPiProviderId("not-a-provider")).toBe(false);
   });
 
   it("treats oauth-only providers as not api-key capable, but both-mode as capable", () => {
-    expect(isPiProviderApiKeyCapable("deepseek")).toBe(true);
+    expect(isPiProviderApiKeyCapable("deepseek")).toBe(false);
     expect(isPiProviderApiKeyCapable("anthropic")).toBe(true);
     expect(isPiProviderApiKeyCapable("openrouter")).toBe(true);
     expect(isPiProviderApiKeyCapable("github-copilot")).toBe(true);

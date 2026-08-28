@@ -34,6 +34,22 @@ func TestMapDSHProviderCatalog_DoesNotTreatAmbientRouteAsConfigured(t *testing.T
 	}
 }
 
+func TestMapDSHProviderCatalog_ExposesOnlyDirectDeepSeekRoute(t *testing.T) {
+	catalog := dsh.ProviderCatalog{Providers: []dsh.ProviderCatalogProvider{
+		{ID: "deepseek-official", Authentication: "api-key", Models: []dsh.ProviderCatalogModel{}},
+		{ID: "deepseek", Authentication: "api-key", Models: []dsh.ProviderCatalogModel{}},
+	}}
+
+	mapped := mapDSHProviderCatalog(catalog, map[string]struct{}{"DEEPSEEK_API_KEY": {}})
+	if len(mapped.Providers) != 1 {
+		t.Fatalf("providers = %#v, want one direct DeepSeek route", mapped.Providers)
+	}
+	provider := mapped.Providers[0]
+	if provider.ID != "deepseek-official" || provider.DisplayName != "DeepSeek" || provider.CredentialRef != "DEEPSEEK_API_KEY" {
+		t.Fatalf("provider = %#v, want direct DeepSeek route", provider)
+	}
+}
+
 func TestMapDSHProviderCatalog_ExposesOnlySafeConfigurationMetadata(t *testing.T) {
 	catalog := dsh.ProviderCatalog{Providers: []dsh.ProviderCatalogProvider{
 		{ID: "deepseek-official", Authentication: "api-key", Models: []dsh.ProviderCatalogModel{{ID: "deepseek-v4", Name: "DeepSeek V4"}}},

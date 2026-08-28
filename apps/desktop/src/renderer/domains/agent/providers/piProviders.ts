@@ -55,12 +55,6 @@ export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
     authMode: "api_key",
   },
   {
-    id: "deepseek",
-    name: "DeepSeek",
-    envVar: "DEEPSEEK_API_KEY",
-    authMode: "api_key",
-  },
-  {
     id: "nvidia",
     name: "NVIDIA NIM",
     envVar: "NVIDIA_API_KEY",

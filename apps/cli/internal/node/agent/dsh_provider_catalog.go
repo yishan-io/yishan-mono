@@ -12,6 +12,7 @@ const (
 	dshSetupStatusReady           = "ready"
 	dshSetupStatusNeedsCredential = "needs-credential"
 	dshSetupStatusAmbient         = "ambient"
+	piDeepSeekProviderID          = "deepseek"
 )
 
 // DSHProviderCatalog is the optional safe provider-discovery capability of a DSH runtime.
@@ -54,6 +55,10 @@ func (s *Service) listDSHCredentialRefs() (map[string]struct{}, error) {
 func mapDSHProviderCatalog(catalog dsh.ProviderCatalog, credentialRefs map[string]struct{}) rpc.DSHProviderCatalogResult {
 	providers := make([]rpc.DSHProviderCatalogEntry, 0, len(catalog.Providers))
 	for _, provider := range catalog.Providers {
+		// Direct DeepSeek owns the shared credential and selectable DSH route.
+		if provider.ID == piDeepSeekProviderID {
+			continue
+		}
 		entry := rpc.DSHProviderCatalogEntry{ID: provider.ID, DisplayName: dshProviderDisplayName(provider.ID), Authentication: provider.Authentication}
 		if provider.Authentication == "api-key" {
 			entry.CredentialRef = dshProviderCredentialRef(provider.ID)
@@ -87,7 +92,7 @@ func dshProviderDisplayName(providerID string) string {
 }
 
 var dshProviderNames = map[string]string{
-	"deepseek-official": "DeepSeek", "deepseek": "DeepSeek", "ant-ling": "Ant Ling", "anthropic": "Anthropic",
+	"deepseek-official": "DeepSeek", "ant-ling": "Ant Ling", "anthropic": "Anthropic",
 	"azure-openai-responses": "Azure OpenAI Responses", "cerebras": "Cerebras", "fireworks": "Fireworks",
 	"github-copilot": "GitHub Copilot", "google": "Google Gemini", "groq": "Groq", "huggingface": "Hugging Face",
 	"kimi-coding": "Kimi For Coding", "minimax": "MiniMax", "minimax-cn": "MiniMax (China)", "mistral": "Mistral",
@@ -107,5 +112,5 @@ func dshProviderCredentialRef(provider string) string {
 }
 
 var dshProviderCredentialRefs = map[string]string{
-	"deepseek-official": "DEEPSEEK_API_KEY", "deepseek": "DEEPSEEK_API_KEY", "ant-ling": "ANT_LING_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "azure-openai-responses": "AZURE_OPENAI_API_KEY", "cerebras": "CEREBRAS_API_KEY", "fireworks": "FIREWORKS_API_KEY", "github-copilot": "COPILOT_GITHUB_TOKEN", "google": "GEMINI_API_KEY", "groq": "GROQ_API_KEY", "huggingface": "HF_TOKEN", "kimi-coding": "KIMI_API_KEY", "minimax": "MINIMAX_API_KEY", "minimax-cn": "MINIMAX_CN_API_KEY", "mistral": "MISTRAL_API_KEY", "moonshotai": "MOONSHOT_API_KEY", "moonshotai-cn": "MOONSHOT_API_KEY", "nvidia": "NVIDIA_API_KEY", "openai": "OPENAI_API_KEY", "opencode": "OPENCODE_API_KEY", "opencode-go": "OPENCODE_API_KEY", "openrouter": "OPENROUTER_API_KEY", "qwen-token-plan": "QWEN_TOKEN_PLAN_API_KEY", "qwen-token-plan-cn": "QWEN_TOKEN_PLAN_CN_API_KEY", "together": "TOGETHER_API_KEY", "vercel-ai-gateway": "AI_GATEWAY_API_KEY", "xai": "XAI_API_KEY", "xiaomi": "XIAOMI_API_KEY", "xiaomi-token-plan-ams": "XIAOMI_TOKEN_PLAN_AMS_API_KEY", "xiaomi-token-plan-cn": "XIAOMI_TOKEN_PLAN_CN_API_KEY", "xiaomi-token-plan-sgp": "XIAOMI_TOKEN_PLAN_SGP_API_KEY", "zai": "ZAI_API_KEY", "zai-coding-cn": "ZAI_CODING_CN_API_KEY",
+	"deepseek-official": "DEEPSEEK_API_KEY", "ant-ling": "ANT_LING_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "azure-openai-responses": "AZURE_OPENAI_API_KEY", "cerebras": "CEREBRAS_API_KEY", "fireworks": "FIREWORKS_API_KEY", "github-copilot": "COPILOT_GITHUB_TOKEN", "google": "GEMINI_API_KEY", "groq": "GROQ_API_KEY", "huggingface": "HF_TOKEN", "kimi-coding": "KIMI_API_KEY", "minimax": "MINIMAX_API_KEY", "minimax-cn": "MINIMAX_CN_API_KEY", "mistral": "MISTRAL_API_KEY", "moonshotai": "MOONSHOT_API_KEY", "moonshotai-cn": "MOONSHOT_API_KEY", "nvidia": "NVIDIA_API_KEY", "openai": "OPENAI_API_KEY", "opencode": "OPENCODE_API_KEY", "opencode-go": "OPENCODE_API_KEY", "openrouter": "OPENROUTER_API_KEY", "qwen-token-plan": "QWEN_TOKEN_PLAN_API_KEY", "qwen-token-plan-cn": "QWEN_TOKEN_PLAN_CN_API_KEY", "together": "TOGETHER_API_KEY", "vercel-ai-gateway": "AI_GATEWAY_API_KEY", "xai": "XAI_API_KEY", "xiaomi": "XIAOMI_API_KEY", "xiaomi-token-plan-ams": "XIAOMI_TOKEN_PLAN_AMS_API_KEY", "xiaomi-token-plan-cn": "XIAOMI_TOKEN_PLAN_CN_API_KEY", "xiaomi-token-plan-sgp": "XIAOMI_TOKEN_PLAN_SGP_API_KEY", "zai": "ZAI_API_KEY", "zai-coding-cn": "ZAI_CODING_CN_API_KEY",
 }

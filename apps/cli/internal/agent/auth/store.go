@@ -53,7 +53,6 @@ var apiKeyCapableProviders = []string{
 	"cerebras",
 	"cloudflare-ai-gateway",
 	"cloudflare-workers-ai",
-	"deepseek",
 	"fireworks",
 	"github-copilot",
 	"google",
