@@ -1,5 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { type ModelSelection, type ModelSelectionRef, installModelSelection } from "@deepseek-ai/dsh-agent";
+import {
+  type ModelSelection,
+  type ModelSelectionRef,
+  type PreStepDecision,
+  installModelSelection,
+} from "@deepseek-ai/dsh-agent";
 import { type UserMessage, createUserMessage } from "@deepseek-ai/dsh-llm";
 
 import { type SessionEvent, type SessionHeader, foldRequestHeader } from "@deepseek-ai/dsh-session";
@@ -59,6 +64,7 @@ export class YishanSessionExecutionOwner {
   private readonly disposals = new Map<string, CwdTask<boolean>>();
   private readonly flushes = new Map<string, CwdTask<DurableCursor>>();
   private readonly pendingSelections = new Map<string, ModelSelection>();
+  private readonly pendingSelectionReservations = new Map<string, PendingSelectionReservation>();
   private readonly selections = new Map<string, ModelSelectionRef>();
   private readonly incarnation: string;
   private initializeOptions: InitializeOptions = {};
@@ -224,10 +230,26 @@ export class YishanSessionExecutionOwner {
     });
   }
 
-  /** Activates a pending route when DSH claims an externally supplied user prompt for its turn. */
+  /** Reserves a pending route for an externally supplied user prompt claimed by DSH. */
   handleAgentInboxClaimed(sessionId: string, message: UserMessage): void {
     if (this.isShuttingDown || !this.handles.has(sessionId) || message.source.kind !== "user") return;
-    this.activatePendingSelection(sessionId);
+    const selection = this.pendingSelections.get(sessionId);
+    if (selection === undefined) return;
+    this.pendingSelectionReservations.set(sessionId, { messageId: message.id, selection });
+  }
+
+  /** Activates a reserved route only when DSH accepts its claimed user prompt into a step. */
+  async handleAgentPreStep(
+    sessionId: string,
+    messages: UserMessage[],
+    next: () => Promise<PreStepDecision>,
+  ): Promise<PreStepDecision> {
+    const decision = await next();
+    const reservation = this.pendingSelectionReservations.get(sessionId);
+    if (reservation === undefined || !messages.some((message) => message.id === reservation.messageId)) return decision;
+    this.pendingSelectionReservations.delete(sessionId);
+    if (decision.kind === "enter") this.activateReservedSelection(sessionId, reservation);
+    return decision;
   }
 
   /** Closes admission, flushes every owned session, and then disposes all owned handles. */
@@ -435,6 +457,7 @@ export class YishanSessionExecutionOwner {
     await this.flushHandle(sessionId, handle);
     await handle.dispose();
     this.pendingSelections.delete(sessionId);
+    this.pendingSelectionReservations.delete(sessionId);
     this.selections.delete(sessionId);
     if (this.handles.get(sessionId) === handle) this.handles.delete(sessionId);
     return true;
@@ -465,12 +488,14 @@ export class YishanSessionExecutionOwner {
     return { messageId: message.id };
   }
 
-  private activatePendingSelection(sessionId: string): void {
-    const pendingSelection = this.pendingSelections.get(sessionId);
+  private activateReservedSelection(sessionId: string, reservation: PendingSelectionReservation): void {
     const selection = this.selections.get(sessionId);
-    if (pendingSelection === undefined || selection === undefined) return;
-    selection.current = pendingSelection;
-    this.pendingSelections.delete(sessionId);
+    if (selection === undefined) return;
+    selection.current = reservation.selection;
+    selection.assembled = reservation.selection;
+    if (isSameSelection(this.pendingSelections.get(sessionId), reservation.selection)) {
+      this.pendingSelections.delete(sessionId);
+    }
   }
 
   private requireAdmitted(): void {
@@ -564,4 +589,17 @@ function createModelSelection(options: InitializeOptions): ModelSelectionRef {
       ? undefined
       : { provider: options.provider, model: options.model };
   return { current, assembled: undefined };
+}
+
+/** Associates one claimed user message with the pending route it may activate. */
+type PendingSelectionReservation = {
+  messageId: UserMessage["id"];
+  selection: ModelSelection;
+};
+
+/** Returns whether two complete model routes select the same provider, model, and effort. */
+function isSameSelection(left: ModelSelection | undefined, right: ModelSelection): boolean {
+  return (
+    left?.provider === right.provider && left.model === right.model && left.reasoningEffort === right.reasoningEffort
+  );
 }

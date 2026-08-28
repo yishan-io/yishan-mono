@@ -61,6 +61,10 @@ describe("Yishan provider switching through the DSH agent loop", () => {
     adapter.onFirstRequest = async () => await owner.setModel({ cwd: CWD, sessionId: SESSION_ID, ...NEXT_ROUTE });
     context.on("session/event", (session, event) => owner.handleSessionEvent(session as never, event as never));
     context.on("agent/inbox/claimed", ({ agent, message }) => owner.handleAgentInboxClaimed(agent.id, message));
+    context.on(
+      "agent/pre-step",
+      async ({ agent, messages }, next) => await owner.handleAgentPreStep(agent.id, messages, next),
+    );
 
     try {
       await owner.start({ cwd: CWD, sessionId: SESSION_ID, binding: BINDING, agentOptions: INITIAL_ROUTE });
@@ -84,7 +88,7 @@ describe("Yishan provider switching through the DSH agent loop", () => {
     }
   });
 
-  it("keeps a pending selection through an automatic goal followup and applies it to the next user prompt", async () => {
+  it("keeps the old route for goal and tool followups after rejecting a user prompt, then activates the pending route", async () => {
     const context = new Context();
     await context.plugin(agentSpine, { workspaceContext: false });
     vi.spyOn(context.sessions, "flush").mockResolvedValue(true);
@@ -107,12 +111,27 @@ describe("Yishan provider switching through the DSH agent loop", () => {
       notify: vi.fn(),
       validateProviderSelection: vi.fn(async () => undefined),
     });
+    let hasRejectedUserPrompt = false;
     context.on("session/event", (session, event) => owner.handleSessionEvent(session as never, event as never));
     context.on("agent/inbox/claimed", ({ agent, message }) => owner.handleAgentInboxClaimed(agent.id, message));
+    context.on(
+      "agent/pre-step",
+      async ({ agent, messages }, next) => await owner.handleAgentPreStep(agent.id, messages, next),
+    );
+    context.on("agent/pre-step", async ({ messages }, next) => {
+      const decision = await next();
+      if (!hasRejectedUserPrompt && messages.some((message) => message.source.kind === "user")) {
+        hasRejectedUserPrompt = true;
+        return { kind: "reject" };
+      }
+      return decision;
+    });
 
     try {
       await owner.start({ cwd: CWD, sessionId: SESSION_ID, binding: BINDING, agentOptions: INITIAL_ROUTE });
       await owner.setModel({ cwd: CWD, sessionId: SESSION_ID, ...NEXT_ROUTE });
+      await owner.prompt({ cwd: CWD, sessionId: SESSION_ID, contentBlocks: [{ type: "text", text: "reject this" }] });
+      await context.agents.get(SESSION_ID as never)?.whenIdle();
       context.agents.get(SESSION_ID as never)?.followup(
         createUserMessage({
           content: [{ type: "text", text: "automatic goal round" }],
@@ -120,7 +139,7 @@ describe("Yishan provider switching through the DSH agent loop", () => {
         }),
       );
       await context.agents.get(SESSION_ID as never)?.whenIdle();
-      await owner.prompt({ cwd: CWD, sessionId: SESSION_ID, contentBlocks: [{ type: "text", text: "user prompt" }] });
+      await owner.prompt({ cwd: CWD, sessionId: SESSION_ID, contentBlocks: [{ type: "text", text: "accepted" }] });
       await context.agents.get(SESSION_ID as never)?.whenIdle();
 
       expect(adapter.inputs).toEqual([INITIAL_ROUTE, INITIAL_ROUTE, NEXT_ROUTE]);
