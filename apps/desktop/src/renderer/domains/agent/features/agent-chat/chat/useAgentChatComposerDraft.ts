@@ -1,5 +1,5 @@
 import { searchFiles } from "@renderer/domains/files";
-import { renameTab } from "@renderer/domains/workbench";
+import { renameTab, tabStore } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import { useCallback, useEffect, useState } from "react";
@@ -164,6 +164,7 @@ export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput)
       // when the next session is started (per-session override via agent.start).
       if (runtime === "dsh") {
         agentChatStore.getState().setCurrentModel(tabId, model);
+        tabStore.getState().setAgentChatTabDSHModel(tabId, model.id);
         return;
       }
       try {

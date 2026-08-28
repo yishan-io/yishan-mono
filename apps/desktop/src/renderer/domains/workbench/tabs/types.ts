@@ -73,6 +73,8 @@ export type WorkbenchTabDataByKind = {
     sessionView?: AgentChatSessionView;
     subagentAgentId?: string;
     subagentParentSessionId?: string;
+    /** For DSH sessions: the user-selected model id to use for the next session start. */
+    dshSelectedModelId?: string;
   };
 };
 

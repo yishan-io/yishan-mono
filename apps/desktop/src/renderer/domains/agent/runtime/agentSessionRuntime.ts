@@ -60,6 +60,8 @@ type EnsureAgentSessionOptions = {
   sessionId?: string;
   sessionView?: AgentChatSessionView;
   paneId?: string;
+  /** For DSH sessions: the model id to use for this session (overrides daemon default). */
+  dshModelId?: string;
 };
 type EnsureAgentSessionResult = { sessionId: string; attached: boolean; runtime: AgentRuntime };
 
@@ -487,9 +489,8 @@ async function adoptExistingChatSession(
 }
 async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: EnsureAgentSessionOptions): Promise<void> {
   const shouldResumeDSH = record.runtime === "dsh" && Boolean(opts.sessionId?.trim());
-  const dshModelId = record.runtime === "dsh" && !shouldResumeDSH
-    ? agentChatStore.getState().sessionsByTabId[opts.tabId]?.currentModel?.id
-    : undefined;
+  // Use the model passed through opts (read before initSession cleared the store).
+  const dshModelId = record.runtime === "dsh" && !shouldResumeDSH ? opts.dshModelId : undefined;
   await startAgentSessionProcedure({
     runtime: record.runtime,
     sessionId: record.sessionId,

@@ -96,6 +96,15 @@ export async function startAgentChatSession(opts: {
   }
 
   try {
+    // For DSH: read currentModel BEFORE ensureAgentSession calls initSession (which clears it).
+    // Tab data has the user's persisted selection; session state may not be loaded yet.
+    const dshModelId = runtime === "dsh"
+      ? (() => {
+          const tab = tabStore.getState().tabs.find((t) => t.id === opts.tabId);
+          const persisted = tab?.kind === "agent-chat" ? tab.data.dshSelectedModelId : undefined;
+          return persisted ?? agentChatStore.getState().sessionsByTabId[opts.tabId]?.currentModel?.id;
+        })()
+      : undefined;
     const { sessionId: startedSessionId, attached } = await ensureAgentSession({
       runtime,
       tabId: opts.tabId,
@@ -104,6 +113,7 @@ export async function startAgentChatSession(opts: {
       sessionId: opts.sessionId,
       sessionView: opts.sessionView,
       paneId: opts.paneId,
+      dshModelId,
     });
 
     // A fresh process means the previous owner is gone: any sub-agent rows
