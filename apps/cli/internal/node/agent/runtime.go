@@ -127,7 +127,7 @@ func (s *Service) AgentSetModel(ctx context.Context, req rpc.AgentSetModelParams
 	if err != nil {
 		return nil, err
 	}
-	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHModel)
+	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHProvider, s.deps.DSHModel)
 	if err := s.deps.DSH.SetModelSession(ctx, dsh.SetModelRequest{
 		CWD:       workspaceInstance.Path,
 		SessionID: req.SessionID,

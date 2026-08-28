@@ -1,5 +1,11 @@
 import type { Config, PiAiProviderProfile } from "@deepseek-ai/dsh-llm-pi-ai";
 
+import {
+  YISHAN_DSH_TEST_REPLAY_MODEL,
+  YISHAN_DSH_TEST_REPLAY_PROVIDER,
+  isYishanDshTestReplayEnabled,
+} from "./testReplayAdapter";
+
 /** The direct DSH adapter route, intentionally outside the pi-ai catalog. */
 export const DIRECT_DEEPSEEK_PROVIDER = "deepseek-official";
 /** The pi-ai catalog route for DeepSeek. */
@@ -199,6 +205,7 @@ export async function listYishanProviders(llm: RuntimeLlmCatalog): Promise<Yisha
   const providers = await Promise.all(
     activeProviderIds.map(async (provider) => await createProviderCatalogEntry(llm, provider)),
   );
+  if (isYishanDshTestReplayEnabled()) providers.push(createTestReplayProviderCatalogEntry());
   return { providers };
 }
 
@@ -211,6 +218,21 @@ export async function validateYishanProviderSelection(
   const catalog = await listYishanProviders(llm);
   const provider = catalog.providers.find(({ id }) => id === selection.provider);
   if (provider?.models.some(({ id }) => id === selection.model) !== true) throw new YishanProviderSelectionError();
+}
+
+function createTestReplayProviderCatalogEntry(): YishanProviderCatalogEntry {
+  return {
+    id: YISHAN_DSH_TEST_REPLAY_PROVIDER,
+    authentication: "ambient",
+    setupRequired: false,
+    models: [
+      {
+        provider: YISHAN_DSH_TEST_REPLAY_PROVIDER,
+        id: YISHAN_DSH_TEST_REPLAY_MODEL,
+        name: YISHAN_DSH_TEST_REPLAY_MODEL,
+      },
+    ],
+  };
 }
 
 async function createProviderCatalogEntry(

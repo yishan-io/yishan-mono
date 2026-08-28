@@ -76,7 +76,7 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 	} else if _, err := s.dshRuntime().StartSession(ctx, dsh.SessionStartRequest{
 		SessionID: req.SessionID, CWD: cwd,
 		Binding:      dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd},
-		AgentOptions: dshAgentOptionsPointer(req.ModelID, req.Provider, s.deps.DSHModel),
+		AgentOptions: dshAgentOptionsPointer(req.ModelID, req.Provider, s.deps.DSHProvider, s.deps.DSHModel),
 	}); err != nil {
 		return nil, mapDSHExecutionError(err)
 	}
@@ -93,7 +93,7 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 }
 
 func (s *Service) registerStartedDSHSession(connection *rpc.Connection, req rpc.AgentStartParams, cwd string, claim runtimeIdentityClaim, subscription dsh.SessionSubscription) (any, error) {
-	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHModel)
+	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHProvider, s.deps.DSHModel)
 	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, workspaceID: req.WorkspaceID, cwd: cwd, incarnation: subscription.Incarnation, provider: selection.Provider, model: selection.Model, connection: connection, available: true, subscription: subscription}
 	if !s.dshSessions.register(entry) {
 		subscription.Unsubscribe()
@@ -378,14 +378,17 @@ func dshRequestErrorCode(raw json.RawMessage) string {
 
 const defaultDSHProvider = "deepseek-official"
 
-// dshAgentOptionsFrom always makes DSH provider selection explicit. Legacy
-// callers that omit a provider are constrained to the deepseek-official route.
-func dshAgentOptionsPointer(modelID, provider, defaultModel string) *dsh.SessionAgentOptions {
-	selection := dshAgentOptionsFrom(modelID, provider, defaultModel)
+// dshAgentOptionsFrom always makes DSH provider selection explicit. Callers
+// that omit a provider use the configured route, or direct DeepSeek as a fallback.
+func dshAgentOptionsPointer(modelID, provider, defaultProvider, defaultModel string) *dsh.SessionAgentOptions {
+	selection := dshAgentOptionsFrom(modelID, provider, defaultProvider, defaultModel)
 	return &selection
 }
 
-func dshAgentOptionsFrom(modelID, provider, defaultModel string) dsh.SessionAgentOptions {
+func dshAgentOptionsFrom(modelID, provider, defaultProvider, defaultModel string) dsh.SessionAgentOptions {
+	if provider == "" {
+		provider = defaultProvider
+	}
 	if provider == "" {
 		provider = defaultDSHProvider
 	}

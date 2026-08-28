@@ -7,6 +7,8 @@ export const YISHAN_DSH_TEST_REPLAY_ENVIRONMENT_VARIABLE = "YISHAN_DSH_TEST_REPL
 export const YISHAN_DSH_TEST_REPLAY_ENVIRONMENT_VALUE = "1";
 /** Provider name served by the deterministic replay adapter. */
 export const YISHAN_DSH_TEST_REPLAY_PROVIDER = "smoke-replay";
+/** Model name accepted by the deterministic replay adapter. */
+export const YISHAN_DSH_TEST_REPLAY_MODEL = "smoke-model";
 /** Text emitted by the deterministic replay adapter before cancellation. */
 export const YISHAN_DSH_TEST_REPLAY_TEXT = "deterministic replay response";
 

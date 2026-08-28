@@ -34,23 +34,23 @@ func TestService_AgentStartDispatchesToDSHRuntime(t *testing.T) {
 	}
 }
 
-func TestService_DSHSelectionIsExplicitAndLegacyProviderUsesDeepSeekRoute(t *testing.T) {
+func TestService_DSHSelectionUsesConfiguredDefaultRoute(t *testing.T) {
 	runtime := &recordingDSHSessions{}
 	service := NewService(Deps{Workspace: testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
 		return workspace.Workspace{ID: id, Path: "/workspace"}, nil
-	}), DSH: runtime, OwnerNodeID: "node", DSHModel: "deepseek-v4-flash"})
+	}), DSH: runtime, OwnerNodeID: "node", DSHProvider: "configured-provider", DSHModel: "configured-model"})
 	_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "session", TabID: "tab", WorkspaceID: "workspace", CWD: "/workspace"})
 	if err != nil {
 		t.Fatalf("AgentStart: %v", err)
 	}
-	if got := runtime.startRequest.AgentOptions; got == nil || got.Provider != "deepseek-official" || got.Model != "deepseek-v4-flash" {
+	if got := runtime.startRequest.AgentOptions; got == nil || got.Provider != "configured-provider" || got.Model != "configured-model" {
 		t.Fatalf("start selection = %#v", got)
 	}
-	_, err = service.AgentSetModel(context.Background(), rpc.AgentSetModelParams{SessionID: "session", WorkspaceID: "workspace", CWD: "/workspace", ModelID: "deepseek-v4-flash"})
+	_, err = service.AgentSetModel(context.Background(), rpc.AgentSetModelParams{SessionID: "session", WorkspaceID: "workspace", CWD: "/workspace", ModelID: "configured-model"})
 	if err != nil {
 		t.Fatalf("AgentSetModel: %v", err)
 	}
-	if got := runtime.setModelRequest; got.Provider != "deepseek-official" || got.Model != "deepseek-v4-flash" {
+	if got := runtime.setModelRequest; got.Provider != "configured-provider" || got.Model != "configured-model" {
 		t.Fatalf("set selection = %#v", got)
 	}
 }
