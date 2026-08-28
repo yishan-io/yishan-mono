@@ -256,3 +256,52 @@ describe("AgentModelSelector", () => {
     expect(screen.queryByRole("searchbox", { name: "Search models" })).toBeNull();
   });
 });
+
+it("selects Pi models whose provider is inferred from their ID", () => {
+  const models: AgentModel[] = [
+    { id: "anthropic/claude-sonnet-4", name: "claude-sonnet-4" },
+    { id: "openai/gpt-4.1", name: "gpt-4.1" },
+  ];
+  const onModelChange = vi.fn();
+
+  render(
+    <AgentModelSelector
+      models={models}
+      currentModel={models[0] ?? null}
+      thinkingLevel="off"
+      onModelChange={onModelChange}
+      onThinkingLevelSelect={vi.fn()}
+    />,
+  );
+
+  fireEvent.mouseDown(screen.getByRole("button", { name: "Other/claude-sonnet-4" }));
+  fireEvent.click(screen.getByRole("button", { name: "Other/claude-sonnet-4" }));
+  fireEvent.click(screen.getByRole("button", { name: "OpenAI 1 model" }));
+  fireEvent.click(screen.getByRole("button", { name: "gpt-4.1" }));
+
+  expect(onModelChange).toHaveBeenCalledWith(models[1]);
+});
+
+it("keeps DSH models with duplicate IDs distinct by provider", () => {
+  const models: AgentModel[] = [
+    { id: "shared-model", provider: "route-a", providerName: "Route A", name: "Shared model" },
+    { id: "shared-model", provider: "route-b", providerName: "Route B", name: "Shared model" },
+  ];
+
+  render(
+    <AgentModelSelector
+      models={models}
+      currentModel={models[1] ?? null}
+      thinkingLevel="off"
+      onModelChange={vi.fn()}
+      onThinkingLevelSelect={vi.fn()}
+    />,
+  );
+
+  expect(screen.getByRole("button", { name: "route-b/Shared model" })).toBeTruthy();
+  fireEvent.mouseDown(screen.getByRole("button", { name: "route-b/Shared model" }));
+  fireEvent.click(screen.getByRole("button", { name: "route-b/Shared model" }));
+
+  expect(screen.getByPlaceholderText("Search 1 model")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Route B 1 model" }).className).toContain("Mui-selected");
+});

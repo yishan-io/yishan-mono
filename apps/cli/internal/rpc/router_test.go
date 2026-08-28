@@ -115,12 +115,16 @@ func TestHandleMessage_Success(t *testing.T) {
 
 func TestHandleMessage_StructuredRPCErrorPassthrough(t *testing.T) {
 	server := NewServer(HandlerFunc(func(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error) {
-		return nil, NewRPCError(CodeNotFound, "workspace not found")
+		return nil, NewRPCErrorWithData(CodeNotFound, "workspace not found", map[string]any{"code": "WORKSPACE_NOT_FOUND"})
 	}))
 
 	resp := server.HandleMessage(context.Background(), &Connection{}, []byte(`{"jsonrpc":"2.0","id":1,"method":"workspace.health"}`))
 	if resp == nil || resp.Error == nil || resp.Error.Code != CodeNotFound || resp.Error.Message != "workspace not found" {
 		t.Fatalf("unexpected response: %#v", resp)
+	}
+	encoded, err := json.Marshal(resp)
+	if err != nil || !strings.Contains(string(encoded), `"data":{"code":"WORKSPACE_NOT_FOUND"}`) {
+		t.Fatalf("structured error data = %s, %v", encoded, err)
 	}
 }
 

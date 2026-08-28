@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
   ensureWorkspaceChatSession: mocks.ensureChatSession,
   runWorkspaceChatPrompt: mocks.runChatPrompt,
   closeAgentSession: mocks.closeAgentSession,

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
@@ -257,8 +258,14 @@ done
 	if completionPayload["taskRunSessionId"] != "task-ws-1" {
 		t.Fatalf("completion taskRunSessionId = %#v, want %q", completionPayload["taskRunSessionId"], "task-ws-1")
 	}
+	if completionPayload["taskRunTabId"] != "task-ws-1" {
+		t.Fatalf("completion taskRunTabId = %#v, want %q", completionPayload["taskRunTabId"], "task-ws-1")
+	}
 	if completionPayload["taskRunTitle"] != "Task: investigate bug" {
 		t.Fatalf("completion taskRunTitle = %#v, want %q", completionPayload["taskRunTitle"], "Task: investigate bug")
+	}
+	if completionPayload["taskRunRuntime"] != "pi" {
+		t.Fatalf("completion taskRunRuntime = %#v, want %q", completionPayload["taskRunRuntime"], "pi")
 	}
 
 	// The run must be a Pi session, not a terminal session.
@@ -311,4 +318,113 @@ func TestPublishWorkspaceCreateCompleted_HeadlessTaskRunInjectsEndpointAndOwners
 	assertEnvValue(t, env, "YISHAN_WORKSPACE_ID", "ws-headless")
 	assertEnvValue(t, env, "YISHAN_PROJECT_ID", "project-headless")
 	assertEnvValue(t, env, "YISHAN_ORG_ID", "org-headless")
+}
+
+func TestPublishWorkspaceCreateCompleted_DSHStartsBoundSessionAndPublishesTabMetadata(t *testing.T) {
+	runtime := &recordingDSHSessions{}
+	s := newTestHandler(t)
+	s.deps.DSH = runtime
+	s.deps.OwnerNodeID = "node-1"
+	workspacePath := t.TempDir()
+	s.deps.Workspace = testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: id, ProjectID: "project-1", OrgID: "org-1", Path: workspacePath}, nil
+	})
+
+	subscriptionID, events := s.deps.Events.Subscribe()
+	defer s.deps.Events.Unsubscribe(subscriptionID)
+	s.PublishWorkspaceCreateCompleted(application.CreatePlan{LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{
+		Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "investigate bug",
+	}}}, workspace.Workspace{ID: "ws-1", ProjectID: "project-1", OrgID: "org-1", Path: workspacePath}, nil)
+
+	completion := waitForTaskRunCompletion(t, events)
+	if runtime.startRequest.SessionID != "task-ws-1" || runtime.startRequest.CWD != workspacePath {
+		t.Fatalf("DSH start request = %#v", runtime.startRequest)
+	}
+	if runtime.startRequest.Binding.WorkspaceID != "ws-1" || runtime.startRequest.Binding.OwnerNodeID != "node-1" {
+		t.Fatalf("DSH binding = %#v", runtime.startRequest.Binding)
+	}
+	if runtime.promptRequest.SessionID != "task-ws-1" || runtime.promptRequest.ContentBlocks[0].Text != "investigate bug" {
+		t.Fatalf("DSH prompt request = %#v", runtime.promptRequest)
+	}
+	if completion["taskRunRuntime"] != "dsh" || completion["taskRunSessionId"] != "task-ws-1" || completion["taskRunTabId"] != "task-ws-1" {
+		t.Fatalf("completion = %#v", completion)
+	}
+	if _, ok := s.deps.AgentMgr.Session("task-ws-1"); ok {
+		t.Fatal("DSH task run started a Pi process")
+	}
+	if sessions := s.deps.Terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true}); len(sessions) != 0 {
+		t.Fatalf("DSH task run started terminals: %#v", sessions)
+	}
+}
+
+func TestPublishWorkspaceCreateCompleted_RelayedDSHTaskRunUsesTerminalFallback(t *testing.T) {
+	runtime := &recordingDSHSessions{}
+	s := newTestHandler(t)
+	s.deps.DSH = runtime
+	workspacePath := t.TempDir()
+	s.deps.Workspace = testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: id, Path: workspacePath}, nil
+	})
+	registerTestDesktopConn(s)
+
+	s.PublishWorkspaceCreateCompleted(application.CreatePlan{
+		IsRelayed: true,
+		LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{
+			Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "investigate bug",
+		}},
+	}, workspace.Workspace{ID: "ws-relayed", Path: workspacePath}, nil)
+	defer stopAllTerminalSessions(s)
+
+	if runtime.startRequest.SessionID != "" || runtime.promptRequest.SessionID != "" {
+		t.Fatalf("relayed task run started DSH: start=%#v prompt=%#v", runtime.startRequest, runtime.promptRequest)
+	}
+	if _, ok := s.deps.AgentMgr.Session("task-ws-relayed"); ok {
+		t.Fatal("relayed task run started a Pi session")
+	}
+	if sessions := s.deps.Terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true}); len(sessions) != 1 {
+		t.Fatalf("terminal sessions = %#v, want one terminal fallback", sessions)
+	}
+}
+
+func TestPublishWorkspaceCreateCompleted_DSHPromptFailureDisposesSession(t *testing.T) {
+	runtime := &recordingDSHSessions{promptErr: errors.New("prompt failed")}
+	s := newTestHandler(t)
+	s.deps.DSH = runtime
+	workspacePath := t.TempDir()
+	s.deps.Workspace = testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: id, Path: workspacePath}, nil
+	})
+	s.PublishWorkspaceCreateCompleted(application.CreatePlan{LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "run"}}}, workspace.Workspace{ID: "ws-1", Path: workspacePath}, nil)
+	if runtime.disposeCount != 1 || runtime.disposeCWD != workspacePath {
+		t.Fatalf("dispose count/cwd = %d/%q, want 1/%q", runtime.disposeCount, runtime.disposeCWD, workspacePath)
+	}
+}
+
+func TestPublishWorkspaceCreateCompleted_DSHStartFailureDisposesSession(t *testing.T) {
+	runtime := &recordingDSHSessions{subscribeErr: errors.New("subscribe failed")}
+	s := newTestHandler(t)
+	s.deps.DSH = runtime
+	workspacePath := t.TempDir()
+	s.deps.Workspace = testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: id, Path: workspacePath}, nil
+	})
+	s.PublishWorkspaceCreateCompleted(application.CreatePlan{LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "run"}}}, workspace.Workspace{ID: "ws-1", Path: workspacePath}, nil)
+	if runtime.disposeCount != 1 || runtime.promptRequest.SessionID != "" {
+		t.Fatalf("dispose count = %d, prompt = %#v", runtime.disposeCount, runtime.promptRequest)
+	}
+}
+
+func waitForTaskRunCompletion(t *testing.T, events <-chan eventbus.Event) map[string]any {
+	t.Helper()
+	select {
+	case event := <-events:
+		payload, ok := event.Payload.(map[string]any)
+		if !ok || event.Topic != "workspaceCreateCompleted" {
+			t.Fatalf("event = %#v", event)
+		}
+		return payload
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for task run completion")
+	}
+	return nil
 }

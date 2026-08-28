@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"time"
@@ -9,11 +10,16 @@ import (
 )
 
 type Service struct {
-	fetchers map[string]*agentFetcher
-	cache    *cache
+	fetchers       map[string]*agentFetcher
+	cache          *cache
+	runtimeCatalog RuntimeCatalogSource
 }
 
-func NewService() *Service {
+func NewService(runtimeCatalog ...RuntimeCatalogSource) *Service {
+	var source RuntimeCatalogSource
+	if len(runtimeCatalog) > 0 {
+		source = runtimeCatalog[0]
+	}
 	fetchers := map[string]*agentFetcher{
 		"opencode": {
 			cli:    opencodeFetcher{},
@@ -45,12 +51,21 @@ func NewService() *Service {
 		},
 	}
 	return &Service{
-		fetchers: fetchers,
-		cache:    newCache(DefaultCacheTTL),
+		fetchers:       fetchers,
+		cache:          newCache(DefaultCacheTTL),
+		runtimeCatalog: source,
 	}
 }
 
 func (s *Service) ListModels(agentKind string, forceRefresh bool) (*AgentModelList, error) {
+	return s.ListModelsContext(context.Background(), agentKind, forceRefresh)
+}
+
+// ListModelsContext lists models, querying DSH only through its safe runtime catalog.
+func (s *Service) ListModelsContext(ctx context.Context, agentKind string, forceRefresh bool) (*AgentModelList, error) {
+	if agentKind == "dsh" {
+		return s.listDSHModels(ctx, forceRefresh)
+	}
 	if !forceRefresh {
 		if cached, ok := s.cache.get(agentKind); ok {
 			return &cached, nil
@@ -121,15 +136,21 @@ func (s *Service) fetchWithFallback(af *agentFetcher) ([]ModelInfo, FetchSource,
 }
 
 func (s *Service) ListAllModels(forceRefresh bool) []AgentModelList {
+	return s.ListAllModelsContext(context.Background(), forceRefresh)
+}
+
+// ListAllModelsContext lists all agent catalogs using the DSH runtime catalog when configured.
+func (s *Service) ListAllModelsContext(ctx context.Context, forceRefresh bool) []AgentModelList {
 	agentKinds := make([]string, 0, len(s.fetchers))
 	for kind := range s.fetchers {
 		agentKinds = append(agentKinds, kind)
 	}
+	agentKinds = append(agentKinds, "dsh")
 	sort.Strings(agentKinds)
 
 	results := make([]AgentModelList, 0, len(agentKinds))
 	for _, agentKind := range agentKinds {
-		list, err := s.ListModels(agentKind, forceRefresh)
+		list, err := s.ListModelsContext(ctx, agentKind, forceRefresh)
 		if err != nil {
 			results = append(results, AgentModelList{
 				AgentKind: agentKind,
@@ -141,4 +162,29 @@ func (s *Service) ListAllModels(forceRefresh bool) []AgentModelList {
 		results = append(results, *list)
 	}
 	return results
+}
+
+func (s *Service) listDSHModels(ctx context.Context, forceRefresh bool) (*AgentModelList, error) {
+	if !forceRefresh {
+		if cached, ok := s.cache.get("dsh"); ok {
+			return &cached, nil
+		}
+	}
+	if s.runtimeCatalog == nil {
+		return nil, fmt.Errorf("DSH provider catalog is unavailable")
+	}
+	catalog, err := s.runtimeCatalog.ListProviderCatalog(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetch DSH provider catalog: %w", err)
+	}
+	models := make([]ModelInfo, 0)
+	for _, provider := range catalog.Providers {
+		for _, model := range provider.Models {
+			models = append(models, ModelInfo{ID: model.ID, Name: model.Name, Provider: provider.ID})
+		}
+	}
+	now := time.Now()
+	entry := AgentModelList{AgentKind: "dsh", Models: models, Source: "runtime", FetchedAt: now.UnixMilli(), CacheExpiry: now.Add(DefaultCacheTTL).UnixMilli()}
+	s.cache.set("dsh", entry)
+	return &entry, nil
 }

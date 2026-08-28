@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../../chat/agentChatSubagents";
-import { fetchAgentMessages } from "../../../commands/agentChatCommands";
+import { fetchPiAgentMessagesCompatibility } from "../../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
 import { agentChatStore } from "../../../state/agentChatStore";
 
@@ -43,7 +43,7 @@ export function useAgentChatSubagentActions({
       let childSessionId = subagent.childSessionId;
       let title = subagent.title;
       if (!childSessionId && sessionId) {
-        await fetchAgentMessages({ tabId, sessionId });
+        await fetchPiAgentMessagesCompatibility({ tabId, sessionId });
         const refreshedRunningSubagents = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
         const refreshedSubagent = findMatchingRunningSubagent(refreshedRunningSubagents, subagent);
         childSessionId = refreshedSubagent?.childSessionId;
@@ -80,6 +80,7 @@ export function useAgentChatSubagentActions({
         paneId,
         sessionId,
         agentId: subagent.agentId,
+        runtime: subagent.runtime,
         childSessionId,
         title,
       });
@@ -89,6 +90,7 @@ export function useAgentChatSubagentActions({
         parentPaneId: paneId,
         parentSessionId: sessionId ?? undefined,
         agentId: subagent.agentId,
+        runtime: subagent.runtime,
         childSessionId,
         title,
       });
@@ -98,6 +100,16 @@ export function useAgentChatSubagentActions({
   const handleCancelSubagent = useCallback(
     async (subagent: RunningSubagentSummary) => {
       if (!sessionId) return;
+      if (subagent.runtime === "dsh") {
+        await cancelSubagentRun({
+          tabId,
+          sessionId,
+          rowKey: subagent.childSessionId ?? subagent.rowId,
+          runtime: "dsh",
+          childSessionId: subagent.childSessionId,
+        });
+        return;
+      }
       // Prefer the row's real ids; a live run whose lifecycle entry has not
       // reached the store yet resolves its target from a unique progress-widget
       // match (the manager's real agentId). Nothing is silently dropped: rows
@@ -117,6 +129,7 @@ export function useAgentChatSubagentActions({
         tabId,
         sessionId,
         rowKey: subagent.childSessionId ?? subagent.rowId,
+        runtime: subagent.runtime,
         agentId,
         agentName: subagent.agentName,
         childSessionId,

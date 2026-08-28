@@ -11,9 +11,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"yishan/apps/cli/cmd/output"
 	"yishan/apps/cli/internal/daemon"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
-	"yishan/apps/cli/cmd/output"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 var daemonCmd = &cobra.Command{
@@ -183,6 +184,11 @@ func buildRunConfig(logFilePath string) daemon.RunConfig {
 		MemorySummarizer:      appConfig.Memory.SummarizerEnabled,
 		MemorySummarizerAgent: appConfig.Memory.SummarizerAgentKind,
 		MemorySummarizerModel: appConfig.Memory.SummarizerModel,
+		DSHEnabled:            appConfig.Daemon.DSHEnabled,
+		DSHNodePath:           appConfig.Daemon.DSHNodePath,
+		DSHRuntimePath:        appConfig.Daemon.DSHRuntimePath,
+		DSHProvider:           appConfig.Daemon.DSHProvider,
+		DSHModel:              appConfig.Daemon.DSHModel,
 		LogFilePath:           logFilePath,
 	}
 }
@@ -273,6 +279,11 @@ func init() {
 	daemonCmd.PersistentFlags().String("relay-url", "https://relay.yishan.io", "relay websocket URL (wss://.../ws)")
 	daemonCmd.PersistentFlags().String("relay-token", "", "static relay JWT for local dev (bypasses API token minting)")
 	daemonCmd.PersistentFlags().String("log-file", "", "daemon log file path (default: ~/.yishan/profiles/<profile>/logs/daemon.log)")
+	daemonCmd.PersistentFlags().Bool("dsh-enabled", false, "enable the experimental bundled DSH runtime")
+	daemonCmd.PersistentFlags().String("dsh-node-path", "", "bundled Electron executable path for DSH")
+	daemonCmd.PersistentFlags().String("dsh-runtime-path", "", "bundled DSH JavaScript runtime path")
+	daemonCmd.PersistentFlags().String("dsh-provider", config.DefaultDSHProvider, "DSH provider default")
+	daemonCmd.PersistentFlags().String("dsh-model", config.DefaultDSHModel, "DSH model default")
 
 	cobra.CheckErr(viper.BindPFlag("daemon_host", daemonCmd.PersistentFlags().Lookup("host")))
 	cobra.CheckErr(viper.BindPFlag("daemon_port", daemonCmd.PersistentFlags().Lookup("port")))
@@ -280,6 +291,11 @@ func init() {
 	cobra.CheckErr(viper.BindPFlag("daemon_relay_url", daemonCmd.PersistentFlags().Lookup("relay-url")))
 	cobra.CheckErr(viper.BindPFlag("daemon_relay_token", daemonCmd.PersistentFlags().Lookup("relay-token")))
 	cobra.CheckErr(viper.BindPFlag("daemon_log_file", daemonCmd.PersistentFlags().Lookup("log-file")))
+	cobra.CheckErr(viper.BindPFlag("daemon_dsh_enabled", daemonCmd.PersistentFlags().Lookup("dsh-enabled")))
+	cobra.CheckErr(viper.BindPFlag("daemon_dsh_node_path", daemonCmd.PersistentFlags().Lookup("dsh-node-path")))
+	cobra.CheckErr(viper.BindPFlag("daemon_dsh_runtime_path", daemonCmd.PersistentFlags().Lookup("dsh-runtime-path")))
+	cobra.CheckErr(viper.BindPFlag("daemon_dsh_provider", daemonCmd.PersistentFlags().Lookup("dsh-provider")))
+	cobra.CheckErr(viper.BindPFlag("daemon_dsh_model", daemonCmd.PersistentFlags().Lookup("dsh-model")))
 }
 
 // resolveDaemonClient loads the daemon state file and returns a JSON-RPC

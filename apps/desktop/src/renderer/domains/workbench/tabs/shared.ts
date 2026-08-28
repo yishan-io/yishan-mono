@@ -56,11 +56,13 @@ export function findExistingTab(
     }
 
     const isSubagentDetail = input.sessionView === "subagent-detail";
+    const runtime = input.runtime ?? "pi";
     return tabs.find(
       (tab) =>
         tab.workspaceId === targetWorkspaceId &&
         tab.kind === "agent-chat" &&
         tab.data.sessionId?.trim() === sessionId &&
+        (tab.data.runtime ?? "pi") === runtime &&
         Boolean(tab.data.sessionView === "subagent-detail") === isSubagentDetail,
     );
   }

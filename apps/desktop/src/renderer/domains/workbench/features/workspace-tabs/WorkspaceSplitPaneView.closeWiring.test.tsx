@@ -48,6 +48,76 @@ afterEach(() => {
 });
 
 describe("WorkspaceSplitPane close wiring", () => {
+  it("opens a selected DSH history session with its runtime instead of resuming an equal Pi id", () => {
+    const findTabWithSession = vi.fn(() => undefined);
+    let selectSession:
+      | ((session: { sessionId: string; cwd?: string | null; runtime: "pi" | "dsh" }, title: string) => void)
+      | undefined;
+    splitPaneStore.setState({
+      layoutByWorkspaceId: {
+        "workspace-1": {
+          root: { kind: "leaf", id: "root-pane", tabIds: ["pi-tab"], selectedTabId: "pi-tab" },
+          activePaneId: "root-pane",
+        },
+      },
+    });
+    tabStore.setState({
+      selectedTabId: "pi-tab",
+      tabs: [
+        {
+          id: "pi-tab",
+          workspaceId: "workspace-1",
+          title: "Pi",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/workspace", sessionId: "same-id", runtime: "pi" },
+        },
+      ],
+    });
+
+    render(
+      <WorkspaceSplitPane
+        workspaceId="workspace-1"
+        isActive
+        workspaceTabs={tabStore.getState().tabs}
+        worktreePath="/tmp/workspace"
+        enabledAgentKinds={[]}
+        agentPresetMeta={{}}
+        tabFileCommands={{ createNewWhiteboard: vi.fn(), renameEntry: vi.fn() }}
+        openTabRefreshCommands={{
+          readFile: vi.fn(),
+          readDiff: vi.fn(),
+          readCommitDiff: vi.fn(),
+          readBranchComparisonDiff: vi.fn(),
+          refreshFileTabFromDisk: vi.fn(),
+          refreshDiffTabContent: vi.fn(),
+        }}
+        renderSessionHistoryMenu={({ onSelectSession }) => {
+          selectSession = onSelectSession;
+          return null;
+        }}
+        lastUsedExternalAppId={undefined}
+        findTabWithSession={findTabWithSession}
+        formatAgentSessionTitle={(title) => title}
+        renderTabContent={() => null}
+        renderAgentChatSurface={() => null}
+        closeTabWithCleanup={vi.fn()}
+        closeOtherTabsWithCleanup={vi.fn()}
+        closeAllTabsWithCleanup={vi.fn()}
+      />,
+    );
+
+    selectSession?.({ sessionId: "same-id", cwd: "/tmp/workspace", runtime: "dsh" }, "DSH history");
+
+    expect(findTabWithSession).toHaveBeenCalledWith("same-id", "dsh");
+    expect(tabStore.getState().tabs).toContainEqual(
+      expect.objectContaining({
+        kind: "agent-chat",
+        data: expect.objectContaining({ sessionId: "same-id", runtime: "dsh" }),
+      }),
+    );
+  });
+
   it("routes tab-bar close actions to the App cleanup commands", () => {
     const closeTabWithCleanup = vi.fn();
     const closeOtherTabsWithCleanup = vi.fn();

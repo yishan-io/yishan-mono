@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"yishan/apps/cli/cmd/output"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/terminal"
-	"yishan/apps/cli/cmd/output"
 )
 
 var terminalCmd = &cobra.Command{

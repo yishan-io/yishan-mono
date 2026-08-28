@@ -38,7 +38,10 @@ export type AgentChatSessionData = {
   queue: AgentQueueState;
   pendingUiRequest: AgentPendingUiRequest | null;
   pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
+  /** Combined Pi-derived and DSH snapshot rows shown in the parent tab. */
   runningSubagents: RunningSubagentSummary[];
+  piRunningSubagents: RunningSubagentSummary[];
+  dshRunningSubagents: RunningSubagentSummary[];
   finishedSubagents: RunningSubagentSummary[];
   subagentProgressTargets: AgentSubagentProgressTarget[];
   subagentLiveTranscripts: Record<string, AgentMessage[]>;
@@ -47,6 +50,7 @@ export type AgentChatSessionData = {
   hasLoadedMessages: boolean;
   hasLoadedModels: boolean;
   hasLoadedState: boolean;
+  dshTranscriptRetryAvailable: boolean;
   error: string | null;
   turnError: string | null;
 };
@@ -71,6 +75,8 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
     pendingUiRequest: null,
     pendingUiAutoResponse: null,
     runningSubagents: [],
+    piRunningSubagents: [],
+    dshRunningSubagents: [],
     finishedSubagents: [],
     subagentProgressTargets: [],
     subagentLiveTranscripts: {},
@@ -79,16 +85,32 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
     hasLoadedMessages: false,
     hasLoadedModels: false,
     hasLoadedState: false,
+    dshTranscriptRetryAvailable: false,
     error: null,
     turnError: null,
   };
 }
 
 /** Updates running sub-agent state only when its display fields changed. */
-export function setRunningSubagentsIfChanged(
+export function setPiRunningSubagentsIfChanged(
   session: AgentChatSessionData,
   nextRunning: RunningSubagentSummary[],
 ): void {
+  session.piRunningSubagents = nextRunning;
+  setRunningSubagentsIfChanged(session, [...nextRunning, ...session.dshRunningSubagents]);
+}
+
+/** Replaces the authoritative DSH lineage snapshot for a parent session. */
+export function setDshRunningSubagentsIfChanged(
+  session: AgentChatSessionData,
+  nextRunning: RunningSubagentSummary[],
+): void {
+  session.dshRunningSubagents = nextRunning;
+  setRunningSubagentsIfChanged(session, [...session.piRunningSubagents, ...nextRunning]);
+}
+
+/** Updates the effective displayed rows only when their display fields changed. */
+function setRunningSubagentsIfChanged(session: AgentChatSessionData, nextRunning: RunningSubagentSummary[]): void {
   if (
     session.runningSubagents.length === nextRunning.length &&
     session.runningSubagents.every((subagent, index) => {
@@ -96,6 +118,7 @@ export function setRunningSubagentsIfChanged(
       return (
         nextSubagent &&
         subagent.rowId === nextSubagent.rowId &&
+        subagent.runtime === nextSubagent.runtime &&
         subagent.agentId === nextSubagent.agentId &&
         subagent.agentName === nextSubagent.agentName &&
         subagent.childSessionId === nextSubagent.childSessionId &&
@@ -120,6 +143,7 @@ export function setFinishedSubagents(session: AgentChatSessionData): void {
       return (
         nextSubagent &&
         subagent.rowId === nextSubagent.rowId &&
+        subagent.runtime === nextSubagent.runtime &&
         subagent.agentId === nextSubagent.agentId &&
         subagent.agentName === nextSubagent.agentName &&
         subagent.childSessionId === nextSubagent.childSessionId &&

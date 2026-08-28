@@ -2,6 +2,7 @@ package app
 
 import (
 	nodeagent "yishan/apps/cli/internal/node/agent"
+	nodebackgroundjob "yishan/apps/cli/internal/node/backgroundjob"
 	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
@@ -15,7 +16,7 @@ import (
 // and call exactly one typed service method; the daemon implements the
 // services. The agent namespaces (pi/skill/customize) route through the rpc
 // AgentHandler into the daemon's AgentService implementation.
-func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service) *rpc.Router {
+func buildNamespaceRouter(agentSvc *nodeagent.Service, backgroundJobSvc *nodebackgroundjob.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service) *rpc.Router {
 	router := rpc.NewRouter()
 	router.Register("list", &rpc.WorkspaceHandler{Services: workspaceSvc})
 	router.Register("workspace", &rpc.WorkspaceHandler{Services: workspaceSvc})
@@ -27,9 +28,12 @@ func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspa
 	router.Register("memory", &rpc.MemoryHandler{Services: systemSvc})
 	router.Register("project", &rpc.ProjectHandler{Services: projectSvc})
 	router.Register("localTask", &rpc.LocalTaskHandler{Services: localTaskSvc})
+	router.Register("backgroundJob", &rpc.BackgroundJobHandler{Services: backgroundJobSvc})
 	router.Register("system", &rpc.SystemHandler{Services: systemSvc})
+	router.Register("agent", &rpc.AgentHandler{Agent: agentSvc, Catalog: systemSvc})
 	router.Register("pi", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
 	router.Register("skill", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
 	router.Register("customize", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
+	router.Register("dsh", &rpc.AgentHandler{DSH: agentSvc})
 	return router
 }

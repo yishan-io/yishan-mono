@@ -46,11 +46,15 @@ func TestPrepare_ValidatesAndDefaultsTaskRunAgentKind(t *testing.T) {
 	testCases := []struct {
 		name          string
 		agentKind     string
+		runtime       string
 		wantAgentKind string
+		wantRuntime   string
 		wantErr       string
 	}{
 		{name: "defaults omitted kind to pi", wantAgentKind: "pi"},
-		{name: "trims Pi kind", agentKind: " pi ", wantAgentKind: "pi"},
+		{name: "trims Pi kind", agentKind: " pi ", wantAgentKind: "pi", wantRuntime: "pi"},
+		{name: "uses DSH runtime", runtime: " dsh ", wantAgentKind: "pi", wantRuntime: "dsh"},
+		{name: "rejects unsupported runtime", runtime: "terminal", wantErr: "unsupported task-run runtime \"terminal\""},
 		{name: "rejects Pi subagent definition", agentKind: "builder", wantErr: "unsupported task-run agent kind \"builder\""},
 		{name: "rejects other agent CLI", agentKind: "opencode", wantErr: "unsupported task-run agent kind \"opencode\""},
 	}
@@ -65,7 +69,7 @@ func TestPrepare_ValidatesAndDefaultsTaskRunAgentKind(t *testing.T) {
 				RepoKey:        "acme/repo",
 				TargetBranch:   "feature/test",
 				SourceBranch:   "main",
-				TaskRun:        &workspace.TaskRunConfig{AgentKind: testCase.agentKind},
+				TaskRun:        &workspace.TaskRunConfig{AgentKind: testCase.agentKind, Runtime: workspace.TaskRunRuntime(testCase.runtime)},
 			})
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
@@ -81,6 +85,13 @@ func TestPrepare_ValidatesAndDefaultsTaskRunAgentKind(t *testing.T) {
 			}
 			if plan.LocalCreate.TaskRun.AgentKind != testCase.wantAgentKind {
 				t.Fatalf("AgentKind = %q, want %q", plan.LocalCreate.TaskRun.AgentKind, testCase.wantAgentKind)
+			}
+			wantRuntime := testCase.wantRuntime
+			if wantRuntime == "" {
+				wantRuntime = "pi"
+			}
+			if plan.LocalCreate.TaskRun.Runtime != workspace.TaskRunRuntime(wantRuntime) {
+				t.Fatalf("Runtime = %q, want %q", plan.LocalCreate.TaskRun.Runtime, wantRuntime)
 			}
 		})
 	}

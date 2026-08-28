@@ -17,12 +17,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// taskRunSessionInfo describes a task run started as a Pi RPC session (agent
-// chat tab). Non-nil only when the chat-tab path was taken; the desktop uses
-// it to open the agent chat tab for the run.
+// taskRunSessionInfo describes an interactive task run session and its agent-chat
+// tab identity. The desktop uses it to open the corresponding chat tab.
 type taskRunSessionInfo struct {
 	sessionID string
+	tabID     string
 	title     string
+	runtime   workspace.TaskRunRuntime
 }
 
 func (s *Service) PublishWorkspaceCreateCompleted(prepared application.CreatePlan, created workspace.Workspace, warnings []any) {
@@ -33,7 +34,9 @@ func (s *Service) PublishWorkspaceCreateCompleted(prepared application.CreatePla
 	}
 	if taskRunSession != nil {
 		completionPayload["taskRunSessionId"] = taskRunSession.sessionID
+		completionPayload["taskRunTabId"] = taskRunSession.tabID
 		completionPayload["taskRunTitle"] = taskRunSession.title
+		completionPayload["taskRunRuntime"] = string(taskRunSession.runtime)
 	}
 	s.deps.Events.Publish(eventbus.Event{Topic: "workspaceCreateCompleted", Payload: completionPayload})
 	if s.deps.RelayCreateCompleted != nil {
@@ -46,12 +49,19 @@ func (s *Service) PublishWorkspaceCreateCompleted(prepared application.CreatePla
 // When a desktop UI is connected to this daemon, the run executes as a Pi RPC
 // session so the desktop can show it as an agent chat tab. Otherwise (headless
 // daemon, remote service node) the run executes in a terminal via the agent
-// CLI, matching the pre-existing behavior.
+// CLI, matching the pre-existing behavior. DSH sessions are local-only until
+// executor-node agent routing is available.
 func (s *Service) maybeStartTaskRun(prepared application.CreatePlan, created workspace.Workspace) (string, *taskRunSessionInfo) {
 	if prepared.LocalCreate == nil || prepared.LocalCreate.TaskRun == nil {
 		return "", nil
 	}
 	taskRun := prepared.LocalCreate.TaskRun
+	if taskRun.Runtime == workspace.TaskRunRuntimeDSH {
+		if !prepared.IsRelayed {
+			return s.startTaskRunDSH(created, taskRun)
+		}
+		return s.startTaskRunTerminal(created, taskRun), nil
+	}
 	if s.HasDesktopUI() {
 		return s.startTaskRunChatSession(created, taskRun)
 	}
@@ -137,7 +147,42 @@ func (s *Service) sendTaskRunPrompt(created workspace.Workspace, taskRun *worksp
 		return "failed", nil
 	}
 	log.Info().Str("workspaceId", created.ID).Str("sessionId", sessionID).Msg("task run: pi session started")
-	return "started", &taskRunSessionInfo{sessionID: sessionID, title: buildTaskRunTerminalTitle(taskRun.Prompt, taskRun.AgentKind)}
+	return "started", &taskRunSessionInfo{sessionID: sessionID, tabID: sessionID, title: buildTaskRunTerminalTitle(taskRun.Prompt, taskRun.AgentKind), runtime: workspace.TaskRunRuntimePi}
+}
+
+// startTaskRunDSH starts the interactive DSH task run through the same
+// authoritative runtime lifecycle as agent.start and agent.prompt. DSH task
+// runs never start a Pi process or terminal.
+func (s *Service) startTaskRunDSH(created workspace.Workspace, taskRun *workspace.TaskRunConfig) (string, *taskRunSessionInfo) {
+	sessionID := "task-" + created.ID
+	tabID := sessionID
+	ctx := context.Background()
+	_, err := s.AgentStart(ctx, nil, rpc.AgentStartParams{
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion,
+		SessionID: sessionID, TabID: tabID, WorkspaceID: created.ID, CWD: created.Path,
+	})
+	if err != nil {
+		log.Warn().Err(err).Str("workspaceId", created.ID).Msg("task run: failed to start DSH session")
+		return "failed", nil
+	}
+	prompt, err := json.Marshal(taskRun.Prompt)
+	if err == nil {
+		_, err = s.AgentPrompt(ctx, rpc.AgentPromptParams{Runtime: rpc.AgentRuntimeDSH, SessionID: sessionID, WorkspaceID: created.ID, CWD: created.Path, Message: prompt})
+	}
+	if err != nil {
+		s.cleanupTaskRunDSHSession(created, sessionID)
+		log.Warn().Err(err).Str("workspaceId", created.ID).Msg("task run: failed to send prompt to DSH session")
+		return "failed", nil
+	}
+	log.Info().Str("workspaceId", created.ID).Str("sessionId", sessionID).Msg("task run: DSH session started")
+	return "started", &taskRunSessionInfo{sessionID: sessionID, tabID: tabID, title: buildTaskRunTerminalTitle(taskRun.Prompt, taskRun.AgentKind), runtime: workspace.TaskRunRuntimeDSH}
+}
+
+// cleanupTaskRunDSHSession disposes a DSH session after its initial prompt fails.
+func (s *Service) cleanupTaskRunDSHSession(created workspace.Workspace, sessionID string) {
+	if _, err := s.AgentDispose(context.Background(), rpc.AgentDisposeParams{Runtime: rpc.AgentRuntimeDSH, SessionID: sessionID, WorkspaceID: created.ID, CWD: created.Path}); err != nil {
+		log.Warn().Err(err).Str("sessionId", sessionID).Msg("task run: failed to dispose DSH session after prompt failure")
+	}
 }
 
 // cleanupTaskRunSession stops a just-started task run pi session and removes it

@@ -10,6 +10,11 @@ export type ModelPickerOption = {
   providerName: string;
 };
 
+/** Returns the provider-plus-model identity used for picker selection and React keys. */
+export function getModelPickerOptionIdentity(option: Pick<ModelPickerOption, "id" | "providerId">): string {
+  return `${option.providerId}\u0000${option.id}`;
+}
+
 export type ModelPickerProviderGroup = {
   providerId: string;
   providerName: string;

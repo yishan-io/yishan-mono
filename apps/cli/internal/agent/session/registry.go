@@ -342,16 +342,22 @@ func (r *Registry) Register(sessionID string, conn SessionConnection, proc *proc
 }
 
 func (r *Registry) Attach(sessionID string, conn SessionConnection, tabID, workspaceID, cwd string) (*Session, error) {
-	return r.attach(sessionID, conn, tabID, workspaceID, cwd, nil)
+	return r.attach(sessionID, conn, tabID, workspaceID, cwd, nil, false)
 }
 
 // AttachLive attaches only when registry metadata belongs to the manager's
 // current process generation.
 func (r *Registry) AttachLive(pm ProcessManager, sessionID string, conn SessionConnection, tabID, workspaceID, cwd string) (*Session, error) {
-	return r.attach(sessionID, conn, tabID, workspaceID, cwd, pm)
+	return r.attach(sessionID, conn, tabID, workspaceID, cwd, pm, false)
 }
 
-func (r *Registry) attach(sessionID string, conn SessionConnection, tabID, workspaceID, cwd string, pm ProcessManager) (*Session, error) {
+// AttachLiveOwned attaches only when the live session's immutable workspace and
+// working directory match the resolved workspace supplied by an agent.* call.
+func (r *Registry) AttachLiveOwned(pm ProcessManager, sessionID string, conn SessionConnection, tabID, workspaceID, cwd string) (*Session, error) {
+	return r.attach(sessionID, conn, tabID, workspaceID, cwd, pm, true)
+}
+
+func (r *Registry) attach(sessionID string, conn SessionConnection, tabID, workspaceID, cwd string, pm ProcessManager, requireCWDMatch bool) (*Session, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	state, exists := r.sessions[sessionID]
@@ -368,6 +374,9 @@ func (r *Registry) attach(sessionID string, conn SessionConnection, tabID, works
 		return nil, ErrWorkspaceClosing
 	}
 	if workspaceID != "" && workspaceID != state.WorkspaceID {
+		return nil, ErrWorkspaceMismatch
+	}
+	if requireCWDMatch && cwd != state.CWD {
 		return nil, ErrWorkspaceMismatch
 	}
 	if _, stopping := r.stops[stopKey{sessionID: sessionID, generation: state.generation}]; stopping {

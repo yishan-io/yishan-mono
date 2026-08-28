@@ -1,10 +1,11 @@
 import { searchFiles } from "@renderer/domains/files";
-import { renameTab } from "@renderer/domains/workbench";
+import { renameTab, tabStore } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import { useCallback, useEffect, useState } from "react";
 import type { AgentModel } from "../../../chat/agentChatTypes";
-import { abortAgent, compactAgent, sendAgentPrompt } from "../../../commands/agentChatCommands";
+import { abortAgent, compactAgent, sendAgentPrompt, startAgentChatSession } from "../../../commands/agentChatCommands";
+import { setAgentModelDSH } from "../../../daemon/daemonAgentProcedures";
 import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { setAgentModel, setAgentThinkingLevel } from "../../../subscriptions/agentChatPiEventShared";
@@ -18,6 +19,7 @@ const MAX_FILE_MENTION_RESULTS = 50;
 type UseAgentChatComposerDraftInput = {
   tabId: string;
   workspaceId: string;
+  cwd: string;
   sessionId: string | null;
   sessionState: string;
   messageCount: number;
@@ -25,12 +27,23 @@ type UseAgentChatComposerDraftInput = {
   /** Whether the tab was renamed by the user (suppresses the auto title rename). */
   userRenamed: boolean | undefined;
   slashCommands: RichComposerSlashCommand[];
+  runtime?: string;
 };
 
 /** Owns composer draft text, attachments, submit, and session-control actions. */
 export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput) {
-  const { tabId, workspaceId, sessionId, sessionState, messageCount, hasStreamingMessage, userRenamed, slashCommands } =
-    input;
+  const {
+    tabId,
+    workspaceId,
+    cwd,
+    sessionId,
+    sessionState,
+    messageCount,
+    hasStreamingMessage,
+    userRenamed,
+    slashCommands,
+    runtime,
+  } = input;
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [isManualCompactPending, setIsManualCompactPending] = useState(false);
@@ -159,13 +172,25 @@ export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput)
   const handleModelChange = useCallback(
     async (model: AgentModel) => {
       if (!sessionId) return;
+      if (runtime === "dsh") {
+        // Persist selection for next new session.
+        agentChatStore.getState().setCurrentModel(tabId, model);
+        tabStore.getState().setAgentChatTabDSHModel(tabId, { modelId: model.id, providerId: model.provider });
+        // Apply immediately to the live session via agent.setModel.
+        try {
+          await setAgentModelDSH({ sessionId, workspaceId, cwd, modelId: model.id, provider: model.provider });
+        } catch (error) {
+          agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+        }
+        return;
+      }
       try {
         await setAgentModel({ tabId, sessionId, provider: model.provider ?? "", modelId: model.id });
       } catch (error) {
         agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
       }
     },
-    [sessionId, tabId],
+    [cwd, runtime, sessionId, tabId, workspaceId],
   );
 
   const handleThinkingSelect = useCallback(

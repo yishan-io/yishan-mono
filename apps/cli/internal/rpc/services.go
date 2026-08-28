@@ -140,6 +140,14 @@ type ContextService interface {
 	SetActiveFile(ctx context.Context, req ContextSetActiveFileParams) (any, error)
 }
 
+// BackgroundJobService backs the headless backgroundJob.* RPC methods.
+type BackgroundJobService interface {
+	Create(ctx context.Context, req BackgroundJobCreateParams) (any, error)
+	Get(ctx context.Context, req BackgroundJobGetParams) (any, error)
+	List(ctx context.Context, req BackgroundJobListParams) (any, error)
+	Cancel(ctx context.Context, req BackgroundJobCancelParams) (any, error)
+}
+
 // LocalTaskService backs the localTask.* RPC methods.
 type LocalTaskService interface {
 	Create(ctx context.Context, req LocalTaskCreateParams) (any, error)

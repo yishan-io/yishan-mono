@@ -6,12 +6,21 @@ import "time"
 // vocabulary. The provision engine (workspace/application) consumes these; the
 // JSON-RPC layer converts its transport params into a CreateRequest.
 
+// TaskRunRuntime identifies the daemon runtime selected for a task run.
+type TaskRunRuntime string
+
+const (
+	TaskRunRuntimePi  TaskRunRuntime = "pi"
+	TaskRunRuntimeDSH TaskRunRuntime = "dsh"
+)
+
 // TaskRunConfig carries the optional agent task run attached to a workspace
 // create.
 type TaskRunConfig struct {
-	AgentKind string `json:"agentKind"`
-	Prompt    string `json:"prompt"`
-	Model     string `json:"model,omitempty"`
+	Runtime   TaskRunRuntime `json:"runtime,omitempty"`
+	AgentKind string         `json:"agentKind"`
+	Prompt    string         `json:"prompt"`
+	Model     string         `json:"model,omitempty"`
 }
 
 // CreateRequest is the domain-shaped workspace create command consumed by the

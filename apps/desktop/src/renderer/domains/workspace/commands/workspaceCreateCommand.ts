@@ -1,3 +1,4 @@
+import { getAgentCapabilities, selectNewAgentChatRuntime } from "@renderer/domains/agent";
 import { projectStore } from "@renderer/domains/project";
 import { activateWorkspace } from "@renderer/domains/workbench";
 
@@ -24,6 +25,7 @@ type CreateWorkspaceInput = {
     agentKind: string;
     prompt: string;
     model?: string;
+    runtime?: "pi" | "dsh";
   };
 };
 
@@ -130,6 +132,9 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
 
   const normalizedNodeId = input.nodeId?.trim() || "";
 
+  const taskRun = input.taskRun
+    ? { ...input.taskRun, runtime: input.taskRun.runtime ?? (await resolveTaskRunRuntime()) }
+    : undefined;
   const workspaceRpc = await getWorkspaceRpc();
   let created: Record<string, unknown>;
   try {
@@ -144,7 +149,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
       targetBranch,
       contextEnabled: project?.contextEnabled ?? workspaceSettingsStore.getState().isDefaultContextEnabled,
       setupHook: project?.setupScript?.trim() || undefined,
-      taskRun: input.taskRun,
+      taskRun,
     })) as Record<string, unknown>;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Workspace creation failed.";
@@ -185,4 +190,13 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
   activateWorkspace({ workspaceId, projectId });
 
   return workspaceId;
+}
+
+/** Resolves workspace-create task runs with the same ready-DSH rule as a new agent chat. */
+async function resolveTaskRunRuntime(): Promise<"pi" | "dsh"> {
+  try {
+    return selectNewAgentChatRuntime(await getAgentCapabilities());
+  } catch {
+    return "pi";
+  }
 }

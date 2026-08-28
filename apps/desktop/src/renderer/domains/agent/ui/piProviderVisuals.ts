@@ -78,6 +78,7 @@ export const PI_PROVIDER_VISUAL_BY_ID: Record<string, PiProviderVisual> = {
   "azure-openai-responses": { icon: FaMicrosoft, brandColor: "0078D4" },
   openai: { icon: OpenAI },
   deepseek: { icon: SiDeepseek, brandColor: "5786FE" },
+  "deepseek-official": { icon: SiDeepseek, brandColor: "5786FE" },
   nvidia: { icon: SiNvidia, brandColor: "76B900" },
   google: { icon: SiGooglegemini, brandColor: "8E75B2" },
   "google-vertex": { icon: SiGooglecloud, brandColor: "4285F4" },

@@ -26,6 +26,7 @@ type Connection struct {
 	closeOnce                       sync.Once
 	closeHooksMu                    sync.Mutex
 	closeHooks                      []func()
+	isClosed                        bool
 	subsMu                          sync.Mutex
 	subscriptions                   map[string]subscriptionHandle
 	eventsMu                        sync.Mutex
@@ -45,9 +46,14 @@ func NewConnection(conn *websocket.Conn) *Connection {
 	return &Connection{conn: conn, subscriptions: make(map[string]subscriptionHandle)}
 }
 
-// IsOpen reports whether the connection has an underlying WebSocket socket.
+// IsOpen reports whether the connection has an open underlying WebSocket socket.
 func (c *Connection) IsOpen() bool {
-	return c != nil && c.conn != nil
+	if c == nil || c.conn == nil {
+		return false
+	}
+	c.closeHooksMu.Lock()
+	defer c.closeHooksMu.Unlock()
+	return !c.isClosed
 }
 
 // TerminalInputSessionID resolves the session id prefix of a binary frame,
@@ -95,6 +101,7 @@ func (c *Connection) Notify(method string, params any) error {
 func (c *Connection) Close() {
 	c.closeOnce.Do(func() {
 		c.closeHooksMu.Lock()
+		c.isClosed = true
 		hooks := append([]func(){}, c.closeHooks...)
 		c.closeHooks = nil
 		c.closeHooksMu.Unlock()
@@ -115,15 +122,22 @@ func (c *Connection) Close() {
 			handle.cancel(handle.sessionID, handle.subscriptionID)
 		}
 		c.DetachEventStream()
-		_ = c.conn.Close()
+		if c.conn != nil {
+			_ = c.conn.Close()
+		}
 	})
 }
 
 // AddCloseHook registers a callback run when the connection closes.
 func (c *Connection) AddCloseHook(hook func()) {
 	c.closeHooksMu.Lock()
-	c.closeHooks = append(c.closeHooks, hook)
+	if !c.isClosed {
+		c.closeHooks = append(c.closeHooks, hook)
+		c.closeHooksMu.Unlock()
+		return
+	}
 	c.closeHooksMu.Unlock()
+	hook()
 }
 
 // AttachSubscription streams terminal events for one session to the client as

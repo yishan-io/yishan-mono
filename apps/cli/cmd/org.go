@@ -8,9 +8,9 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"yishan/apps/cli/cmd/output"
 	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/platform/config"
-	"yishan/apps/cli/cmd/output"
 )
 
 var orgListCmd = &cobra.Command{
