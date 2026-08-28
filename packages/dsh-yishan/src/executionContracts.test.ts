@@ -226,7 +226,7 @@ describe("Yishan DSH execution contracts", () => {
   });
 
   it("requires exact nonempty cwd for every execution request", () => {
-    expect(() => parseSessionStartRequest({ sessionId: "session-1" })).toThrow("unsupported fields");
+    expect(() => parseSessionStartRequest({ sessionId: "session-1" })).toThrow("cwd is required");
     expect(() =>
       parseSessionStartRequest({
         cwd: "/workspace",

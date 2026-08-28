@@ -83,12 +83,20 @@ export type TranscriptResetNotification = {
 
 /** Parses the exact workspace-scoped request shape shared by start, cancel, and flush. */
 export function parseSessionStartRequest(payload: unknown): SessionStartRequest {
-  const request = requireExactRecord(payload, "session start request", ["cwd", "sessionId", "binding", "agentOptions"]);
-  const cwd = requireNonEmptyString(request, "cwd");
-  const binding = parseSessionBoundData(request.binding);
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new TypeError("session start request must be an object");
+  }
+  const record = payload as Record<string, unknown>;
+  // Allow optional agentOptions field in addition to the three required fields.
+  const allowedKeys = new Set(["cwd", "sessionId", "binding", "agentOptions"]);
+  if (Object.keys(record).some((k) => !allowedKeys.has(k))) {
+    throw new TypeError("session start request has unsupported fields");
+  }
+  const cwd = requireNonEmptyString(record, "cwd");
+  const binding = parseSessionBoundData(record.binding);
   if (binding.cwd !== cwd) throw new TypeError("binding.cwd must equal cwd");
-  const agentOptions = parseStartAgentOptions(request.agentOptions);
-  return { cwd, sessionId: requireNonEmptyString(request, "sessionId"), binding, ...(agentOptions ? { agentOptions } : {}) };
+  const agentOptions = parseStartAgentOptions(record.agentOptions);
+  return { cwd, sessionId: requireNonEmptyString(record, "sessionId"), binding, ...(agentOptions ? { agentOptions } : {}) };
 }
 
 function parseStartAgentOptions(raw: unknown): { model?: string; provider?: string } | undefined {
