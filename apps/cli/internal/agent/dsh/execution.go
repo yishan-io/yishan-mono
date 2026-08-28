@@ -179,7 +179,8 @@ func (s *Supervisor) SetModelSession(ctx context.Context, request SetModelReques
 	if request.CWD == "" || request.SessionID == "" || request.Model == "" {
 		return errors.New("SetModelSession requires cwd, sessionId, and model")
 	}
-	return s.call(ctx, yishanSessionSetModelMethod, request, nil)
+	var response map[string]any
+	return s.call(ctx, yishanSessionSetModelMethod, request, &response)
 }
 func (s *Supervisor) CancelSession(ctx context.Context, request SessionCancelRequest) (SessionCancelResult, error) {
 	if err := validateExecutionRequest(request); err != nil {

@@ -452,6 +452,7 @@ describe("Yishan execution routing", () => {
     const execution = {
       start: vi.fn(async () => ({ sessionId: "session-1", incarnation: "run-1" })),
       prompt: vi.fn(),
+      setModel: vi.fn(),
       cancel: vi.fn(),
       flushSession: vi.fn(),
       subscribe: vi.fn(),

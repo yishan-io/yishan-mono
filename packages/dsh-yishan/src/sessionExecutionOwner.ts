@@ -138,10 +138,11 @@ export class YishanSessionExecutionOwner {
     this.requireAdmitted();
     const handle = await this.requireOwnedHandle(request.sessionId);
     this.requireCwd(handle.agent.session, request);
-    if (handle.agent.options) {
-      handle.agent.options.model = request.model;
-      if (request.provider) handle.agent.options.provider = request.provider;
-    }
+    handle.agent.options = {
+      ...handle.agent.options,
+      model: request.model,
+      ...(request.provider ? { provider: request.provider } : {}),
+    };
   }
 
   /** Cancels an owned session while retaining its handle and queued inbox. */

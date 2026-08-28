@@ -71,6 +71,10 @@ func (f *executionDSH) StartSession(_ context.Context, req dsh.SessionStartReque
 	}
 	return dsh.SessionStartResult{SessionID: req.SessionID, Incarnation: "inc-1"}, nil
 }
+func (f *executionDSH) SetModelSession(_ context.Context, _ dsh.SetModelRequest) error {
+	return nil
+}
+
 func (f *executionDSH) PromptSession(_ context.Context, req dsh.SessionPromptRequest) (dsh.SessionPromptResult, error) {
 	f.mu.Lock()
 	f.prompted++

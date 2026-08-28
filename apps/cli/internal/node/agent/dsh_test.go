@@ -206,6 +206,9 @@ func (r *recordingDSHSessions) StartSession(_ context.Context, request dsh.Sessi
 	r.startRequest = request
 	return dsh.SessionStartResult{SessionID: request.SessionID, Incarnation: "test-incarnation"}, r.startErr
 }
+func (r *recordingDSHSessions) SetModelSession(context.Context, dsh.SetModelRequest) error {
+	return nil
+}
 func (r *recordingDSHSessions) PromptSession(_ context.Context, request dsh.SessionPromptRequest) (dsh.SessionPromptResult, error) {
 	r.promptRequest = request
 	return dsh.SessionPromptResult{}, r.promptErr

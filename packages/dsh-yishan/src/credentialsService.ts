@@ -32,7 +32,8 @@ function parseCredentialsYaml(text: string): Map<string, string> {
     const match = line.match(/^\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*)/);
     if (!match) continue;
     const [, name, rawValue] = match;
-    const value = rawValue.trim().replace(/^(['"])(.*)\1$/, "$2");
+    if (!name) continue;
+    const value = (rawValue ?? "").trim().replace(/^(['"])(.*)\1$/, "$2");
     if (value) refs.set(name, value);
   }
   return refs;

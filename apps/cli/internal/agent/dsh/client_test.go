@@ -221,6 +221,9 @@ func TestSupervisor_ExecutionCallsValidateExactResults(t *testing.T) {
 	if response, err := supervisor.PromptSession(context.Background(), SessionPromptRequest{CWD: request.CWD, SessionID: request.SessionID, ContentBlocks: []TextPromptContentBlock{{Type: "text", Text: "hello"}}}); err != nil || response.MessageID != "message" {
 		t.Fatalf("PromptSession = %#v, %v", response, err)
 	}
+	if err := supervisor.SetModelSession(context.Background(), SetModelRequest{CWD: request.CWD, SessionID: request.SessionID, Model: "deepseek-v4-flash"}); err != nil {
+		t.Fatalf("SetModelSession: %v", err)
+	}
 	if response, err := supervisor.CancelSession(context.Background(), request); err != nil || !response.Cancelled {
 		t.Fatalf("CancelSession = %#v, %v", response, err)
 	}

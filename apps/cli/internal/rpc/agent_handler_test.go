@@ -34,6 +34,9 @@ func (s *recordingAgentFacade) AgentPrompt(context.Context, AgentPromptParams) (
 func (s *recordingAgentFacade) AgentAbort(context.Context, AgentAbortParams) (any, error) {
 	return s.called(MethodAgentAbort)
 }
+func (s *recordingAgentFacade) AgentSetModel(context.Context, AgentSetModelParams) (any, error) {
+	return s.called(MethodAgentSetModel)
+}
 func (s *recordingAgentFacade) AgentDispose(context.Context, AgentDisposeParams) (any, error) {
 	return s.called(MethodAgentDispose)
 }
