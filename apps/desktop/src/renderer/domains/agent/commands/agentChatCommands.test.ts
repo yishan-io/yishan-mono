@@ -498,7 +498,7 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
 });
 
 describe("loadDSHSessionModels configured providers", () => {
-  it("excludes unconfigured provider models from the DSH model picker", async () => {
+  it("excludes ambient provider models when no credential availability is verified", async () => {
     tabStore.setState({
       ...initialTabStoreState,
       tabs: [
@@ -524,12 +524,11 @@ describe("loadDSHSessionModels configured providers", () => {
           models: [{ id: "configured-model", name: "Configured model" }],
         },
         {
-          id: "unconfigured-provider",
-          displayName: "Unconfigured",
-          authentication: "api-key",
-          credentialRef: "UNCONFIGURED_API_KEY",
+          id: "amazon-bedrock",
+          displayName: "Amazon Bedrock",
+          authentication: "ambient",
           configured: false,
-          models: [{ id: "unconfigured-model", name: "Unconfigured model" }],
+          models: [{ id: "nova", name: "Nova" }],
         },
       ],
     });

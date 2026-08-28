@@ -53,9 +53,9 @@ func mapDSHProviderCatalog(catalog dsh.ProviderCatalog, credentialRefs map[strin
 			entry.CredentialRef = dshProviderCredentialRef(provider.ID)
 			_, entry.Configured = credentialRefs[entry.CredentialRef]
 		} else {
-			// The runtime's setup capability is the only safe signal for ambient routes.
-			// It does not assert that a system credential exists.
-			entry.Configured = !provider.SetupRequired
+			// setupRequired classifies the route; it does not verify an ambient
+			// credential for this account. Keep ambient routes out of the picker.
+			entry.Configured = false
 		}
 		entry.Models = make([]rpc.DSHProviderCatalogModel, 0, len(provider.Models))
 		for _, model := range provider.Models {

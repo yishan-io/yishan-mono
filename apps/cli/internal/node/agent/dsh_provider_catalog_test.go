@@ -8,7 +8,7 @@ import (
 	"yishan/apps/cli/internal/rpc"
 )
 
-func TestMapDSHProviderCatalog_ReportsConfigurationWithoutCredentialData(t *testing.T) {
+func TestMapDSHProviderCatalog_DoesNotTreatAmbientRouteAsConfigured(t *testing.T) {
 	catalog := dsh.ProviderCatalog{Providers: []dsh.ProviderCatalogProvider{
 		{ID: "deepseek-official", Authentication: "api-key", SetupRequired: false, Models: []dsh.ProviderCatalogModel{}},
 		{ID: "anthropic", Authentication: "api-key", SetupRequired: false, Models: []dsh.ProviderCatalogModel{}},
@@ -24,7 +24,7 @@ func TestMapDSHProviderCatalog_ReportsConfigurationWithoutCredentialData(t *test
 	want := map[string]bool{
 		"deepseek-official": true,
 		"anthropic":         false,
-		"amazon-bedrock":    true,
+		"amazon-bedrock":    false,
 		"google-vertex":     false,
 	}
 	for providerID, isConfigured := range want {
@@ -48,7 +48,7 @@ func TestMapDSHProviderCatalog_ExposesOnlySafeConfigurationMetadata(t *testing.T
 		t.Fatalf("api-key provider = %#v", apiKey)
 	}
 	ambient := mapped.Providers[1]
-	if ambient.CredentialRef != "" || !ambient.Configured {
+	if ambient.CredentialRef != "" || ambient.Configured {
 		t.Fatalf("ambient provider = %#v", ambient)
 	}
 }
