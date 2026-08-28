@@ -96,7 +96,12 @@ export function parseSessionStartRequest(payload: unknown): SessionStartRequest 
   const binding = parseSessionBoundData(record.binding);
   if (binding.cwd !== cwd) throw new TypeError("binding.cwd must equal cwd");
   const agentOptions = parseStartAgentOptions(record.agentOptions);
-  return { cwd, sessionId: requireNonEmptyString(record, "sessionId"), binding, ...(agentOptions ? { agentOptions } : {}) };
+  return {
+    cwd,
+    sessionId: requireNonEmptyString(record, "sessionId"),
+    binding,
+    ...(agentOptions ? { agentOptions } : {}),
+  };
 }
 
 function parseStartAgentOptions(raw: unknown): { model?: string; provider?: string } | undefined {

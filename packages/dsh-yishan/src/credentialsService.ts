@@ -26,8 +26,14 @@ function parseCredentialsYaml(text: string): Map<string, string> {
   for (const raw of text.split("\n")) {
     const line = raw.trimEnd();
     if (line.trim() === "" || line.trim().startsWith("#")) continue;
-    if (line === "refs:") { inRefs = true; continue; }
-    if (!line.startsWith(" ") && !line.startsWith("\t")) { inRefs = false; continue; }
+    if (line === "refs:") {
+      inRefs = true;
+      continue;
+    }
+    if (!line.startsWith(" ") && !line.startsWith("\t")) {
+      inRefs = false;
+      continue;
+    }
     if (!inRefs) continue;
     const match = line.match(/^\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*)/);
     if (!match) continue;
