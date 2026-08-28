@@ -17,7 +17,15 @@ export const CREDENTIALS_FILE_NAME = ".credentials.yaml";
 const REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 export type CredentialEntry = { value: string };
-export type CredentialsService = { resolve(ref: string): Promise<CredentialEntry | undefined> };
+/** The credential methods dsh-llm-pi-ai calls for ambient provider resolution.
+ *
+ * OAuth records are intentionally not supported here. The existing account-scoped
+ * reference store has no safe durable record format or locking for refresh tokens.
+ */
+export type CredentialsService = {
+  resolve(ref: string): Promise<CredentialEntry | undefined>;
+  readRecord(key: string): Promise<undefined>;
+};
 
 /** Parses the YAML credentials file without a heavy YAML parser dependency. */
 function parseCredentialsYaml(text: string): Map<string, string> {
@@ -60,6 +68,11 @@ export function createCredentialsService(dataDirectory: string): CredentialsServ
       const refs = parseCredentialsYaml(text);
       const value = refs.get(ref);
       return value !== undefined ? { value } : undefined;
+    },
+    async readRecord(_key: string): Promise<undefined> {
+      // pi-ai checks its credential record before falling back to ambient auth.
+      // This store only owns API-key references, never durable OAuth grants.
+      return undefined;
     },
   };
 }

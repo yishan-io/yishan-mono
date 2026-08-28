@@ -7,6 +7,15 @@ import { PassThrough, Writable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  DIRECT_DEEPSEEK_PROVIDER,
+  PI_AI_DEEPSEEK_PROVIDER,
+  YISHAN_DSH_ACTIVE_PROVIDER_COUNT,
+  YISHAN_DSH_ACTIVE_PROVIDER_SET,
+  YISHAN_PI_AI_ACTIVE_PROVIDER_COUNT,
+  YISHAN_PI_AI_PROVIDER_ALLOWLIST,
+  YISHAN_UNSUPPORTED_PI_AI_PROVIDERS,
+} from "./llmProviders";
+import {
   YISHAN_AGENT_SPINE_CONFIG,
   YISHAN_RUNTIME_MCP_ENABLED,
   createYishanRuntime,
@@ -50,6 +59,80 @@ describe("Yishan production runtime", () => {
       goals: {},
     });
     expect(YISHAN_AGENT_SPINE_CONFIG).not.toHaveProperty("mcp");
+  });
+
+  it("registers exactly 36 pi-ai routes plus direct DeepSeek for 37 active DSH routes", async () => {
+    const runtime = await createYishanRuntime({
+      dataDirectory: await mkdtemp(join(tmpdir(), "yishan-dsh-provider-catalog-")),
+      input: new PassThrough(),
+      output: new Writable({ write: (_chunk, _encoding, callback) => callback() }),
+      exit: () => undefined,
+    });
+
+    try {
+      const activeProviderIds = runtime.context.llm.listProviders().map(({ id }) => id);
+      expect(YISHAN_PI_AI_PROVIDER_ALLOWLIST).toHaveLength(YISHAN_PI_AI_ACTIVE_PROVIDER_COUNT);
+      expect(activeProviderIds).toHaveLength(YISHAN_DSH_ACTIVE_PROVIDER_COUNT);
+      expect(new Set(activeProviderIds)).toEqual(YISHAN_DSH_ACTIVE_PROVIDER_SET);
+
+      const modelCatalogs = await Promise.all(
+        [...YISHAN_PI_AI_PROVIDER_ALLOWLIST].map((provider) => runtime.context.llm.listModels(provider)),
+      );
+      expect(modelCatalogs).toHaveLength(YISHAN_PI_AI_ACTIVE_PROVIDER_COUNT);
+      for (const models of modelCatalogs) expect(models.length).toBeGreaterThan(0);
+    } finally {
+      await runtime.shutdown();
+    }
+  });
+
+  it("mounts no settings service and keeps unsupported routes out of the active registry", async () => {
+    const runtime = await createYishanRuntime({
+      dataDirectory: await mkdtemp(join(tmpdir(), "yishan-dsh-provider-boundary-")),
+      input: new PassThrough(),
+      output: new Writable({ write: (_chunk, _encoding, callback) => callback() }),
+      exit: () => undefined,
+    });
+
+    try {
+      expect(runtime.context.get("settings")).toBeUndefined();
+      const activeProviderIds = runtime.context.llm.listProviders().map(({ id }) => id);
+      for (const provider of YISHAN_UNSUPPORTED_PI_AI_PROVIDERS) {
+        expect(activeProviderIds).not.toContain(provider);
+        await expect(runtime.context.llm.listModels(provider)).rejects.toMatchObject({ code: "NO_ADAPTER" });
+      }
+
+      // This is adapter metadata only, not an active DSH route: dsh-llm-pi-ai
+      // 0.1.1-rc.2 publishes all installed pi-ai providers here and exposes no
+      // Config option to filter this directory.
+      expect(runtime.context.llm.listConfigurableProviders()).toContainEqual(
+        expect.objectContaining({ provider: "openai-codex" }),
+      );
+      expect(runtime.context.llm.listConfigurableProviders()).not.toContainEqual(
+        expect.objectContaining({ provider: "radius" }),
+      );
+    } finally {
+      await runtime.shutdown();
+    }
+  });
+
+  it("registers pi-ai DeepSeek beside the direct DeepSeek adapter", async () => {
+    const runtime = await createYishanRuntime({
+      dataDirectory: await mkdtemp(join(tmpdir(), "yishan-dsh-provider-routes-")),
+      input: new PassThrough(),
+      output: new Writable({ write: (_chunk, _encoding, callback) => callback() }),
+      exit: () => undefined,
+    });
+
+    try {
+      await expect(runtime.context.llm.listModels(PI_AI_DEEPSEEK_PROVIDER)).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: "deepseek-v4-flash" })]),
+      );
+      await expect(runtime.context.llm.listModels(DIRECT_DEEPSEEK_PROVIDER)).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: "deepseek-v4-flash" })]),
+      );
+    } finally {
+      await runtime.shutdown();
+    }
   });
 
   it("drains the runtime on EOF", async () => {

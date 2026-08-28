@@ -5,6 +5,8 @@ import { join, resolve } from "node:path";
 import { Context } from "@deepseek-ai/cordis";
 import * as agentSpine from "@deepseek-ai/dsh-agent-spine-demo";
 import { LocalBashExecutor } from "@deepseek-ai/dsh-bash-local";
+import * as deepSeekOfficial from "@deepseek-ai/dsh-llm-deepseek";
+import * as piAi from "@deepseek-ai/dsh-llm-pi-ai";
 import * as sessionCheckpointPolicy from "@deepseek-ai/dsh-session-checkpoint-policy";
 import JsonlSessionPersistence from "@deepseek-ai/dsh-session-persistence-jsonl";
 import { SessionProjectionRegistry } from "@deepseek-ai/dsh-session-projection";
@@ -13,6 +15,7 @@ import { SubagentRuntime } from "@deepseek-ai/dsh-subagent";
 import { LocalSubprocessRuntime } from "@deepseek-ai/dsh-subprocess-local";
 
 import { installCredentialsPlugin } from "./credentialsService";
+import { YISHAN_PI_AI_CONFIG, assertPiAiProviderManifest } from "./llmProviders";
 import * as runtimeServer from "./runtimeServer";
 
 const DATA_DIRECTORY_ENVIRONMENT_VARIABLE = "YISHAN_DSH_DATA_DIR";
@@ -82,6 +85,12 @@ export async function createYishanRuntime(config: YishanRuntimeConfig = {}): Pro
   await context.plugin(sessionCheckpointPolicy);
   await context.plugin(SqliteSessionQueryEngine, { path: join(dataDirectory, SESSION_QUERY_DATABASE_NAME) });
   installCredentialsPlugin(context, dataDirectory);
+  assertPiAiProviderManifest();
+  await context.plugin(deepSeekOfficial);
+  // dsh-llm-pi-ai's configurable directory always mirrors pi-ai's full built-in
+  // catalog. Its Config can restrict registered routes but cannot restrict that
+  // metadata directory, and no ctx.settings service is mounted in this runtime.
+  await context.plugin(piAi, YISHAN_PI_AI_CONFIG);
   await context.plugin(runtimeServer, config);
 
   return { context, shutdown: async () => await context.fiber.dispose() };
