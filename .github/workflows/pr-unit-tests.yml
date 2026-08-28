@@ -223,6 +223,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup Bun for CLI DSH runtime tests
+        if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+
+      - name: Install dependencies for CLI DSH runtime tests
+        if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
+        run: bun install --frozen-lockfile --linker hoisted
+
       - name: Setup Go for CLI tests
         if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
         uses: actions/setup-go@v5
