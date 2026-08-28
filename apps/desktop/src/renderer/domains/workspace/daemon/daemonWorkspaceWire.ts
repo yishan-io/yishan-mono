@@ -88,6 +88,7 @@ export type WorkspaceCreateInput = {
     agentKind?: string;
     prompt?: string;
     model?: string;
+    runtime?: "pi" | "dsh";
   };
 };
 

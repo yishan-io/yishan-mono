@@ -1,4 +1,4 @@
-import type { DesktopAgentKind } from "@renderer/domains/agent";
+import type { AgentRuntime, DesktopAgentKind } from "@renderer/domains/agent";
 
 export type TabStoreStateSlice = {
   tabs: WorkbenchTab[];
@@ -66,11 +66,17 @@ export type WorkbenchTabDataByKind = {
   "agent-chat": {
     /** Single source of truth for agent-chat identity: one live/runtime session id per tab. */
     sessionId?: string;
+    /** Selected execution runtime; missing legacy records normalize to Pi. */
+    runtime?: AgentRuntime;
     cwd: string;
     userRenamed?: boolean;
     sessionView?: AgentChatSessionView;
     subagentAgentId?: string;
     subagentParentSessionId?: string;
+    /** For DSH sessions: the user-selected model id to use for the next session start. */
+    dshSelectedModelId?: string;
+    /** Provider route paired with dshSelectedModelId. */
+    dshSelectedProviderId?: string;
   };
 };
 
@@ -186,7 +192,10 @@ export type OpenTabInput =
       cwd?: string;
       /** Single session id used for both live attach and persisted Pi resume. */
       sessionId?: string;
+      runtime?: AgentRuntime;
       sessionView?: AgentChatSessionView;
       subagentAgentId?: string;
       subagentParentSessionId?: string;
+      /** Caller-provided stable identity for daemon-created agent-chat tabs. */
+      tabId?: string;
     };

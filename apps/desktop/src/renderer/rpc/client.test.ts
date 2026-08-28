@@ -84,6 +84,27 @@ describe("DaemonRpcClient (desktop8 Phase 31 transport)", () => {
     await expect(pending).resolves.toEqual({ ok: true });
   });
 
+  it("preserves structured JSON-RPC error data", async () => {
+    const { socket, handlers } = createFakeSocket();
+    const { client } = createClient(async () => socket);
+
+    const pending = client.request("agent.readHistory", {});
+    await vi.advanceTimersByTimeAsync(0);
+    const sent = JSON.parse(socket.send.mock.calls[0]?.[0] as string);
+    handlers.message({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: sent.id,
+        error: { code: -32000, message: "dsh runtime unavailable", data: { code: "DSH_RUNTIME_UNAVAILABLE" } },
+      }),
+    });
+
+    await expect(pending).rejects.toMatchObject({
+      code: -32000,
+      data: { code: "DSH_RUNTIME_UNAVAILABLE" },
+    });
+  });
+
   it("rejects a request after its timeout", async () => {
     const { socket } = createFakeSocket();
     const { client } = createClient(async () => socket);

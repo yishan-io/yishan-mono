@@ -226,6 +226,27 @@ func stopPID(pid int, timeout time.Duration) error {
 	return stopProcess(pid, timeout)
 }
 
+func buildDetachedArgs(cfg StartConfig) []string {
+	args := []string{"daemon", "run", "--host", cfg.Run.Host, "--port", strconv.Itoa(cfg.Run.Port)}
+	args = append(args, "--relay-enabled="+strconv.FormatBool(cfg.Run.RelayEnabled))
+	args = appendOptionalArg(args, "--relay-url", cfg.Run.RelayURL)
+	args = appendOptionalArg(args, "--config", cfg.ConfigPath)
+	args = appendOptionalArg(args, "--log-level", cfg.LogLevel)
+	args = appendOptionalArg(args, "--log-file", cfg.LogFile)
+	args = append(args, "--dsh-enabled="+strconv.FormatBool(cfg.Run.DSHEnabled))
+	args = appendOptionalArg(args, "--dsh-node-path", cfg.Run.DSHNodePath)
+	args = appendOptionalArg(args, "--dsh-runtime-path", cfg.Run.DSHRuntimePath)
+	args = appendOptionalArg(args, "--dsh-provider", cfg.Run.DSHProvider)
+	return appendOptionalArg(args, "--dsh-model", cfg.Run.DSHModel)
+}
+
+func appendOptionalArg(args []string, flag string, value string) []string {
+	if value == "" {
+		return args
+	}
+	return append(args, flag, value)
+}
+
 func StartDetached(cfg StartConfig) (int, error) {
 	executable, err := os.Executable()
 	if err != nil {
@@ -252,6 +273,11 @@ func StartDetached(cfg StartConfig) (int, error) {
 	if cfg.HasCustomLogFile && cfg.LogFile != "" {
 		args = append(args, "--log-file", cfg.LogFile)
 	}
+	args = append(args, "--dsh-enabled="+strconv.FormatBool(cfg.Run.DSHEnabled))
+	args = appendOptionalArg(args, "--dsh-node-path", cfg.Run.DSHNodePath)
+	args = appendOptionalArg(args, "--dsh-runtime-path", cfg.Run.DSHRuntimePath)
+	args = appendOptionalArg(args, "--dsh-provider", cfg.Run.DSHProvider)
+	args = appendOptionalArg(args, "--dsh-model", cfg.Run.DSHModel)
 
 	command := exec.Command(executable, args...)
 	command.Env = append(os.Environ(), detachedEnvKey+"=1")

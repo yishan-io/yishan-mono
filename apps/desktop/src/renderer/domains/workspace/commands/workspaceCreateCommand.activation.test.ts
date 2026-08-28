@@ -50,7 +50,29 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("createWorkspace acceptance", () => {
+describe("createWorkspace activation", () => {
+  it("sends DSH task-run runtime when DSH is configured and ready", async () => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    projectStore.setState({ projects: [{ id: "project-created", key: "project-created", name: "Created", path: "/tmp/project", localPath: "/tmp/project" }] });
+    agentMocks.getAgentCapabilities.mockResolvedValueOnce({ dsh: { configured: true, ready: true } });
+    daemonMocks.createWorkspace.mockResolvedValueOnce({ workspaceId: "workspace-created" });
+
+    await createWorkspace({ projectId: "project-created", name: "created", sourceBranch: "main", targetBranch: "created", taskRun: { agentKind: "pi", prompt: "run" } });
+
+    expect(daemonMocks.createWorkspace).toHaveBeenCalledWith(expect.objectContaining({ taskRun: { agentKind: "pi", prompt: "run", runtime: "dsh" } }));
+  });
+
+  it.each(["pi", "dsh"] as const)("preserves an explicit %s task-run runtime", async (runtime) => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    projectStore.setState({ projects: [{ id: "project-created", key: "project-created", name: "Created", path: "/tmp/project", localPath: "/tmp/project" }] });
+    daemonMocks.createWorkspace.mockResolvedValueOnce({ workspaceId: "workspace-created" });
+
+    await createWorkspace({ projectId: "project-created", name: "created", sourceBranch: "main", targetBranch: "created", taskRun: { agentKind: "pi", prompt: "run", runtime } });
+
+    expect(daemonMocks.createWorkspace).toHaveBeenCalledWith(expect.objectContaining({ taskRun: { agentKind: "pi", prompt: "run", runtime } }));
+    expect(agentMocks.getAgentCapabilities).not.toHaveBeenCalled();
+  });
+
   it("does not add or activate the accepted workspace", async () => {
     const resolveTabForWorkspace = vi.fn();
     tabStore.setState({ resolveTabForWorkspace });

@@ -132,6 +132,12 @@ func buildHandler(cfg RunConfig, statePath string, runtime *session.Session, dae
 		RelayEnabled:     cfg.RelayEnabled,
 		RelayURL:         cfg.RelayURL,
 		RelayToken:       cfg.RelayToken,
+		DSHEnabled:       cfg.DSHEnabled,
+		DSHNodePath:      cfg.DSHNodePath,
+		DSHRuntimePath:   cfg.DSHRuntimePath,
+		DSHDataDir:       config.DSHDataDir(dataDir),
+		DSHProvider:      cfg.DSHProvider,
+		DSHModel:         cfg.DSHModel,
 	})
 	if err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap

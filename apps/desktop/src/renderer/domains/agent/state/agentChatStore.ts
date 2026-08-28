@@ -23,7 +23,7 @@ import {
   type AgentSubagentProgressTarget,
   createAgentChatSession,
   setFinishedSubagents,
-  setRunningSubagentsIfChanged,
+  setPiRunningSubagentsIfChanged,
 } from "./agentChatStoreSession";
 import {
   mergeAgentChatUsageLedgerHistory,
@@ -171,7 +171,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.rendererFinalToolCallAssistantIds,
           session.messages,
         );
-        setRunningSubagentsIfChanged(
+        setPiRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
@@ -216,7 +216,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.streamingMessage = null;
           session.activeCoreTurnAssistantId = null;
         }
-        setRunningSubagentsIfChanged(
+        setPiRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
@@ -232,7 +232,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         // ID. Once live streaming begins, it is the authoritative source.
         session.messages = session.messages.filter((committedMessage) => committedMessage.id !== message.id);
         session.streamingMessage = message;
-        setRunningSubagentsIfChanged(
+        setPiRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
@@ -265,7 +265,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.rendererFinalToolCallAssistantIds,
           session.messages,
         );
-        setRunningSubagentsIfChanged(
+        setPiRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, undefined, session.subagentSessionEndedAtMs),
         );
@@ -407,7 +407,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.subagentSessionEndedAtMs = endedAtMs;
-        setRunningSubagentsIfChanged(
+        setPiRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, endedAtMs),
         );

@@ -63,6 +63,7 @@ export function buildTabDataByInput<T extends OpenTabInput>(input: T): Workbench
     return {
       cwd: input.cwd || "",
       sessionId: input.sessionId || undefined,
+      runtime: input.runtime,
       sessionView: input.sessionView ?? "full",
       subagentAgentId: input.subagentAgentId || undefined,
       subagentParentSessionId: input.subagentParentSessionId || undefined,
@@ -364,13 +365,15 @@ export function openTabState(
     }
   }
 
-  const nextTab = createTabFromOpenInput(input, targetWorkspaceId, nextTabId);
+  const requestedTabId = input.kind === "terminal" || input.kind === "agent-chat" ? input.tabId?.trim() : "";
+  const createdTabId = requestedTabId || nextTabId;
+  const nextTab = createTabFromOpenInput(input, targetWorkspaceId, createdTabId);
   return {
     tabs: [...state.tabs, nextTab],
-    selectedTabId: nextTabId,
+    selectedTabId: createdTabId,
     selectedTabIdByWorkspaceId: {
       ...state.selectedTabIdByWorkspaceId,
-      [targetWorkspaceId]: nextTabId,
+      [targetWorkspaceId]: createdTabId,
     },
   };
 }

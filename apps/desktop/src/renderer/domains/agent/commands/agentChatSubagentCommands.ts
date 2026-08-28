@@ -1,23 +1,23 @@
 import { splitPaneStore, tabStore } from "@renderer/domains/workbench";
-import {} from "@renderer/domains/workbench";
 import {
   createAdjacentPaneWithTab,
-  moveTabToPane,
   openTab,
   paneSelectTab,
   registerTabInPane,
-  reorderPaneTab,
   setActivePane,
   setAgentChatTabSubagentControl,
   setSelectedTab,
   splitWorkspacePane,
-  unregisterTabFromPane,
 } from "@renderer/domains/workbench";
 import { findOppositePaneId } from "@renderer/domains/workbench";
 import { isAgentSessionBusy } from "../chat/agentChatTypes";
-import { sendPiCommand } from "../daemon/daemonAgentProcedures";
+import type { AgentRuntime } from "../daemon/daemonAgentTypes";
+import { normalizeAgentChatRuntime } from "../runtime/agentRuntimeSelection";
+import { buildAgentRuntimeSessionKey } from "../runtime/agentSessionIdentity";
+import { promptAgentSession } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
 import { findTabWithSession } from "./agentChatCommands";
+import { cancelDshSubagentRun } from "./agentChatDshSubagentCancellation";
 
 const SUBAGENT_SPLIT_DIRECTION = "horizontal";
 const SUBAGENT_SPLIT_PLACEMENT = "second";
@@ -29,7 +29,6 @@ const SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX = "The user cancelled sub-agent";
  * covers the round trip with margin.
  */
 const SUBAGENT_CANCEL_CONFIRM_TIMEOUT_MS = 5_000;
-const SUBAGENT_CANCEL_POLL_INTERVAL_MS = 250;
 
 /** Opens one sub-agent child session in a right split pane when possible. */
 export async function openSubagentSessionInRightSplitPane(opts: {
@@ -39,16 +38,22 @@ export async function openSubagentSessionInRightSplitPane(opts: {
   parentSessionId?: string;
   agentId?: string;
   childSessionId: string;
+  runtime?: AgentRuntime;
   title: string;
 }): Promise<void> {
   console.debug("[agentChatSubagentCommands] open requested", opts);
+  const runtime = normalizeAgentChatRuntime({ runtime: opts.runtime, sessionId: opts.childSessionId });
+  const sessionKey = buildAgentRuntimeSessionKey(runtime, opts.childSessionId);
   const existingTabId =
-    findTabWithSession(opts.childSessionId) ??
+    findTabWithSession(opts.childSessionId, runtime) ??
     tabStore.getState().tabs.find((tab) => {
+      const sessionId = tab.kind === "agent-chat" ? tab.data.sessionId?.trim() : undefined;
       return (
         tab.workspaceId === opts.workspaceId &&
         tab.kind === "agent-chat" &&
-        tab.data.sessionId?.trim() === opts.childSessionId
+        sessionId &&
+        buildAgentRuntimeSessionKey(normalizeAgentChatRuntime({ runtime: tab.data.runtime, sessionId }), sessionId) ===
+          sessionKey
       );
     })?.id;
   if (existingTabId) {
@@ -78,6 +83,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
       title: opts.title,
       cwd: opts.cwd,
       sessionId: opts.childSessionId,
+      runtime,
       sessionView: "subagent-detail",
       subagentAgentId: opts.agentId,
       subagentParentSessionId: opts.parentSessionId,
@@ -97,6 +103,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
       title: opts.title,
       cwd: opts.cwd,
       sessionId: opts.childSessionId,
+      runtime,
       sessionView: "subagent-detail",
       subagentAgentId: opts.agentId,
       subagentParentSessionId: opts.parentSessionId,
@@ -118,6 +125,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
       title: opts.title,
       cwd: opts.cwd,
       sessionId: opts.childSessionId,
+      runtime,
       sessionView: "subagent-detail",
       subagentAgentId: opts.agentId,
       subagentParentSessionId: opts.parentSessionId,
@@ -215,10 +223,16 @@ export async function cancelSubagentRun(opts: {
   sessionId: string;
   /** Row identity for cancel feedback: childSessionId ?? rowId. */
   rowKey: string;
+  runtime?: AgentRuntime;
   agentId?: string;
   agentName?: string;
   childSessionId?: string;
 }): Promise<void> {
+  if (opts.runtime === "dsh") {
+    await cancelDshSubagentRun(opts);
+    return;
+  }
+
   const stopTarget = opts.childSessionId?.trim() || opts.agentId?.trim();
   if (!stopTarget) {
     agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, {
@@ -233,25 +247,21 @@ export async function cancelSubagentRun(opts: {
   try {
     const sessionState = agentChatStore.getState().sessionsByTabId[opts.tabId]?.state;
     const streamingBehavior = isAgentSessionBusy(sessionState) ? "steer" : undefined;
-    await sendPiCommand({
+    await promptAgentSession({
+      tabId: opts.tabId,
       sessionId: opts.sessionId,
-      command: {
-        type: "prompt",
-        message: `/agent-stop ${stopTarget}`,
-        streamingBehavior,
-      },
+      message: `/agent-stop ${stopTarget}`,
+      streamingBehavior,
     });
 
     if (streamingBehavior === "steer") {
       const cancelledAgentLabel =
         opts.agentName?.trim() || opts.childSessionId?.trim() || opts.agentId?.trim() || stopTarget;
-      await sendPiCommand({
+      await promptAgentSession({
+        tabId: opts.tabId,
         sessionId: opts.sessionId,
-        command: {
-          type: "prompt",
-          message: `${SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX} ${cancelledAgentLabel}. Do not retry that sub-agent. Continue without it and explain any missing work if needed.`,
-          streamingBehavior: "steer",
-        },
+        message: `${SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX} ${cancelledAgentLabel}. Do not retry that sub-agent. Continue without it and explain any missing work if needed.`,
+        streamingBehavior: "steer",
       });
     }
   } catch (error) {

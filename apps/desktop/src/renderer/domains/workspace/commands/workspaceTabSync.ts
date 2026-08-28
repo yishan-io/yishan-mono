@@ -1,4 +1,4 @@
-import { chatStore, stopPiSession } from "@renderer/domains/agent";
+import { chatStore, stopAgentSession } from "@renderer/domains/agent";
 import {
   resolveTabForWorkspace,
   retainWorkspaceTabs,
@@ -20,9 +20,9 @@ export async function syncTabStoreWithWorkspace(previousWorkspaces: WorkspaceIte
   const removedAgentChatTabs = tabStore
     .getState()
     .tabs.filter((tab) => removedWorkspaceIds.includes(tab.workspaceId) && tab.kind === "agent-chat");
-  const piStopPromises = removedAgentChatTabs.map((tab) => stopPiSession(tab.id));
-  // fire-and-forget: workspace removal must not wait for Pi session cleanup.
-  void Promise.allSettled(piStopPromises);
+  const agentStopPromises = removedAgentChatTabs.map((tab) => stopAgentSession(tab.id));
+  // fire-and-forget: workspace removal must not wait for agent session cleanup.
+  void Promise.allSettled(agentStopPromises);
 
   const removedTabIds = retainWorkspaceTabs(nextWorkspaceIds);
 

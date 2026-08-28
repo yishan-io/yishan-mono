@@ -27,6 +27,8 @@ export type AgentSubagentLifecycleDetails = {
 /** One running sub-agent row rendered above the parent chat composer. */
 export type RunningSubagentSummary = {
   rowId: string;
+  /** Runtime that owns this row; omitted for existing Pi-derived rows. */
+  runtime?: "pi" | "dsh";
   agentName: string;
   agentId?: string;
   childSessionId?: string;

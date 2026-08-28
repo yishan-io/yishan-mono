@@ -33,7 +33,7 @@ func TestMigrate_016ConvertsPresetNamesToHexAndPromotesCustomColor(t *testing.T)
 	if err := Migrate(database); err != nil {
 		t.Fatalf("apply migration 016: %v", err)
 	}
-	assertMigrationCount(t, database, 21)
+	assertMigrationCount(t, database, 22)
 	assertColumnAbsent(t, database, "local_task_tag_catalog", "custom_color")
 	assertForeignKeyCheckEmpty(t, database)
 
@@ -61,7 +61,7 @@ func TestMigrate_016ConvertsPresetNamesToHexAndPromotesCustomColor(t *testing.T)
 	if err := Migrate(database); err != nil {
 		t.Fatalf("rerun migrate: %v", err)
 	}
-	assertMigrationCount(t, database, 21)
+	assertMigrationCount(t, database, 22)
 }
 
 func TestMigrate_016HexConstraintRejectsLowercaseAndNonHex(t *testing.T) {
@@ -119,7 +119,7 @@ func TestMigrate_016PreservesExistingTagsAndReferencesAfterReopen(t *testing.T) 
 	if err := Migrate(database); err != nil {
 		t.Fatalf("remigrate: %v", err)
 	}
-	assertMigrationCount(t, database, 21)
+	assertMigrationCount(t, database, 22)
 	assertColumnAbsent(t, database, "local_task_tag_catalog", "custom_color")
 	// custom_color='#123456' should be promoted → color='#123456' (already uppercase).
 	assert016AlphaCatalog(t, database)

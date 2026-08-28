@@ -23,11 +23,22 @@ func (s *Service) Start(ctx context.Context, connState *rpc.Connection, req rpc.
 	if err := validatePiStart(req); err != nil {
 		return nil, err
 	}
+	claim, err := s.runtimeIdentities.claim(req.SessionID, rpc.AgentRuntimePi)
+	if err != nil {
+		return nil, err
+	}
 	admission, err := s.piSessions.Admit(req.WorkspaceID)
 	if err != nil {
+		if claim.isFresh {
+			s.runtimeIdentities.release(req.SessionID, rpc.AgentRuntimePi)
+		}
 		return nil, workspaceClosingError(req.WorkspaceID)
 	}
-	return s.startAdmittedPi(ctx, admission, connState, req)
+	result, err := s.startAdmittedPi(ctx, admission, connState, req)
+	if err != nil && claim.isFresh {
+		s.runtimeIdentities.release(req.SessionID, rpc.AgentRuntimePi)
+	}
+	return result, err
 }
 
 func validatePiStart(req rpc.PiStartParams) error {
@@ -42,6 +53,12 @@ func validatePiStart(req rpc.PiStartParams) error {
 
 func workspaceClosingError(workspaceID string) error {
 	return rpc.NewRPCError(rpc.CodeNotFound, "workspace is closing: "+workspaceID)
+}
+
+// SetAfterWorkspaceCleanupAdmissionClosedForTest installs a focused-test hook
+// that runs after a workspace close blocks new agent admissions.
+func (s *Service) SetAfterWorkspaceCleanupAdmissionClosedForTest(hook func()) {
+	s.piSessions.SetAfterWorkspaceCleanupMarkerInstalledForTest(hook)
 }
 
 func (s *Service) startAdmittedPi(ctx context.Context, admission *session.Admission, connState *rpc.Connection, req rpc.PiStartParams) (any, error) {
@@ -233,6 +250,10 @@ func (s *Service) stopRegisteredSession(ctx context.Context, sessionID string) e
 	if !exists {
 		return nil
 	}
+	return s.stopClaim(ctx, claim)
+}
+
+func (s *Service) stopClaim(ctx context.Context, claim *session.StopClaim) error {
 	if !claim.IsOwner() {
 		return claim.Wait(ctx)
 	}
@@ -241,6 +262,9 @@ func (s *Service) stopRegisteredSession(ctx context.Context, sessionID string) e
 	}
 	err := s.stopProcess(claim.Process())
 	s.piSessions.CompleteStop(claim, err)
+	if err == nil {
+		s.runtimeIdentities.release(claim.Process().ID(), rpc.AgentRuntimePi)
+	}
 	return err
 }
 
@@ -336,7 +360,7 @@ func (s *Service) BeginWorkspaceAgentCleanup(ctx context.Context, workspaceID st
 	if s.afterWorkspaceClaims != nil {
 		s.afterWorkspaceClaims()
 	}
-	handle.err = errors.Join(beginErr, s.stopWorkspaceClaims(ctx, claims))
+	handle.err = errors.Join(beginErr, s.stopWorkspaceClaims(ctx, claims), s.stopDSHWorkspaceSessions(ctx, workspaceID))
 	return handle, handle.err
 }
 

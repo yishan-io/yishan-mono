@@ -14,6 +14,7 @@ const rpcMocks = vi.hoisted(() => ({
   closeAgentSession: vi.fn(),
   closeSession: vi.fn(async () => undefined),
   enqueueWorkspaceErrorNotice: vi.fn(),
+  stopAgentSession: vi.fn(async () => {}),
   stopPiSession: vi.fn(async () => {}),
   clearAgentChatComposerFocus: vi.fn(),
   clearTerminalAgentStatus: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
 });
 
 vi.mock("../../domains/agent/commands/agentChatCommands", () => ({
+  stopAgentSession: rpcMocks.stopAgentSession,
   stopPiSession: rpcMocks.stopPiSession,
 }));
 
@@ -75,28 +77,29 @@ afterEach(() => {
 });
 
 describe("tabCloseHandler", () => {
-  it("stops the pi session when an agent-chat tab with a session id closes", async () => {
+  it("stops an interactive workspace-create DSH Task Run when its tab closes", async () => {
     const removeTabData = vi.fn();
     tabStore.setState({
       tabs: [
         {
-          id: "tab-1",
+          id: "task-run-tab-1",
           workspaceId: "workspace-1",
-          title: "Agent Chat",
+          title: "Task: investigate bug",
           pinned: false,
           kind: "agent-chat",
-          data: { cwd: "/tmp/project", sessionId: "session-1" },
+          data: { cwd: "/tmp/workspace-1", sessionId: "task-run-session-1", runtime: "dsh" },
         },
       ],
     });
     chatStore.setState({ removeTabData });
 
-    closeTabWithCleanup("tab-1");
+    closeTabWithCleanup("task-run-tab-1");
     await Promise.resolve();
 
-    expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-1");
-    expect(rpcMocks.closeTab).toHaveBeenCalledWith("tab-1", undefined);
-    expect(removeTabData).toHaveBeenCalledWith(["tab-1"]);
+    expect(rpcMocks.stopAgentSession).toHaveBeenCalledWith("task-run-tab-1");
+    expect(rpcMocks.stopPiSession).not.toHaveBeenCalled();
+    expect(rpcMocks.closeTab).toHaveBeenCalledWith("task-run-tab-1", undefined);
+    expect(removeTabData).toHaveBeenCalledWith(["task-run-tab-1"]);
   });
 
   it("closes backend terminal session when terminal tab is closed", async () => {
@@ -210,9 +213,9 @@ describe("tabCloseHandler", () => {
     closeOtherTabsWithCleanup("tab-1");
     await Promise.resolve();
 
-    expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-2");
-    expect(rpcMocks.stopPiSession).not.toHaveBeenCalledWith("tab-pinned");
-    expect(rpcMocks.stopPiSession).not.toHaveBeenCalledWith("tab-3");
+    expect(rpcMocks.stopAgentSession).toHaveBeenCalledWith("tab-2");
+    expect(rpcMocks.stopAgentSession).not.toHaveBeenCalledWith("tab-pinned");
+    expect(rpcMocks.stopAgentSession).not.toHaveBeenCalledWith("tab-3");
     expect(rpcMocks.closeOtherTabs).toHaveBeenCalledWith("tab-1");
     expect(removeTabData).toHaveBeenCalledWith(["tab-2"]);
   });
@@ -254,8 +257,8 @@ describe("tabCloseHandler", () => {
 
     closeOtherTabsWithCleanup("tab-keep");
     await vi.waitFor(() => {
-      expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-agent");
-      expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-subagent-detail");
+      expect(rpcMocks.stopAgentSession).toHaveBeenCalledWith("tab-agent");
+      expect(rpcMocks.stopAgentSession).toHaveBeenCalledWith("tab-subagent-detail");
     });
     expect(rpcMocks.clearAgentChatComposerFocus).toHaveBeenCalledWith("tab-agent");
     expect(rpcMocks.clearAgentChatComposerFocus).toHaveBeenCalledWith("tab-subagent-detail");
@@ -396,9 +399,9 @@ describe("tabCloseHandler", () => {
     closeAllTabsWithCleanup("tab-1");
     await Promise.resolve();
 
-    expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-1");
-    expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-2");
-    expect(rpcMocks.stopPiSession).not.toHaveBeenCalledWith("tab-pinned");
+    expect(rpcMocks.stopAgentSession).toHaveBeenCalledWith("tab-1");
+    expect(rpcMocks.stopAgentSession).toHaveBeenCalledWith("tab-2");
+    expect(rpcMocks.stopAgentSession).not.toHaveBeenCalledWith("tab-pinned");
     expect(rpcMocks.closeAllTabs).toHaveBeenCalledWith("tab-1");
     expect(removeTabData).toHaveBeenCalledWith(["tab-1", "tab-2"]);
   });

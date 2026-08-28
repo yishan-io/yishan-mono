@@ -267,8 +267,13 @@ export function setTerminalTabAgentKind(tabId: string, agentKind: DesktopAgentKi
   tabStore.getState().setTerminalTabAgentKind(tabId, agentKind);
 }
 
+/** Persists the resolved execution runtime before session startup begins. */
+export function bindAgentChatTabRuntime(input: { tabId: string; runtime: "pi" | "dsh" }): void {
+  tabStore.getState().setAgentChatTabRuntime(input);
+}
+
 /** Records the bound backend session id on one agent-chat tab. */
-export function bindAgentChatTabSession(input: { tabId: string; sessionId: string }): void {
+export function bindAgentChatTabSession(input: { tabId: string; sessionId: string; runtime: "pi" | "dsh" }): void {
   tabStore.getState().setAgentChatTabSession(input);
 }
 

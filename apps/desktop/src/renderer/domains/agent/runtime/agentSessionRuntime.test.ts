@@ -3,21 +3,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
-import { sendAgentPrompt } from "../commands/agentChatCommands";
+import { abortAgent, sendAgentPrompt } from "../commands/agentChatCommands";
 import { agentChatStore } from "../state/agentChatStore";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
-import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
-import { registerAgentSession } from "../subscriptions/agentChatPiEventShared";
-import { clearPiSessionHandle, ensurePiSession, stopPiSession } from "./agentSessionRuntime";
+import { ensureAgentSession, ensurePiSession, stopAgentSession, stopPiSession } from "./agentSessionRuntime";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialSplitPaneStoreState = splitPaneStore.getState();
 
 const mocks = vi.hoisted(() => ({
-  start: vi.fn(),
-  attach: vi.fn(),
-  stop: vi.fn(),
+  startAgent: vi.fn(),
+  attachAgent: vi.fn(),
+  promptAgent: vi.fn(),
+  abortAgent: vi.fn(),
+  disposeAgent: vi.fn(),
   send: vi.fn(),
   listSessions: vi.fn(),
   listActiveSessions: vi.fn(),
@@ -44,36 +44,160 @@ vi.mock("../subscriptions/agentChatEventRouter", () => ({
 }));
 
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
-  attachPiSession: mocks.attach,
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
+  attachAgentSession: mocks.attachAgent,
+  abortAgentSession: mocks.abortAgent,
+  disposeAgentSession: mocks.disposeAgent,
+  promptAgentSession: mocks.promptAgent,
+  startAgentSession: mocks.startAgent,
   closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
   ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),
-  getPiSessionFile: mocks.getSessionFile ?? vi.fn(),
-  listActivePiSessions: mocks.listActiveSessions ?? vi.fn(),
+  listActivePiCompatibilitySessions: mocks.listActiveSessions ?? vi.fn(),
   listAgentDetectionStatuses: mocks.listDetectionStatuses ?? vi.fn(),
   listAgentModels: mocks.listModels ?? vi.fn(),
   listPiProviders: mocks.listProviders ?? vi.fn(),
-  listPiSessions: mocks.listSessions ?? vi.fn(),
   removePiProvider: mocks.removeProvider ?? vi.fn(),
-  renamePiSession: mocks.rename ?? vi.fn(),
+  renamePiCompatibilitySession: mocks.rename ?? vi.fn(),
   runWorkspaceChatPrompt: mocks.runChatPrompt ?? vi.fn(),
   savePiProvider: mocks.saveProvider ?? vi.fn(),
-  sendPiCommand: mocks.send ?? vi.fn(),
-  startPiSession: mocks.start ?? vi.fn(),
-  stopPiSession: mocks.stop ?? vi.fn(),
+  sendPiCompatibilityCommand: mocks.send ?? vi.fn(),
 }));
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   splitPaneStore.setState(initialSplitPaneStoreState, true);
-  // The reopen test leaves a deferred pi.stop implementation behind; reset it so
-  // later tests never hang on an unresolved stop.
-  mocks.stop.mockReset();
+  mocks.disposeAgent.mockReset();
   vi.clearAllMocks();
 });
+describe.each(["pi", "dsh"] as const)("agentSessionRuntime pre-start close (%s)", (runtime) => {
+  it("defers close through prior teardown and disposes the eventual backend start exactly once", async () => {
+    const sessionId = `${runtime}-pre-start`;
+    mocks.startAgent.mockResolvedValue({ runtime, sessionId });
+    await ensureAgentSession({
+      runtime,
+      tabId: `${runtime}-old`,
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId,
+    });
+
+    let resolvePriorDispose: (() => void) | undefined;
+    mocks.disposeAgent.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePriorDispose = resolve;
+        }),
+    );
+    const priorStop = stopAgentSession(`${runtime}-old`);
+    await vi.waitFor(() => expect(mocks.disposeAgent).toHaveBeenCalledTimes(1));
+
+    const ensurePromise = ensureAgentSession({
+      runtime,
+      tabId: `${runtime}-new`,
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId,
+    });
+    const stopPromise = stopAgentSession(`${runtime}-new`);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mocks.startAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.disposeAgent).toHaveBeenCalledTimes(1);
+
+    resolvePriorDispose?.();
+    await priorStop;
+    await ensurePromise;
+    await stopPromise;
+
+    expect(mocks.startAgent).toHaveBeenCalledTimes(2);
+    expect(mocks.disposeAgent).toHaveBeenCalledTimes(2);
+    expect(mocks.disposeAgent).toHaveBeenLastCalledWith(expect.objectContaining({ runtime, sessionId }));
+  });
+});
+
+describe("agentSessionRuntime Pi router wait", () => {
+  it("defers close until router readiness permits the backend start", async () => {
+    let resolveRouterReady: (() => void) | undefined;
+    vi.mocked(ensureAgentChatEventRouterReady).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRouterReady = resolve;
+        }),
+    );
+    mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "pi-router-wait" });
+
+    const ensurePromise = ensurePiSession({
+      tabId: "tab-router-wait",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId: "pi-router-wait",
+    });
+    const stopPromise = stopPiSession("tab-router-wait");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mocks.startAgent).not.toHaveBeenCalled();
+    expect(mocks.disposeAgent).not.toHaveBeenCalled();
+
+    resolveRouterReady?.();
+    await ensurePromise;
+    await stopPromise;
+
+    expect(mocks.startAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.disposeAgent).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("agentSessionRuntime.ensurePiSession", () => {
+  it("uses neutral agent procedures for production Pi start, prompt, abort, and dispose", async () => {
+    mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "neutral-session" });
+    mocks.promptAgent.mockResolvedValue({ runtime: "pi", ok: true });
+    mocks.abortAgent.mockResolvedValue({ runtime: "pi", ok: true });
+    mocks.disposeAgent.mockResolvedValue({ runtime: "pi", ok: true });
+
+    await ensurePiSession({
+      tabId: "tab-neutral",
+      workspaceId: "workspace-canonical",
+      cwd: "/canonical/workspace",
+      sessionId: "neutral-session",
+    });
+    await sendAgentPrompt({ tabId: "tab-neutral", sessionId: "neutral-session", message: "Hello" });
+    await abortAgent({ tabId: "tab-neutral", sessionId: "neutral-session" });
+    expect(agentChatStore.getState().sessionsByTabId["tab-neutral"]?.sessionId).toBe("neutral-session");
+    await stopPiSession("tab-neutral");
+
+    expect(mocks.startAgent).toHaveBeenCalledWith({
+      runtime: "pi",
+      sessionId: "neutral-session",
+      tabId: "tab-neutral",
+      paneId: "pane-tab-neutral",
+      workspaceId: "workspace-canonical",
+      cwd: "/canonical/workspace",
+    });
+    expect(mocks.promptAgent).toHaveBeenCalledWith({
+      runtime: "pi",
+      sessionId: "neutral-session",
+      workspaceId: "workspace-canonical",
+      cwd: "/canonical/workspace",
+      message: "Hello",
+      streamingBehavior: undefined,
+    });
+    expect(mocks.abortAgent).toHaveBeenCalledWith({
+      runtime: "pi",
+      sessionId: "neutral-session",
+      workspaceId: "workspace-canonical",
+      cwd: "/canonical/workspace",
+    });
+    expect(mocks.disposeAgent).toHaveBeenCalledWith({
+      runtime: "pi",
+      sessionId: "neutral-session",
+      workspaceId: "workspace-canonical",
+      cwd: "/canonical/workspace",
+    });
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
   it("passes paneId through to pi.start", async () => {
-    mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
+    mocks.startAgent.mockResolvedValue({ sessionId: "generated-session-id" });
 
     await ensurePiSession({
       tabId: "tab-pane-explicit",
@@ -89,18 +213,18 @@ describe("agentSessionRuntime.ensurePiSession", () => {
     });
     expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
 
-    expect(mocks.start).toHaveBeenCalledWith({
+    expect(mocks.startAgent).toHaveBeenCalledWith({
+      runtime: "pi",
       sessionId: "generated-session-id",
       tabId: "tab-pane-explicit",
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
       paneId: "pane-1",
-      resume: undefined,
     });
   });
 
   it("uses a deterministic pane fallback when paneId is omitted", async () => {
-    mocks.start.mockResolvedValue({ sessionId: "pi-session-2" });
+    mocks.startAgent.mockResolvedValue({ sessionId: "pi-session-2" });
 
     await ensurePiSession({
       tabId: "tab-pane-fallback",
@@ -115,18 +239,18 @@ describe("agentSessionRuntime.ensurePiSession", () => {
     });
     expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
 
-    expect(mocks.start).toHaveBeenCalledWith({
+    expect(mocks.startAgent).toHaveBeenCalledWith({
+      runtime: "pi",
       sessionId: "generated-session-id",
       tabId: "tab-pane-fallback",
       workspaceId: "workspace-2",
       cwd: "/tmp/project-2",
       paneId: "pane-tab-pane-fallback",
-      resume: undefined,
     });
   });
 
   it("reopens history sessions by starting with the existing session id", async () => {
-    mocks.start.mockResolvedValue({ sessionId: "history-session-1" });
+    mocks.startAgent.mockResolvedValue({ sessionId: "history-session-1" });
 
     await ensurePiSession({
       tabId: "tab-history-resume",
@@ -142,20 +266,20 @@ describe("agentSessionRuntime.ensurePiSession", () => {
     });
     expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
 
-    expect(mocks.start).toHaveBeenCalledWith({
+    expect(mocks.startAgent).toHaveBeenCalledWith({
+      runtime: "pi",
       sessionId: "history-session-1",
       tabId: "tab-history-resume",
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
       paneId: "pane-history",
-      resume: undefined,
     });
-    expect(mocks.attach).not.toHaveBeenCalled();
+    expect(mocks.attachAgent).not.toHaveBeenCalled();
   });
 
   it("attaches only when start reports that the live daemon session already exists", async () => {
-    mocks.start.mockRejectedValue(Object.assign(new Error("agent session already exists"), { code: -32003 }));
-    mocks.attach.mockResolvedValue({ ok: true });
+    mocks.startAgent.mockRejectedValue(Object.assign(new Error("agent session already exists"), { code: -32003 }));
+    mocks.attachAgent.mockResolvedValue({ ok: true });
 
     await ensurePiSession({
       tabId: "tab-reattach",
@@ -171,15 +295,16 @@ describe("agentSessionRuntime.ensurePiSession", () => {
     });
     expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
 
-    expect(mocks.start).toHaveBeenCalledWith({
+    expect(mocks.startAgent).toHaveBeenCalledWith({
+      runtime: "pi",
       sessionId: "live-session-1",
       tabId: "tab-reattach",
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
       paneId: "pane-tab-reattach",
-      resume: undefined,
     });
-    expect(mocks.attach).toHaveBeenCalledWith({
+    expect(mocks.attachAgent).toHaveBeenCalledWith({
+      runtime: "pi",
       sessionId: "live-session-1",
       tabId: "tab-reattach",
       workspaceId: "workspace-1",
@@ -188,7 +313,7 @@ describe("agentSessionRuntime.ensurePiSession", () => {
   });
 
   it("does not attach when start fails for reasons other than an already-running live session", async () => {
-    mocks.start.mockRejectedValue(new Error("pi session not found"));
+    mocks.startAgent.mockRejectedValue(new Error("pi session not found"));
 
     await expect(
       ensurePiSession({
@@ -199,7 +324,7 @@ describe("agentSessionRuntime.ensurePiSession", () => {
       }),
     ).rejects.toThrow("pi session not found");
 
-    expect(mocks.attach).not.toHaveBeenCalled();
+    expect(mocks.attachAgent).not.toHaveBeenCalled();
     expect(registerAgentChatEventRouter).toHaveBeenCalledWith({
       tabId: "tab-start-failure",
       sessionId: "missing-session-1",
@@ -210,7 +335,7 @@ describe("agentSessionRuntime.ensurePiSession", () => {
 
   it("prefers explicit session ids over stale local chat-session state", async () => {
     agentChatStore.getState().initSession("tab-explicit-live", "stale-session");
-    mocks.start.mockResolvedValue({ sessionId: "live-session-2" });
+    mocks.startAgent.mockResolvedValue({ sessionId: "live-session-2" });
 
     await ensurePiSession({
       tabId: "tab-explicit-live",
@@ -226,18 +351,24 @@ describe("agentSessionRuntime.ensurePiSession", () => {
     });
     expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
 
-    expect(mocks.start).toHaveBeenCalledWith({
+    expect(mocks.startAgent).toHaveBeenCalledWith({
+      runtime: "pi",
       sessionId: "live-session-2",
       tabId: "tab-explicit-live",
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
       paneId: "pane-tab-explicit-live",
-      resume: undefined,
     });
   });
 
   it("clears the previous turn error when sending a new prompt", async () => {
-    agentChatStore.getState().initSession("tab-send", "session-send");
+    mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "session-send" });
+    await ensurePiSession({
+      tabId: "tab-send",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "session-send",
+    });
     agentChatStore.getState().setTurnError("tab-send", "previous turn failed");
 
     await sendAgentPrompt({
@@ -246,196 +377,14 @@ describe("agentSessionRuntime.ensurePiSession", () => {
       message: "try again",
     });
 
-    expect(mocks.send).toHaveBeenCalledWith({
+    expect(mocks.promptAgent).toHaveBeenCalledWith({
+      runtime: "pi",
       sessionId: "session-send",
-      command: {
-        type: "prompt",
-        message: "try again",
-        streamingBehavior: undefined,
-      },
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      message: "try again",
+      streamingBehavior: undefined,
     });
     expect(agentChatStore.getState().sessionsByTabId["tab-send"]?.turnError).toBeNull();
-  });
-
-  it("unsubscribes and still stops the backend session after clearing a stale local handle", async () => {
-    const unsubscribe = vi.fn();
-    mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
-
-    await ensurePiSession({
-      tabId: "tab-clear-handle",
-      workspaceId: "workspace-1",
-      cwd: "/tmp/project",
-    });
-    registerAgentSession({ tabId: "tab-clear-handle", sessionId: "generated-session-id" });
-
-    clearPiSessionHandle("tab-clear-handle");
-    await stopPiSession("tab-clear-handle");
-
-    expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "generated-session-id" });
-  });
-
-  it("stops a Pi session even when the tab closes while pi.start is still in flight", async () => {
-    let resolveStart: ((value: { sessionId: string }) => void) | undefined;
-    mocks.start.mockImplementation(
-      () =>
-        new Promise((resolve: (value: { sessionId: string }) => void) => {
-          resolveStart = resolve;
-        }),
-    );
-
-    const ensurePromise = ensurePiSession({
-      tabId: "tab-close-during-start",
-      workspaceId: "workspace-1",
-      cwd: "/tmp/project",
-    });
-
-    await Promise.resolve();
-
-    const stopPromise = stopPiSession("tab-close-during-start");
-    expect(mocks.stop).not.toHaveBeenCalled();
-
-    await vi.waitFor(() => {
-      expect(mocks.start).toHaveBeenCalled();
-    });
-    resolveStart?.({ sessionId: "generated-session-id" });
-
-    await ensurePromise;
-    await stopPromise;
-
-    expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "generated-session-id" });
-  });
-
-  it("concurrent ensurePiSession calls await in-flight startup and return the same session ID", async () => {
-    let resolveStart: ((value: { sessionId: string }) => void) | undefined;
-    mocks.start.mockImplementation(
-      () =>
-        new Promise((resolve: (value: { sessionId: string }) => void) => {
-          resolveStart = resolve;
-        }),
-    );
-
-    // First call starts Pi but hasn't resolved yet.
-    const firstPromise = ensurePiSession({
-      tabId: "tab-concurrent",
-      workspaceId: "workspace-1",
-      cwd: "/tmp/project",
-    });
-
-    // Yield to let the first call register its handle before the second starts.
-    await Promise.resolve();
-
-    // Second call (simulates Strict Mode remount) finds the in-flight handle.
-    const secondPromise = ensurePiSession({
-      tabId: "tab-concurrent",
-      workspaceId: "workspace-1",
-      cwd: "/tmp/project",
-    });
-
-    // Pi hasn't started yet — second call must be waiting, not resolved.
-    let secondResolved = false;
-    void secondPromise.then(() => {
-      secondResolved = true;
-    });
-    await Promise.resolve();
-    expect(secondResolved).toBe(false);
-
-    // Resolve Pi startup.
-    await vi.waitFor(() => {
-      expect(mocks.start).toHaveBeenCalled();
-    });
-    resolveStart?.({ sessionId: "generated-session-id" });
-
-    const [id1, id2] = await Promise.all([firstPromise, secondPromise]);
-
-    expect(id1.sessionId).toBe("generated-session-id");
-    expect(id2.sessionId).toBe("generated-session-id");
-    expect(id1.attached).toBe(false);
-    // Pi must have been started only once.
-    expect(mocks.start).toHaveBeenCalledTimes(1);
-  });
-
-  it("reopens a session id only after an in-flight stop for it has settled", async () => {
-    mocks.start.mockResolvedValue({ sessionId: "history-close-reopen" });
-
-    // Open the history session in a first tab.
-    await ensurePiSession({
-      tabId: "tab-close",
-      workspaceId: "workspace-1",
-      cwd: "/tmp/project",
-      sessionId: "history-close-reopen",
-    });
-
-    // Close the tab; pi.stop stays in flight until the test resolves it.
-    let resolveStop: (() => void) | undefined;
-    mocks.stop.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveStop = resolve;
-        }),
-    );
-    const stopPromise = stopPiSession("tab-close");
-    await vi.waitFor(() => {
-      expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "history-close-reopen" });
-    });
-
-    // Reopen the same history session in a new tab while the stop is in flight.
-    const reopenPromise = ensurePiSession({
-      tabId: "tab-reopen",
-      workspaceId: "workspace-1",
-      cwd: "/tmp/project",
-      sessionId: "history-close-reopen",
-    });
-
-    // The reopen must wait for the teardown instead of racing pi.start.
-    let reopenSettled = false;
-    void reopenPromise.then(() => {
-      reopenSettled = true;
-    });
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(reopenSettled).toBe(false);
-    expect(mocks.start).toHaveBeenCalledTimes(1); // only the first open so far
-
-    // Finish the teardown; the reopen then proceeds with a fresh pi.start.
-    resolveStop?.();
-    await stopPromise;
-    await reopenPromise;
-
-    expect(reopenSettled).toBe(true);
-    expect(mocks.start).toHaveBeenCalledTimes(2);
-    expect(mocks.attach).not.toHaveBeenCalled();
-    expect(mocks.start).toHaveBeenLastCalledWith(
-      expect.objectContaining({ sessionId: "history-close-reopen", tabId: "tab-reopen" }),
-    );
-  });
-
-  it("closes subagent-detail tabs without stopping the child session", async () => {
-    tabStore.setState(
-      {
-        ...tabStore.getState(),
-        tabs: [
-          {
-            id: "subagent-tab",
-            workspaceId: "workspace-1",
-            title: "Builder detail",
-            pinned: false,
-            kind: "agent-chat",
-            data: {
-              cwd: "/tmp/project",
-              sessionId: "child-session-1",
-              sessionView: "subagent-detail",
-            },
-          },
-        ],
-      },
-      true,
-    );
-    agentChatStore.getState().initSession("subagent-tab", "child-session-1");
-
-    await stopPiSession("subagent-tab");
-
-    expect(mocks.stop).not.toHaveBeenCalled();
-    expect(agentChatStore.getState().sessionsByTabId["subagent-tab"]).toBeUndefined();
   });
 });

@@ -892,6 +892,8 @@ describe("createWorkspaceEventHandlers", () => {
       workspaceId: "workspace-1",
       worktreePath: "/tmp/workspace-1",
       taskRunSessionId: "chat-task-1",
+      taskRunTabId: "task-workspace-1",
+      taskRunRuntime: "dsh",
       taskRunTitle: "Task: investigate bug",
       taskRunStatus: "started",
     } as RpcFrontendMessagePayload<"workspaceCreateCompleted">);
@@ -901,9 +903,20 @@ describe("createWorkspaceEventHandlers", () => {
       kind: "agent-chat",
       workspaceId: "workspace-1",
       title: "Task: investigate bug",
-      data: { sessionId: "chat-task-1", cwd: "/tmp/workspace-1", sessionView: "full" },
+      id: "task-workspace-1",
+      data: { sessionId: "chat-task-1", cwd: "/tmp/workspace-1", runtime: "dsh", sessionView: "full" },
     });
 
+    createCompletedHarness.emit({
+      workspaceId: "workspace-1",
+      worktreePath: "/tmp/workspace-1",
+      taskRunSessionId: "chat-task-1",
+      taskRunTabId: "task-workspace-1",
+      taskRunRuntime: "dsh",
+      taskRunTitle: "Task: investigate bug",
+      taskRunStatus: "started",
+    } as RpcFrontendMessagePayload<"workspaceCreateCompleted">);
+    expect(tabStore.getState().tabs).toHaveLength(1);
     stopBindings();
   });
 });

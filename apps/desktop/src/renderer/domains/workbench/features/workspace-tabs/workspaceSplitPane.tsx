@@ -39,8 +39,10 @@ export type TabBarDescriptor = {
   isTemporary?: boolean;
   /** Present for agent-chat tabs: pi resume/runtime session id. */
   sessionId?: string;
-  /** Present for agent-chat tabs: working directory of the pi process. */
+  /** Present for agent-chat tabs: working directory of the agent process. */
   cwd?: string;
+  /** Present for agent-chat tabs: selected session runtime. */
+  runtime?: "pi" | "dsh";
 };
 
 /** Converts a full WorkbenchTab to the lightweight descriptor used by TabBar/SplitPaneGroup. */
@@ -56,5 +58,6 @@ export function toTabBarDescriptor(tab: WorkbenchTab): TabBarDescriptor {
       : false,
     sessionId: tab.kind === "agent-chat" ? tab.data.sessionId : undefined,
     cwd: tab.kind === "agent-chat" ? tab.data.cwd : undefined,
+    runtime: tab.kind === "agent-chat" ? tab.data.runtime : undefined,
   };
 }

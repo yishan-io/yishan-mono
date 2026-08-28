@@ -11,14 +11,14 @@ const daemon = vi.hoisted(() => {
   const activeSessions = new Map<string, { sessionId: string; tabId: string; workspaceId: string; cwd: string }>();
   return {
     activeSessions,
-    stopPiSession: vi.fn(async (tabId: string) => {
+    stopAgentSession: vi.fn(async (tabId: string) => {
       activeSessions.delete(tabId);
     }),
   };
 });
 
 vi.mock("@renderer/domains/agent/commands/agentChatCommands", () => ({
-  stopPiSession: daemon.stopPiSession,
+  stopAgentSession: daemon.stopAgentSession,
 }));
 
 const initialTabStoreState = tabStore.getState();
@@ -65,7 +65,7 @@ describe("tab close recovery", () => {
 
     closeTabWithCleanup("tab-1");
     await vi.waitFor(() => {
-      expect(daemon.stopPiSession).toHaveBeenCalledWith("tab-1");
+      expect(daemon.stopAgentSession).toHaveBeenCalledWith("tab-1");
     });
 
     const restoredTabStore = createEmptyTabStoreAccess();

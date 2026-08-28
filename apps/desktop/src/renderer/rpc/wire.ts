@@ -17,7 +17,7 @@ export type JsonRpcResponse = {
   jsonrpc: "2.0";
   id: string;
   result?: unknown;
-  error?: { code: number; message: string };
+  error?: { code: number; message: string; data?: unknown };
 };
 
 export type JsonRpcNotification = {

@@ -121,12 +121,15 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
 
     const taskRunSessionId = payload.taskRunSessionId?.trim();
     if (taskRunSessionId && payload.worktreePath) {
+      const taskRunTabId = payload.taskRunTabId?.trim();
       openTab({
         workspaceId: payload.workspaceId,
         kind: "agent-chat",
         ...(payload.taskRunTitle?.trim() ? { title: payload.taskRunTitle.trim() } : {}),
+        ...(taskRunTabId ? { tabId: taskRunTabId } : {}),
         cwd: payload.worktreePath,
         sessionId: taskRunSessionId,
+        runtime: payload.taskRunRuntime ?? "pi",
       });
     }
 

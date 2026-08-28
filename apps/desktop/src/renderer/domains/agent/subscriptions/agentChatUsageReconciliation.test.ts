@@ -12,10 +12,13 @@ import {
   refreshAgentSessionStats,
 } from "./agentChatPiEventShared";
 
-const mocks = vi.hoisted(() => ({ sendPiCommand: vi.fn() }));
+const mocks = vi.hoisted(() => ({ sendPiCompatibilityCommand: vi.fn() }));
 const initialAgentChatStoreState = agentChatStore.getState();
 
-vi.mock("../daemon/daemonAgentProcedures", () => ({ sendPiCommand: mocks.sendPiCommand }));
+vi.mock("../daemon/daemonAgentProcedures", () => ({
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
+  sendPiCompatibilityCommand: mocks.sendPiCompatibilityCommand,
+}));
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);

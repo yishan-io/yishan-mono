@@ -3,6 +3,7 @@ import { ModelPickerMenu } from "@renderer/domains/agent";
 import { ProviderMark } from "@renderer/domains/agent";
 import {
   buildModelPickerOption,
+  getModelPickerOptionIdentity,
   groupModelPickerOptionsByProvider,
   stripProviderPrefix,
 } from "@renderer/domains/agent";
@@ -223,7 +224,7 @@ export function TaskRunSection({
             anchorEl={menuAnchor}
             open={isMenuOpen}
             options={modelOptions}
-            selectedModelId={selectedOption?.id ?? null}
+            selectedModelIdentity={selectedOption ? getModelPickerOptionIdentity(selectedOption) : null}
             selectedProviderId={activeSelectedProvider}
             ignoreNextClickAwayRef={ignoreNextClickAwayRef}
             onClose={handleMenuClose}

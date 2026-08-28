@@ -142,6 +142,23 @@ describe("tabs-domain open", () => {
     expect(patch?.tabs?.some((tab) => tab.id === "new-agent-chat")).toBeFalsy();
   });
 
+  it("preserves an explicit agent-chat tab id", () => {
+    const patch = openTabState(
+      createBaseState(),
+      {
+        kind: "agent-chat",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        sessionId: "task-session",
+        runtime: "dsh",
+        tabId: "task-tab",
+      },
+      "generated-tab",
+      { selectedWorkspaceId: "workspace-1" },
+    );
+    expect(patch?.tabs?.find((tab) => tab.id === "task-tab")?.kind).toBe("agent-chat");
+  });
+
   it("creates a new agent-chat tab for a history session not yet open", () => {
     const state = createBaseState();
     const patch = openTabState(

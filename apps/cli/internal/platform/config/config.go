@@ -16,6 +16,9 @@ const (
 	DirName          = ".yishan"
 	PiAgentDirEnvKey = "PI_CODING_AGENT_DIR"
 
+	DefaultDSHProvider = "deepseek-official"
+	DefaultDSHModel    = "deepseek-v4-flash"
+
 	// AccountDirName is the per-account layer under a profile (env sandbox).
 	// profiles/<env>/accounts/<userId>/ holds the account-scoped data files.
 	AccountDirName = "accounts"
@@ -89,6 +92,9 @@ func ManagedPiSessionsDir() (string, error) {
 	return filepath.Join(agentDir, "sessions"), nil
 }
 
+// DSHDataDir returns the account-scoped root for DSH durable session data.
+func DSHDataDir(accountDataDir string) string { return filepath.Join(accountDataDir, "dsh") }
+
 type APIConfig struct {
 	BaseURL               string
 	Token                 string
@@ -98,11 +104,16 @@ type APIConfig struct {
 }
 
 type DaemonConfig struct {
-	Host         string
-	Port         int
-	RelayEnabled bool
-	RelayURL     string
-	RelayToken   string // static JWT for local dev; bypasses API token minting
+	Host           string
+	Port           int
+	RelayEnabled   bool
+	RelayURL       string
+	RelayToken     string // static JWT for local dev; bypasses API token minting
+	DSHEnabled     bool
+	DSHNodePath    string
+	DSHRuntimePath string
+	DSHProvider    string
+	DSHModel       string
 }
 
 type MemoryConfig struct {
@@ -190,11 +201,16 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 			RefreshTokenExpiresAt: v.GetString(KeyAPIRefreshTokenExpiresAt),
 		},
 		Daemon: DaemonConfig{
-			Host:         v.GetString("daemon_host"),
-			Port:         v.GetInt("daemon_port"),
-			RelayEnabled: v.GetBool("daemon_relay_enabled"),
-			RelayURL:     v.GetString("daemon_relay_url"),
-			RelayToken:   v.GetString("daemon_relay_token"),
+			Host:           v.GetString("daemon_host"),
+			Port:           v.GetInt("daemon_port"),
+			RelayEnabled:   v.GetBool("daemon_relay_enabled"),
+			RelayURL:       v.GetString("daemon_relay_url"),
+			RelayToken:     v.GetString("daemon_relay_token"),
+			DSHEnabled:     v.GetBool("daemon_dsh_enabled"),
+			DSHNodePath:    v.GetString("daemon_dsh_node_path"),
+			DSHRuntimePath: v.GetString("daemon_dsh_runtime_path"),
+			DSHProvider:    readStringWithDefault(v, "daemon_dsh_provider", DefaultDSHProvider),
+			DSHModel:       readStringWithDefault(v, "daemon_dsh_model", DefaultDSHModel),
 		},
 		Memory:      settingsCfg.Memory,
 		ComputerUse: settingsCfg.ComputerUse,
@@ -280,4 +296,11 @@ func ReadUserIDFromConfig(configPath string) string {
 		return ""
 	}
 	return strings.TrimSpace(v.GetString(KeyUserID))
+}
+
+func readStringWithDefault(v *viper.Viper, key string, defaultValue string) string {
+	if value := strings.TrimSpace(v.GetString(key)); value != "" {
+		return value
+	}
+	return defaultValue
 }

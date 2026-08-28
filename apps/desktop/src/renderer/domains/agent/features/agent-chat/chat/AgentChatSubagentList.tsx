@@ -56,7 +56,9 @@ export function AgentChatSubagentList({
         const canCancel =
           subagent.state === "running" &&
           !isInterrupted &&
-          Boolean(subagent.agentId || subagent.childSessionId || hasUniqueLiveTarget);
+          (subagent.runtime === "dsh"
+            ? Boolean(subagent.childSessionId)
+            : Boolean(subagent.agentId || subagent.childSessionId || hasUniqueLiveTarget));
 
         return (
           <AgentChatSubagentRow

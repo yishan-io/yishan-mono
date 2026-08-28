@@ -6,7 +6,7 @@ import type {
   AgentSessionStats,
   AgentStreamEvent,
 } from "../chat/agentChatTypes";
-import { sendPiCommand } from "../daemon/daemonAgentProcedures";
+import { sendPiCompatibilityCommand } from "../daemon/daemonAgentProcedures";
 import {
   flushAgentChatStreamBuffer,
   peekAgentChatStreamMessage,
@@ -238,7 +238,7 @@ export function handlePiResponse(tabId: string, sessionId: string, event: Record
 
 /** Sends a get_state command to Pi to resync session state (e.g. after a rejected model change). */
 async function resyncAgentState(sessionId: string): Promise<void> {
-  await sendPiCommand({ sessionId, command: { type: "get_state" } });
+  await sendPiCompatibilityCommand({ sessionId, command: { type: "get_state" } });
 }
 
 const statsRequestSequenceBySessionId = new Map<string, number>();
@@ -253,7 +253,7 @@ export async function refreshAgentSessionStats(sessionId: string): Promise<void>
   if (sessionEntry) {
     agentChatStore.getState().recordSessionStatsRequest(sessionEntry[0], requestId);
   }
-  await sendPiCommand({
+  await sendPiCompatibilityCommand({
     sessionId,
     command: { type: "get_session_stats", id: requestId },
   });
@@ -326,7 +326,7 @@ export async function setAgentModel(opts: {
   provider: string;
   modelId: string;
 }): Promise<void> {
-  await sendPiCommand({
+  await sendPiCompatibilityCommand({
     sessionId: opts.sessionId,
     command: { type: "set_model", provider: opts.provider, modelId: opts.modelId },
   });
@@ -338,7 +338,7 @@ export async function setAgentThinkingLevel(opts: {
   sessionId: string;
   level: string;
 }): Promise<void> {
-  await sendPiCommand({
+  await sendPiCompatibilityCommand({
     sessionId: opts.sessionId,
     command: { type: "set_thinking_level", level: opts.level },
   });

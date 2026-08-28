@@ -16,3 +16,14 @@ func TestStopDaemon_SucceedsWhenDaemonNotRunning(t *testing.T) {
 		t.Fatalf("stopDaemon returned error for missing daemon: %v", err)
 	}
 }
+
+func TestBuildRunConfig_PropagatesDisabledDSHByDefault(t *testing.T) {
+	previousConfig := appConfig
+	defer func() { appConfig = previousConfig }()
+	appConfig.Daemon.DSHEnabled = false
+
+	runConfig := buildRunConfig("")
+	if runConfig.DSHEnabled {
+		t.Fatal("DSH is enabled by default")
+	}
+}

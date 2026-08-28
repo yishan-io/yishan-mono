@@ -58,6 +58,7 @@ func newTestService(t *testing.T, runtime *session.Session, nodeID string) *Serv
 		ServerCtx:            context.Background(),
 	})
 	router := rpc.NewRouter()
+	router.Register("agent", &rpc.AgentHandler{Agent: svc})
 	router.Register("pi", &rpc.AgentHandler{Pi: svc, Skill: svc, Customize: svc})
 	router.Register("skill", &rpc.AgentHandler{Pi: svc, Skill: svc, Customize: svc})
 	router.Register("customize", &rpc.AgentHandler{Pi: svc, Skill: svc, Customize: svc})

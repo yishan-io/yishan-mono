@@ -1,10 +1,11 @@
-import { Alert, Box, CircularProgress, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import { tabStore } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
-import { memo, useCallback, useEffect, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { respondToAgentExtensionUiRequest } from "../../../commands/agentChatCommands";
+import { respondToAgentExtensionUiRequest, retryDSHTranscript } from "../../../commands/agentChatCommands";
+import type { AgentRuntime } from "../../../daemon/daemonAgentTypes";
 import { setAgentChatStreamTabVisible } from "../../../subscriptions/agentChatPiEventShared";
 
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
@@ -19,6 +20,7 @@ type AgentChatViewProps = {
   workspaceId: string;
   cwd: string;
   sessionId?: string;
+  runtime?: AgentRuntime;
   sessionView?: AgentChatSessionView;
   paneId?: string;
   isActive?: boolean;
@@ -29,12 +31,14 @@ function AgentChatViewComponent({
   workspaceId,
   cwd,
   sessionId,
+  runtime,
   sessionView = "full",
   paneId,
   isActive = true,
 }: AgentChatViewProps) {
   const { t } = useTranslation();
   const isReadOnlySubagentDetail = sessionView === "subagent-detail";
+  const [isRetryingDSHTranscript, setIsRetryingDSHTranscript] = useState(false);
   const foundTab = tabStore((state) => state.tabs.find((tab) => tab.id === tabId));
   const agentChatTab = foundTab?.kind === "agent-chat" ? foundTab : undefined;
   const session = agentChatStore((state) => state.sessionsByTabId[tabId]);
@@ -45,6 +49,7 @@ function AgentChatViewComponent({
   const hasLoadedModels = session?.hasLoadedModels ?? false;
   const hasLoadedState = session?.hasLoadedState ?? false;
   const error = session?.error ?? null;
+  const dshTranscriptRetryAvailable = session?.dshTranscriptRetryAvailable ?? false;
   const turnError = session?.turnError ?? null;
   const pendingUiRequest = session?.pendingUiRequest ?? null;
   const pendingUiAutoResponse = session?.pendingUiAutoResponse ?? null;
@@ -63,6 +68,7 @@ function AgentChatViewComponent({
     workspaceId,
     cwd,
     sessionId,
+    runtime,
     sessionView,
     paneId,
     subagentParentSessionId,
@@ -71,6 +77,17 @@ function AgentChatViewComponent({
   useEffect(() => {
     setAgentChatStreamTabVisible(tabId, isActive);
   }, [isActive, tabId]);
+
+  const handleRetryDSHTranscript = useCallback(async () => {
+    setIsRetryingDSHTranscript(true);
+    try {
+      await retryDSHTranscript(tabId);
+    } catch (error) {
+      agentChatStore.getState().setSessionError(tabId, getErrorMessage(error));
+    } finally {
+      setIsRetryingDSHTranscript(false);
+    }
+  }, [tabId]);
 
   const handlePendingUiCancel = useCallback(async () => {
     if (!liveSessionId || !pendingUiRequest) {
@@ -182,7 +199,7 @@ function AgentChatViewComponent({
     );
   }
 
-  if (sessionState === "error") {
+  if (sessionState === "error" || isRetryingDSHTranscript) {
     return (
       <AgentChatContentLayout>
         <Box
@@ -214,6 +231,16 @@ function AgentChatViewComponent({
           >
             {error}
           </Typography>
+          {runtime === "dsh" && dshTranscriptRetryAvailable ? (
+            <Button
+              variant="outlined"
+              onClick={handleRetryDSHTranscript}
+              disabled={isRetryingDSHTranscript}
+              startIcon={isRetryingDSHTranscript ? <CircularProgress size={16} /> : undefined}
+            >
+              {isRetryingDSHTranscript ? "Retrying DSH transcript…" : "Retry DSH transcript"}
+            </Button>
+          ) : null}
         </Box>
       </AgentChatContentLayout>
     );

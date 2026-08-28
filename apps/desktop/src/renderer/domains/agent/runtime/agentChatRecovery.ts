@@ -1,6 +1,8 @@
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import type { TabStoreState } from "../../../domains/workbench";
-import type { PiActiveSessionSummary } from "../daemon/daemonAgentTypes";
+import type { AgentRuntime, PiActiveSessionSummary } from "../daemon/daemonAgentTypes";
+import { normalizeAgentChatRuntime } from "./agentRuntimeSelection";
+import { buildAgentRuntimeSessionKey } from "./agentSessionIdentity";
 
 type AgentChatTab = Extract<TabStoreState["tabs"][number], { kind: "agent-chat" }>;
 
@@ -11,6 +13,7 @@ type PersistedAgentChatTabEntry = {
   pinned: boolean;
   cwd: string;
   sessionId: string;
+  runtime?: AgentRuntime;
   userRenamed: boolean;
   sessionView: AgentChatSessionView;
 };
@@ -45,7 +48,7 @@ export class AgentChatRecoveryCoordinator {
     private readonly storage: Storage | undefined = resolveBrowserStorage(),
   ) {}
 
-  /** Restores agent-chat tabs from active daemon Pi sessions. */
+  /** Restores persisted DSH tabs and live Pi tabs after an application restart. */
   async restoreAgentChatTabsFromDaemon(params: {
     listActivePiSessions: () => Promise<PiActiveSessionSummary[]>;
   }): Promise<AgentChatRecoveryResult> {
@@ -54,82 +57,108 @@ export class AgentChatRecoveryCoordinator {
       return {};
     }
 
-    let activeSessions: PiActiveSessionSummary[];
+    // DSH owns durable session history, so its persisted tab identity is enough
+    // to resume lifecycle attach. Pi remains contingent on a live daemon session.
+    const persisted = this.loadPersistedAgentChatTabs();
+    let activeSessions: PiActiveSessionSummary[] = [];
     try {
       activeSessions = await params.listActivePiSessions();
     } catch {
-      return {};
-    }
-
-    const recoverableSessions = activeSessions.filter(
-      (session) => workspaceIdSet.has(session.workspaceId) && normalizeOptionalText(session.sessionId) && session.cwd,
-    );
-    if (recoverableSessions.length === 0) {
-      return {};
-    }
-
-    const persisted = this.loadPersistedAgentChatTabs();
-    const persistedBySessionId = new Map<string, PersistedAgentChatTabEntry>();
-    for (const entry of persisted.tabs) {
-      persistedBySessionId.set(entry.sessionId, entry);
+      // A Pi discovery failure must not discard independently recoverable DSH tabs.
     }
 
     const state = this.tabStoreAccess.getState();
-    const existingTabIds = new Set(state.tabs.map((tab) => tab.id));
-    const existingSessionIds = new Set(
-      state.tabs
-        .filter((tab): tab is AgentChatTab => tab.kind === "agent-chat")
-        .map((tab) => tab.data.sessionId)
-        .filter(Boolean) as string[],
-    );
-
-    const unrestoredSessions = recoverableSessions.filter((session) => !existingSessionIds.has(session.sessionId));
-    if (unrestoredSessions.length === 0) {
-      return {};
-    }
-
     const nextTabs = [...state.tabs];
+    const existingTabIds = new Set(nextTabs.map((tab) => tab.id));
+    const existingSessionKeys = new Set(
+      nextTabs
+        .filter((tab): tab is AgentChatTab => tab.kind === "agent-chat")
+        .flatMap((tab) => {
+          const sessionId = normalizeOptionalText(tab.data.sessionId);
+          return sessionId
+            ? [
+                buildAgentRuntimeSessionKey(
+                  normalizeAgentChatRuntime({ runtime: tab.data.runtime, sessionId }),
+                  sessionId,
+                ),
+              ]
+            : [];
+        }),
+    );
     const nextSelectedByWorkspaceId = { ...state.selectedTabIdByWorkspaceId };
     let fallbackWorkspaceId: string | undefined;
 
-    for (const session of unrestoredSessions) {
-      const persistedEntry = persistedBySessionId.get(session.sessionId);
-      const tabId = persistedEntry?.tabId ?? normalizeOptionalText(session.tabId);
-      if (!tabId || existingTabIds.has(tabId)) {
-        continue;
+    const restoreTab = (entry: PersistedAgentChatTabEntry, session: PiActiveSessionSummary | undefined): void => {
+      if (
+        !workspaceIdSet.has(entry.workspaceId) ||
+        existingTabIds.has(entry.tabId) ||
+        existingSessionKeys.has(buildAgentRuntimeSessionKey(entry.runtime ?? "pi", entry.sessionId))
+      ) {
+        return;
       }
 
       const tab: AgentChatTab = {
-        id: tabId,
-        workspaceId: session.workspaceId,
-        title: persistedEntry?.title ?? "Agent Chat",
-        pinned: persistedEntry?.pinned ?? false,
+        id: entry.tabId,
+        workspaceId: entry.workspaceId,
+        title: entry.title,
+        pinned: entry.pinned,
         kind: "agent-chat",
         data: {
-          cwd: session.cwd,
-          sessionId: session.sessionId,
-          userRenamed: persistedEntry?.userRenamed ?? false,
-          sessionView: persistedEntry?.sessionView ?? "full",
+          cwd: session?.cwd ?? entry.cwd,
+          sessionId: entry.sessionId,
+          runtime: normalizeAgentChatRuntime({ runtime: entry.runtime, sessionId: entry.sessionId }),
+          userRenamed: entry.userRenamed,
+          sessionView: entry.sessionView,
         },
       };
-
       nextTabs.push(tab);
-      existingTabIds.add(tabId);
-
-      if (!nextSelectedByWorkspaceId[session.workspaceId]) {
-        nextSelectedByWorkspaceId[session.workspaceId] = tabId;
-        fallbackWorkspaceId ??= session.workspaceId;
+      existingTabIds.add(tab.id);
+      existingSessionKeys.add(buildAgentRuntimeSessionKey(entry.runtime ?? "pi", entry.sessionId));
+      if (!nextSelectedByWorkspaceId[entry.workspaceId]) {
+        nextSelectedByWorkspaceId[entry.workspaceId] = entry.tabId;
+        fallbackWorkspaceId ??= entry.workspaceId;
       }
+    };
+
+    for (const entry of persisted.tabs) {
+      if (entry.runtime === "dsh") {
+        restoreTab(entry, undefined);
+      }
+    }
+
+    const persistedBySessionKey = new Map(
+      persisted.tabs.map((entry) => [buildAgentRuntimeSessionKey(entry.runtime ?? "pi", entry.sessionId), entry]),
+    );
+    for (const session of activeSessions) {
+      if (!workspaceIdSet.has(session.workspaceId) || !normalizeOptionalText(session.sessionId) || !session.cwd) {
+        continue;
+      }
+      const persistedEntry = persistedBySessionKey.get(buildAgentRuntimeSessionKey("pi", session.sessionId));
+      const entry: PersistedAgentChatTabEntry = persistedEntry ?? {
+        tabId: normalizeOptionalText(session.tabId) ?? "",
+        workspaceId: session.workspaceId,
+        title: "Agent Chat",
+        pinned: false,
+        cwd: session.cwd,
+        sessionId: session.sessionId,
+        runtime: "pi",
+        userRenamed: false,
+        sessionView: "full",
+      };
+      restoreTab(entry, session);
     }
 
     const selectedRecoveredTab = persisted.selectedTabId
       ? nextTabs.find((tab) => tab.id === persisted.selectedTabId)
       : undefined;
-    const shouldRestoreSelectedTab = Boolean(selectedRecoveredTab);
     if (selectedRecoveredTab) {
       nextSelectedByWorkspaceId[selectedRecoveredTab.workspaceId] = selectedRecoveredTab.id;
     }
-    const nextSelectedTabId = shouldRestoreSelectedTab ? persisted.selectedTabId : state.selectedTabId;
+    const nextSelectedTabId = selectedRecoveredTab ? persisted.selectedTabId : state.selectedTabId;
+
+    if (nextTabs.length === state.tabs.length) {
+      return {};
+    }
 
     this.tabStoreAccess.setState({
       tabs: nextTabs,
@@ -225,6 +254,7 @@ export class AgentChatRecoveryCoordinator {
         pinned: tab.pinned,
         cwd: tab.data.cwd,
         sessionId,
+        runtime: normalizeAgentChatRuntime({ runtime: tab.data.runtime, sessionId }),
         userRenamed: Boolean(tab.data.userRenamed),
         sessionView: tab.data.sessionView ?? "full",
       });
@@ -273,6 +303,7 @@ function normalizePersistedAgentChatTabEntry(value: unknown): PersistedAgentChat
     pinned: Boolean(entry.pinned),
     cwd,
     sessionId,
+    runtime: normalizeAgentChatRuntime({ runtime: entry.runtime, sessionId }),
     userRenamed: Boolean(entry.userRenamed),
     sessionView,
   };

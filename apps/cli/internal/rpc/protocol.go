@@ -11,6 +11,7 @@ import (
 
 	relayprotocol "yishan/packages/relay-protocol-go"
 
+	"yishan/apps/cli/internal/backgroundjob"
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
@@ -66,7 +67,7 @@ func asJSONID(raw json.RawMessage) any {
 func MapRPCError(err error) *RPCError {
 	var e *Error
 	if errors.As(err, &e) {
-		return &RPCError{Code: e.Code, Message: e.Message}
+		return &RPCError{Code: e.Code, Message: e.Message, Data: e.Data}
 	}
 	var computerErr *computer.Error
 	if errors.As(err, &computerErr) {
@@ -99,6 +100,9 @@ func MapRPCError(err error) *RPCError {
 	var workspaceErr *workspace.Error
 	if errors.As(err, &workspaceErr) {
 		return &RPCError{Code: mapWorkspaceErrorCode(workspaceErr.Code), Message: workspaceErr.Message}
+	}
+	if code, isBackgroundJobError := mapBackgroundJobErrorCode(err); isBackgroundJobError {
+		return &RPCError{Code: code, Message: err.Error()}
 	}
 	if code, isLocalTaskError := mapLocalTaskErrorCode(err); isLocalTaskError {
 		return &RPCError{Code: code, Message: err.Error()}
@@ -191,6 +195,17 @@ func mapLocalTaskErrorCode(err error) (int, bool) {
 		return CodeInvalidParams, true
 	case errors.Is(err, localtask.ErrTaskNotFound), errors.Is(err, localtask.ErrLinkNotFound),
 		errors.Is(err, localtask.ErrContextUnavailable), errors.Is(err, localtask.ErrTagNotFound):
+		return CodeNotFound, true
+	default:
+		return CodeServerError, false
+	}
+}
+
+func mapBackgroundJobErrorCode(err error) (int, bool) {
+	switch {
+	case errors.Is(err, backgroundjob.ErrInvalidJob), errors.Is(err, backgroundjob.ErrInvalidTransition):
+		return CodeInvalidParams, true
+	case errors.Is(err, backgroundjob.ErrJobNotFound):
 		return CodeNotFound, true
 	default:
 		return CodeServerError, false

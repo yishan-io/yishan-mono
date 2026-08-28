@@ -59,6 +59,9 @@ export type {
   AgentThinkingSignatureSummary,
 } from "./chat";
 
+export type { AgentRuntime } from "./daemon/daemonAgentTypes";
+export { getAgentCapabilities } from "./daemon/daemonAgentProcedures";
+export { selectNewAgentChatRuntime } from "./runtime/agentRuntimeSelection";
 export { agentChatStore, type AgentChatStoreState } from "./state/agentChatStore";
 export { chatStore, type ChatStoreState, type WorkspaceAgentStatus, type WorkspaceUnreadTone } from "./state/chatStore";
 // Agent event-pipeline entry points required by cross-feature composition.
@@ -75,14 +78,26 @@ export { SessionHistoryMenu } from "./features/agent-chat/session/SessionHistory
 export {
   ModelPickerMenu,
   buildModelPickerOption,
+  getModelPickerOptionIdentity,
   groupModelPickerOptionsByProvider,
   stripProviderPrefix,
   type ModelPickerOption,
 } from "./features/select-model";
 export { ProviderMark } from "./ui/ProviderMark";
 
-export { findTabWithSession, renameAgentChatSessionByTab, stopPiSession } from "./commands/agentChatCommands";
-export { fetchAgentSessionFilePath, listActivePiSessions } from "./commands/agentChatSessionHistory";
+export {
+  findTabWithSession,
+  renameAgentChatSessionByTab,
+  retryDSHTranscript,
+  stopAgentSession,
+  stopPiSession,
+} from "./commands/agentChatCommands";
+export {
+  fetchAgentSessionFilePath,
+  listActivePiSessions,
+  listAgentSessionHistory,
+  readAgentSessionHistory,
+} from "./commands/agentChatSessionHistory";
 
 // Agent enablement preferences owned by Agent, consumed by the Settings CLI
 // feature through the public API (desktop7 Phase 21 — moved from Settings so

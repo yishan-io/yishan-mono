@@ -62,12 +62,15 @@ export type WorkspaceSplitPaneProps = {
     cwd: string;
     anchorEl: HTMLElement | null;
     onClose: () => void;
-    onSelectSession: (session: { sessionId: string; cwd?: string | null }, title: string) => void;
+    onSelectSession: (
+      session: { sessionId: string; cwd?: string | null; runtime: "pi" | "dsh" },
+      title: string,
+    ) => void;
   }) => React.ReactNode;
   /** Last used external app id for "open in app" actions. */
   lastUsedExternalAppId: ExternalAppId | undefined;
   /** Opens an existing agent-chat tab for a session, or null when absent. */
-  findTabWithSession: (sessionId: string) => string | undefined;
+  findTabWithSession: (sessionId: string, runtime: "pi" | "dsh") => string | undefined;
   /** Formats an agent session title for the tab bar. */
   formatAgentSessionTitle: (title: string) => string;
   /** App-composed tab content renderer (product UI). */
@@ -396,15 +399,16 @@ export function WorkspaceSplitPane({
           anchorEl: historyMenuAnchor,
           onClose: () => setHistoryMenuAnchor(null),
           onSelectSession: (session, title) => {
-            // Check if this Pi session is already active in a full agent-chat
+            // Check if this runtime-tagged session is already active in a full agent-chat
             // tab (subagent-detail tabs are read-only and not candidates).
             const existingTabId =
-              findTabWithSession(session.sessionId) ??
+              findTabWithSession(session.sessionId, session.runtime) ??
               workspaceTabs.find(
                 (tab) =>
                   tab.kind === "agent-chat" &&
                   tab.data.sessionView !== "subagent-detail" &&
-                  tab.data.sessionId === session.sessionId,
+                  tab.data.sessionId === session.sessionId &&
+                  (tab.data.runtime ?? "pi") === session.runtime,
               )?.id;
             if (existingTabId) {
               selectTab(existingTabId);
@@ -416,6 +420,7 @@ export function WorkspaceSplitPane({
               title: formatAgentSessionTitle(title),
               cwd: session.cwd?.trim() || workspace.worktreePath,
               sessionId: session.sessionId,
+              runtime: session.runtime,
             });
           },
         })}

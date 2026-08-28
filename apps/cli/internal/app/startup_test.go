@@ -3,9 +3,15 @@ package app
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
+
+	"yishan/apps/cli/internal/agent/dsh"
 
 	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/memory"
@@ -180,6 +186,25 @@ func TestAppClose_ShutdownOrder(t *testing.T) {
 	}
 }
 
+func TestBootstrap_DSHFailureKeepsPiFallbackActive(t *testing.T) {
+	database := openTestDB(t)
+	app, err := Bootstrap(Config{
+		NodeID: "node-1", Database: database, EnvDir: t.TempDir(), DataDir: t.TempDir(), DSHEnabled: true,
+		DSHDataDir: t.TempDir(), DSHProvider: "deepseek-official", DSHModel: "deepseek-v4-flash",
+	})
+	if err != nil {
+		t.Fatalf("Bootstrap: %v", err)
+	}
+	defer app.Close()
+	health, configured := app.DSHHealth()
+	if !configured || health.IsReady || health.LastError == "" {
+		t.Fatalf("DSH health = %#v, configured=%t", health, configured)
+	}
+	if app.agentSvc == nil || app.agentMgr == nil {
+		t.Fatal("Pi fallback services are unavailable")
+	}
+}
+
 func TestBootstrap_WiresWorkspaceAgentCleanupLifecycle(t *testing.T) {
 	database := openTestDB(t)
 	app, err := Bootstrap(Config{
@@ -230,4 +255,265 @@ func installBootstrapTestPi(t *testing.T) {
 		t.Fatalf("write test pi: %v", err)
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+type failingBackgroundJobRunner struct{}
+
+func (failingBackgroundJobRunner) RecoverRunning(context.Context) error { return nil }
+func (failingBackgroundJobRunner) RecoverQueued(context.Context) error  { return nil }
+func (failingBackgroundJobRunner) Close(context.Context) error          { return context.DeadlineExceeded }
+
+type recoveryRecordingJobRunner struct {
+	runningCalls chan struct{}
+	queuedCalls  chan struct{}
+}
+
+func (r recoveryRecordingJobRunner) RecoverRunning(context.Context) error {
+	r.runningCalls <- struct{}{}
+	return nil
+}
+func (r recoveryRecordingJobRunner) RecoverQueued(context.Context) error {
+	r.queuedCalls <- struct{}{}
+	return nil
+}
+func (recoveryRecordingJobRunner) Close(context.Context) error { return nil }
+
+func TestAppStartDSHSupervisor_InitialFailureRestartsAndRunsQueuedRecoveryOnce(t *testing.T) {
+	attempts := 0
+	supervisor := dsh.NewSupervisor(dsh.Config{
+		Command: func(context.Context) (*exec.Cmd, error) {
+			attempts++
+			if attempts == 1 {
+				return nil, errors.New("initial startup unavailable")
+			}
+			return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; cat >/dev/null`), nil
+		},
+		Initialize:      dsh.InitializeConfig{CWD: "/workspace", Provider: "provider", Model: "model"},
+		RestartLimit:    1,
+		RestartBackoff:  time.Millisecond,
+		ShutdownTimeout: 10 * time.Millisecond,
+	})
+	defer supervisor.Close()
+	jobs := recoveryRecordingJobRunner{runningCalls: make(chan struct{}, 1), queuedCalls: make(chan struct{}, 2)}
+	registerBackgroundJobRecovery(supervisor, jobs)
+	app := &App{dsh: supervisor, backgroundJobs: jobs}
+
+	if err := app.startDSHSupervisor(); err == nil {
+		t.Fatal("expected initial DSH startup error")
+	}
+	select {
+	case <-jobs.runningCalls:
+	case <-time.After(time.Second):
+		t.Fatal("running recovery was not called")
+	}
+	select {
+	case <-jobs.queuedCalls:
+		t.Fatal("queued job ran before DSH was ready")
+	default:
+	}
+	waitForDSHReady(t, supervisor)
+	select {
+	case <-jobs.queuedCalls:
+	case <-time.After(time.Second):
+		t.Fatal("queued job did not run after DSH restart")
+	}
+	select {
+	case <-jobs.queuedCalls:
+		t.Fatal("queued job ran more than once")
+	default:
+	}
+}
+
+func waitForDSHReady(t *testing.T, supervisor *dsh.Supervisor) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if supervisor.Health().IsReady {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("DSH supervisor did not become ready")
+}
+
+type transientRecoveryJobRunner struct {
+	runningCalls    chan struct{}
+	queuedCalls     chan struct{}
+	recoveryRetried chan struct{}
+	calls           int
+}
+
+func (r *transientRecoveryJobRunner) RecoverRunning(context.Context) error {
+	r.calls++
+	r.runningCalls <- struct{}{}
+	if r.calls == 1 {
+		return errors.New("temporary recovery failure")
+	}
+	r.recoveryRetried <- struct{}{}
+	return nil
+}
+
+func (r *transientRecoveryJobRunner) RecoverQueued(context.Context) error {
+	r.queuedCalls <- struct{}{}
+	return nil
+}
+
+func (*transientRecoveryJobRunner) Close(context.Context) error { return nil }
+
+func TestAppStartDSHSupervisor_RecoveryFailureDoesNotPreventRuntimeOrQueuedRecovery(t *testing.T) {
+	supervisor := dsh.NewSupervisor(dsh.Config{
+		Command: func(context.Context) (*exec.Cmd, error) {
+			return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; cat >/dev/null`), nil
+		},
+		Initialize:      dsh.InitializeConfig{CWD: "/workspace", Provider: "provider", Model: "model"},
+		ShutdownTimeout: 10 * time.Millisecond,
+	})
+	defer supervisor.Close()
+	recoveryCtx, cancelRecovery := context.WithCancel(context.Background())
+	defer cancelRecovery()
+	jobs := &transientRecoveryJobRunner{
+		runningCalls: make(chan struct{}, 2), queuedCalls: make(chan struct{}, 1), recoveryRetried: make(chan struct{}, 1),
+	}
+	registerBackgroundJobRecovery(supervisor, jobs)
+	app := &App{dsh: supervisor, backgroundJobs: jobs, backgroundJobRecoveryCtx: recoveryCtx}
+	if err := app.startDSHSupervisor(); err != nil {
+		t.Fatalf("start DSH supervisor: %v", err)
+	}
+	<-jobs.runningCalls
+	waitForDSHReady(t, supervisor)
+	select {
+	case <-jobs.queuedCalls:
+	case <-time.After(time.Second):
+		t.Fatal("queued recovery did not run after DSH became ready")
+	}
+	select {
+	case <-jobs.recoveryRetried:
+	case <-time.After(2 * time.Second):
+		t.Fatal("running recovery was not retried")
+	}
+}
+
+func TestAppClose_BackgroundJobTimeoutKeepsDatabaseOpen(t *testing.T) {
+	database, err := sqlite.Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	app := &App{database: database, backgroundJobs: failingBackgroundJobRunner{}}
+	if err := app.Close(); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("close error = %v", err)
+	}
+	if err := database.Ping(); err != nil {
+		t.Fatalf("database was closed after background job timeout: %v", err)
+	}
+}
+
+type queuedTransientRecoveryJobRunner struct {
+	calls     chan struct{}
+	completed chan struct{}
+	mu        sync.Mutex
+	attempts  int
+}
+
+func (r *queuedTransientRecoveryJobRunner) RecoverRunning(context.Context) error { return nil }
+
+func (r *queuedTransientRecoveryJobRunner) RecoverQueued(context.Context) error {
+	r.mu.Lock()
+	r.attempts++
+	attempt := r.attempts
+	r.mu.Unlock()
+	r.calls <- struct{}{}
+	if attempt == 1 {
+		return errors.New("temporary queued recovery failure")
+	}
+	r.completed <- struct{}{}
+	return nil
+}
+
+func (*queuedTransientRecoveryJobRunner) Close(context.Context) error { return nil }
+
+func TestRegisterBackgroundJobRecovery_RetriesQueuedRecoveryAfterLaterDSHReady(t *testing.T) {
+	attempts := 0
+	supervisor := dsh.NewSupervisor(dsh.Config{
+		Command: func(context.Context) (*exec.Cmd, error) {
+			attempts++
+			if attempts == 1 {
+				return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; exit 0`), nil
+			}
+			return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; cat >/dev/null`), nil
+		},
+		Initialize:      dsh.InitializeConfig{CWD: "/workspace", Provider: "provider", Model: "model"},
+		RestartLimit:    1,
+		RestartBackoff:  time.Millisecond,
+		ShutdownTimeout: 10 * time.Millisecond,
+	})
+	defer supervisor.Close()
+	jobs := &queuedTransientRecoveryJobRunner{calls: make(chan struct{}, 2), completed: make(chan struct{}, 1)}
+	registerBackgroundJobRecovery(supervisor, jobs)
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("start DSH supervisor: %v", err)
+	}
+	for range 2 {
+		select {
+		case <-jobs.calls:
+		case <-time.After(time.Second):
+			t.Fatal("queued recovery was not retried after DSH became ready")
+		}
+	}
+	select {
+	case <-jobs.completed:
+	case <-time.After(time.Second):
+		t.Fatal("queued recovery did not complete after retry")
+	}
+	select {
+	case <-jobs.calls:
+		t.Fatal("queued recovery ran again after successful completion")
+	case <-time.After(10 * time.Millisecond):
+	}
+}
+
+type blockingQueuedRecoveryRunner struct {
+	started chan struct{}
+	release <-chan struct{}
+}
+
+func (r blockingQueuedRecoveryRunner) RecoverRunning(context.Context) error { return nil }
+
+func (r blockingQueuedRecoveryRunner) RecoverQueued(context.Context) error {
+	close(r.started)
+	<-r.release
+	return nil
+}
+
+func (blockingQueuedRecoveryRunner) Close(context.Context) error { return nil }
+
+func TestRegisterBackgroundJobRecovery_DoesNotBlockDSHStartup(t *testing.T) {
+	supervisor := dsh.NewSupervisor(dsh.Config{
+		Command: func(context.Context) (*exec.Cmd, error) {
+			return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; cat >/dev/null`), nil
+		},
+		Initialize:      dsh.InitializeConfig{CWD: "/workspace", Provider: "provider", Model: "model"},
+		ShutdownTimeout: 10 * time.Millisecond,
+	})
+	defer supervisor.Close()
+	release := make(chan struct{})
+	defer close(release)
+	recoveryStarted := make(chan struct{})
+	registerBackgroundJobRecovery(supervisor, blockingQueuedRecoveryRunner{started: recoveryStarted, release: release})
+	startDone := make(chan error, 1)
+	go func() { startDone <- supervisor.Start(context.Background()) }()
+
+	select {
+	case <-recoveryStarted:
+	case <-time.After(time.Second):
+		t.Fatal("queued recovery did not start")
+	}
+	select {
+	case err := <-startDone:
+		if err != nil {
+			t.Fatalf("start DSH supervisor: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("blocked queued recovery stalled DSH startup")
+	}
 }

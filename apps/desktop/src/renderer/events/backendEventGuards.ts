@@ -22,6 +22,7 @@ const FRONTEND_MESSAGE_KEYS = [
   "terminalSessionChanged",
   "terminalAgentChanged",
   "agentPiEvent",
+  "backgroundJobChanged",
 ] as const satisfies readonly RpcFrontendMessageKey[];
 
 const FRONTEND_MESSAGE_KEY_SET = new Set<string>(FRONTEND_MESSAGE_KEYS);
@@ -43,6 +44,31 @@ export function isOptionalString(value: unknown): boolean {
 
 export function isOptionalBoolean(value: unknown): boolean {
   return value === undefined || typeof value === "boolean";
+}
+
+const MAX_TASK_RUN_COMPLETION_METADATA_LENGTH = 256;
+
+function isNonEmptyBoundedString(value: unknown): value is string {
+  return (
+    typeof value === "string" && value.trim().length > 0 && value.length <= MAX_TASK_RUN_COMPLETION_METADATA_LENGTH
+  );
+}
+
+/** Returns true when optional workspace-create interactive task-run metadata is complete and safe to consume. */
+export function isWorkspaceCreateTaskRunMetadata(payload: Record<string, unknown>): boolean {
+  const metadata = [payload.taskRunSessionId, payload.taskRunTabId, payload.taskRunTitle, payload.taskRunRuntime];
+  if (metadata.every((value) => value === undefined)) {
+    return true;
+  }
+  if (!metadata.every(isNonEmptyBoundedString)) {
+    return false;
+  }
+  return payload.taskRunRuntime === "pi" || payload.taskRunRuntime === "dsh";
+}
+
+/** Returns true when optional workspace-create task-run status has a supported value. */
+export function isOptionalWorkspaceCreateTaskRunStatus(value: unknown): boolean {
+  return value === undefined || value === "started" || value === "failed";
 }
 
 /**

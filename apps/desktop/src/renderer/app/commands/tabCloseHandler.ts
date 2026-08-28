@@ -1,4 +1,4 @@
-import { chatStore, clearTerminalAgentStatus, stopPiSession } from "@renderer/domains/agent";
+import { chatStore, clearTerminalAgentStatus, stopAgentSession } from "@renderer/domains/agent";
 import { removeFileTabContent } from "@renderer/domains/files";
 import { removeDiffTabContent } from "@renderer/domains/git";
 import { closeTerminalSession } from "@renderer/domains/terminal";
@@ -31,7 +31,7 @@ function stopAgentChatSessionsForTabs(tabs: AgentChatTab[]): void {
   for (const tab of tabs) {
     clearTabFocus(tab.id);
     // fire-and-forget: tab closure must not wait for daemon session cleanup.
-    void stopPiSession(tab.id).catch(() => {});
+    void stopAgentSession(tab.id).catch(() => {});
   }
 }
 
@@ -73,7 +73,7 @@ export function closeTabWithCleanup(tabId: string, options?: CloseTabOptions): v
 
   if (tab.kind === "agent-chat") {
     clearTabFocus(tab.id);
-    void stopPiSession(tab.id).catch(() => {});
+    void stopAgentSession(tab.id).catch(() => {});
   }
   if (tab.kind === "terminal") {
     recordExplicitlyClosedTerminalTabId(tab.id);
