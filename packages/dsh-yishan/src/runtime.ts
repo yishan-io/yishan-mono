@@ -87,9 +87,10 @@ export async function createYishanRuntime(config: YishanRuntimeConfig = {}): Pro
   installCredentialsPlugin(context, dataDirectory);
   assertPiAiProviderManifest();
   await context.plugin(deepSeekOfficial);
-  // dsh-llm-pi-ai's configurable directory always mirrors pi-ai's full built-in
-  // catalog. Its Config can restrict registered routes but cannot restrict that
-  // metadata directory, and no ctx.settings service is mounted in this runtime.
+  // dsh-llm-pi-ai's internal configurable-provider metadata always mirrors pi-ai's
+  // full built-in catalog. It is not Yishan's active route registry or an external
+  // RPC/catalog surface. Config restricts registered routes, and no ctx.settings
+  // service is mounted, so this metadata cannot activate an additional route.
   await context.plugin(piAi, YISHAN_PI_AI_CONFIG);
   await context.plugin(runtimeServer, config);
 

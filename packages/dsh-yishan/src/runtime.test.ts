@@ -85,7 +85,7 @@ describe("Yishan production runtime", () => {
     }
   });
 
-  it("mounts no settings service and keeps unsupported routes out of the active registry", async () => {
+  it("keeps internal configurable metadata out of active routes and the external Yishan RPC surface", async () => {
     const runtime = await createYishanRuntime({
       dataDirectory: await mkdtemp(join(tmpdir(), "yishan-dsh-provider-boundary-")),
       input: new PassThrough(),
@@ -101,15 +101,43 @@ describe("Yishan production runtime", () => {
         await expect(runtime.context.llm.listModels(provider)).rejects.toMatchObject({ code: "NO_ADAPTER" });
       }
 
-      // This is adapter metadata only, not an active DSH route: dsh-llm-pi-ai
-      // 0.1.1-rc.2 publishes all installed pi-ai providers here and exposes no
-      // Config option to filter this directory.
+      // This is internal adapter metadata only, not an active DSH route or a
+      // Yishan RPC/catalog result. dsh-llm-pi-ai 0.1.1-rc.2 publishes all
+      // installed pi-ai providers here and exposes no Config option to filter it.
       expect(runtime.context.llm.listConfigurableProviders()).toContainEqual(
         expect.objectContaining({ provider: "openai-codex" }),
       );
       expect(runtime.context.llm.listConfigurableProviders()).not.toContainEqual(
         expect.objectContaining({ provider: "radius" }),
       );
+    } finally {
+      await runtime.shutdown();
+    }
+  });
+
+  it("requires stored credentials for the direct DeepSeek route even when its process environment key exists", async () => {
+    vi.stubEnv("DEEPSEEK_API_KEY", "process-environment-value");
+    const runtime = await createYishanRuntime({
+      dataDirectory: await mkdtemp(join(tmpdir(), "yishan-dsh-missing-direct-deepseek-credential-")),
+      input: new PassThrough(),
+      output: new Writable({ write: (_chunk, _encoding, callback) => callback() }),
+      exit: () => undefined,
+    });
+
+    try {
+      const chunks = [];
+      for await (const chunk of runtime.context.llm.stream({
+        provider: DIRECT_DEEPSEEK_PROVIDER,
+        model: "deepseek-v4-flash",
+        messages: [],
+      })) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toMatchObject([
+        { type: "finish", reason: { kind: "error", failure: { code: "MISSING_CREDENTIAL" } } },
+      ]);
+      expect(JSON.stringify(chunks)).not.toContain("process-environment-value");
     } finally {
       await runtime.shutdown();
     }

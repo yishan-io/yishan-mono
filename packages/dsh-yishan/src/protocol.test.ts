@@ -31,6 +31,12 @@ describe("yishanMethod", () => {
     });
   });
 
+  it("exposes no Yishan provider catalog or settings RPC", () => {
+    expect(YISHAN_METHODS).not.toHaveProperty("catalog");
+    expect(YISHAN_METHODS).not.toHaveProperty("providers");
+    expect(YISHAN_METHODS).not.toHaveProperty("settings");
+  });
+
   it("declares reverse requests and durable notifications", () => {
     expect(YISHAN_REVERSE_METHODS.capabilityRequest).toBe("yishan.v1.capability.request");
     expect(YISHAN_REVERSE_METHODS.interactionRequest).toBe("yishan.v1.interaction.request");

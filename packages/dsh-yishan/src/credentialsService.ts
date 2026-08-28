@@ -4,6 +4,10 @@
  * Provides the `credentials` service that DSH LLM adapters query to resolve
  * API keys by their env-var reference name (e.g. "DEEPSEEK_API_KEY").
  *
+ * This account-scoped file is DSH credential storage, not DSH configuration
+ * YAML. A mounted credentials service deliberately makes direct DeepSeek use
+ * only saved references; it must not fall back to the launcher process environment.
+ *
  * Reads from `<dataDirectory>/.credentials.yaml`:
  *   version: 1
  *   refs:
