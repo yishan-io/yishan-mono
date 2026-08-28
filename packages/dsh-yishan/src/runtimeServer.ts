@@ -83,6 +83,7 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
   );
 
   ctx.on("session/event", (session, event) => owner.handleSessionEvent(session, event));
+  ctx.on("agent/inbox/claimed", ({ agent, message }) => owner.handleAgentInboxClaimed(agent.id, message));
 
   transport.onRequest(async (method, params) => {
     if (method === "initialize") {

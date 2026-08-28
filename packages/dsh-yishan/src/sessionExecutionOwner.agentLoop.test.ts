@@ -1,6 +1,6 @@
 import { Context } from "@deepseek-ai/cordis";
 import * as agentSpine from "@deepseek-ai/dsh-agent-spine-demo";
-import { type GenerateOptions, LlmAdapter, type StreamChunk } from "@deepseek-ai/dsh-llm";
+import { type GenerateOptions, LlmAdapter, type StreamChunk, createUserMessage } from "@deepseek-ai/dsh-llm";
 import { describe, expect, it, vi } from "vitest";
 
 import { YishanSessionExecutionOwner } from "./sessionExecutionOwner";
@@ -60,6 +60,7 @@ describe("Yishan provider switching through the DSH agent loop", () => {
     });
     adapter.onFirstRequest = async () => await owner.setModel({ cwd: CWD, sessionId: SESSION_ID, ...NEXT_ROUTE });
     context.on("session/event", (session, event) => owner.handleSessionEvent(session as never, event as never));
+    context.on("agent/inbox/claimed", ({ agent, message }) => owner.handleAgentInboxClaimed(agent.id, message));
 
     try {
       await owner.start({ cwd: CWD, sessionId: SESSION_ID, binding: BINDING, agentOptions: INITIAL_ROUTE });
@@ -77,6 +78,52 @@ describe("Yishan provider switching through the DSH agent loop", () => {
         expect.objectContaining({ reason: "initial", header: expect.objectContaining({ config: INITIAL_ROUTE }) }),
         expect.objectContaining({ reason: "change", header: expect.objectContaining({ config: NEXT_ROUTE }) }),
       ]);
+    } finally {
+      await owner.dispose();
+      await context.fiber.dispose();
+    }
+  });
+
+  it("keeps a pending selection through an automatic goal followup and applies it to the next user prompt", async () => {
+    const context = new Context();
+    await context.plugin(agentSpine, { workspaceContext: false });
+    vi.spyOn(context.sessions, "flush").mockResolvedValue(true);
+    const adapter = new DeterministicAdapter();
+    context.llm.registerAdapter([INITIAL_ROUTE.provider, NEXT_ROUTE.provider], adapter);
+    const owner = new YishanSessionExecutionOwner({
+      agents: {
+        get: (sessionId) => context.agents.get(sessionId as never),
+        create: async (options) => await context.agents.create({ ...options, sessionId: options.sessionId as never }),
+        resume: async (options) =>
+          await context.agents.resume({ ...options, resumeSessionId: options.resumeSessionId as never }),
+      },
+      sessions: {
+        get: (sessionId) => context.sessions.get(sessionId as never),
+        flush: async (session) => await context.sessions.flush(session as never),
+      },
+      sessionPersistence: {
+        readFrom: async () => ({ meta: { version: 0, id: SESSION_ID as never, createdAt: 1, cwd: CWD }, events: [] }),
+      },
+      notify: vi.fn(),
+      validateProviderSelection: vi.fn(async () => undefined),
+    });
+    context.on("session/event", (session, event) => owner.handleSessionEvent(session as never, event as never));
+    context.on("agent/inbox/claimed", ({ agent, message }) => owner.handleAgentInboxClaimed(agent.id, message));
+
+    try {
+      await owner.start({ cwd: CWD, sessionId: SESSION_ID, binding: BINDING, agentOptions: INITIAL_ROUTE });
+      await owner.setModel({ cwd: CWD, sessionId: SESSION_ID, ...NEXT_ROUTE });
+      context.agents.get(SESSION_ID as never)?.followup(
+        createUserMessage({
+          content: [{ type: "text", text: "automatic goal round" }],
+          source: { kind: "goal", goalId: "goal-1" as never, revision: 1, round: 1 },
+        }),
+      );
+      await context.agents.get(SESSION_ID as never)?.whenIdle();
+      await owner.prompt({ cwd: CWD, sessionId: SESSION_ID, contentBlocks: [{ type: "text", text: "user prompt" }] });
+      await context.agents.get(SESSION_ID as never)?.whenIdle();
+
+      expect(adapter.inputs).toEqual([INITIAL_ROUTE, INITIAL_ROUTE, NEXT_ROUTE]);
     } finally {
       await owner.dispose();
       await context.fiber.dispose();

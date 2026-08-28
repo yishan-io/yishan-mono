@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type ModelSelection, type ModelSelectionRef, installModelSelection } from "@deepseek-ai/dsh-agent";
-import { createUserMessage } from "@deepseek-ai/dsh-llm";
+import { type UserMessage, createUserMessage } from "@deepseek-ai/dsh-llm";
 
 import { type SessionEvent, type SessionHeader, foldRequestHeader } from "@deepseek-ai/dsh-session";
 
@@ -215,7 +215,6 @@ export class YishanSessionExecutionOwner {
   /** Starts a coalesced durability checkpoint when an owned turn ends. */
   handleSessionEvent(session: LiveSession, event: SequencedSessionEvent): void {
     if (this.isShuttingDown || !this.handles.has(session.id)) return;
-    if (event.type === "turn/start") this.activatePendingSelection(session.id);
     if (event.type !== "turn/end") return;
     const cwd = session.header.cwd;
     if (cwd === undefined) return;
@@ -223,6 +222,12 @@ export class YishanSessionExecutionOwner {
     void this.getOrStartFlush({ cwd, sessionId: session.id }).catch((error: unknown) => {
       console.error("failed to auto-flush Yishan session", error);
     });
+  }
+
+  /** Activates a pending route when DSH claims an externally supplied user prompt for its turn. */
+  handleAgentInboxClaimed(sessionId: string, message: UserMessage): void {
+    if (this.isShuttingDown || !this.handles.has(sessionId) || message.source.kind !== "user") return;
+    this.activatePendingSelection(sessionId);
   }
 
   /** Closes admission, flushes every owned session, and then disposes all owned handles. */
