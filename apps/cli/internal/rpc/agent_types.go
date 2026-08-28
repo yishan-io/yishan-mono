@@ -394,6 +394,9 @@ type DSHProviderCatalogEntry struct {
 	Authentication string                    `json:"authentication"`
 	CredentialRef  string                    `json:"credentialRef,omitempty"`
 	Configured     bool                      `json:"configured"`
+	SetupRequired  bool                      `json:"setupRequired"`
+	SetupStatus    string                    `json:"setupStatus"`
+	SetupGuidance  string                    `json:"setupGuidance"`
 	Models         []DSHProviderCatalogModel `json:"models"`
 }
 type DSHProviderCatalogModel struct {

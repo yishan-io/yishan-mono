@@ -204,6 +204,10 @@ export type DSHProviderCatalogEntry = {
   authentication: "api-key" | "ambient";
   credentialRef?: string;
   configured: boolean;
+  setupRequired: boolean;
+  setupStatus: "ready" | "needs-credential" | "ambient";
+  /** Safe provider-owned setup text. It excludes credentials and local paths. */
+  setupGuidance: string;
   models: Array<{ id: string; name: string }>;
 };
 

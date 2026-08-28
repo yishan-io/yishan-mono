@@ -48,8 +48,11 @@ func TestMapDSHProviderCatalog_ExposesOnlySafeConfigurationMetadata(t *testing.T
 		t.Fatalf("api-key provider = %#v", apiKey)
 	}
 	ambient := mapped.Providers[1]
-	if ambient.CredentialRef != "" || ambient.Configured {
+	if ambient.CredentialRef != "" || ambient.Configured || ambient.SetupRequired {
 		t.Fatalf("ambient provider = %#v", ambient)
+	}
+	if ambient.SetupStatus != dshSetupStatusAmbient || ambient.SetupGuidance != "Uses system or cloud credentials configured on this computer." {
+		t.Fatalf("ambient setup metadata = %#v", ambient)
 	}
 }
 
