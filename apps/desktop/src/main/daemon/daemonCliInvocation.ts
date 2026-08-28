@@ -7,9 +7,11 @@ import { resolveCliProfileName } from "./daemonEndpoint";
 export type CliCommandResult = { exitCode: number | null; stdout: string; stderr: string; error?: string };
 export type CliCommandRunner = (args: string[]) => Promise<CliCommandResult>;
 type Invocation = { executablePath: string; prefixArgs: string[]; cwd?: string };
+export type DaemonCliEnvironment = NodeJS.ProcessEnv;
 const timeoutMs = 30_000;
 const terminateGraceMs = 1_000;
 const forceKillWaitMs = 1_000;
+const dshTestReplayEnvironmentVariable = "YISHAN_DSH_TEST_REPLAY";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
@@ -67,6 +69,31 @@ export function resolveCliInvocation(): Invocation {
     ? { executablePath: bundledPath, prefixArgs: [] }
     : { executablePath: "go", prefixArgs: ["run", "."], cwd: resolveDevCliDir() };
 }
+function resolveDshRuntimePath(): string {
+  if (!isDevMode()) return resolve(process.resourcesPath, "dsh-runtime.mjs");
+  return (
+    firstExistingPath([
+      process.env.YISHAN_DSH_RUNTIME_PATH,
+      resolve(process.cwd(), "dist", "resources", "dsh-runtime.mjs"),
+      resolve(process.cwd(), "apps", "desktop", "dist", "resources", "dsh-runtime.mjs"),
+    ]) ?? resolve(process.cwd(), "dist", "resources", "dsh-runtime.mjs")
+  );
+}
+
+/** Builds the environment that tells the daemon to launch the packaged DSH resource with Electron's Node runtime. */
+export function resolveDaemonCliEnvironment(): DaemonCliEnvironment {
+  const environment = Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([environmentVariable]) => environmentVariable.toLowerCase() !== dshTestReplayEnvironmentVariable.toLowerCase(),
+    ),
+  );
+  return {
+    ...environment,
+    YISHAN_DAEMON_DSH_ENABLED: process.env.YISHAN_DSH_ENABLED ?? process.env.YISHAN_DAEMON_DSH_ENABLED,
+    YISHAN_DAEMON_DSH_NODE_PATH: process.execPath,
+    YISHAN_DAEMON_DSH_RUNTIME_PATH: resolveDshRuntimePath(),
+  };
+}
 export function buildDaemonStartArgs(): string[] {
   return ["daemon", "start", "--profile", resolveCliProfileName()];
 }
@@ -79,7 +106,7 @@ export async function runCliCommand(args: string[]): Promise<CliCommandResult> {
   return await new Promise((resolveResult) => {
     const child = spawn(invocation.executablePath, [...invocation.prefixArgs, ...args], {
       stdio: ["ignore", "pipe", "pipe"],
-      env: process.env,
+      env: resolveDaemonCliEnvironment(),
       cwd: invocation.cwd,
     });
     let stdout = "";

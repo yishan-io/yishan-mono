@@ -109,7 +109,14 @@ describe("LaunchView", () => {
   it("opens a recent agent session", async () => {
     mocks.workspaces = [{ id: "workspace-1", status: "active", worktreePath: "/tmp/project" }];
     mocks.fetchSessionHistory.mockResolvedValueOnce([
-      { sessionId: "history-1", timestamp: new Date().toISOString(), previewText: "Review the implementation" },
+      {
+        sessionId: "history-1",
+        cwd: "/tmp/project",
+        createdAt: Date.now(),
+        previewText: "Review the implementation",
+        live: false,
+        persisted: true,
+      },
     ]);
 
     render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);

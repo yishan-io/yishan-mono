@@ -1,12 +1,18 @@
 package catalog
 
-import "time"
+import (
+	"context"
+	"time"
+
+	"yishan/apps/cli/internal/agent/dsh"
+)
 
 const DefaultCacheTTL = 5 * time.Minute
 
 type ModelInfo struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Provider string `json:"provider,omitempty"`
 	// Reasoning reports whether the model supports thinking at all. Derived
 	// from the pi --list-models "thinking" column, and overridden by the
 	// models-store.json catalog entry when present.
@@ -23,6 +29,11 @@ type AgentModelList struct {
 	Source      string      `json:"source"`
 	FetchedAt   int64       `json:"fetchedAt"`
 	CacheExpiry int64       `json:"cacheExpiry"`
+}
+
+// RuntimeCatalogSource supplies the safe provider catalog owned by the DSH runtime.
+type RuntimeCatalogSource interface {
+	ListProviderCatalog(context.Context) (dsh.ProviderCatalog, error)
 }
 
 type Fetcher interface {

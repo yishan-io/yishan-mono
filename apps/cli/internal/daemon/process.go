@@ -32,6 +32,11 @@ type RunConfig struct {
 	MemorySummarizer      bool
 	MemorySummarizerAgent string
 	MemorySummarizerModel string
+	DSHEnabled            bool
+	DSHNodePath           string
+	DSHRuntimePath        string
+	DSHProvider           string
+	DSHModel              string
 	// LogFilePath is the initial daemon log file path. Default log output starts
 	// at the profile path and switches to the account path after user_id resolves.
 	LogFilePath string
@@ -59,10 +64,14 @@ type daemonRuntime struct {
 // shutdownContext holds the coordination channels produced when the daemon
 // starts serving (phases 5–6).
 type shutdownContext struct {
-	ctx       context.Context
-	cancel    context.CancelFunc
-	stop      chan os.Signal
-	serverErr <-chan error
+	processCtx       context.Context
+	cancelProcess    context.CancelFunc
+	cancelRelay      context.CancelFunc
+	stop             chan os.Signal
+	shutdownStarted  <-chan struct{}
+	shutdownComplete <-chan struct{}
+	serverStopped    <-chan struct{}
+	serverErr        <-chan error
 }
 
 func usesRemoteHostPolicy(runtime *session.Session) bool {
@@ -87,7 +96,8 @@ func buildMemorySummarizerConfig(cfg RunConfig, runtime *session.Session) memory
 
 func (sc *shutdownContext) cleanup() {
 	signal.Stop(sc.stop)
-	sc.cancel()
+	sc.cancelRelay()
+	sc.cancelProcess()
 }
 
 func Run(cfg RunConfig, statePath string, runtime *session.Session) error {
@@ -117,9 +127,7 @@ func Run(cfg RunConfig, statePath string, runtime *session.Session) error {
 	defer sc.cleanup()
 
 	if err := registerNode(dr, runtime); err != nil {
-		dr.app.Close()
-		shutdownServer(dr.server)
-		return err
+		return closeAfterRegistrationFailure(sc, dr.app, dr.server, err)
 	}
 
 	return sc.waitForShutdown()
@@ -138,6 +146,9 @@ func shutdownServer(server *http.Server) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		log.Error().Err(err).Msg("failed to shutdown daemon server after startup error")
+		log.Error().Err(err).Msg("failed to gracefully shutdown daemon server")
+		if closeErr := server.Close(); closeErr != nil && !errors.Is(closeErr, http.ErrServerClosed) {
+			log.Error().Err(closeErr).Msg("failed to force daemon server shutdown")
+		}
 	}
 }

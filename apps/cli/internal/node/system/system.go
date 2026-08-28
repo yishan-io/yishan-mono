@@ -133,9 +133,9 @@ func (s *Service) AppReloadAuthConfig(ctx context.Context) (any, error) {
 func (s *Service) AgentListModels(ctx context.Context, req rpc.SystemAgentListModelsParams) (any, error) {
 	agentKind := strings.TrimSpace(req.AgentKind)
 	if agentKind == "" {
-		return s.deps.ModelList.ListAllModels(req.ForceRefresh), nil
+		return s.deps.ModelList.ListAllModelsContext(ctx, req.ForceRefresh), nil
 	}
-	return s.deps.ModelList.ListModels(agentKind, req.ForceRefresh)
+	return s.deps.ModelList.ListModelsContext(ctx, agentKind, req.ForceRefresh)
 }
 
 func (s *Service) TokenUsageDebugState(ctx context.Context) (any, error) {

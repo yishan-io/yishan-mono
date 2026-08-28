@@ -79,6 +79,9 @@ describe("PI_PROVIDER_VISUAL_BY_ID (desktop8 Phase 29: visual metadata moved out
   it("resolves brand colors and switches dark brands to white in dark mode", () => {
     expect(getPiProviderIconColor("deepseek", false)).toBe("#5786FE");
     expect(getPiProviderIconColor("deepseek", true)).toBe("#5786FE");
+    expect(getPiProviderIcon("deepseek-official")).toBe(getPiProviderIcon("deepseek"));
+    expect(getPiProviderIconColor("deepseek-official", false)).toBe("#5786FE");
+    expect(getPiProviderIconColor("deepseek-official", true)).toBe("#5786FE");
     // Black/dark brands render white in dark mode.
     expect(getPiProviderIconColor("github-copilot", true)).toBe("#FFFFFF");
     expect(getPiProviderIconColor("github-copilot", false)).toBe("#000000");

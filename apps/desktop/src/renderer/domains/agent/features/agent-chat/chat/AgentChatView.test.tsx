@@ -66,9 +66,9 @@ const mocked = vi.hoisted(() => {
     clearPiSessionHandle: vi.fn(),
     reattachPiSession: vi.fn(),
     respondToAgentExtensionUiRequest: vi.fn(),
-    fetchAgentState: vi.fn().mockResolvedValue(undefined),
-    fetchAgentMessages: vi.fn().mockResolvedValue(undefined),
-    fetchAgentModels: vi.fn().mockResolvedValue(undefined),
+    fetchPiAgentStateCompatibility: vi.fn().mockResolvedValue(undefined),
+    fetchPiAgentMessagesCompatibility: vi.fn().mockResolvedValue(undefined),
+    fetchPiAgentModelsCompatibility: vi.fn().mockResolvedValue(undefined),
     refreshAgentSessionStats: vi.fn().mockResolvedValue(undefined),
     setAgentChatStreamTabVisible: vi.fn(),
     setAgentModel: vi.fn(),
@@ -118,9 +118,9 @@ const mocked = vi.hoisted(() => {
           paneId: opts.paneId,
         });
         const sessionId = typeof resolved === "object" && resolved ? (resolved.sessionId ?? "session-1") : "session-1";
-        await mocked.fetchAgentState({ tabId: opts.tabId, sessionId });
-        await mocked.fetchAgentMessages({ tabId: opts.tabId, sessionId });
-        await mocked.fetchAgentModels({ tabId: opts.tabId, sessionId });
+        await mocked.fetchPiAgentStateCompatibility({ tabId: opts.tabId, sessionId });
+        await mocked.fetchPiAgentMessagesCompatibility({ tabId: opts.tabId, sessionId });
+        await mocked.fetchPiAgentModelsCompatibility({ tabId: opts.tabId, sessionId });
         await mocked.refreshAgentSessionStats(sessionId);
       },
     ),
@@ -134,9 +134,9 @@ const mocked = vi.hoisted(() => {
         paneId?: string;
       }) => {
         await mocked.reattachPiSession(opts.tabId);
-        await mocked.fetchAgentState({ tabId: opts.tabId, sessionId: opts.sessionId });
-        await mocked.fetchAgentMessages({ tabId: opts.tabId, sessionId: opts.sessionId });
-        await mocked.fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
+        await mocked.fetchPiAgentStateCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
+        await mocked.fetchPiAgentMessagesCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
+        await mocked.fetchPiAgentModelsCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
         await mocked.refreshAgentSessionStats(opts.sessionId);
       },
     ),
@@ -149,7 +149,7 @@ const mocked = vi.hoisted(() => {
         sessionId: string;
         providerId: string;
       }) => {
-        await mocked.fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
+        await mocked.fetchPiAgentModelsCompatibility({ tabId: opts.tabId, sessionId: opts.sessionId });
         const models = agentChatStore.getState().sessionsByTabId[opts.tabId]?.availableModels ?? [];
         const providerVisible = models.some(
           (model) => model.provider?.trim().toLowerCase() === opts.providerId.trim().toLowerCase(),
@@ -168,9 +168,9 @@ const mocked = vi.hoisted(() => {
           });
           const sessionId =
             typeof resolved === "object" && resolved ? (resolved.sessionId ?? opts.sessionId) : opts.sessionId;
-          await mocked.fetchAgentState({ tabId: opts.tabId, sessionId });
-          await mocked.fetchAgentMessages({ tabId: opts.tabId, sessionId });
-          await mocked.fetchAgentModels({ tabId: opts.tabId, sessionId });
+          await mocked.fetchPiAgentStateCompatibility({ tabId: opts.tabId, sessionId });
+          await mocked.fetchPiAgentMessagesCompatibility({ tabId: opts.tabId, sessionId });
+          await mocked.fetchPiAgentModelsCompatibility({ tabId: opts.tabId, sessionId });
           await mocked.refreshAgentSessionStats(sessionId);
         } catch (error) {
           agentChatStore.getState().setSessionError(opts.tabId, error instanceof Error ? error.message : String(error));
@@ -195,9 +195,9 @@ vi.mock("../../../commands/agentChatCommands", () => ({
   abortAgent: mocked.abortAgent,
   clearPiSessionHandle: mocked.clearPiSessionHandle,
   ensurePiSession: mocked.ensurePiSession,
-  fetchAgentMessages: mocked.fetchAgentMessages,
-  fetchAgentModels: mocked.fetchAgentModels,
-  fetchAgentState: mocked.fetchAgentState,
+  fetchPiAgentMessagesCompatibility: mocked.fetchPiAgentMessagesCompatibility,
+  fetchPiAgentModelsCompatibility: mocked.fetchPiAgentModelsCompatibility,
+  fetchPiAgentStateCompatibility: mocked.fetchPiAgentStateCompatibility,
   findTabWithSession: mocked.findTabWithSession,
   handleAgentPiEvent: vi.fn(),
   reattachPiSession: mocked.reattachPiSession,
@@ -1497,7 +1497,7 @@ describe("AgentChatView", () => {
       await dialogProps?.onSaved("deepseek");
     });
 
-    expect(mocked.fetchAgentModels).toHaveBeenCalledWith({ tabId: "tab-1", sessionId: "session-1" });
+    expect(mocked.fetchPiAgentModelsCompatibility).toHaveBeenCalledWith({ tabId: "tab-1", sessionId: "session-1" });
     expect(mocked.stopPiSession).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -1530,7 +1530,7 @@ describe("AgentChatView", () => {
       sessionId: "session-1",
       paneId: undefined,
     });
-    expect(mocked.fetchAgentModels).toHaveBeenCalled();
+    expect(mocked.fetchPiAgentModelsCompatibility).toHaveBeenCalled();
   });
 
   it("never restarts a busy session after a provider save", async () => {
@@ -1554,7 +1554,7 @@ describe("AgentChatView", () => {
     });
 
     expect(mocked.stopPiSession).not.toHaveBeenCalled();
-    expect(mocked.fetchAgentModels).toHaveBeenCalled();
+    expect(mocked.fetchPiAgentModelsCompatibility).toHaveBeenCalled();
   });
 
   it("surfaces a session error when the restart fails mid-way", async () => {

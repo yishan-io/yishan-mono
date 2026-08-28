@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/adapter/cloud"
-	"yishan/apps/cli/internal/daemon"
-	"yishan/apps/cli/internal/rpc"
-	daemonclient "yishan/apps/cli/internal/daemon/client"
 	"yishan/apps/cli/internal/adapter/cloud/session"
+	"yishan/apps/cli/internal/daemon"
+	daemonclient "yishan/apps/cli/internal/daemon/client"
+	"yishan/apps/cli/internal/rpc"
 )
 
 const daemonAuthSyncHealthTimeout = 250 * time.Millisecond

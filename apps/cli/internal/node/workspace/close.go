@@ -54,22 +54,56 @@ func (s *Service) stopWorkspaceTerminals(workspaceID string) []string {
 	return messages
 }
 
+type closeCleanupHandle struct {
+	workspaceID string
+	agentHandle any
+	hasJobs     bool
+}
+
 func (s *Service) beginAgentCleanup(ctx context.Context, workspaceID string) (any, error) {
-	if s.deps.BeginAgentCleanup == nil {
-		return nil, nil
+	handle := closeCleanupHandle{workspaceID: workspaceID}
+	if s.deps.BackgroundJobCleanup != nil {
+		if err := s.deps.BackgroundJobCleanup(ctx, workspaceID); err != nil {
+			return nil, fmt.Errorf("stop background jobs: %w", err)
+		}
+		handle.hasJobs = true
 	}
-	return s.deps.BeginAgentCleanup(ctx, workspaceID)
+	if s.deps.BeginAgentCleanup == nil {
+		return handle, nil
+	}
+	agentHandle, err := s.deps.BeginAgentCleanup(ctx, workspaceID)
+	if err != nil {
+		s.abortBackgroundJobCleanup(handle)
+		return nil, err
+	}
+	handle.agentHandle = agentHandle
+	return handle, nil
 }
 
 func (s *Service) abortAgentCleanup(handle any) {
+	cleanup, ok := handle.(closeCleanupHandle)
+	if !ok {
+		return
+	}
+	s.abortBackgroundJobCleanup(cleanup)
 	if s.deps.AbortAgentCleanup != nil {
-		s.deps.AbortAgentCleanup(handle)
+		s.deps.AbortAgentCleanup(cleanup.agentHandle)
+	}
+}
+
+func (s *Service) abortBackgroundJobCleanup(handle closeCleanupHandle) {
+	if handle.hasJobs && s.deps.AbortBackgroundJobCleanup != nil {
+		s.deps.AbortBackgroundJobCleanup(handle.workspaceID)
 	}
 }
 
 func (s *Service) commitAgentCleanup(handle any) {
+	cleanup, ok := handle.(closeCleanupHandle)
+	if !ok {
+		return
+	}
 	if s.deps.CommitAgentCleanup != nil {
-		s.deps.CommitAgentCleanup(handle)
+		s.deps.CommitAgentCleanup(cleanup.agentHandle)
 	}
 }
 

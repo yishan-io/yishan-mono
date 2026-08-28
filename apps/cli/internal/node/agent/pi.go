@@ -173,6 +173,7 @@ func (s *Service) handlePiSessionExit(exited *process.Session) {
 	if !exists {
 		return
 	}
+	s.runtimeIdentities.release(exited.ID(), rpc.AgentRuntimePi)
 	connState := state.Conn
 	if connState == nil || !connState.IsOpen() {
 		return

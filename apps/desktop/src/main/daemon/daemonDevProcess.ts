@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { resolveCliInvocation } from "./daemonCliInvocation";
+import { resolveCliInvocation, resolveDaemonCliEnvironment } from "./daemonCliInvocation";
 import { resolveCliProfileName } from "./daemonEndpoint";
 
 const relayUrl = "http://127.0.0.1:8788";
@@ -30,7 +30,7 @@ export class DaemonDevProcess {
     const child = spawn(
       invocation.executablePath,
       [...invocation.prefixArgs, "daemon", "run", "--relay-url", relayUrl, "--profile", resolveCliProfileName()],
-      { stdio: "ignore", env: process.env, cwd: invocation.cwd },
+      { stdio: "ignore", env: resolveDaemonCliEnvironment(), cwd: invocation.cwd },
     );
     this.child = child;
     child.once("exit", () => {

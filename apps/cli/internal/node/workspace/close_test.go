@@ -100,3 +100,26 @@ func TestWorkspaceClose_LocalNode_TakesLocalClosePath(t *testing.T) {
 		t.Fatalf("expected local close path (not relay), got err=%v", err)
 	}
 }
+
+func TestService_CloseCleanupAbortReopensBackgroundJobAdmission(t *testing.T) {
+	var canceled, reopened, agentAborted int
+	service := &Service{deps: Deps{
+		BackgroundJobCleanup:      func(context.Context, string) error { canceled++; return nil },
+		AbortBackgroundJobCleanup: func(string) { reopened++ },
+		BeginAgentCleanup:         func(context.Context, string) (any, error) { return "agent", nil },
+		AbortAgentCleanup: func(handle any) {
+			if handle != "agent" {
+				t.Fatalf("agent handle = %#v", handle)
+			}
+			agentAborted++
+		},
+	}}
+	handle, err := service.beginAgentCleanup(context.Background(), "ws-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	service.abortAgentCleanup(handle)
+	if canceled != 1 || reopened != 1 || agentAborted != 1 {
+		t.Fatalf("cleanup lifecycle = %d/%d/%d", canceled, reopened, agentAborted)
+	}
+}

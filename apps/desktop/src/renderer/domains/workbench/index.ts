@@ -17,6 +17,7 @@ export {
   toggleTaskHubOverlay,
 } from "./commands/navigationCommands";
 export {
+  bindAgentChatTabRuntime,
   bindAgentChatTabSession,
   bindTerminalTabSession,
   closeAllTabs,

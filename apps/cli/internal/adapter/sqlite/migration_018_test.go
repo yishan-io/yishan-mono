@@ -16,7 +16,7 @@ func TestMigrate_018ReplacesLocalTaskLifecycleStatuses(t *testing.T) {
 	}
 	assert018TaskStatuses(t, database)
 	assert018LinksMapped(t, database)
-	assertMigrationCount(t, database, 18)
+	assertMigrationCount(t, database, 19)
 }
 
 func seed018LegacyLifecycleRows(t *testing.T, database *sql.DB) {

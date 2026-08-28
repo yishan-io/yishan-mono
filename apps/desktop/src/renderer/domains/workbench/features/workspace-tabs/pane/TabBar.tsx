@@ -19,8 +19,10 @@ type WorkbenchTab = {
   isTemporary?: boolean;
   /** Present for agent-chat tabs: pi resume/runtime session id. */
   sessionId?: string;
-  /** Present for agent-chat tabs: working directory of the pi process. */
+  /** Present for agent-chat tabs: working directory of the agent process. */
   cwd?: string;
+  /** Present for agent-chat tabs: selected session runtime. */
+  runtime?: "pi" | "dsh";
 };
 
 export type TabBarCreateOption = "browser" | "terminal" | "agent-chat" | "whiteboard" | string;
@@ -433,6 +435,7 @@ export function TabBar({
         onCloseAllTabs={onCloseAllTabs}
         sessionId={selectedContextTab?.sessionId}
         cwd={selectedContextTab?.cwd}
+        sessionRuntime={selectedContextTab?.runtime}
         fetchAgentSessionFilePath={fetchAgentSessionFilePath}
       />
 

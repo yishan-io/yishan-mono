@@ -41,8 +41,12 @@ export type TabStoreState = {
   closeAllTerminalTabs: (workspaceId: string) => void;
   /** Persists one backend terminal session id on one terminal tab. */
   setTerminalTabSessionId: (tabId: string, sessionId: string) => void;
+  /** Persists the selected execution runtime on one agent-chat tab. */
+  setAgentChatTabRuntime: (input: { tabId: string; runtime: "pi" | "dsh" }) => void;
   /** Persists the single agent-chat session identity on one tab. */
-  setAgentChatTabSession: (input: { tabId: string; sessionId: string }) => void;
+  setAgentChatTabSession: (input: { tabId: string; sessionId: string; runtime: "pi" | "dsh" }) => void;
+  /** Persists the user-selected DSH model for the next session start on one agent-chat tab. */
+  setAgentChatTabDSHModel: (tabId: string, selection: { modelId?: string; providerId?: string }) => void;
   /** Persists subagent-control metadata on one agent-chat tab. */
   setAgentChatTabSubagentControl: (input: { tabId: string; agentId?: string; parentSessionId?: string }) => void;
   /** Updates the detected agent kind on one terminal tab. Pass undefined to clear. */
@@ -145,7 +149,10 @@ export const tabStore = create<TabStoreState>()(
         return removedTabIds;
       },
       openTab: (input, options) => {
-        const nextTabId = input.kind === "terminal" ? (input.tabId ?? createClientTabId()) : createClientTabId();
+        const nextTabId =
+          input.kind === "terminal" || input.kind === "agent-chat"
+            ? (input.tabId ?? createClientTabId())
+            : createClientTabId();
         set(
           (state) =>
             openTabState(state, input, nextTabId, {
@@ -187,7 +194,27 @@ export const tabStore = create<TabStoreState>()(
           ),
         }));
       },
-      setAgentChatTabSession: ({ tabId, sessionId }) => {
+      setAgentChatTabRuntime: ({ tabId, runtime }) => {
+        const normalizedTabId = tabId.trim();
+        if (!normalizedTabId) {
+          return;
+        }
+
+        set((state) => ({
+          tabs: state.tabs.map((tab: WorkbenchTab) =>
+            tab.id === normalizedTabId && tab.kind === "agent-chat"
+              ? {
+                  ...tab,
+                  data: {
+                    ...tab.data,
+                    runtime,
+                  },
+                }
+              : tab,
+          ),
+        }));
+      },
+      setAgentChatTabSession: ({ tabId, sessionId, runtime }) => {
         const normalizedTabId = tabId.trim();
         const normalizedSessionId = sessionId.trim();
         if (!normalizedTabId || !normalizedSessionId) {
@@ -202,6 +229,25 @@ export const tabStore = create<TabStoreState>()(
                   data: {
                     ...tab.data,
                     sessionId: normalizedSessionId,
+                    runtime,
+                  },
+                }
+              : tab,
+          ),
+        }));
+      },
+      setAgentChatTabDSHModel: (tabId, selection) => {
+        const normalizedTabId = tabId.trim();
+        if (!normalizedTabId) return;
+        set((state) => ({
+          tabs: state.tabs.map((tab: WorkbenchTab) =>
+            tab.id === normalizedTabId && tab.kind === "agent-chat"
+              ? {
+                  ...tab,
+                  data: {
+                    ...tab.data,
+                    dshSelectedModelId: selection.modelId || undefined,
+                    dshSelectedProviderId: selection.providerId || undefined,
                   },
                 }
               : tab,

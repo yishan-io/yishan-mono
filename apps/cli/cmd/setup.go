@@ -6,9 +6,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/cmd/output"
 	"yishan/apps/cli/internal/adapter/cloud/session"
+	setup "yishan/apps/cli/internal/agent/setup"
 )
 
 var setupCmd = &cobra.Command{

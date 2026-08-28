@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/cmd/output"
+	"yishan/apps/cli/internal/platform/config"
 )
 
 var logoutCmd = &cobra.Command{

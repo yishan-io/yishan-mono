@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/cmd/output"
+	"yishan/apps/cli/internal/adapter/cloud"
 )
 
 var jobCmd = &cobra.Command{

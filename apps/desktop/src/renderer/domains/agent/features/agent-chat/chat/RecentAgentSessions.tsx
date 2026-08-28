@@ -4,8 +4,7 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuHistory } from "react-icons/lu";
-import { fetchSessionHistory } from "../../../commands/agentChatSessionHistory";
-import type * as Rpc from "../../../daemon/daemonAgentTypes";
+import { type RuntimeAgentSessionSummary, fetchSessionHistory } from "../../../commands/agentChatSessionHistory";
 import { formatAgentSessionTitle } from "../../../skills/agentSkillText";
 
 const RECENT_SESSION_LIMIT = 5;
@@ -15,8 +14,8 @@ type RecentAgentSessionsProps = {
   cwd?: string;
 };
 
-function formatRelativeTime(timestamp: string, t: (key: string, options?: { count: number }) => string): string {
-  const date = new Date(timestamp);
+function formatRelativeTime(createdAt: number, t: (key: string, options?: { count: number }) => string): string {
+  const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return "";
 
   const elapsedMinutes = Math.floor((Date.now() - date.getTime()) / 60_000);
@@ -28,10 +27,10 @@ function formatRelativeTime(timestamp: string, t: (key: string, options?: { coun
   return date.toLocaleDateString();
 }
 
-/** Lists recent Pi sessions for a workspace when no tabs are open. */
+/** Lists recent durable agent sessions for a workspace when no tabs are open. */
 export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsProps) {
   const { t } = useTranslation();
-  const [sessions, setSessions] = useState<Rpc.PiSessionSummary[]>([]);
+  const [sessions, setSessions] = useState<RuntimeAgentSessionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(cwd));
   const [error, setError] = useState<string | null>(null);
 
@@ -104,10 +103,19 @@ export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsPro
               ) || t("launch.recent.defaultTitle");
             return (
               <Button
-                key={session.sessionId}
+                key={`${session.runtime}:${session.sessionId}`}
                 variant="text"
                 color="inherit"
-                onClick={() => openTab({ workspaceId, kind: "agent-chat", title, cwd, sessionId: session.sessionId })}
+                onClick={() =>
+                  openTab({
+                    workspaceId,
+                    kind: "agent-chat",
+                    title,
+                    cwd,
+                    sessionId: session.sessionId,
+                    runtime: session.runtime,
+                  })
+                }
                 sx={{ justifyContent: "space-between", textAlign: "left" }}
               >
                 <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -122,7 +130,7 @@ export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsPro
                     flexShrink: 0,
                   }}
                 >
-                  {formatRelativeTime(session.timestamp, t)}
+                  {formatRelativeTime(session.createdAt, t)}
                 </Typography>
               </Button>
             );

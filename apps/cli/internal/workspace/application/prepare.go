@@ -56,8 +56,12 @@ func normalizeCreateCommand(command CreateCommand) CreateCommand {
 		command.TaskRun.AgentKind = strings.TrimSpace(command.TaskRun.AgentKind)
 		command.TaskRun.Prompt = strings.TrimSpace(command.TaskRun.Prompt)
 		command.TaskRun.Model = strings.TrimSpace(command.TaskRun.Model)
+		command.TaskRun.Runtime = workspace.TaskRunRuntime(strings.TrimSpace(string(command.TaskRun.Runtime)))
 		if command.TaskRun.AgentKind == "" {
 			command.TaskRun.AgentKind = agentkind.Pi
+		}
+		if command.TaskRun.Runtime == "" {
+			command.TaskRun.Runtime = workspace.TaskRunRuntimePi
 		}
 	}
 	if command.Kind == "" {
@@ -67,10 +71,16 @@ func normalizeCreateCommand(command CreateCommand) CreateCommand {
 }
 
 func validateTaskRun(taskRun *workspace.TaskRunConfig) error {
-	if taskRun == nil || taskRun.AgentKind == agentkind.Pi {
+	if taskRun == nil {
 		return nil
 	}
-	return fmt.Errorf("unsupported task-run agent kind %q; only %q is supported", taskRun.AgentKind, agentkind.Pi)
+	if taskRun.Runtime != workspace.TaskRunRuntimePi && taskRun.Runtime != workspace.TaskRunRuntimeDSH {
+		return fmt.Errorf("unsupported task-run runtime %q", taskRun.Runtime)
+	}
+	if taskRun.AgentKind != agentkind.Pi {
+		return fmt.Errorf("unsupported task-run agent kind %q; only %q is supported", taskRun.AgentKind, agentkind.Pi)
+	}
+	return nil
 }
 
 func fallbackWorkspaceName(command CreateCommand) string {

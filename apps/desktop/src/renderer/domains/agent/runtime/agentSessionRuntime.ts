@@ -2,428 +2,576 @@ import { tabStore } from "@renderer/domains/workbench";
 import { bindAgentChatTabSession } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "@shared/async/delay";
-/**
- * AgentSessionRuntime — one owner for Pi session handles and lifecycle races.
- *
- * Owns the module-level `activePiSessions`/`closingSessions` maps, the
- * start/attach/stop/reopen races, and the state-hydration sends
- * (fetchAgentState / fetchAgentMessages / fetchAgentModels / stats refresh)
- * so recovery sequences can compose them without a commands↔runtime cycle.
- *
- * React mounts attach UI to this Runtime; they do not own Pi process
- * lifecycle. UI-intent commands (`features/agent/commands/agentChatCommands.ts`)
- * delegate here; the Pi event decode adapter lives in
- * `features/agent/subscriptions/agentChatEventRouter.ts` and the reduction in
- * `features/agent/subscriptions/agentChatPiEventHandler.ts`.
- *
- * Pi RPC sessions outlive React component mounts so that Strict Mode
- * double-mounts reuse the same Pi process instead of starting a second one.
- */
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import {
-  attachPiSession as attachPiSessionProcedure,
-  sendPiCommand as sendPiCommandProcedure,
-  startPiSession as startPiSessionProcedure,
-  stopPiSession as stopPiSessionProcedure,
+  abortAgentSession as abortAgentSessionProcedure,
+  attachAgentSession as attachAgentSessionProcedure,
+  disposeAgentSession as disposeAgentSessionProcedure,
+  getAgentCapabilities,
+  promptAgentSession as promptAgentSessionProcedure,
+  readAgentRuntimeHistory,
+  startAgentSession as startAgentSessionProcedure,
 } from "../daemon/daemonAgentProcedures";
+import type { AgentDSHAttachResult, AgentRuntime } from "../daemon/daemonAgentTypes";
 import { agentChatStore } from "../state/agentChatStore";
+import { registerAgentChatDSHEventRouter } from "../subscriptions/agentChatDSHEventRouter";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
 import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
-import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
+import { clearAgentChatSessionStatsSequence } from "../subscriptions/agentChatPiEventShared";
+import type { DSHFrontendPayload } from "../subscriptions/dshTranscript";
+import { DSHTranscriptController } from "../subscriptions/dshTranscriptController";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
+import { buildAgentRuntimeSessionKey } from "./agentSessionIdentity";
 
-type PiSessionHandle = {
+type Deferred<T> = { promise: Promise<T>; resolve(value: T): void; reject(reason?: unknown): void };
+type AgentRuntimeSessionRecord = {
+  runtime: AgentRuntime;
   sessionId: string;
+  workspaceId: string;
+  cwd: string;
+  ownsSessionOnClose: boolean;
+  sessionView: AgentChatSessionView;
   unsubscribe: (() => void) | null;
   state: "starting" | "running" | "closing";
   closeRequested: boolean;
-  ownsSessionOnClose: boolean;
   startPromise: Promise<void> | null;
+  dshTranscriptController: DSHTranscriptController | null;
+  lifecycleRevisionsByIncarnation: Map<string, number>;
+  currentLifecycleIncarnation: string | null;
 };
 
-const activePiSessions = new Map<string, PiSessionHandle>();
-// closingSessions tracks in-flight pi.stop teardowns by session id so a fast
-// reopen of the same history session waits for the teardown instead of racing
-// it (pi.start would hit ErrSessionExists and attach to a process being killed).
+const activeSessions = new Map<string, AgentRuntimeSessionRecord>();
+const runtimeSessionRecords = new Map<string, AgentRuntimeSessionRecord>();
 const closingSessions = new Map<string, Promise<void>>();
 const PI_SESSION_EXISTS_RPC_CODE = -32003;
-// CLOSING_SESSION_WAIT_TIMEOUT_MS bounds how long a reopen waits for an
-// in-flight pi.stop of the same session id before proceeding anyway.
 const CLOSING_SESSION_WAIT_TIMEOUT_MS = 6_000;
 
-/**
- * Ensures a Pi RPC session exists for a tab. Idempotent — subsequent calls
- * for the same tabId return the existing session.
- *
- * Returns whether the session process was already alive (attached or reused)
- * rather than freshly started, so callers can classify pre-existing transcript
- * history as interrupted when the previous owner process is gone.
- */
-export async function ensurePiSession(opts: {
+/** Ensures a Pi session exists, preserving the legacy public API. */
+export async function ensurePiSession(opts: EnsureAgentSessionOptions): Promise<EnsureAgentSessionResult> {
+  return await ensureAgentSession({ ...opts, runtime: "pi" });
+}
+
+type EnsureAgentSessionOptions = {
+  runtime?: AgentRuntime;
   tabId: string;
   workspaceId: string;
   cwd: string;
   sessionId?: string;
   sessionView?: AgentChatSessionView;
   paneId?: string;
-}): Promise<{ sessionId: string; attached: boolean }> {
-  const existing = activePiSessions.get(opts.tabId);
+  /** For DSH sessions: the model id to use for this session (overrides daemon default). */
+  dshModelId?: string;
+  /** For DSH sessions: the provider route paired with dshModelId. */
+  dshProviderId?: string;
+};
+type EnsureAgentSessionResult = { sessionId: string; attached: boolean; runtime: AgentRuntime };
+
+/** Ensures a runtime-neutral session exists without inferring runtime from an id. */
+export async function ensureAgentSession(opts: EnsureAgentSessionOptions): Promise<EnsureAgentSessionResult> {
+  const runtime = opts.runtime ?? "pi";
+  const existing = activeSessions.get(opts.tabId);
   if (existing) {
-    // If Pi startup is still in flight, wait before declaring the session ready.
-    // Without this, a concurrent call (e.g. React Strict Mode remount) would
-    // return the session ID and immediately try to send commands before Pi exists.
-    if (existing.startPromise) {
-      await existing.startPromise.catch(() => {
-        // Startup failed — handle was removed. Fall through to create a new session.
-      });
-      if (activePiSessions.get(opts.tabId) !== existing) {
-        return ensurePiSession(opts);
-      }
+    if (existing.runtime !== runtime) {
+      throw new Error(`Agent-chat tab ${opts.tabId} is already bound to ${existing.runtime}`);
     }
-    return { sessionId: existing.sessionId, attached: true };
+    await existing.startPromise?.catch(() => undefined);
+    if (activeSessions.get(opts.tabId) !== existing) return await ensureAgentSession(opts);
+    return { sessionId: existing.sessionId, attached: true, runtime };
   }
 
-  const requestedSessionId = opts.sessionId?.trim();
+  const sessionId = opts.sessionId?.trim() || generateId();
   const chatSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
-  if (chatSession && !requestedSessionId) {
-    const routerDispose = registerAgentChatEventRouter({
-      tabId: opts.tabId,
-      sessionId: chatSession.sessionId,
-      onEvent: (payload) => handleAgentPiEvent(payload),
-    });
-    // Set the handle before awaiting so concurrent calls find it immediately.
-    activePiSessions.set(opts.tabId, {
-      sessionId: chatSession.sessionId,
-      unsubscribe: routerDispose,
-      state: "running",
-      closeRequested: false,
-      ownsSessionOnClose: true,
-      startPromise: null,
-    });
-    await ensureAgentChatEventRouterReady();
-    return { sessionId: chatSession.sessionId, attached: true };
+  if (chatSession && chatSession.state !== "error" && !opts.sessionId?.trim()) {
+    return await adoptExistingChatSession(opts, runtime, chatSession.sessionId);
   }
 
-  const sessionId = requestedSessionId || generateId();
   agentChatStore.getState().initSession(opts.tabId, sessionId);
-  let didAttach = false;
-  const routerDispose = registerAgentChatEventRouter({
-    tabId: opts.tabId,
+  const record: AgentRuntimeSessionRecord = {
+    runtime,
     sessionId,
-    onEvent: (payload) => handleAgentPiEvent(payload),
-  });
-  // Place a deferred startPromise on the handle before any await so that
-  // stopPiSession can await it even while startup is still in flight.
-  let resolveDeferredStart: (() => void) | null = null;
-  const deferredStartPromise = new Promise<void>((resolve) => {
-    resolveDeferredStart = resolve;
-  });
-  const handle: PiSessionHandle = {
-    sessionId,
-    unsubscribe: routerDispose,
+    workspaceId: opts.workspaceId,
+    cwd: opts.cwd,
+    ownsSessionOnClose: opts.sessionView !== "subagent-detail",
+    sessionView: opts.sessionView ?? "full",
+    unsubscribe: null,
     state: "starting",
     closeRequested: false,
-    ownsSessionOnClose: opts.sessionView !== "subagent-detail",
-    startPromise: deferredStartPromise,
+    startPromise: null,
+    dshTranscriptController: null,
+    lifecycleRevisionsByIncarnation: new Map(),
+    currentLifecycleIncarnation: null,
   };
-  activePiSessions.set(opts.tabId, handle);
-  await ensureAgentChatEventRouterReady();
-  // A previous tab may have just been closed for this session id; wait for its
-  // teardown to finish so pi.start spawns a fresh process instead of falling
-  // back to attaching to a process that is being killed.
-  await closingSessions.get(sessionId)?.catch(() => undefined);
-  const startPiSession = async (): Promise<{ sessionId: string } | { ok: boolean }> => {
-    return await startPiSessionProcedure({
-      sessionId,
-      tabId: opts.tabId,
-      paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
-      workspaceId: opts.workspaceId,
-      cwd: opts.cwd,
-    });
-  };
+  record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
+  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
+  const deferredStart = createDeferred<void>();
+  record.startPromise = deferredStart.promise;
+  // This promise can reject when startup fails without a concurrent stop.
+  void deferredStart.promise.catch(() => undefined);
+  runtimeSessionRecords.set(opts.tabId, record);
+  activeSessions.set(opts.tabId, record);
+  if (runtime === "pi") await ensureAgentChatEventRouterReady();
+  await closingSessions.get(buildAgentRuntimeSessionKey(runtime, sessionId))?.catch(() => undefined);
 
-  const startPromise = startPiSession()
+  let didAttach = false;
+  const startPromise = startRuntimeSession(record, opts)
     .catch(async (error) => {
-      if (!requestedSessionId || !isPiSessionAlreadyRunningError(error)) {
-        throw error;
-      }
+      if (!opts.sessionId?.trim() || !isSessionAlreadyRunningError(error)) throw error;
       didAttach = true;
-      return await attachPiSessionProcedure({
-        sessionId,
-        tabId: opts.tabId,
-        workspaceId: opts.workspaceId,
-        cwd: opts.cwd,
-      });
+      await attachRuntimeSession(record, opts.tabId);
     })
     .then(async () => {
-      handle.startPromise = null;
-      bindAgentChatTabSession({
-        tabId: opts.tabId,
-        sessionId,
-      });
-
-      if (handle.closeRequested) {
-        if (handle.ownsSessionOnClose) {
-          await closePiSessionHandle(opts.tabId, handle);
-        } else {
-          releasePiSessionHandle(opts.tabId, handle);
-        }
-        return;
+      bindAgentChatTabSession({ tabId: opts.tabId, sessionId, runtime });
+      if (record.closeRequested) {
+        await releaseOrDisposeSession(opts.tabId, record);
+      } else {
+        record.state = "running";
       }
-
-      handle.state = "running";
     })
     .catch((error) => {
-      handle.unsubscribe?.();
-      if (activePiSessions.get(opts.tabId) === handle) {
-        activePiSessions.delete(opts.tabId);
-      }
+      record.unsubscribe?.();
+      if (activeSessions.get(opts.tabId) === record) activeSessions.delete(opts.tabId);
+      runtimeSessionRecords.delete(opts.tabId);
       throw error;
     });
-
-  // Resolve the deferred startPromise when the real startPromise settles.
   startPromise.then(
-    () => resolveDeferredStart?.(),
-    () => resolveDeferredStart?.(),
+    () => {
+      record.startPromise = null;
+      deferredStart.resolve();
+    },
+    (error) => deferredStart.reject(error),
   );
   await startPromise;
-  return { sessionId, attached: didAttach };
+  return { sessionId, attached: didAttach, runtime };
 }
 
-/** Returns the tabId that currently owns the given agent-chat session, if any. */
-export function findTabWithSession(sessionId: string): string | undefined {
+/** Returns the open tab with this runtime-tagged session identity. */
+export function findTabWithSession(sessionId: string, runtime: AgentRuntime = "pi"): string | undefined {
   const openTabIds = new Set(tabStore.getState().tabs.map((tab) => tab.id));
-
-  for (const [tabId, session] of activePiSessions) {
-    if (session.sessionId === sessionId && openTabIds.has(tabId)) {
-      return tabId;
-    }
+  for (const [tabId, record] of activeSessions) {
+    if (record.runtime === runtime && record.sessionId === sessionId && openTabIds.has(tabId)) return tabId;
   }
-
-  const sessions = agentChatStore.getState().sessionsByTabId;
-  for (const [tabId, session] of Object.entries(sessions)) {
-    if (session.sessionId === sessionId && openTabIds.has(tabId)) {
-      return tabId;
-    }
-  }
-  return undefined;
+  return tabStore
+    .getState()
+    .tabs.find(
+      (tab) => tab.kind === "agent-chat" && (tab.data.runtime ?? "pi") === runtime && tab.data.sessionId === sessionId,
+    )?.id;
 }
 
-/** Drops one local Pi-session handle so future startup can recreate or reattach it. */
+/** Drops a local Pi handle. */
 export function clearPiSessionHandle(tabId: string): void {
-  const session = activePiSessions.get(tabId);
-  session?.unsubscribe?.();
-  activePiSessions.delete(tabId);
+  clearAgentSessionHandle(tabId);
+}
+/** Drops a local runtime handle. */
+export function clearAgentSessionHandle(tabId: string): void {
+  const record = activeSessions.get(tabId);
+  record?.unsubscribe?.();
+  activeSessions.delete(tabId);
 }
 
-/** Rebinds one live Pi session to the current daemon WebSocket connection. */
+/** Reattaches the tab's runtime session and reports whether its local record existed. */
+export async function reattachAgentSession(tabId: string): Promise<boolean> {
+  const record = activeSessions.get(tabId);
+  if (!record) return false;
+  if (record.state === "closing") return true;
+  await attachRuntimeSession(record, tabId);
+  if (record.runtime === "pi") agentChatStore.getState().setSessionState(tabId, "starting");
+  return true;
+}
+/** Retries a failed DSH durable transcript reload without changing runtimes. */
+export async function retryDSHTranscript(tabId: string): Promise<void> {
+  const record = activeSessions.get(tabId);
+  if (record?.runtime !== "dsh") return;
+  await record.dshTranscriptController?.retry();
+}
+
+/** Reattaches a live Pi session through the legacy API. */
 export async function reattachPiSession(tabId: string): Promise<void> {
-  const session = activePiSessions.get(tabId);
-  if (!session || session.state === "closing") {
-    return;
-  }
-
-  const tab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
-  await attachPiSessionProcedure({
-    sessionId: session.sessionId,
-    tabId,
-    workspaceId: tab?.workspaceId,
-    cwd: tab?.kind === "agent-chat" ? tab.data.cwd : undefined,
-  });
-  // Events can be missed while disconnected. Let the immediately following
-  // get_state response establish the current idle/running/compacting phase.
-  agentChatStore.getState().setSessionState(tabId, "starting");
+  await reattachAgentSession(tabId);
 }
 
-/** Stops the Pi RPC session for a tab. Called when the tab is closed. */
-export async function stopPiSession(tabId: string): Promise<void> {
+/** Sends one prompt to its recorded runtime. */
+export async function promptAgentSession(opts: {
+  tabId: string;
+  sessionId: string;
+  message: string;
+  streamingBehavior?: string;
+}): Promise<void> {
+  const record = requireRuntimeSessionRecord(opts.tabId, opts.sessionId);
+  await promptAgentSessionProcedure({
+    runtime: record.runtime,
+    sessionId: opts.sessionId,
+    workspaceId: record.workspaceId,
+    cwd: record.cwd,
+    message: opts.message,
+    ...(record.runtime === "pi" && opts.streamingBehavior ? { streamingBehavior: opts.streamingBehavior } : {}),
+  });
+}
+/** Aborts one runtime-neutral session. */
+export async function abortAgentSession(tabId: string, sessionId: string): Promise<void> {
+  const record = requireRuntimeSessionRecord(tabId, sessionId);
+  await abortAgentSessionProcedure({
+    runtime: record.runtime,
+    sessionId,
+    workspaceId: record.workspaceId,
+    cwd: record.cwd,
+  });
+}
+/** Disposes one runtime-neutral session. */
+export async function stopAgentSession(tabId: string): Promise<void> {
   flushAgentChatStreamBuffer(tabId);
   disposeAgentChatStreamBuffer(tabId);
-
-  const session = activePiSessions.get(tabId);
-  if (!session) {
-    const fallbackTab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
-    const isReadOnlySubagentDetail =
-      fallbackTab?.kind === "agent-chat" && fallbackTab.data.sessionView === "subagent-detail";
-    const fallbackSessionId =
-      agentChatStore.getState().sessionsByTabId[tabId]?.sessionId ??
-      (fallbackTab?.kind === "agent-chat" ? fallbackTab.data.sessionId : undefined);
-
-    if (fallbackSessionId && !isReadOnlySubagentDetail) {
-      const stopPromise = Promise.resolve(stopPiSessionProcedure({ sessionId: fallbackSessionId })).catch(() => {});
-      trackClosingSession(fallbackSessionId, stopPromise);
-      await stopPromise;
-    }
-
+  const record = activeSessions.get(tabId) ?? runtimeSessionRecords.get(tabId);
+  if (!record) {
     agentChatStore.getState().removeSession(tabId);
-    if (fallbackSessionId) {
-      clearAgentChatSessionStatsSequence(fallbackSessionId);
-    }
     return;
   }
-
-  session.closeRequested = true;
-  session.unsubscribe?.();
-  session.unsubscribe = null;
-
-  if (session.startPromise) {
-    await session.startPromise.catch(() => {});
-  }
-
-  if (activePiSessions.get(tabId) !== session) {
-    agentChatStore.getState().removeSession(tabId);
-    clearAgentChatSessionStatsSequence(session.sessionId);
-    return;
-  }
-
-  if (!session.ownsSessionOnClose) {
-    releasePiSessionHandle(tabId, session);
-    return;
-  }
-
-  await closePiSessionHandle(tabId, session);
+  record.closeRequested = true;
+  record.unsubscribe?.();
+  record.unsubscribe = null;
+  await record.startPromise?.catch(() => undefined);
+  await releaseOrDisposeSession(tabId, record);
+}
+/** Disposes a Pi session through the legacy public API. */
+export async function stopPiSession(tabId: string): Promise<void> {
+  await stopAgentSession(tabId);
 }
 
-/** Fetches available models from the pi session. Result arrives via agent.pi.event. */
-export async function fetchAgentModels(opts: {
-  tabId: string;
-  sessionId: string;
-}): Promise<void> {
-  await sendPiCommandProcedure({
-    sessionId: opts.sessionId,
-    command: { type: "get_available_models" },
-  });
+/** Pi-only state hydration control. */
+export async function fetchPiAgentModelsCompatibility(opts: { tabId: string; sessionId: string }): Promise<void> {
+  await sendPiControl(opts.sessionId, { type: "get_available_models" });
+}
+/** Pi-only state hydration control. */
+export async function fetchPiAgentStateCompatibility(opts: { tabId: string; sessionId: string }): Promise<void> {
+  await sendPiControl(opts.sessionId, { type: "get_state" });
+}
+/** Pi-only state hydration control. */
+export async function fetchPiAgentMessagesCompatibility(opts: { tabId: string; sessionId: string }): Promise<void> {
+  await sendPiControl(opts.sessionId, { type: "get_messages" });
 }
 
-/** Fetches session state (model, thinkingLevel) from the pi session. */
-export async function fetchAgentState(opts: {
-  tabId: string;
-  sessionId: string;
-}): Promise<void> {
-  await sendPiCommandProcedure({
-    sessionId: opts.sessionId,
-    command: { type: "get_state" },
-  });
+async function sendPiControl(sessionId: string, command: unknown): Promise<void> {
+  const { sendPiCompatibilityCommand } = await import("../daemon/daemonAgentProcedures");
+  await sendPiCompatibilityCommand({ sessionId, command });
 }
 
-/** Fetches all conversation messages from the pi session. */
-export async function fetchAgentMessages(opts: {
-  tabId: string;
-  sessionId: string;
-}): Promise<void> {
-  await sendPiCommandProcedure({
-    sessionId: opts.sessionId,
-    command: { type: "get_messages" },
-  });
-}
-
-/**
- * Recovers one agent-chat tab after a daemon reconnect: reattaches the live
- * session, rehydrates state/messages/models/stats, and falls back to a fresh
- * start when the daemon no longer holds the session. Owned by the Runtime so
- * React mounts never run the recovery race themselves.
- */
-export async function recoverAgentSessionAfterReconnect(opts: {
-  tabId: string;
-  workspaceId: string;
-  cwd: string;
-  sessionId: string;
-  sessionView: AgentChatSessionView;
-  paneId?: string;
-}): Promise<void> {
+/** Recovers a session without changing its chosen runtime after failures. */
+export async function recoverAgentSessionAfterReconnect(
+  opts: EnsureAgentSessionOptions & { sessionId: string },
+): Promise<void> {
+  const runtime = opts.runtime ?? "pi";
   try {
-    await reattachPiSession(opts.tabId);
-    // The process survived the connection drop; rows stay live.
-    agentChatStore.getState().setSubagentSessionEndedAt(opts.tabId, null);
-    await fetchAgentState({ tabId: opts.tabId, sessionId: opts.sessionId });
-    await fetchAgentMessages({ tabId: opts.tabId, sessionId: opts.sessionId });
-    await fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
-    await refreshAgentSessionStats(opts.sessionId);
-  } catch {
-    // The daemon no longer holds the session (e.g. it was re-run and started
-    // fresh). Drop the stale handle and re-start the session so the tab heals
-    // itself instead of staying broken.
-    clearPiSessionHandle(opts.tabId);
+    const hasLocalRecord = await reattachAgentSession(opts.tabId);
+    if (!hasLocalRecord && runtime === "dsh") {
+      await ensureAgentSession({ ...opts, runtime });
+      return;
+    }
+    if (runtime === "pi") await hydratePiSession(opts.tabId, opts.sessionId);
+  } catch (error) {
+    if (runtime === "dsh") {
+      agentChatStore.getState().setSessionError(opts.tabId, getErrorMessage(error));
+      return;
+    }
+    clearAgentSessionHandle(opts.tabId);
     try {
-      const { attached } = await ensurePiSession({
-        tabId: opts.tabId,
-        workspaceId: opts.workspaceId,
-        cwd: opts.cwd,
-        sessionId: opts.sessionId,
-        sessionView: opts.sessionView,
-        paneId: opts.paneId,
-      });
-      // Fresh start resets the session; classify pre-existing rows as
-      // interrupted when the previous process is gone.
-      agentChatStore.getState().setSubagentSessionEndedAt(opts.tabId, attached ? null : Date.now());
-      await fetchAgentState({ tabId: opts.tabId, sessionId: opts.sessionId });
-      await fetchAgentMessages({ tabId: opts.tabId, sessionId: opts.sessionId });
-      await fetchAgentModels({ tabId: opts.tabId, sessionId: opts.sessionId });
-      await refreshAgentSessionStats(opts.sessionId);
+      await ensureAgentSession({ ...opts, runtime });
+      await hydratePiSession(opts.tabId, opts.sessionId);
     } catch (recoveryError) {
       agentChatStore.getState().setSessionError(opts.tabId, getErrorMessage(recoveryError));
     }
   }
 }
 
-// ─── Private helpers ──────────────────────────────────────────────────────────
-
-function isPiSessionAlreadyRunningError(error: unknown): boolean {
-  if (typeof error === "object" && error !== null && "code" in error && error.code === PI_SESSION_EXISTS_RPC_CODE) {
-    return true;
-  }
-
-  return getErrorMessage(error).includes("agent session already exists");
+async function hydratePiSession(tabId: string, sessionId: string): Promise<void> {
+  const { refreshAgentSessionStats } = await import("../subscriptions/agentChatPiEventShared");
+  agentChatStore.getState().setSubagentSessionEndedAt(tabId, null);
+  await fetchPiAgentStateCompatibility({ tabId, sessionId });
+  await fetchPiAgentMessagesCompatibility({ tabId, sessionId });
+  await fetchPiAgentModelsCompatibility({ tabId, sessionId });
+  await refreshAgentSessionStats(sessionId);
 }
 
+function registerPiRouter(tabId: string, sessionId: string): () => void {
+  return registerAgentChatEventRouter({ tabId, sessionId, onEvent: (payload) => handleAgentPiEvent(payload) });
+}
+function registerRuntimeRouter(
+  runtime: AgentRuntime,
+  tabId: string,
+  sessionId: string,
+  controller: DSHTranscriptController | null,
+  record: AgentRuntimeSessionRecord,
+): () => void {
+  if (runtime === "pi") return registerPiRouter(tabId, sessionId);
+  if (!controller) throw new Error("DSH transcript controller is required");
+  return registerAgentChatDSHEventRouter({
+    tabId,
+    sessionId,
+    onEvent: (payload) => controller.handle(payload),
+    onLifecycleUpdate: (payload) => {
+      if (!advanceDshLifecycleWatermark(record, payload)) return;
+      refreshDshSubagentLineageForLifecycle(record, tabId, payload);
+    },
+    onMalformedPayload: () => controller.handleMalformedPayload(),
+  });
+}
+function refreshDshSubagentLineageForLifecycle(
+  record: AgentRuntimeSessionRecord,
+  tabId: string,
+  payload: DSHFrontendPayload,
+): void {
+  if (
+    record.sessionView !== "full" ||
+    payload.sessionId !== record.sessionId ||
+    (payload.update.lifecycle?.parentSessionId ?? payload.update.lifecycleResync?.parentSessionId) !==
+      record.sessionId ||
+    !isCurrentDshRuntimeParent(record, tabId)
+  ) {
+    return;
+  }
+  // fire-and-forget: lineage is supplementary and must not delay DSH event handling.
+  void import("../commands/agentChatCommands")
+    .then(async ({ refreshDshSubagentLineage }) => {
+      const lineage = await refreshDshSubagentLineage({
+        tabId,
+        workspaceId: record.workspaceId,
+        cwd: record.cwd,
+        rootSessionId: record.sessionId,
+      });
+      if (
+        !payload.update.lifecycle ||
+        !isCurrentDshLifecycleWatermark(record, payload) ||
+        !isCurrentDshRuntimeParent(record, tabId)
+      ) {
+        return;
+      }
+      const { confirmDshSubagentCancellationFromLifecycle } = await import(
+        "../commands/agentChatDshSubagentCancellation"
+      );
+      confirmDshSubagentCancellationFromLifecycle({
+        tabId,
+        sessionId: record.sessionId,
+        rowKey: payload.update.lifecycle.childSessionId,
+        childSessionId: payload.update.lifecycle.childSessionId,
+        lifecycle: payload.update.lifecycle,
+        lineage,
+      });
+    })
+    .catch((error: unknown) => console.warn("Failed to load DSH subagent lineage refresh", getErrorMessage(error)));
+}
+
+/** Advances the current lifecycle incarnation only for a newer lifecycle or resync revision. */
+function advanceDshLifecycleWatermark(record: AgentRuntimeSessionRecord, payload: DSHFrontendPayload): boolean {
+  const lifecycleUpdate = payload.update.lifecycle ?? payload.update.lifecycleResync;
+  if (!lifecycleUpdate) return false;
+
+  const isNewIncarnation = record.currentLifecycleIncarnation !== lifecycleUpdate.incarnation;
+  if (isNewIncarnation && record.lifecycleRevisionsByIncarnation.has(lifecycleUpdate.incarnation)) return false;
+
+  const latestRevision = record.lifecycleRevisionsByIncarnation.get(lifecycleUpdate.incarnation);
+  if (latestRevision !== undefined && lifecycleUpdate.revision <= latestRevision) return false;
+
+  record.lifecycleRevisionsByIncarnation.set(lifecycleUpdate.incarnation, lifecycleUpdate.revision);
+  if (isNewIncarnation) record.currentLifecycleIncarnation = lifecycleUpdate.incarnation;
+  return true;
+}
+
+/** Returns whether an async lifecycle refresh still represents the active lifecycle revision. */
+function isCurrentDshLifecycleWatermark(record: AgentRuntimeSessionRecord, payload: DSHFrontendPayload): boolean {
+  const lifecycle = payload.update.lifecycle;
+  return (
+    lifecycle !== undefined &&
+    record.currentLifecycleIncarnation === lifecycle.incarnation &&
+    record.lifecycleRevisionsByIncarnation.get(lifecycle.incarnation) === lifecycle.revision
+  );
+}
+
+function isCurrentDshRuntimeParent(record: AgentRuntimeSessionRecord, tabId: string): boolean {
+  const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
+  const session = agentChatStore.getState().sessionsByTabId[tabId];
+  return (
+    tab?.kind === "agent-chat" &&
+    tab.data.runtime === "dsh" &&
+    tab.data.sessionId === record.sessionId &&
+    session?.sessionId === record.sessionId
+  );
+}
+
+function createDSHTranscriptController(
+  record: AgentRuntimeSessionRecord,
+  tabId: string,
+): DSHTranscriptController | null {
+  if (record.runtime !== "dsh") return null;
+  return new DSHTranscriptController(
+    tabId,
+    record.sessionId,
+    agentChatStore.getState(),
+    async () =>
+      await loadDSHDurableHistory({
+        sessionId: record.sessionId,
+        workspaceId: record.workspaceId,
+        cwd: record.cwd,
+      }),
+    () => {},
+    async (cursor): Promise<AgentDSHAttachResult> => {
+      const snapshot = await attachAgentSessionProcedure({
+        runtime: "dsh",
+        sessionId: record.sessionId,
+        tabId,
+        workspaceId: record.workspaceId,
+        cwd: record.cwd,
+        afterSeq: cursor.durableThroughSeq,
+      });
+      if (!("events" in snapshot)) throw new TypeError("invalid DSH recovery attach response");
+      return snapshot;
+    },
+  );
+}
+// DSH's supervisor defaults to a one-second restart backoff. Keep polling long
+// enough to observe that restart while keeping transcript recovery bounded.
+const DSH_RECOVERY_POLL_WINDOW_MS = 2_500;
+const DSH_RECOVERY_RETRY_DELAY_MS = 100;
+const DSH_RECOVERY_ATTEMPTS = Math.ceil(DSH_RECOVERY_POLL_WINDOW_MS / DSH_RECOVERY_RETRY_DELAY_MS) + 1;
+
+async function loadDSHDurableHistory(input: {
+  sessionId: string;
+  workspaceId: string;
+  cwd: string;
+}) {
+  let lastUnavailableError: unknown;
+  for (let attempt = 0; attempt < DSH_RECOVERY_ATTEMPTS; attempt++) {
+    try {
+      const history = await readAgentRuntimeHistory({ runtime: "dsh", ...input });
+      if (history.runtime !== "dsh") throw new TypeError("DSH history loader returned another runtime");
+      return history.dsh;
+    } catch (error) {
+      if (!isDSHRuntimeUnavailable(error) || attempt === DSH_RECOVERY_ATTEMPTS - 1) throw error;
+      lastUnavailableError = error;
+    }
+    const capabilities = await getAgentCapabilities();
+    if (!capabilities.dsh.ready) await delay(DSH_RECOVERY_RETRY_DELAY_MS);
+  }
+  throw lastUnavailableError;
+}
+
+const DSH_RUNTIME_UNAVAILABLE_CODE = "DSH_RUNTIME_UNAVAILABLE";
+
+function isDSHRuntimeUnavailable(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("data" in error)) return false;
+  const { data } = error as { data: unknown };
+  if (typeof data !== "object" || data === null || !("code" in data)) return false;
+  return data.code === DSH_RUNTIME_UNAVAILABLE_CODE;
+}
+
+async function adoptExistingChatSession(
+  opts: EnsureAgentSessionOptions,
+  runtime: AgentRuntime,
+  sessionId: string,
+): Promise<EnsureAgentSessionResult> {
+  if (runtime === "pi") await ensureAgentChatEventRouterReady();
+  const record: AgentRuntimeSessionRecord = {
+    runtime,
+    sessionId,
+    workspaceId: opts.workspaceId,
+    cwd: opts.cwd,
+    ownsSessionOnClose: true,
+    sessionView: opts.sessionView ?? "full",
+    unsubscribe: null,
+    state: "running",
+    closeRequested: false,
+    startPromise: null,
+    dshTranscriptController: null,
+    lifecycleRevisionsByIncarnation: new Map(),
+    currentLifecycleIncarnation: null,
+  };
+  record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
+  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
+  runtimeSessionRecords.set(opts.tabId, record);
+  activeSessions.set(opts.tabId, record);
+  return { sessionId, attached: true, runtime };
+}
+async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: EnsureAgentSessionOptions): Promise<void> {
+  const shouldResumeDSH = record.runtime === "dsh" && Boolean(opts.sessionId?.trim());
+  // Use the model passed through opts (read before initSession cleared the store).
+  const dshModelId = record.runtime === "dsh" && !shouldResumeDSH ? opts.dshModelId : undefined;
+  const dshProviderId = record.runtime === "dsh" && !shouldResumeDSH ? opts.dshProviderId : undefined;
+  await startAgentSessionProcedure({
+    runtime: record.runtime,
+    sessionId: record.sessionId,
+    tabId: opts.tabId,
+    paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
+    workspaceId: record.workspaceId,
+    cwd: record.cwd,
+    ...(shouldResumeDSH ? { resume: true } : {}),
+    ...(dshModelId ? { modelId: dshModelId } : {}),
+    ...(dshProviderId ? { provider: dshProviderId } : {}),
+  });
+}
+async function attachRuntimeSession(record: AgentRuntimeSessionRecord, tabId: string): Promise<void> {
+  const result = await attachAgentSessionProcedure({
+    runtime: record.runtime,
+    sessionId: record.sessionId,
+    tabId,
+    workspaceId: record.workspaceId,
+    cwd: record.cwd,
+    ...(record.runtime === "dsh" ? { afterSeq: record.dshTranscriptController?.getDurableThroughSeq() ?? -1 } : {}),
+  });
+  if (record.runtime === "dsh") {
+    if (result.runtime !== "dsh" || !("events" in result) || !record.dshTranscriptController) {
+      throw new TypeError("invalid DSH attach response");
+    }
+    record.dshTranscriptController.applyAttachSnapshot(result);
+  }
+}
+async function releaseOrDisposeSession(tabId: string, record: AgentRuntimeSessionRecord): Promise<void> {
+  if (record.state === "closing") return;
+  record.state = "closing";
+  if (record.ownsSessionOnClose) {
+    const disposePromise = Promise.resolve(
+      disposeAgentSessionProcedure({
+        runtime: record.runtime,
+        sessionId: record.sessionId,
+        workspaceId: record.workspaceId,
+        cwd: record.cwd,
+      }),
+    ).catch(() => {});
+    trackClosingSession(record.runtime, record.sessionId, disposePromise);
+    await disposePromise;
+  }
+  if (activeSessions.get(tabId) === record) activeSessions.delete(tabId);
+  runtimeSessionRecords.delete(tabId);
+  agentChatStore.getState().removeSession(tabId);
+  if (record.runtime === "pi") clearAgentChatSessionStatsSequence(record.sessionId);
+}
+function requireRuntimeSessionRecord(tabId: string, sessionId: string): AgentRuntimeSessionRecord {
+  const record = runtimeSessionRecords.get(tabId);
+  if (record?.sessionId === sessionId) return record;
+  throw new Error(`No runtime session record for agent-chat tab ${tabId}`);
+}
+function isSessionAlreadyRunningError(error: unknown): boolean {
+  return (
+    (typeof error === "object" && error !== null && "code" in error && error.code === PI_SESSION_EXISTS_RPC_CODE) ||
+    getErrorMessage(error).includes("agent session already exists")
+  );
+}
 function resolveAgentChatPaneId(tabId: string, paneId: string | undefined): string {
-  const normalizedPaneId = paneId?.trim();
-  if (normalizedPaneId) {
-    return normalizedPaneId;
-  }
-
-  return `pane-${tabId}`;
+  return paneId?.trim() || `pane-${tabId}`;
 }
-
-/** Records an in-flight pi.stop so a concurrent reopen can await it. */
-function trackClosingSession(sessionId: string, stopPromise: Promise<unknown>): void {
-  // Bound the wait: a hung stop RPC (transport timeout is 30s) must not stall
-  // reopens of the same session id; the daemon serializes start-during-stop
-  // itself, so the frontend only needs a responsive fast path.
+function createDeferred<T>(): Deferred<T> {
+  let resolve: ((value: T) => void) | undefined;
+  let reject: ((reason?: unknown) => void) | undefined;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve: (value) => resolve?.(value), reject: (reason) => reject?.(reason) };
+}
+function trackClosingSession(runtime: AgentRuntime, sessionId: string, stopPromise: Promise<unknown>): void {
+  const sessionKey = buildAgentRuntimeSessionKey(runtime, sessionId);
   const tracked = Promise.race([stopPromise.then(() => undefined), delay(CLOSING_SESSION_WAIT_TIMEOUT_MS)]).catch(
     () => undefined,
   );
-  closingSessions.set(sessionId, tracked);
+  closingSessions.set(sessionKey, tracked);
   void tracked.finally(() => {
-    if (closingSessions.get(sessionId) === tracked) {
-      closingSessions.delete(sessionId);
-    }
+    if (closingSessions.get(sessionKey) === tracked) closingSessions.delete(sessionKey);
   });
-}
-
-function releasePiSessionHandle(tabId: string, session: PiSessionHandle): void {
-  if (activePiSessions.get(tabId) === session) {
-    activePiSessions.delete(tabId);
-  }
-  agentChatStore.getState().removeSession(tabId);
-  clearAgentChatSessionStatsSequence(session.sessionId);
-}
-
-async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Promise<void> {
-  if (session.state === "closing") {
-    return;
-  }
-
-  session.state = "closing";
-
-  const stopPromise = Promise.resolve(stopPiSessionProcedure({ sessionId: session.sessionId })).catch(() => {});
-  trackClosingSession(session.sessionId, stopPromise);
-  await stopPromise;
-
-  if (activePiSessions.get(tabId) === session) {
-    activePiSessions.delete(tabId);
-  }
-  agentChatStore.getState().removeSession(tabId);
-  clearAgentChatSessionStatsSequence(session.sessionId);
 }
