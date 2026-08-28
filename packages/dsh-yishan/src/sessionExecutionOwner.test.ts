@@ -216,10 +216,13 @@ describe("YishanSessionExecutionOwner", () => {
     const harness = createHarness();
     harness.owner.setInitializeOptions({ provider: "provider", model: "model", maxTokens: 42 });
     await harness.owner.resume({ cwd: CWD, sessionId: "one" });
-    expect(harness.resume).toHaveBeenCalledWith({
-      resumeSessionId: "one",
-      agentOptions: { provider: "provider", model: "model", maxTokens: 42 },
-    });
+    expect(harness.resume).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resumeSessionId: "one",
+        agentOptions: { provider: "provider", model: "model", maxTokens: 42 },
+        setup: expect.any(Function),
+      }),
+    );
   });
 
   it("keeps a resumed session in the creation barrier until its persisted read and shutdown settle", async () => {
@@ -523,7 +526,7 @@ describe("Yishan provider switching", () => {
 
     await harness.owner.prompt({ cwd: CWD, sessionId: "one", contentBlocks: [{ type: "text", text: "next prompt" }] });
 
-    expect(agent?.options).toMatchObject({ provider: "deepseek-official", model: "next-model" });
+    expect(agent?.options).toMatchObject({ provider: "deepseek-official", model: "first-model" });
     expect(agent?.followup).toHaveBeenCalledTimes(2);
     expect(harness.flush).not.toHaveBeenCalled();
   });

@@ -1,3 +1,4 @@
+import type { AgentSetup } from "@deepseek-ai/dsh-agent";
 import type { createUserMessage } from "@deepseek-ai/dsh-llm";
 
 import type { SessionEvent, SessionHeader } from "@deepseek-ai/dsh-session";
@@ -16,7 +17,7 @@ export type LiveSession = BoundSession & {
 /** Owned DSH agent surface required by the Yishan execution owner. */
 export type LiveAgent = {
   session: LiveSession;
-  options?: { provider?: string; model?: string; maxTokens?: number };
+  readonly options?: { provider?: string; model?: string; maxTokens?: number };
   followup(message: ReturnType<typeof createUserMessage>): void;
   cancel(cause: { kind: "user" }, options: { keepInbox: true }): void;
 };
@@ -48,8 +49,13 @@ export type YishanSessionExecutionDependencies = {
       sessionId: string;
       meta: { cwd: string };
       agentOptions?: InitializeOptions;
+      setup?: AgentSetup;
     }): Promise<AgentHandle>;
-    resume(options: { resumeSessionId: string; agentOptions?: InitializeOptions }): Promise<AgentHandle>;
+    resume(options: {
+      resumeSessionId: string;
+      agentOptions?: InitializeOptions;
+      setup?: AgentSetup;
+    }): Promise<AgentHandle>;
   };
   sessions: { get(sessionId: string): LiveSession | undefined; flush(session: LiveSession): Promise<boolean> };
   sessionPersistence: {

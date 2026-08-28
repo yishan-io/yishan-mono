@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
+import { type ModelSelection, type ModelSelectionRef, installModelSelection } from "@deepseek-ai/dsh-agent";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 
-import type { SessionEvent, SessionHeader } from "@deepseek-ai/dsh-session";
+import { type SessionEvent, type SessionHeader, foldRequestHeader } from "@deepseek-ai/dsh-session";
 
 import type { DurableCursor } from "./durableCursor";
 import type {
@@ -57,7 +58,8 @@ export class YishanSessionExecutionOwner {
   private readonly creations = new Map<string, CwdTask<AgentHandle>>();
   private readonly disposals = new Map<string, CwdTask<boolean>>();
   private readonly flushes = new Map<string, CwdTask<DurableCursor>>();
-  private readonly pendingSelections = new Map<string, { provider?: string; model?: string }>();
+  private readonly pendingSelections = new Map<string, ModelSelection>();
+  private readonly selections = new Map<string, ModelSelectionRef>();
   private readonly incarnation: string;
   private initializeOptions: InitializeOptions = {};
   private isShuttingDown = false;
@@ -123,7 +125,7 @@ export class YishanSessionExecutionOwner {
     this.requireAdmitted();
     const handle = await this.requireOwnedHandle(request.sessionId);
     this.requireCwd(handle.agent.session, request);
-    return this.followup(request.sessionId, handle, request.contentBlocks);
+    return this.followup(handle, request.contentBlocks);
   }
 
   /** Adds a stock prompt to an owned session using only its authoritative handle cwd. */
@@ -131,7 +133,7 @@ export class YishanSessionExecutionOwner {
     this.requireAdmitted();
     const handle = await this.requireOwnedHandle(sessionId);
     this.requireAuthoritativeCwd(handle.agent.session);
-    return this.followup(sessionId, handle, contentBlocks);
+    return this.followup(handle, contentBlocks);
   }
 
   /** Updates the model for the next turn of a live session without restarting it. */
@@ -140,10 +142,10 @@ export class YishanSessionExecutionOwner {
     const handle = await this.requireOwnedHandle(request.sessionId);
     this.requireCwd(handle.agent.session, request);
     const pendingSelection = this.pendingSelections.get(request.sessionId);
-    const selection = {
-      provider: request.provider ?? pendingSelection?.provider ?? handle.agent.options?.provider,
-      model: request.model,
-    };
+    const provider =
+      request.provider ?? pendingSelection?.provider ?? this.selections.get(request.sessionId)?.current?.provider;
+    if (provider === undefined) throw new TypeError("session has no provider selection");
+    const selection = { provider, model: request.model };
     const validateProviderSelection = this.dependencies.validateProviderSelection;
     if (validateProviderSelection !== undefined) await validateProviderSelection(selection);
     this.pendingSelections.set(request.sessionId, selection);
@@ -212,7 +214,9 @@ export class YishanSessionExecutionOwner {
 
   /** Starts a coalesced durability checkpoint when an owned turn ends. */
   handleSessionEvent(session: LiveSession, event: SequencedSessionEvent): void {
-    if (this.isShuttingDown || !this.handles.has(session.id) || event.type !== "turn/end") return;
+    if (this.isShuttingDown || !this.handles.has(session.id)) return;
+    if (event.type === "turn/start") this.activatePendingSelection(session.id);
+    if (event.type !== "turn/end") return;
     const cwd = session.header.cwd;
     if (cwd === undefined) return;
     // fire-and-forget: turn-end durability must not block DSH event publication.
@@ -292,16 +296,31 @@ export class YishanSessionExecutionOwner {
     binding?: SessionBoundData,
     agentOptions?: { model?: string; provider?: string },
   ): Promise<AgentHandle> {
-    if (operation === "resume") {
-      const persisted = await this.dependencies.sessionPersistence.readFrom(sessionId, 0);
-      this.requirePersistedCwd(persisted.meta.cwd, { sessionId, cwd });
-    }
     const mergedOptions = agentOptions ? { ...this.initializeOptions, ...agentOptions } : this.initializeOptions;
+    const persisted =
+      operation === "resume" ? await this.dependencies.sessionPersistence.readFrom(sessionId, 0) : undefined;
+    if (persisted !== undefined) this.requirePersistedCwd(persisted.meta.cwd, { sessionId, cwd });
+    const selection = createModelSelection(
+      persisted === undefined ? mergedOptions : (foldRequestHeader(persisted.events)?.config ?? mergedOptions),
+    );
     const validateProviderSelection = this.dependencies.validateProviderSelection;
-    if (validateProviderSelection !== undefined) await validateProviderSelection(mergedOptions);
+    if (validateProviderSelection !== undefined) await validateProviderSelection(selection.current ?? mergedOptions);
     const handle = await (operation === "start"
-      ? this.dependencies.agents.create({ sessionId, meta: { cwd }, agentOptions: mergedOptions })
-      : this.dependencies.agents.resume({ resumeSessionId: sessionId, agentOptions: this.initializeOptions }));
+      ? this.dependencies.agents.create({
+          sessionId,
+          meta: { cwd },
+          agentOptions: mergedOptions,
+          setup: (agentCtx) => {
+            installModelSelection(agentCtx, selection);
+          },
+        })
+      : this.dependencies.agents.resume({
+          resumeSessionId: sessionId,
+          agentOptions: this.initializeOptions,
+          setup: (agentCtx) => {
+            installModelSelection(agentCtx, selection);
+          },
+        }));
     try {
       this.requireAdmitted();
       if (handle.agent.session.id !== sessionId) {
@@ -312,6 +331,7 @@ export class YishanSessionExecutionOwner {
       }
       this.requireCwd(handle.agent.session, { sessionId, cwd });
       if (operation === "start") await this.appendAndFlushBinding(handle.agent.session, binding);
+      this.selections.set(sessionId, selection);
       this.handles.set(sessionId, handle);
       return handle;
     } catch (error) {
@@ -410,6 +430,7 @@ export class YishanSessionExecutionOwner {
     await this.flushHandle(sessionId, handle);
     await handle.dispose();
     this.pendingSelections.delete(sessionId);
+    this.selections.delete(sessionId);
     if (this.handles.get(sessionId) === handle) this.handles.delete(sessionId);
     return true;
   }
@@ -433,19 +454,18 @@ export class YishanSessionExecutionOwner {
     return handle;
   }
 
-  private followup(
-    sessionId: string,
-    handle: AgentHandle,
-    contentBlocks: TextPromptContentBlock[],
-  ): SessionPromptResult {
-    const pendingSelection = this.pendingSelections.get(sessionId);
-    if (pendingSelection !== undefined) {
-      handle.agent.options = { ...handle.agent.options, ...pendingSelection };
-      this.pendingSelections.delete(sessionId);
-    }
+  private followup(handle: AgentHandle, contentBlocks: TextPromptContentBlock[]): SessionPromptResult {
     const message = createUserMessage({ content: contentBlocks, source: { kind: "user" } });
     handle.agent.followup(message);
     return { messageId: message.id };
+  }
+
+  private activatePendingSelection(sessionId: string): void {
+    const pendingSelection = this.pendingSelections.get(sessionId);
+    const selection = this.selections.get(sessionId);
+    if (pendingSelection === undefined || selection === undefined) return;
+    selection.current = pendingSelection;
+    this.pendingSelections.delete(sessionId);
   }
 
   private requireAdmitted(): void {
@@ -530,4 +550,13 @@ export class YishanSessionExecutionOwner {
   private disposingError(): YishanSessionExecutionError {
     return new YishanSessionExecutionError("session execution is disposing", "YISHAN_SESSION_DISPOSING");
   }
+}
+
+/** Creates the mutable route surface used by DSH prompt assembly and request dispatch. */
+function createModelSelection(options: InitializeOptions): ModelSelectionRef {
+  const current =
+    options.provider === undefined || options.model === undefined
+      ? undefined
+      : { provider: options.provider, model: options.model };
+  return { current, assembled: undefined };
 }
