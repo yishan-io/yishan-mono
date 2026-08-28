@@ -9,6 +9,7 @@ import {
   parseSessionPromptResult,
   parseSessionStartRequest,
   parseSessionStartResult,
+  parseSetModelRequest,
   parseSessionSubscribeRequest,
   parseSessionSubscribeResult,
   parseStockSessionPromptRequest,
@@ -16,6 +17,22 @@ import {
 } from "./executionContracts";
 
 describe("Yishan DSH execution contracts", () => {
+  it("accepts a model switch request with an optional provider", () => {
+    expect(
+      parseSetModelRequest({
+        cwd: "/workspace",
+        sessionId: "session-1",
+        model: "deepseek-v4-flash",
+        provider: "deepseek-official",
+      }),
+    ).toEqual({
+      cwd: "/workspace",
+      sessionId: "session-1",
+      model: "deepseek-v4-flash",
+      provider: "deepseek-official",
+    });
+  });
+
   it("accepts exact cwd-scoped start, text-only prompt, cancel, and flush contracts", () => {
     const binding = {
       version: 1,

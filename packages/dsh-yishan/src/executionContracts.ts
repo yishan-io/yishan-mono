@@ -309,6 +309,10 @@ export function parseSetModelRequest(payload: unknown): SetModelRequest {
   const model = typeof rec.model === "string" && rec.model.trim() ? rec.model.trim() : undefined;
   if (!model) throw new TypeError("model is required");
   const provider = typeof rec.provider === "string" && rec.provider.trim() ? rec.provider.trim() : undefined;
-  const base = parseSessionExecutionRequest(rec, "set model request");
-  return { ...base, model, ...(provider ? { provider } : {}) };
+  return {
+    cwd: requireNonEmptyString(rec, "cwd"),
+    sessionId: requireNonEmptyString(rec, "sessionId"),
+    model,
+    ...(provider ? { provider } : {}),
+  };
 }
