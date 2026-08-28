@@ -58,7 +58,7 @@ func TestPiProvider_RoundTrip(t *testing.T) {
 	s := newPiAuthTestHandler(t)
 
 	saveResult, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiSaveProvider,
-		mustJSON(t, map[string]any{"provider": "mistral", "key": "sk-roundtrip"}))
+		mustJSON(t, map[string]any{"provider": "deepseek", "key": "sk-roundtrip"}))
 	if err != nil {
 		t.Fatalf("saveProvider: %v", err)
 	}
@@ -72,12 +72,12 @@ func TestPiProvider_RoundTrip(t *testing.T) {
 	}
 	payload := listResult.(map[string]any)
 	providers := payload["providers"].([]piauth.Entry)
-	if len(providers) != 1 || providers[0].Provider != "mistral" || providers[0].Type != "api_key" {
-		t.Fatalf("listProviders = %+v, want one mistral/api_key entry", providers)
+	if len(providers) != 1 || providers[0].Provider != "deepseek" || providers[0].Type != "api_key" {
+		t.Fatalf("listProviders = %+v, want one deepseek/api_key entry", providers)
 	}
 
 	removeResult, err := s.callAgentRPCForTest(context.Background(), nil, rpc.MethodPiRemoveProvider,
-		mustJSON(t, map[string]any{"provider": "mistral"}))
+		mustJSON(t, map[string]any{"provider": "deepseek"}))
 	if err != nil {
 		t.Fatalf("removeProvider: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestPiProvider_InvalidParams(t *testing.T) {
 		body any
 	}{
 		{name: "empty provider", body: map[string]any{"provider": "", "key": "sk-x"}},
-		{name: "empty key and env", body: map[string]any{"provider": "mistral", "key": " "}},
+		{name: "empty key and env", body: map[string]any{"provider": "deepseek", "key": " "}},
 		{name: "non-allowlisted provider", body: map[string]any{"provider": "openai-codex", "key": "sk-x"}},
 		{name: "malformed json", body: "not-an-object"},
 	}

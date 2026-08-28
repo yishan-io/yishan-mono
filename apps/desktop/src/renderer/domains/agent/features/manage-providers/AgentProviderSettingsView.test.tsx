@@ -37,7 +37,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-const apiKeyProvider = { provider: "mistral", type: "api_key" };
+const apiKeyProvider = { provider: "deepseek", type: "api_key" };
 const oauthProvider = { provider: "openai-codex", type: "oauth" };
 const ambientProvider = { provider: "amazon-bedrock", type: "ambient", source: "AWS_PROFILE: ai-bedrock" };
 
@@ -56,7 +56,7 @@ describe("AgentProviderSettingsView", () => {
 
     render(<AgentProviderSettingsView />);
 
-    expect(await screen.findByText("Mistral")).toBeTruthy();
+    expect(await screen.findByText("DeepSeek")).toBeTruthy();
     expect(screen.getByText("OpenAI Codex")).toBeTruthy();
     expect(screen.getByText("settings.providers.credentialType.apiKey")).toBeTruthy();
     expect(screen.getByText("settings.providers.credentialType.oauth")).toBeTruthy();
@@ -84,11 +84,11 @@ describe("AgentProviderSettingsView", () => {
 
     render(<AgentProviderSettingsView />);
 
-    await screen.findByText("Mistral");
+    await screen.findByText("DeepSeek");
     const editButtons = screen.getAllByLabelText(/settings.providers.actions.edit/);
     expect(editButtons).toHaveLength(1);
     const [editButton] = editButtons;
-    expect(editButton?.getAttribute("aria-label")).toContain("Mistral");
+    expect(editButton?.getAttribute("aria-label")).toContain("DeepSeek");
     expect(screen.queryByLabelText("settings.providers.actions.edit OpenAI Codex")).toBeNull();
   });
 
@@ -118,7 +118,7 @@ describe("AgentProviderSettingsView", () => {
     expect(await screen.findByText("settings.providers.dialog.addTitle")).toBeTruthy();
 
     fireEvent.mouseDown(screen.getByRole("combobox"));
-    const option = await screen.findByRole("option", { name: "Mistral" });
+    const option = await screen.findByRole("option", { name: "DeepSeek" });
     fireEvent.click(option);
 
     const keyInput = document.querySelector('input[type="password"]') as HTMLInputElement;
@@ -131,7 +131,7 @@ describe("AgentProviderSettingsView", () => {
     await waitFor(() => {
       // PROBE
       expect(mocked.savePiProvider.mock.calls.length).toBeGreaterThan(0);
-      expect(mocked.savePiProvider).toHaveBeenCalledWith("mistral", "sk-test-secret", undefined);
+      expect(mocked.savePiProvider).toHaveBeenCalledWith("deepseek", "sk-test-secret", undefined);
     });
     expect(mocked.listPiProviders).toHaveBeenCalledTimes(2); // initial load + refresh after save
   });
@@ -141,7 +141,7 @@ describe("AgentProviderSettingsView", () => {
 
     render(<AgentProviderSettingsView />);
 
-    fireEvent.click(await screen.findByLabelText("settings.providers.actions.edit Mistral"));
+    fireEvent.click(await screen.findByLabelText("settings.providers.actions.edit DeepSeek"));
 
     expect(await screen.findByText("settings.providers.dialog.editTitle")).toBeTruthy();
     // Provider select is read-only in edit mode.
@@ -154,7 +154,7 @@ describe("AgentProviderSettingsView", () => {
     fireEvent.click(screen.getByText("settings.providers.actions.save"));
 
     await waitFor(() => {
-      expect(mocked.savePiProvider).toHaveBeenCalledWith("mistral", "sk-new-key", undefined);
+      expect(mocked.savePiProvider).toHaveBeenCalledWith("deepseek", "sk-new-key", undefined);
     });
   });
 
@@ -173,13 +173,13 @@ describe("AgentProviderSettingsView", () => {
 
     render(<AgentProviderSettingsView />);
 
-    fireEvent.click(await screen.findByLabelText("settings.providers.actions.remove Mistral"));
+    fireEvent.click(await screen.findByLabelText("settings.providers.actions.remove DeepSeek"));
 
     expect(await screen.findByText("settings.providers.removeDialog.title")).toBeTruthy();
     fireEvent.click(screen.getByText("settings.providers.removeDialog.confirm"));
 
     await waitFor(() => {
-      expect(mocked.removePiProvider).toHaveBeenCalledWith("mistral");
+      expect(mocked.removePiProvider).toHaveBeenCalledWith("deepseek");
     });
     expect(mocked.listPiProviders).toHaveBeenCalledTimes(2); // initial load + refresh after remove
   });
@@ -224,8 +224,8 @@ describe("AgentProviderSettingsView", () => {
     const anthropicOption = await screen.findByRole("option", { name: /Anthropic/ });
     expect(anthropicOption.textContent).toContain("settings.providers.dialog.subscriptionTag");
 
-    const mistralOption = await screen.findByRole("option", { name: "Mistral" });
-    expect(mistralOption.textContent).not.toContain("settings.providers.dialog.subscriptionTag");
+    const deepseekOption = await screen.findByRole("option", { name: "DeepSeek" });
+    expect(deepseekOption.textContent).not.toContain("settings.providers.dialog.subscriptionTag");
 
     // OpenRouter has OAuth sign-in but is NOT a subscription — no tag.
     const openrouterOption = await screen.findByRole("option", { name: /OpenRouter/ });
@@ -312,7 +312,7 @@ describe("AgentProviderSettingsView", () => {
 
     render(<AgentProviderSettingsView />);
 
-    await screen.findByText("Mistral");
+    await screen.findByText("DeepSeek");
     expect(document.body.textContent).not.toContain("sk-");
   });
 });

@@ -61,7 +61,7 @@ func TestStore_SaveCreatesFileAndDirWithModes(t *testing.T) {
 	t.Parallel()
 	store, dir := newTestStore(t)
 
-	if err := store.Save("mistral", CredentialInput{Key: "sk-test-123"}); err != nil {
+	if err := store.Save("deepseek", CredentialInput{Key: "sk-test-123"}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
@@ -128,7 +128,7 @@ func TestStore_SavePreservesOAuthEntryByteForByte(t *testing.T) {
 	}
 	oauthLineBefore := extractLine(t, string(rawBefore), `"access": "access-token-value"`)
 
-	if err := store.Save("mistral", CredentialInput{Key: "sk-ds-new"}); err != nil {
+	if err := store.Save("deepseek", CredentialInput{Key: "sk-ds-new"}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
@@ -152,8 +152,8 @@ func TestStore_SavePreservesOAuthEntryByteForByte(t *testing.T) {
 	if byProvider["openai-codex"] != "oauth" {
 		t.Fatalf("openai-codex type = %q, want oauth", byProvider["openai-codex"])
 	}
-	if byProvider["mistral"] != "api_key" {
-		t.Fatalf("mistral type = %q, want api_key", byProvider["mistral"])
+	if byProvider["deepseek"] != "api_key" {
+		t.Fatalf("deepseek type = %q, want api_key", byProvider["deepseek"])
 	}
 }
 
@@ -161,14 +161,14 @@ func TestStore_RemoveDeletesOnlyTarget(t *testing.T) {
 	t.Parallel()
 	store, _ := newTestStore(t)
 
-	if err := store.Save("mistral", CredentialInput{Key: "sk-a"}); err != nil {
-		t.Fatalf("Save mistral: %v", err)
+	if err := store.Save("deepseek", CredentialInput{Key: "sk-a"}); err != nil {
+		t.Fatalf("Save deepseek: %v", err)
 	}
 	if err := store.Save("openrouter", CredentialInput{Key: "sk-b"}); err != nil {
 		t.Fatalf("Save openrouter: %v", err)
 	}
-	if err := store.Remove("mistral"); err != nil {
-		t.Fatalf("Remove mistral: %v", err)
+	if err := store.Remove("deepseek"); err != nil {
+		t.Fatalf("Remove deepseek: %v", err)
 	}
 	if err := store.Remove("never-existed"); err != nil {
 		t.Fatalf("Remove absent provider should be a no-op, got: %v", err)
@@ -195,15 +195,14 @@ func TestStore_SaveValidation(t *testing.T) {
 		wantErr  bool
 	}{
 		{name: "empty provider", provider: "", key: "sk-x", wantErr: true},
-		{name: "empty key and env", provider: "mistral", key: "   ", wantErr: true},
-		{name: "invalid provider chars", provider: "Mistral!", key: "sk-x", wantErr: true},
+		{name: "empty key and env", provider: "deepseek", key: "   ", wantErr: true},
+		{name: "invalid provider chars", provider: "DeepSeek!", key: "sk-x", wantErr: true},
 		{name: "non-allowlisted provider", provider: "openai-codex", key: "sk-x", wantErr: true},
-		{name: "removed pi DeepSeek provider", provider: "deepseek", key: "sk-x", wantErr: true},
 		{name: "oversized provider id", provider: strings.Repeat("p", providerIDMaxLength+1), key: "sk-x", wantErr: true},
-		{name: "oversized key", provider: "mistral", key: strings.Repeat("k", keyMaxLength+1), wantErr: true},
-		{name: "invalid env name", provider: "mistral", key: "sk-x", env: map[string]string{"aws-profile": "x"}, wantErr: true},
-		{name: "empty env value", provider: "mistral", key: "sk-x", env: map[string]string{"AWS_PROFILE": " "}, wantErr: true},
-		{name: "too many env pairs", provider: "mistral", key: "sk-x", env: manyEnvPairs(envMaxPairs + 1), wantErr: true},
+		{name: "oversized key", provider: "deepseek", key: strings.Repeat("k", keyMaxLength+1), wantErr: true},
+		{name: "invalid env name", provider: "deepseek", key: "sk-x", env: map[string]string{"aws-profile": "x"}, wantErr: true},
+		{name: "empty env value", provider: "deepseek", key: "sk-x", env: map[string]string{"AWS_PROFILE": " "}, wantErr: true},
+		{name: "too many env pairs", provider: "deepseek", key: "sk-x", env: manyEnvPairs(envMaxPairs + 1), wantErr: true},
 		{name: "valid save", provider: "anthropic", key: "sk-ant-valid", wantErr: false},
 		{name: "env-only save", provider: "amazon-bedrock", env: map[string]string{"AWS_PROFILE": "sandbox"}, wantErr: false},
 	}
@@ -228,10 +227,10 @@ func TestStore_CorruptFileReturnsTypedError(t *testing.T) {
 	if _, err := store.List(); !errors.Is(err, ErrCorrupt) {
 		t.Fatalf("List err = %v, want ErrCorrupt", err)
 	}
-	if err := store.Save("mistral", CredentialInput{Key: "sk-x"}); !errors.Is(err, ErrCorrupt) {
+	if err := store.Save("deepseek", CredentialInput{Key: "sk-x"}); !errors.Is(err, ErrCorrupt) {
 		t.Fatalf("Save err = %v, want ErrCorrupt", err)
 	}
-	if err := store.Remove("mistral"); !errors.Is(err, ErrCorrupt) {
+	if err := store.Remove("deepseek"); !errors.Is(err, ErrCorrupt) {
 		t.Fatalf("Remove err = %v, want ErrCorrupt", err)
 	}
 }
@@ -247,7 +246,7 @@ func TestStore_FreshLockReturnsRetryableError(t *testing.T) {
 		t.Fatalf("seed lock: %v", err)
 	}
 
-	err := store.Save("mistral", CredentialInput{Key: "sk-x"})
+	err := store.Save("deepseek", CredentialInput{Key: "sk-x"})
 	if !errors.Is(err, ErrLocked) {
 		t.Fatalf("Save err = %v, want ErrLocked", err)
 	}
@@ -268,7 +267,7 @@ func TestStore_StaleLockIsStolen(t *testing.T) {
 		t.Fatalf("age lock: %v", err)
 	}
 
-	if err := store.Save("mistral", CredentialInput{Key: "sk-x"}); err != nil {
+	if err := store.Save("deepseek", CredentialInput{Key: "sk-x"}); err != nil {
 		t.Fatalf("Save with stale lock: %v", err)
 	}
 	if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
@@ -279,7 +278,7 @@ func TestStore_StaleLockIsStolen(t *testing.T) {
 func TestStore_ReleaseRemovesOwnLock(t *testing.T) {
 	t.Parallel()
 	store, dir := newTestStore(t)
-	if err := store.Save("mistral", CredentialInput{Key: "sk-x"}); err != nil {
+	if err := store.Save("deepseek", CredentialInput{Key: "sk-x"}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, authFileName) + ".lock"); !os.IsNotExist(err) {
@@ -292,7 +291,7 @@ func TestStore_ConcurrentSaveAndRemove(t *testing.T) {
 
 	// Use allowlisted provider ids so every Save actually exercises the
 	// lock-protected read-modify-write path.
-	providers := []string{"mistral", "openrouter", "anthropic"}
+	providers := []string{"deepseek", "openrouter", "anthropic"}
 	var wg sync.WaitGroup
 	for i := 0; i < 30; i++ {
 		provider := providers[i%len(providers)]
