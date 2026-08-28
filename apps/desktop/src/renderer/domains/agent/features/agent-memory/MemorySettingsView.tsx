@@ -18,7 +18,12 @@ import {
 import type { MemoryConfig } from "../../daemon/daemonAgentTypes";
 import { ProviderMark } from "../../ui/ProviderMark";
 import { ModelPickerMenu } from "../select-model";
-import { buildModelPickerOption, groupModelPickerOptionsByProvider, stripProviderPrefix } from "../select-model";
+import {
+  buildModelPickerOption,
+  getModelPickerOptionIdentity,
+  groupModelPickerOptionsByProvider,
+  stripProviderPrefix,
+} from "../select-model";
 
 const MEMORY_SUMMARIZER_AGENT_KIND = "pi" as const;
 
@@ -308,7 +313,7 @@ export function MemorySettingsView() {
                       anchorEl={menuAnchor}
                       open={isMenuOpen}
                       options={modelOptions}
-                      selectedModelId={selectedOption?.id ?? null}
+                      selectedModelIdentity={selectedOption ? getModelPickerOptionIdentity(selectedOption) : null}
                       selectedProviderId={activeSelectedProvider}
                       ignoreNextClickAwayRef={ignoreNextClickAwayRef}
                       onClose={handleMenuClose}

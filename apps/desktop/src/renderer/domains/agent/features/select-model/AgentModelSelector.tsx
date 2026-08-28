@@ -6,6 +6,7 @@ import { getSupportedThinkingLevels } from "../../providers/agentThinkingLevels"
 import {
   type ModelPickerOption,
   buildModelPickerOption,
+  getModelPickerOptionIdentity,
   groupModelPickerOptionsByProvider,
 } from "../../providers/modelPicker";
 import { ProviderMark } from "../../ui/ProviderMark";
@@ -28,25 +29,29 @@ const MODEL_SELECTOR_FONT_SIZE_PX = 12;
 const MODEL_SELECTOR_MAX_WIDTH = "min(48ch, calc(100vw - 120px))";
 
 function getInitialSelectedProvider(
-  selectedOptionId: string | null,
+  selectedOptionIdentity: string | null,
   modelOptions: ReturnType<typeof buildAgentModelOptions>,
 ): string {
-  if (selectedOptionId) {
-    return modelOptions.find((option) => option.id === selectedOptionId)?.providerId ?? "";
+  if (selectedOptionIdentity) {
+    return (
+      modelOptions.find((option) => getModelPickerOptionIdentity(option) === selectedOptionIdentity)?.providerId ?? ""
+    );
   }
 
   return groupModelPickerOptionsByProvider(modelOptions)[0]?.providerId ?? "";
 }
 
-function buildAgentModelOptions(models: AgentModel[]) {
-  return models.map((model) =>
-    buildModelPickerOption({
-      id: model.id,
-      name: model.name,
-      providerId: model.provider?.trim(),
-      providerName: model.providerName,
-    }),
-  );
+function buildAgentModelOption(model: AgentModel): ModelPickerOption {
+  return buildModelPickerOption({
+    id: model.id,
+    name: model.name,
+    providerId: model.provider?.trim(),
+    providerName: model.providerName,
+  });
+}
+
+function buildAgentModelOptions(models: AgentModel[]): ModelPickerOption[] {
+  return models.map(buildAgentModelOption);
 }
 
 /** Model selector dropdown with thinking level picker. */
@@ -61,15 +66,21 @@ export function AgentModelSelector({
   const modelLabel = currentModel ? formatAgentModelLabel(currentModel) : "Select model";
   const supportedLevels = useMemo(() => getSupportedThinkingLevels(currentModel), [currentModel]);
   const modelOptions = useMemo(() => buildAgentModelOptions(models), [models]);
-  const selectedModelId = currentModel?.id ?? null;
+  const selectedModelIdentity = useMemo(
+    () => (currentModel ? getModelPickerOptionIdentity(buildAgentModelOption(currentModel)) : null),
+    [currentModel],
+  );
   const selectedOption = useMemo(
-    () => (selectedModelId ? (modelOptions.find((option) => option.id === selectedModelId) ?? null) : null),
-    [modelOptions, selectedModelId],
+    () =>
+      selectedModelIdentity
+        ? (modelOptions.find((option) => getModelPickerOptionIdentity(option) === selectedModelIdentity) ?? null)
+        : null,
+    [modelOptions, selectedModelIdentity],
   );
   const providerLabel = selectedOption?.providerName ?? "";
   const initialSelectedProvider = useMemo(
-    () => getInitialSelectedProvider(selectedModelId, modelOptions),
-    [modelOptions, selectedModelId],
+    () => getInitialSelectedProvider(selectedModelIdentity, modelOptions),
+    [modelOptions, selectedModelIdentity],
   );
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedProvider, setSelectedProvider] = useState(initialSelectedProvider);
@@ -101,7 +112,8 @@ export function AgentModelSelector({
   const handleModelSelect = useCallback(
     (model: ModelPickerOption) => {
       const nextModel = models.find(
-        (candidateModel) => candidateModel.id === model.id && candidateModel.provider === model.providerId,
+        (candidateModel) =>
+          getModelPickerOptionIdentity(buildAgentModelOption(candidateModel)) === getModelPickerOptionIdentity(model),
       );
       if (!nextModel) {
         return;
@@ -195,7 +207,7 @@ export function AgentModelSelector({
         anchorEl={menuAnchor}
         open={isMenuOpen}
         options={modelOptions}
-        selectedModelId={selectedModelId}
+        selectedModelIdentity={selectedModelIdentity}
         selectedProviderId={activeSelectedProvider}
         ignoreNextClickAwayRef={ignoreNextClickAwayRef}
         onClose={handleMenuClose}

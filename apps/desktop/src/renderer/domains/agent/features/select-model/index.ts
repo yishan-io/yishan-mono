@@ -3,6 +3,7 @@ export {
   FALLBACK_MODEL_PROVIDER_ID,
   FALLBACK_MODEL_PROVIDER_NAME,
   buildModelPickerOption,
+  getModelPickerOptionIdentity,
   groupModelPickerOptionsByProvider,
   splitModelId,
   stripProviderPrefix,

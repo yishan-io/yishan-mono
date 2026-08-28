@@ -179,18 +179,36 @@ export async function loadDSHSessionModels(
         ...(provider.credentialRef ? { credentialRef: provider.credentialRef } : {}),
       })),
     );
-    agentChatStore.getState().setAvailableModels(tabId, models);
     const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
-    const selectedProvider = tab?.kind === "agent-chat" ? tab.data.dshSelectedProviderId : undefined;
-    const selectedModel = tab?.kind === "agent-chat" ? tab.data.dshSelectedModelId : undefined;
-    const configuredProvider = capabilities.dsh.provider;
-    const configuredModel = capabilities.dsh.model;
+    const selectedProvider = tab?.kind === "agent-chat" ? tab.data.dshSelectedProviderId?.trim() : undefined;
+    const selectedModel = tab?.kind === "agent-chat" ? tab.data.dshSelectedModelId?.trim() : undefined;
+    const hasExplicitSelection = Boolean(selectedProvider && selectedModel);
+    const selectedProviderId = selectedProvider?.toLowerCase();
+    const selectedModelId = selectedModel || undefined;
+    const directDeepSeekProviderId = "deepseek";
+    const persistedModel = selectedModelId
+      ? models.find(
+          (model) =>
+            model.id === selectedModelId &&
+            model.provider?.trim().toLowerCase() === (selectedProviderId ?? directDeepSeekProviderId),
+        )
+      : undefined;
+    const configuredProvider = capabilities.dsh.provider?.trim().toLowerCase();
+    const configuredModel = capabilities.dsh.model?.trim();
     const currentModel =
-      models.find((model) => model.id === selectedModel && model.provider === selectedProvider) ??
-      models.find((model) => model.id === configuredModel && model.provider === configuredProvider) ??
-      models[0];
-    if (currentModel) {
-      agentChatStore.getState().setCurrentModel(tabId, currentModel);
+      persistedModel ??
+      (!selectedModelId
+        ? (models.find(
+            (model) => model.id === configuredModel && model.provider?.trim().toLowerCase() === configuredProvider,
+          ) ?? models[0])
+        : undefined);
+
+    agentChatStore.getState().setAvailableModels(tabId, models);
+    agentChatStore.getState().setCurrentModel(tabId, currentModel ?? null);
+    if (hasExplicitSelection && !persistedModel) {
+      agentChatStore
+        .getState()
+        .setTurnError(tabId, `Selected DSH model is unavailable: ${selectedProvider}/${selectedModel}.`);
     }
   } catch (error) {
     agentChatStore.getState().setAvailableModels(tabId, []);

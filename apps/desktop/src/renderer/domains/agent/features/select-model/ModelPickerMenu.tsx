@@ -17,6 +17,7 @@ import { SearchInput } from "../../../../ui/components/SearchInput";
 import {
   type ModelPickerOption,
   type ModelPickerProviderGroup,
+  getModelPickerOptionIdentity,
   groupModelPickerOptionsByProvider,
 } from "../../providers/modelPicker";
 import { ProviderMark } from "../../ui/ProviderMark";
@@ -25,7 +26,7 @@ type ModelPickerMenuProps = {
   anchorEl: HTMLElement | null;
   open: boolean;
   options: ModelPickerOption[];
-  selectedModelId: string | null;
+  selectedModelIdentity: string | null;
   selectedProviderId: string;
   ignoreNextClickAwayRef: MutableRefObject<boolean>;
   onClose: () => void;
@@ -165,7 +166,7 @@ export function ModelPickerMenu({
   anchorEl,
   open,
   options,
-  selectedModelId,
+  selectedModelIdentity,
   selectedProviderId,
   ignoreNextClickAwayRef,
   onClose,
@@ -292,7 +293,7 @@ export function ModelPickerMenu({
                         fullWidth
                         size="small"
                         onClick={onClearSelection}
-                        sx={buildModelButtonSx(selectedModelId === null)}
+                        sx={buildModelButtonSx(selectedModelIdentity === null)}
                       >
                         <Box
                           component="span"
@@ -304,10 +305,10 @@ export function ModelPickerMenu({
                     </Box>
                   ) : null}
                   {filteredModels.map((option) => {
-                    const isSelected = option.id === selectedModelId;
+                    const isSelected = getModelPickerOptionIdentity(option) === selectedModelIdentity;
 
                     return (
-                      <Box key={option.id} component="li">
+                      <Box key={getModelPickerOptionIdentity(option)} component="li">
                         <Button
                           fullWidth
                           size="small"
@@ -351,7 +352,7 @@ export function ModelPickerMenu({
                           fullWidth
                           size="small"
                           onClick={onClearSelection}
-                          sx={buildModelButtonSx(selectedModelId === null)}
+                          sx={buildModelButtonSx(selectedModelIdentity === null)}
                         >
                           <Box
                             component="span"
@@ -363,7 +364,7 @@ export function ModelPickerMenu({
                       </Box>
                     ) : null}
                     {virtualizedModels.map((option, index) => {
-                      const isSelected = option.id === selectedModelId;
+                      const isSelected = getModelPickerOptionIdentity(option) === selectedModelIdentity;
                       const virtualizedIndex = virtualizedStartIndex + index;
                       const offsetTop =
                         virtualizedIndex * MODEL_ROW_HEIGHT_PX +
@@ -371,7 +372,7 @@ export function ModelPickerMenu({
 
                       return (
                         <Box
-                          key={option.id}
+                          key={getModelPickerOptionIdentity(option)}
                           component="li"
                           sx={{
                             position: "absolute",

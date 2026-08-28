@@ -78,6 +78,7 @@ export { SessionHistoryMenu } from "./features/agent-chat/session/SessionHistory
 export {
   ModelPickerMenu,
   buildModelPickerOption,
+  getModelPickerOptionIdentity,
   groupModelPickerOptionsByProvider,
   stripProviderPrefix,
   type ModelPickerOption,

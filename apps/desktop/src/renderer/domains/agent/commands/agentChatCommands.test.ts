@@ -498,3 +498,87 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
     });
   });
 });
+
+describe("loadDSHSessionModels selection recovery", () => {
+  it("does not replace an unavailable explicit DSH provider and model selection", async () => {
+    tabStore.setState({
+      ...initialTabStoreState,
+      tabs: [
+        {
+          id: "dsh-tab",
+          workspaceId: "workspace",
+          title: "DSH",
+          pinned: false,
+          kind: "agent-chat",
+          data: {
+            cwd: "/workspace",
+            runtime: "dsh",
+            dshSelectedProviderId: "missing-route",
+            dshSelectedModelId: "shared-model",
+          },
+        },
+      ],
+    });
+    agentChatStore.getState().initSession("dsh-tab", "dsh-session");
+    mocks.listDSHProviders.mockResolvedValue({
+      providers: [
+        {
+          id: "available-route",
+          displayName: "Available",
+          authentication: "api-key",
+          setupRequired: false,
+          setupStatus: "ready",
+          setupGuidance: "Configured.",
+          models: [{ id: "shared-model", name: "Shared model" }],
+        },
+      ],
+    });
+    mocks.getCapabilities.mockResolvedValue({
+      dsh: { configured: true, ready: true, provider: "available-route", model: "shared-model" },
+    });
+
+    await loadDSHSessionModels("dsh-tab");
+
+    const session = agentChatStore.getState().sessionsByTabId["dsh-tab"];
+    expect(session?.currentModel).toBeNull();
+    expect(session?.turnError).toBe("Selected DSH model is unavailable: missing-route/shared-model.");
+  });
+
+  it("maps a legacy provider-less DSH selection to the direct DeepSeek route", async () => {
+    tabStore.setState({
+      ...initialTabStoreState,
+      tabs: [
+        {
+          id: "dsh-tab",
+          workspaceId: "workspace",
+          title: "DSH",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/workspace", runtime: "dsh", dshSelectedModelId: "deepseek-chat" },
+        },
+      ],
+    });
+    agentChatStore.getState().initSession("dsh-tab", "dsh-session");
+    mocks.listDSHProviders.mockResolvedValue({
+      providers: [
+        {
+          id: "deepseek",
+          displayName: "DeepSeek",
+          authentication: "api-key",
+          setupRequired: false,
+          setupStatus: "ready",
+          setupGuidance: "Configured.",
+          models: [{ id: "deepseek-chat", name: "DeepSeek Chat" }],
+        },
+      ],
+    });
+    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true } });
+
+    await loadDSHSessionModels("dsh-tab");
+
+    expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.currentModel).toMatchObject({
+      id: "deepseek-chat",
+      provider: "deepseek",
+    });
+  });
+});
