@@ -10,7 +10,8 @@ import {
   projectDSHTranscript,
 } from "./dshTranscript";
 
-const MAX_BUFFERED_UPDATES = 128;
+/** Bounds recovery memory while allowing normal DSH initial transcript replays. */
+const MAX_BUFFERED_UPDATES = 4_096;
 
 /** Store mutations used by the DSH controller; I/O is intentionally injected. */
 export type DSHTranscriptActions = {
