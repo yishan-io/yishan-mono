@@ -40,12 +40,12 @@ async function expectShutdownEdge(edge: "end" | "SIGINT" | "SIGTERM", exitCode: 
 }
 
 describe("Yishan production runtime", () => {
-  it("enables built-in capabilities that do not require native PTY resources", () => {
+  it("enables all built-in agent-spine capabilities without MCP", () => {
     expect(YISHAN_RUNTIME_MCP_ENABLED).toBe(false);
     expect(YISHAN_AGENT_SPINE_CONFIG).toEqual({
       workspaceContext: { maxBytes: 16 * 1024 },
       skills: { enabled: true },
-      toolBash: false,
+      toolBash: {},
       toolJobs: {},
       goals: {},
     });

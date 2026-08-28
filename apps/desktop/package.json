@@ -116,6 +116,10 @@
           "yishan",
           "dsh-runtime.mjs"
         ]
+      },
+      {
+        "from": "dist/resources/node_modules",
+        "to": "node_modules"
       }
     ],
     "mac": {

@@ -4,11 +4,13 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { Context } from "@deepseek-ai/cordis";
 import * as agentSpine from "@deepseek-ai/dsh-agent-spine-demo";
+import { LocalBashExecutor } from "@deepseek-ai/dsh-bash-local";
 import * as sessionCheckpointPolicy from "@deepseek-ai/dsh-session-checkpoint-policy";
 import JsonlSessionPersistence from "@deepseek-ai/dsh-session-persistence-jsonl";
 import { SessionProjectionRegistry } from "@deepseek-ai/dsh-session-projection";
 import SqliteSessionQueryEngine from "@deepseek-ai/dsh-session-query-sqlite";
 import { SubagentRuntime } from "@deepseek-ai/dsh-subagent";
+import { LocalSubprocessRuntime } from "@deepseek-ai/dsh-subprocess-local";
 
 import { installCredentialsPlugin } from "./credentialsService";
 import * as runtimeServer from "./runtimeServer";
@@ -23,13 +25,29 @@ export const YISHAN_RUNTIME_MCP_ENABLED = false;
 
 /** Maximum UTF-8 bytes of workspace instructions included in one agent context. */
 const WORKSPACE_CONTEXT_MAX_BYTES = 16 * 1024;
-/** Enables built-in agent-spine capabilities that do not require native PTY resources. */
+const DEFAULT_BASH_TIMEOUT_MS = 120_000;
+const MAXIMUM_BASH_TIMEOUT_MS = 600_000;
+const MAXIMUM_BASH_OUTPUT_BYTES = 64_000;
+const MAXIMUM_BASH_SPILL_BYTES = 64 * 1024 * 1024;
+const BASH_TERMINATION_GRACE_MS = 3_000;
+
+/** Enables all built-in agent-spine capabilities in the production runtime. */
 export const YISHAN_AGENT_SPINE_CONFIG = {
   workspaceContext: { maxBytes: WORKSPACE_CONTEXT_MAX_BYTES },
   skills: { enabled: true },
-  toolBash: false,
+  toolBash: {},
   toolJobs: {},
   goals: {},
+} as const;
+
+/** Default limits for the local bash executor used by the model-facing bash tool. */
+const YISHAN_LOCAL_BASH_CONFIG = {
+  cwd: process.cwd(),
+  timeoutMs: DEFAULT_BASH_TIMEOUT_MS,
+  maxTimeoutMs: MAXIMUM_BASH_TIMEOUT_MS,
+  maxOutputBytes: MAXIMUM_BASH_OUTPUT_BYTES,
+  maxSpillBytes: MAXIMUM_BASH_SPILL_BYTES,
+  graceMs: BASH_TERMINATION_GRACE_MS,
 } as const;
 
 /** Configuration for the programmatic Yishan production DSH runtime. */
@@ -55,6 +73,8 @@ export async function createYishanRuntime(config: YishanRuntimeConfig = {}): Pro
   await mkdir(dataDirectory, { recursive: true });
 
   const context = new Context();
+  new LocalSubprocessRuntime(context);
+  new LocalBashExecutor(context, YISHAN_LOCAL_BASH_CONFIG);
   await context.plugin(agentSpine, YISHAN_AGENT_SPINE_CONFIG);
   new SessionProjectionRegistry(context);
   new SubagentRuntime(context);
