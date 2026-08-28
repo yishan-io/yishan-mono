@@ -57,6 +57,7 @@ export class YishanSessionExecutionOwner {
   private readonly creations = new Map<string, CwdTask<AgentHandle>>();
   private readonly disposals = new Map<string, CwdTask<boolean>>();
   private readonly flushes = new Map<string, CwdTask<DurableCursor>>();
+  private readonly pendingSelections = new Map<string, { provider?: string; model?: string }>();
   private readonly incarnation: string;
   private initializeOptions: InitializeOptions = {};
   private isShuttingDown = false;
@@ -122,7 +123,7 @@ export class YishanSessionExecutionOwner {
     this.requireAdmitted();
     const handle = await this.requireOwnedHandle(request.sessionId);
     this.requireCwd(handle.agent.session, request);
-    return this.followup(handle, request.contentBlocks);
+    return this.followup(request.sessionId, handle, request.contentBlocks);
   }
 
   /** Adds a stock prompt to an owned session using only its authoritative handle cwd. */
@@ -130,7 +131,7 @@ export class YishanSessionExecutionOwner {
     this.requireAdmitted();
     const handle = await this.requireOwnedHandle(sessionId);
     this.requireAuthoritativeCwd(handle.agent.session);
-    return this.followup(handle, contentBlocks);
+    return this.followup(sessionId, handle, contentBlocks);
   }
 
   /** Updates the model for the next turn of a live session without restarting it. */
@@ -138,13 +139,14 @@ export class YishanSessionExecutionOwner {
     this.requireAdmitted();
     const handle = await this.requireOwnedHandle(request.sessionId);
     this.requireCwd(handle.agent.session, request);
+    const pendingSelection = this.pendingSelections.get(request.sessionId);
     const selection = {
-      provider: request.provider ?? handle.agent.options?.provider,
+      provider: request.provider ?? pendingSelection?.provider ?? handle.agent.options?.provider,
       model: request.model,
     };
     const validateProviderSelection = this.dependencies.validateProviderSelection;
     if (validateProviderSelection !== undefined) await validateProviderSelection(selection);
-    handle.agent.options = { ...handle.agent.options, ...selection };
+    this.pendingSelections.set(request.sessionId, selection);
   }
 
   /** Cancels an owned session while retaining its handle and queued inbox. */
@@ -407,6 +409,7 @@ export class YishanSessionExecutionOwner {
     await activeFlush?.task;
     await this.flushHandle(sessionId, handle);
     await handle.dispose();
+    this.pendingSelections.delete(sessionId);
     if (this.handles.get(sessionId) === handle) this.handles.delete(sessionId);
     return true;
   }
@@ -430,7 +433,16 @@ export class YishanSessionExecutionOwner {
     return handle;
   }
 
-  private followup(handle: AgentHandle, contentBlocks: TextPromptContentBlock[]): SessionPromptResult {
+  private followup(
+    sessionId: string,
+    handle: AgentHandle,
+    contentBlocks: TextPromptContentBlock[],
+  ): SessionPromptResult {
+    const pendingSelection = this.pendingSelections.get(sessionId);
+    if (pendingSelection !== undefined) {
+      handle.agent.options = { ...handle.agent.options, ...pendingSelection };
+      this.pendingSelections.delete(sessionId);
+    }
     const message = createUserMessage({ content: contentBlocks, source: { kind: "user" } });
     handle.agent.followup(message);
     return { messageId: message.id };

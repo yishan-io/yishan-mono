@@ -493,7 +493,7 @@ describe("Yishan provider switching", () => {
     expect(harness.flush).not.toHaveBeenCalled();
   });
 
-  it("validates a next-prompt switch before changing the live selection and retains its provider when omitted", async () => {
+  it("queues a validated selection until the prompt after an active multi-step tool turn", async () => {
     const validateProviderSelection = vi.fn(async () => undefined);
     const harness = createHarness(validateProviderSelection);
     await harness.owner.start({
@@ -502,13 +502,29 @@ describe("Yishan provider switching", () => {
       binding: BINDING,
       agentOptions: { provider: "deepseek-official", model: "first-model" },
     });
+    const agent = harness.agents.get("one");
+    agent?.followup.mockImplementationOnce(() => {
+      (harness.sessions.get("one") as FakeSession).append("tool/call", { name: "multi-step-tool" });
+    });
+    await harness.owner.prompt({ cwd: CWD, sessionId: "one", contentBlocks: [{ type: "text", text: "first prompt" }] });
+    expect((harness.sessions.get("one") as FakeSession).events).toContainEqual({
+      seq: 1,
+      type: "tool/call",
+      data: { name: "multi-step-tool" },
+    });
     validateProviderSelection.mockClear();
     harness.flush.mockClear();
 
     await harness.owner.setModel({ cwd: CWD, sessionId: "one", model: "next-model" });
 
     expect(validateProviderSelection).toHaveBeenCalledWith({ provider: "deepseek-official", model: "next-model" });
-    expect(harness.agents.get("one")?.options).toMatchObject({ provider: "deepseek-official", model: "next-model" });
+    expect(agent?.options).toMatchObject({ provider: "deepseek-official", model: "first-model" });
+    expect(agent?.followup).toHaveBeenCalledOnce();
+
+    await harness.owner.prompt({ cwd: CWD, sessionId: "one", contentBlocks: [{ type: "text", text: "next prompt" }] });
+
+    expect(agent?.options).toMatchObject({ provider: "deepseek-official", model: "next-model" });
+    expect(agent?.followup).toHaveBeenCalledTimes(2);
     expect(harness.flush).not.toHaveBeenCalled();
   });
 });
