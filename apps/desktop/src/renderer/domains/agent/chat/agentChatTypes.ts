@@ -107,6 +107,8 @@ export type AgentModel = {
   id: string;
   name: string;
   provider?: string;
+  /** Runtime-provided display name for the provider route. */
+  providerName?: string;
   contextWindow?: number;
   reasoning?: boolean;
   /** Per-level provider mapping; a null value marks the level as unsupported. */

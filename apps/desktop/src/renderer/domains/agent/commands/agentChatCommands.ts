@@ -8,6 +8,7 @@ import { isAgentSessionBusy } from "../chat/agentChatTypes";
 import {
   getAgentCapabilities,
   listAgentSessionLineage,
+  listDSHProviders,
   renamePiCompatibilitySession,
   sendPiCompatibilityCommand,
 } from "../daemon/daemonAgentProcedures";
@@ -32,7 +33,6 @@ import {
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
 import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } from "../subscriptions/agentChatPiEventShared";
-import { listAgentModels } from "./agentCommands";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
 // The Runtime owns Pi session handles, start/attach/stop/reopen races, and the
@@ -98,13 +98,19 @@ export async function startAgentChatSession(opts: {
   try {
     // For DSH: read currentModel BEFORE ensureAgentSession calls initSession (which clears it).
     // Tab data has the user's persisted selection; session state may not be loaded yet.
-    const dshModelId = runtime === "dsh"
-      ? (() => {
-          const tab = tabStore.getState().tabs.find((t) => t.id === opts.tabId);
-          const persisted = tab?.kind === "agent-chat" ? tab.data.dshSelectedModelId : undefined;
-          return persisted ?? agentChatStore.getState().sessionsByTabId[opts.tabId]?.currentModel?.id;
-        })()
-      : undefined;
+    const dshSelection =
+      runtime === "dsh"
+        ? (() => {
+            const tab = tabStore.getState().tabs.find((t) => t.id === opts.tabId);
+            const persisted = tab?.kind === "agent-chat" ? tab.data.dshSelectedModelId : undefined;
+            const current = agentChatStore.getState().sessionsByTabId[opts.tabId]?.currentModel;
+            return {
+              modelId: persisted ?? current?.id,
+              providerId:
+                tab?.kind === "agent-chat" ? (tab.data.dshSelectedProviderId ?? current?.provider) : current?.provider,
+            };
+          })()
+        : undefined;
     const { sessionId: startedSessionId, attached } = await ensureAgentSession({
       runtime,
       tabId: opts.tabId,
@@ -113,7 +119,8 @@ export async function startAgentChatSession(opts: {
       sessionId: opts.sessionId,
       sessionView: opts.sessionView,
       paneId: opts.paneId,
-      dshModelId,
+      dshModelId: dshSelection?.modelId,
+      dshProviderId: dshSelection?.providerId,
     });
 
     // A fresh process means the previous owner is gone: any sub-agent rows
@@ -153,38 +160,44 @@ export async function startAgentChatSession(opts: {
   }
 }
 
-/** Populates the model selector for a DSH session from agent.listModels("dsh") and capabilities. */
-export async function loadDSHSessionModels(tabId: string, cachedCapabilities?: Awaited<ReturnType<typeof getAgentCapabilities>>): Promise<void> {
+/** Populates the DSH model selector from the runtime-owned provider catalog. */
+export async function loadDSHSessionModels(
+  tabId: string,
+  cachedCapabilities?: Awaited<ReturnType<typeof getAgentCapabilities>>,
+): Promise<void> {
   try {
-    const [modelsResult, capabilities] = await Promise.all([
-      listAgentModels("dsh").catch(() => null),
-      cachedCapabilities ? Promise.resolve(cachedCapabilities) : getAgentCapabilities().catch(() => null),
+    const [catalog, capabilities] = await Promise.all([
+      listDSHProviders(),
+      cachedCapabilities ? Promise.resolve(cachedCapabilities) : getAgentCapabilities(),
     ]);
-    const provider = capabilities?.dsh.provider;
-    const credentialRef = capabilities?.dsh.credentialRef;
-    const configuredModelId = capabilities?.dsh.model;
-    const models = (modelsResult?.models ?? []).map((m) => ({
-      id: m.id,
-      name: m.name,
-      provider,
-      ...(credentialRef ? { credentialRef } : {}),
-    }));
-    if (models.length > 0) {
-      agentChatStore.getState().setAvailableModels(tabId, models);
-      const currentModel = models.find((m) => m.id === configuredModelId) ?? models[0];
-      if (currentModel) agentChatStore.getState().setCurrentModel(tabId, currentModel);
-    } else if (provider && configuredModelId) {
-      // Fallback: use the single configured model if the list is empty.
-      const model = { id: configuredModelId, name: configuredModelId, provider, ...(credentialRef ? { credentialRef } : {}) };
-      agentChatStore.getState().setAvailableModels(tabId, [model]);
-      agentChatStore.getState().setCurrentModel(tabId, model);
-    } else {
-      agentChatStore.getState().setAvailableModels(tabId, []);
+    const models = catalog.providers.flatMap((provider) =>
+      provider.models.map((model) => ({
+        id: model.id,
+        name: model.name,
+        provider: provider.id,
+        providerName: provider.displayName,
+        ...(provider.credentialRef ? { credentialRef: provider.credentialRef } : {}),
+      })),
+    );
+    agentChatStore.getState().setAvailableModels(tabId, models);
+    const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
+    const selectedProvider = tab?.kind === "agent-chat" ? tab.data.dshSelectedProviderId : undefined;
+    const selectedModel = tab?.kind === "agent-chat" ? tab.data.dshSelectedModelId : undefined;
+    const configuredProvider = capabilities.dsh.provider;
+    const configuredModel = capabilities.dsh.model;
+    const currentModel =
+      models.find((model) => model.id === selectedModel && model.provider === selectedProvider) ??
+      models.find((model) => model.id === configuredModel && model.provider === configuredProvider) ??
+      models[0];
+    if (currentModel) {
+      agentChatStore.getState().setCurrentModel(tabId, currentModel);
     }
-  } catch {
+  } catch (error) {
     agentChatStore.getState().setAvailableModels(tabId, []);
+    agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
   }
 }
+
 export async function refreshDshSubagentLineage(opts: {
   tabId: string;
   workspaceId: string;

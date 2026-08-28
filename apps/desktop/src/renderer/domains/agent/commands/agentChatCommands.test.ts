@@ -6,8 +6,8 @@ import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore"
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
 import {
+  loadDSHSessionModels,
   openChatFileTab,
-  refreshDshSubagentLineage,
   renameAgentChatSessionByTab,
   startAgentChatSession,
 } from "./agentChatCommands";
@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   listActiveSessions: vi.fn(),
   getSessionFile: vi.fn(),
   listModels: vi.fn(),
+  listDSHProviders: vi.fn(),
   listProviders: vi.fn(),
   removeProvider: vi.fn(),
   rename: vi.fn(),
@@ -63,6 +64,7 @@ vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
   listAgentDetectionStatuses: mocks.listDetectionStatuses ?? vi.fn(),
   listAgentSessionLineage: mocks.listSessionLineage,
   listAgentModels: mocks.listModels ?? vi.fn(),
+  listDSHProviders: mocks.listDSHProviders ?? vi.fn(),
   listPiProviders: mocks.listProviders ?? vi.fn(),
   removePiProvider: mocks.removeProvider ?? vi.fn(),
   renamePiCompatibilitySession: mocks.rename ?? vi.fn(),
@@ -452,6 +454,47 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
       availableModels: [],
       hasLoadedModels: true,
       hasLoadedState: true,
+    });
+  });
+  it("maps DSH provider catalog metadata without using Pi provider defaults", async () => {
+    tabStore.setState({
+      ...initialTabStoreState,
+      tabs: [
+        {
+          id: "dsh-tab",
+          workspaceId: "workspace",
+          title: "DSH",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/workspace", runtime: "dsh", dshSelectedProviderId: "anthropic", dshSelectedModelId: "claude" },
+        },
+      ],
+    });
+    agentChatStore.getState().initSession("dsh-tab", "dsh-session");
+    mocks.listDSHProviders.mockResolvedValue({
+      providers: [
+        {
+          id: "anthropic",
+          displayName: "Anthropic",
+          authentication: "api-key",
+          credentialRef: "ANTHROPIC_API_KEY",
+          setupRequired: false,
+          setupStatus: "ready",
+          setupGuidance: "API key configured.",
+          models: [{ id: "claude", name: "Claude" }],
+        },
+      ],
+    });
+    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true, transcriptProtocolVersion: 2 } });
+
+    await loadDSHSessionModels("dsh-tab");
+
+    const current = agentChatStore.getState().sessionsByTabId["dsh-tab"]?.currentModel;
+    expect(current).toMatchObject({
+      id: "claude",
+      provider: "anthropic",
+      providerName: "Anthropic",
+      credentialRef: "ANTHROPIC_API_KEY",
     });
   });
 });

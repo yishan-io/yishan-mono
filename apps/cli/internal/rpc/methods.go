@@ -103,6 +103,7 @@ const (
 	MethodPiListProviders            = "pi.listProviders"
 	MethodPiSaveProvider             = "pi.saveProvider"
 	MethodPiRemoveProvider           = "pi.removeProvider"
+	MethodDSHListProviders           = "dsh.listProviders"
 	MethodDSHListCredentials         = "dsh.listCredentials"
 	MethodDSHSaveCredential          = "dsh.saveCredential"
 	MethodDSHRemoveCredential        = "dsh.removeCredential"

@@ -32,8 +32,18 @@ type UseAgentChatComposerDraftInput = {
 
 /** Owns composer draft text, attachments, submit, and session-control actions. */
 export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput) {
-  const { tabId, workspaceId, cwd, sessionId, sessionState, messageCount, hasStreamingMessage, userRenamed, slashCommands, runtime } =
-    input;
+  const {
+    tabId,
+    workspaceId,
+    cwd,
+    sessionId,
+    sessionState,
+    messageCount,
+    hasStreamingMessage,
+    userRenamed,
+    slashCommands,
+    runtime,
+  } = input;
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [isManualCompactPending, setIsManualCompactPending] = useState(false);
@@ -165,7 +175,7 @@ export function useAgentChatComposerDraft(input: UseAgentChatComposerDraftInput)
       if (runtime === "dsh") {
         // Persist selection for next new session.
         agentChatStore.getState().setCurrentModel(tabId, model);
-        tabStore.getState().setAgentChatTabDSHModel(tabId, model.id);
+        tabStore.getState().setAgentChatTabDSHModel(tabId, { modelId: model.id, providerId: model.provider });
         // Apply immediately to the live session via agent.setModel.
         try {
           await setAgentModelDSH({ sessionId, workspaceId, cwd, modelId: model.id, provider: model.provider });

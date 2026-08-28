@@ -29,6 +29,7 @@ import type {
   AgentStartResult,
   ComputerPermissionStatus,
   ComputerUseFeatureConfig,
+  DSHProviderCatalogResult,
   MemoryConfig,
   MemoryUpdateConfigInput,
   PiActiveSessionSummary,
@@ -123,6 +124,11 @@ export async function removePiProvider(input: { provider: string }): Promise<{ o
 }
 
 // ─── dsh credentials ─────────────────────────────────────────────────────────
+
+/** Lists safe DSH provider setup metadata without reading credential values. */
+export async function listDSHProviders(): Promise<DSHProviderCatalogResult> {
+  return (await request("dsh.listProviders", {})) as DSHProviderCatalogResult;
+}
 
 export async function listDSHCredentials(): Promise<{ refs: string[] }> {
   return (await request("dsh.listCredentials", {})) as { refs: string[] };

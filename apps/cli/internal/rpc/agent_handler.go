@@ -13,6 +13,7 @@ import (
 
 // DSHCredentialService backs the dsh.* credential RPC methods.
 type DSHCredentialService interface {
+	DSHListProviders(ctx context.Context) (any, error)
 	DSHListCredentials(ctx context.Context) (any, error)
 	DSHSaveCredential(ctx context.Context, req DSHSaveCredentialParams) (any, error)
 	DSHRemoveCredential(ctx context.Context, req DSHRemoveCredentialParams) (any, error)
@@ -388,6 +389,8 @@ func (h *AgentHandler) callCustomizeAgents(ctx context.Context, method string, p
 
 func (h *AgentHandler) callDSH(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
+	case MethodDSHListProviders:
+		return h.DSH.DSHListProviders(ctx)
 	case MethodDSHListCredentials:
 		return h.DSH.DSHListCredentials(ctx)
 	case MethodDSHSaveCredential:

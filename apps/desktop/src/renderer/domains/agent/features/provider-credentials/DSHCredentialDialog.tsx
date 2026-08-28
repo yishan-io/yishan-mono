@@ -1,6 +1,16 @@
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from "@mui/material";
-import { useState } from "react";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { useState } from "react";
 import { saveDSHCredential } from "../../commands/dshCredentialCommands";
 
 type DSHCredentialDialogProps = {
@@ -34,6 +44,7 @@ export function DSHCredentialDialog({ open, credentialRef, providerName, onClose
     try {
       await saveDSHCredential({ ref: credentialRef, value: trimmed });
       setValue("");
+      setIsSaving(false);
       onSaved();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -56,7 +67,7 @@ export function DSHCredentialDialog({ open, credentialRef, providerName, onClose
           autoFocus
           fullWidth
           size="small"
-          label={credentialRef}
+          aria-label={credentialRef}
           type="password"
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -68,12 +79,16 @@ export function DSHCredentialDialog({ open, credentialRef, providerName, onClose
         />
         {error && (
           <Box sx={{ mt: 1 }}>
-            <Typography variant="caption" color="error">{error}</Typography>
+            <Typography variant="caption" color="error">
+              {error}
+            </Typography>
           </Box>
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={isSaving}>Cancel</Button>
+        <Button onClick={handleClose} disabled={isSaving}>
+          Cancel
+        </Button>
         <Button variant="contained" onClick={() => void handleSave()} disabled={!canSave}>
           {isSaving ? <CircularProgress size={16} /> : "Save"}
         </Button>

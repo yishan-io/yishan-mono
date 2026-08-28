@@ -1,8 +1,15 @@
 import { useCallback, useState } from "react";
+
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { isAgentSessionBusy } from "../../../chat/agentChatTypes";
 import type { AgentSessionState } from "../../../chat/agentChatTypes";
-import type { AgentRuntime } from "../../../daemon/daemonAgentTypes";
-import { fetchPiAgentModelsCompatibility, loadDSHSessionModels, restartAgentSessionForProvider } from "../../../commands/agentChatCommands";
+import {
+  fetchPiAgentModelsCompatibility,
+  loadDSHSessionModels,
+  restartAgentSessionForProvider,
+} from "../../../commands/agentChatCommands";
+import { listDSHProviders } from "../../../daemon/daemonAgentProcedures";
+import type { AgentRuntime, DSHProviderCatalogEntry } from "../../../daemon/daemonAgentTypes";
 
 type UseAgentChatProviderAddParams = {
   tabId: string;
@@ -26,6 +33,13 @@ export type UseAgentChatProviderAddResult = {
     mode: "add";
     onClose: () => void;
     onSaved: (providerId?: string) => void;
+  };
+  /** Props for the DSH provider picker. */
+  dshProviderPickerDialogProps: {
+    open: boolean;
+    providers: DSHProviderCatalogEntry[];
+    onClose: () => void;
+    onSelect: (provider: DSHProviderCatalogEntry) => void;
   };
   /** Props for DSH's DSHCredentialDialog (runtime === "dsh"). */
   dshCredentialDialogProps: {
@@ -53,8 +67,11 @@ export function useAgentChatProviderAdd({
   dshProviderName = "Provider",
 }: UseAgentChatProviderAddParams): UseAgentChatProviderAddResult {
   const [isOpen, setIsOpen] = useState(false);
+  const [providers, setProviders] = useState<DSHProviderCatalogEntry[]>([]);
+  const [pendingProvider, setPendingProvider] = useState<DSHProviderCatalogEntry | null>(null);
 
   const handleDSHCredentialSaved = useCallback(async () => {
+    setPendingProvider(null);
     setIsOpen(false);
     await loadDSHSessionModels(tabId);
   }, [tabId]);
@@ -73,7 +90,34 @@ export function useAgentChatProviderAdd({
   );
 
   return {
-    openAddProviderDialog: () => setIsOpen(true),
+    openAddProviderDialog: () => {
+      if (runtime !== "dsh") {
+        setIsOpen(true);
+        return;
+      }
+      void listDSHProviders()
+        .then((catalog) => {
+          setProviders(catalog.providers);
+          setIsOpen(true);
+        })
+        .catch((error) => {
+          console.warn("Failed to load DSH providers", getErrorMessage(error));
+          setProviders([]);
+          setIsOpen(true);
+        });
+    },
+    dshProviderPickerDialogProps: {
+      open: isOpen && runtime === "dsh" && pendingProvider === null,
+      providers,
+      onClose: () => setIsOpen(false),
+      onSelect: (provider) => {
+        if (provider.authentication === "ambient") {
+          setIsOpen(false);
+          return;
+        }
+        setPendingProvider(provider);
+      },
+    },
     providerCredentialDialogProps: {
       open: isOpen && runtime !== "dsh",
       mode: "add" as const,
@@ -81,10 +125,13 @@ export function useAgentChatProviderAdd({
       onSaved: handlePiProviderSaved,
     },
     dshCredentialDialogProps: {
-      open: isOpen && runtime === "dsh",
-      credentialRef: dshCredentialRef,
-      providerName: dshProviderName,
-      onClose: () => setIsOpen(false),
+      open: isOpen && runtime === "dsh" && pendingProvider !== null,
+      credentialRef: pendingProvider?.credentialRef ?? dshCredentialRef,
+      providerName: pendingProvider?.displayName ?? dshProviderName,
+      onClose: () => {
+        setPendingProvider(null);
+        setIsOpen(false);
+      },
       onSaved: handleDSHCredentialSaved,
     },
   };

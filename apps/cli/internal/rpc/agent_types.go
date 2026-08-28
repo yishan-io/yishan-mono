@@ -384,6 +384,25 @@ type PiRemoveProviderParams struct {
 	Provider string `json:"provider"`
 }
 
+// DSHProviderCatalogResult contains safe, selectable DSH provider metadata.
+type DSHProviderCatalogResult struct {
+	Providers []DSHProviderCatalogEntry `json:"providers"`
+}
+type DSHProviderCatalogEntry struct {
+	ID             string                    `json:"id"`
+	DisplayName    string                    `json:"displayName"`
+	Authentication string                    `json:"authentication"`
+	CredentialRef  string                    `json:"credentialRef,omitempty"`
+	SetupRequired  bool                      `json:"setupRequired"`
+	SetupStatus    string                    `json:"setupStatus"`
+	SetupGuidance  string                    `json:"setupGuidance"`
+	Models         []DSHProviderCatalogModel `json:"models"`
+}
+type DSHProviderCatalogModel struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 // ---- dsh credentials ----
 
 type DSHSaveCredentialParams struct {

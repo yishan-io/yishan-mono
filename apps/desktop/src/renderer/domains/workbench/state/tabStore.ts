@@ -46,7 +46,7 @@ export type TabStoreState = {
   /** Persists the single agent-chat session identity on one tab. */
   setAgentChatTabSession: (input: { tabId: string; sessionId: string; runtime: "pi" | "dsh" }) => void;
   /** Persists the user-selected DSH model for the next session start on one agent-chat tab. */
-  setAgentChatTabDSHModel: (tabId: string, modelId: string | undefined) => void;
+  setAgentChatTabDSHModel: (tabId: string, selection: { modelId?: string; providerId?: string }) => void;
   /** Persists subagent-control metadata on one agent-chat tab. */
   setAgentChatTabSubagentControl: (input: { tabId: string; agentId?: string; parentSessionId?: string }) => void;
   /** Updates the detected agent kind on one terminal tab. Pass undefined to clear. */
@@ -236,13 +236,20 @@ export const tabStore = create<TabStoreState>()(
           ),
         }));
       },
-      setAgentChatTabDSHModel: (tabId, modelId) => {
+      setAgentChatTabDSHModel: (tabId, selection) => {
         const normalizedTabId = tabId.trim();
         if (!normalizedTabId) return;
         set((state) => ({
           tabs: state.tabs.map((tab: WorkbenchTab) =>
             tab.id === normalizedTabId && tab.kind === "agent-chat"
-              ? { ...tab, data: { ...tab.data, dshSelectedModelId: modelId || undefined } }
+              ? {
+                  ...tab,
+                  data: {
+                    ...tab.data,
+                    dshSelectedModelId: selection.modelId || undefined,
+                    dshSelectedProviderId: selection.providerId || undefined,
+                  },
+                }
               : tab,
           ),
         }));

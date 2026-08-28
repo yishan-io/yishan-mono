@@ -62,6 +62,8 @@ type EnsureAgentSessionOptions = {
   paneId?: string;
   /** For DSH sessions: the model id to use for this session (overrides daemon default). */
   dshModelId?: string;
+  /** For DSH sessions: the provider route paired with dshModelId. */
+  dshProviderId?: string;
 };
 type EnsureAgentSessionResult = { sessionId: string; attached: boolean; runtime: AgentRuntime };
 
@@ -491,6 +493,7 @@ async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: Ensu
   const shouldResumeDSH = record.runtime === "dsh" && Boolean(opts.sessionId?.trim());
   // Use the model passed through opts (read before initSession cleared the store).
   const dshModelId = record.runtime === "dsh" && !shouldResumeDSH ? opts.dshModelId : undefined;
+  const dshProviderId = record.runtime === "dsh" && !shouldResumeDSH ? opts.dshProviderId : undefined;
   await startAgentSessionProcedure({
     runtime: record.runtime,
     sessionId: record.sessionId,
@@ -500,6 +503,7 @@ async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: Ensu
     cwd: record.cwd,
     ...(shouldResumeDSH ? { resume: true } : {}),
     ...(dshModelId ? { modelId: dshModelId } : {}),
+    ...(dshProviderId ? { provider: dshProviderId } : {}),
   });
 }
 async function attachRuntimeSession(record: AgentRuntimeSessionRecord, tabId: string): Promise<void> {

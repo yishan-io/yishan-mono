@@ -44,6 +44,7 @@ function buildAgentModelOptions(models: AgentModel[]) {
       id: model.id,
       name: model.name,
       providerId: model.provider?.trim(),
+      providerName: model.providerName,
     }),
   );
 }
@@ -99,7 +100,9 @@ export function AgentModelSelector({
 
   const handleModelSelect = useCallback(
     (model: ModelPickerOption) => {
-      const nextModel = models.find((candidateModel) => candidateModel.id === model.id);
+      const nextModel = models.find(
+        (candidateModel) => candidateModel.id === model.id && candidateModel.provider === model.providerId,
+      );
       if (!nextModel) {
         return;
       }

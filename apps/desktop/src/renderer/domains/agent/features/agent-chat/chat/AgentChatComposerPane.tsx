@@ -9,8 +9,9 @@ import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
 import { type AgentModel, isAgentSessionBusy } from "../../../chat/agentChatTypes";
 import { getCompactContextPercent } from "../../../chat/agentChatUsageSummary";
 import { agentChatStore } from "../../../state/agentChatStore";
-import { ProviderCredentialDialog } from "../../provider-credentials/ProviderCredentialDialog";
 import { DSHCredentialDialog } from "../../provider-credentials/DSHCredentialDialog";
+import { DSHProviderPickerDialog } from "../../provider-credentials/DSHProviderPickerDialog";
+import { ProviderCredentialDialog } from "../../provider-credentials/ProviderCredentialDialog";
 import { AgentModelSelector } from "../../select-model/AgentModelSelector";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
@@ -168,7 +169,12 @@ function AgentChatComposerPaneComponent({
     consumeTabFocus(tabId);
   }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
 
-  const { openAddProviderDialog, providerCredentialDialogProps, dshCredentialDialogProps } = useAgentChatProviderAdd({
+  const {
+    openAddProviderDialog,
+    providerCredentialDialogProps,
+    dshProviderPickerDialogProps,
+    dshCredentialDialogProps,
+  } = useAgentChatProviderAdd({
     tabId,
     workspaceId,
     cwd,
@@ -254,6 +260,7 @@ function AgentChatComposerPaneComponent({
         onVoiceText={handleVoiceText}
       />
       <ProviderCredentialDialog {...providerCredentialDialogProps} />
+      <DSHProviderPickerDialog {...dshProviderPickerDialogProps} />
       <DSHCredentialDialog {...dshCredentialDialogProps} />
     </Box>
   );

@@ -197,6 +197,20 @@ export type AgentCapabilities = {
   };
 };
 
+/** Safe runtime-owned DSH provider catalog; it intentionally excludes secrets and local paths. */
+export type DSHProviderCatalogEntry = {
+  id: string;
+  displayName: string;
+  authentication: "api-key" | "ambient";
+  credentialRef?: string;
+  setupRequired: boolean;
+  setupStatus: "ready" | "needs-credential" | "ambient";
+  setupGuidance: string;
+  models: Array<{ id: string; name: string }>;
+};
+
+export type DSHProviderCatalogResult = { providers: DSHProviderCatalogEntry[] };
+
 /** Starts a runtime-neutral agent session. */
 export type AgentStartRequest = {
   runtime: AgentRuntime;
@@ -208,6 +222,8 @@ export type AgentStartRequest = {
   resume?: boolean;
   /** For DSH sessions: the selected model id to use for this session. */
   modelId?: string;
+  /** For DSH sessions: the provider route paired with modelId. */
+  provider?: string;
 };
 
 /** Attaches the current daemon connection to an existing agent session. */
