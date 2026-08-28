@@ -473,3 +473,42 @@ describe("YishanSessionExecutionOwner", () => {
     expect(harness.owner.owns("one")).toBe(false);
   });
 });
+
+describe("Yishan provider switching", () => {
+  it("validates the effective start selection before creating or persisting a session", async () => {
+    const validateProviderSelection = vi.fn(async () => {
+      throw Object.assign(new Error("invalid selection"), { code: "YISHAN_PROVIDER_SELECTION_INVALID" });
+    });
+    const harness = createHarness(validateProviderSelection);
+
+    await expect(
+      harness.owner.start({
+        cwd: CWD,
+        sessionId: "one",
+        binding: BINDING,
+        agentOptions: { provider: "unknown-provider", model: "unknown-model" },
+      }),
+    ).rejects.toMatchObject({ code: "YISHAN_PROVIDER_SELECTION_INVALID" });
+    expect(harness.create).not.toHaveBeenCalled();
+    expect(harness.flush).not.toHaveBeenCalled();
+  });
+
+  it("validates a next-prompt switch before changing the live selection and retains its provider when omitted", async () => {
+    const validateProviderSelection = vi.fn(async () => undefined);
+    const harness = createHarness(validateProviderSelection);
+    await harness.owner.start({
+      cwd: CWD,
+      sessionId: "one",
+      binding: BINDING,
+      agentOptions: { provider: "deepseek-official", model: "first-model" },
+    });
+    validateProviderSelection.mockClear();
+    harness.flush.mockClear();
+
+    await harness.owner.setModel({ cwd: CWD, sessionId: "one", model: "next-model" });
+
+    expect(validateProviderSelection).toHaveBeenCalledWith({ provider: "deepseek-official", model: "next-model" });
+    expect(harness.agents.get("one")?.options).toMatchObject({ provider: "deepseek-official", model: "next-model" });
+    expect(harness.flush).not.toHaveBeenCalled();
+  });
+});

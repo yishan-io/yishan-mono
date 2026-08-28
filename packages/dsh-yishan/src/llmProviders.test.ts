@@ -15,6 +15,8 @@ import {
   YISHAN_PI_AI_PROVIDER_ALLOWLIST,
   YISHAN_UNSUPPORTED_PI_AI_PROVIDERS,
   assertPiAiProviderManifest,
+  listYishanProviders,
+  validateYishanProviderSelection,
 } from "./llmProviders";
 
 describe("Yishan pi-ai provider manifest", () => {
@@ -76,4 +78,68 @@ describe("Yishan pi-ai provider manifest", () => {
       }
     }
   });
+});
+
+describe("Yishan external provider catalog", () => {
+  it("returns only active, qualified models and safe authentication setup metadata", async () => {
+    const catalog = await listYishanProviders({
+      listProviders: () => [{ id: "deepseek-official" }, { id: "amazon-bedrock" }, { id: "openai-codex" }],
+      listModels: async (provider) => [
+        { provider, id: "selected-model", name: "Selected model" },
+        { provider: "openai-codex", id: "excluded-model", name: "Excluded model" },
+      ],
+    });
+
+    expect(catalog).toEqual({
+      providers: [
+        {
+          id: "deepseek-official",
+          authentication: "api-key",
+          setupRequired: true,
+          models: [{ provider: "deepseek-official", id: "selected-model", name: "Selected model" }],
+        },
+        {
+          id: "amazon-bedrock",
+          authentication: "ambient",
+          setupRequired: false,
+          models: [{ provider: "amazon-bedrock", id: "selected-model", name: "Selected model" }],
+        },
+      ],
+    });
+    expect(JSON.stringify(catalog)).not.toContain("openai-codex");
+    expect(Object.keys(catalog.providers[0] ?? {})).toEqual(["id", "authentication", "setupRequired", "models"]);
+    expect(JSON.stringify(catalog)).not.toContain("credential-value");
+  });
+
+  it("accepts only an exact active provider-qualified model selection", async () => {
+    const llm = {
+      listProviders: () => [{ id: "deepseek-official" }],
+      listModels: async (provider: string) => [{ provider, id: "selected-model", name: "Selected model" }],
+    };
+
+    await expect(
+      validateYishanProviderSelection(llm, { provider: "deepseek-official", model: "selected-model" }),
+    ).resolves.toBeUndefined();
+    await expect(
+      validateYishanProviderSelection(llm, { provider: "openai-codex", model: "selected-model" }),
+    ).rejects.toMatchObject({
+      code: "YISHAN_PROVIDER_SELECTION_INVALID",
+    });
+    await expect(
+      validateYishanProviderSelection(llm, { provider: "deepseek-official", model: "other-model" }),
+    ).rejects.toMatchObject({
+      code: "YISHAN_PROVIDER_SELECTION_INVALID",
+    });
+  });
+});
+
+it("does not expose adapter failure details from catalog listing", async () => {
+  await expect(
+    listYishanProviders({
+      listProviders: () => [{ id: "deepseek-official" }],
+      listModels: async () => {
+        throw new Error("adapter failure");
+      },
+    }),
+  ).rejects.toThrow("provider catalog is unavailable");
 });

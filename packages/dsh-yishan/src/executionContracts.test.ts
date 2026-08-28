@@ -33,6 +33,14 @@ describe("Yishan DSH execution contracts", () => {
     });
   });
 
+  it("rejects an empty or non-string supplied provider instead of treating it as a retained provider", () => {
+    for (const provider of ["", "   ", 42]) {
+      expect(() =>
+        parseSetModelRequest({ cwd: "/workspace", sessionId: "session-1", model: "next-model", provider }),
+      ).toThrow("provider must be a non-empty string when supplied");
+    }
+  });
+
   it("accepts exact cwd-scoped start, text-only prompt, cancel, and flush contracts", () => {
     const binding = {
       version: 1,

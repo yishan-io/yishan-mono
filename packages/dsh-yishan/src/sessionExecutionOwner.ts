@@ -138,11 +138,13 @@ export class YishanSessionExecutionOwner {
     this.requireAdmitted();
     const handle = await this.requireOwnedHandle(request.sessionId);
     this.requireCwd(handle.agent.session, request);
-    handle.agent.options = {
-      ...handle.agent.options,
+    const selection = {
+      provider: request.provider ?? handle.agent.options?.provider,
       model: request.model,
-      ...(request.provider ? { provider: request.provider } : {}),
     };
+    const validateProviderSelection = this.dependencies.validateProviderSelection;
+    if (validateProviderSelection !== undefined) await validateProviderSelection(selection);
+    handle.agent.options = { ...handle.agent.options, ...selection };
   }
 
   /** Cancels an owned session while retaining its handle and queued inbox. */
@@ -293,6 +295,8 @@ export class YishanSessionExecutionOwner {
       this.requirePersistedCwd(persisted.meta.cwd, { sessionId, cwd });
     }
     const mergedOptions = agentOptions ? { ...this.initializeOptions, ...agentOptions } : this.initializeOptions;
+    const validateProviderSelection = this.dependencies.validateProviderSelection;
+    if (validateProviderSelection !== undefined) await validateProviderSelection(mergedOptions);
     const handle = await (operation === "start"
       ? this.dependencies.agents.create({ sessionId, meta: { cwd }, agentOptions: mergedOptions })
       : this.dependencies.agents.resume({ resumeSessionId: sessionId, agentOptions: this.initializeOptions }));

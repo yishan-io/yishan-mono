@@ -205,7 +205,7 @@ describe("Yishan production runtime", () => {
           jsonrpc: "2.0",
           id: 1,
           method: "initialize",
-          params: { cwd: "/workspace", provider: "deepseek-official", model: "test-model" },
+          params: { cwd: "/workspace", provider: "deepseek-official", model: "deepseek-v4-flash" },
         })}\n`,
       );
       await expect(waitForFrame(frames, 1)).resolves.toMatchObject({

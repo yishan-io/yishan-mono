@@ -56,6 +56,8 @@ export type YishanSessionExecutionDependencies = {
     readFrom(sessionId: string, fromSeq: number): Promise<{ meta: SessionHeader; events: SessionEvent[] }>;
   };
   notify(method: string, params: DurableCursor): void;
+  /** Validates an exact active provider/model route before an agent can retain it. */
+  validateProviderSelection?(selection: { provider?: string; model?: string }): Promise<void>;
   incarnation?: string;
 };
 

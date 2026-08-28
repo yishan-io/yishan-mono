@@ -33,18 +33,33 @@ export type FakeSession = {
   append(type: string, data: unknown): void;
 };
 
-export function createHarness() {
+export function createHarness(
+  validateProviderSelection?: (selection: { provider?: string; model?: string }) => Promise<void>,
+) {
   const sessions = new Map<string, FakeSession>();
   const agents = new Map<
     string,
-    { session: FakeSession; followup: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> }
+    {
+      session: FakeSession;
+      options?: { provider?: string; model?: string; maxTokens?: number };
+      followup: ReturnType<typeof vi.fn>;
+      cancel: ReturnType<typeof vi.fn>;
+    }
   >();
   const handles = new Map<
     string,
     { agent: typeof agents extends Map<string, infer T> ? T : never; dispose: ReturnType<typeof vi.fn> }
   >();
   const create = vi.fn(
-    async ({ sessionId, meta }: { sessionId: string; meta: { cwd: string }; agentOptions?: unknown }) => {
+    async ({
+      sessionId,
+      meta,
+      agentOptions,
+    }: {
+      sessionId: string;
+      meta: { cwd: string };
+      agentOptions?: { provider?: string; model?: string; maxTokens?: number };
+    }) => {
       const session: FakeSession = {
         id: sessionId,
         header: { id: sessionId, version: 0, createdAt: 1, cwd: meta.cwd },
@@ -55,7 +70,12 @@ export function createHarness() {
           this.seq += 1;
         },
       };
-      const agent = { session, followup: vi.fn(), cancel: vi.fn() };
+      const agent = {
+        session,
+        ...(agentOptions === undefined ? {} : { options: agentOptions }),
+        followup: vi.fn(),
+        cancel: vi.fn(),
+      };
       const handle = { agent, dispose: vi.fn(async () => undefined) };
       sessions.set(sessionId, session);
       agents.set(sessionId, agent);
@@ -79,6 +99,7 @@ export function createHarness() {
     sessions: { get: (id: string) => sessions.get(id), flush },
     sessionPersistence: { readFrom },
     notify,
+    ...(validateProviderSelection === undefined ? {} : { validateProviderSelection }),
     incarnation: "test-run",
   } as never);
   return { owner, create, resume, flush, readFrom, notify, agents, sessions, handles };

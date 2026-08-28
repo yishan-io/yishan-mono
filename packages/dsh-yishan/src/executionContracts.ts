@@ -296,7 +296,12 @@ function requireSubscribeConsistency(
   }
 }
 
-/** Sets the model/provider for the next turn of a live session. */
+/**
+ * Sets the selection used by the next accepted prompt of a live session.
+ *
+ * The switch neither restarts nor persists the session. An omitted provider
+ * retains the live provider; a supplied provider switches both route and model.
+ */
 export type SetModelRequest = SessionExecutionRequest & {
   model: string;
   provider?: string;
@@ -313,7 +318,10 @@ export function parseSetModelRequest(payload: unknown): SetModelRequest {
   }
   const model = typeof rec.model === "string" && rec.model.trim() ? rec.model.trim() : undefined;
   if (!model) throw new TypeError("model is required");
-  const provider = typeof rec.provider === "string" && rec.provider.trim() ? rec.provider.trim() : undefined;
+  if (rec.provider !== undefined && (typeof rec.provider !== "string" || !rec.provider.trim())) {
+    throw new TypeError("provider must be a non-empty string when supplied");
+  }
+  const provider = typeof rec.provider === "string" ? rec.provider.trim() : undefined;
   return {
     cwd: requireNonEmptyString(rec, "cwd"),
     sessionId: requireNonEmptyString(rec, "sessionId"),

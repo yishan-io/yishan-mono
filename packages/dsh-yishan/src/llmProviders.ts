@@ -153,3 +153,90 @@ export function assertPiAiProviderManifest(): void {
     providers.add(entry.provider);
   }
 }
+
+/** Authentication metadata safe to expose over the runtime provider catalog RPC. */
+export type YishanProviderAuthentication = "api-key" | "ambient";
+
+/** One model qualified by the exact active provider route that accepts it. */
+export type YishanProviderCatalogModel = {
+  provider: string;
+  id: string;
+  name: string;
+};
+
+/** One secret-free active runtime provider entry. */
+export type YishanProviderCatalogEntry = {
+  id: string;
+  authentication: YishanProviderAuthentication;
+  setupRequired: boolean;
+  models: YishanProviderCatalogModel[];
+};
+
+/** The secret-free catalog returned by `yishan.v1.providers.list`. */
+export type YishanProviderCatalog = { providers: YishanProviderCatalogEntry[] };
+
+type RuntimeLlmCatalog = {
+  listProviders(): readonly { id: string }[];
+  listModels(provider: string): Promise<readonly { provider: string; id: string; name: string }[]>;
+};
+
+/** Raised when a caller selects no active provider/model route. */
+export class YishanProviderSelectionError extends Error {
+  /** Stable machine-readable provider-selection failure code. */
+  readonly code = "YISHAN_PROVIDER_SELECTION_INVALID";
+
+  /** Creates a provider selection failure without reflecting caller input. */
+  constructor() {
+    super("provider and model must identify an active runtime route");
+    this.name = "YishanProviderSelectionError";
+  }
+}
+
+/** Lists only explicitly active runtime routes with safe, provider-qualified model metadata. */
+export async function listYishanProviders(llm: RuntimeLlmCatalog): Promise<YishanProviderCatalog> {
+  const registeredProviderIds = new Set(llm.listProviders().map(({ id }) => id));
+  const activeProviderIds = YISHAN_DSH_ACTIVE_PROVIDER_IDS.filter((provider) => registeredProviderIds.has(provider));
+  const providers = await Promise.all(
+    activeProviderIds.map(async (provider) => await createProviderCatalogEntry(llm, provider)),
+  );
+  return { providers };
+}
+
+/** Validates an exact provider/model selection against the current active runtime catalog. */
+export async function validateYishanProviderSelection(
+  llm: RuntimeLlmCatalog,
+  selection: { provider?: string; model?: string },
+): Promise<void> {
+  if (selection.provider === undefined || selection.model === undefined) throw new YishanProviderSelectionError();
+  const catalog = await listYishanProviders(llm);
+  const provider = catalog.providers.find(({ id }) => id === selection.provider);
+  if (provider?.models.some(({ id }) => id === selection.model) !== true) throw new YishanProviderSelectionError();
+}
+
+async function createProviderCatalogEntry(
+  llm: RuntimeLlmCatalog,
+  provider: string,
+): Promise<YishanProviderCatalogEntry> {
+  try {
+    const discoveredModels = await llm.listModels(provider);
+    return {
+      id: provider,
+      authentication: getProviderAuthentication(provider),
+      setupRequired: getProviderAuthentication(provider) === "api-key",
+      models: discoveredModels
+        .filter((model) => model.provider === provider)
+        .map(({ id, name }) => ({ provider, id, name })),
+    };
+  } catch {
+    // Do not forward adapter errors because they can include credential or configuration details.
+    throw new Error("provider catalog is unavailable");
+  }
+}
+
+function getProviderAuthentication(provider: string): YishanProviderAuthentication {
+  return provider === DIRECT_DEEPSEEK_PROVIDER || !isAmbientPiAiProvider(provider) ? "api-key" : "ambient";
+}
+
+function isAmbientPiAiProvider(provider: string): provider is AmbientPiAiProviderId {
+  return YISHAN_AMBIENT_PI_AI_PROVIDER_IDS.some((ambientProvider) => ambientProvider === provider);
+}

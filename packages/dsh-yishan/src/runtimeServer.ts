@@ -7,6 +7,7 @@ import type { SessionId } from "@deepseek-ai/dsh-session";
 import type {} from "@deepseek-ai/dsh-subagent";
 
 import { parseStockSessionPromptRequest } from "./executionContracts";
+import { listYishanProviders, validateYishanProviderSelection } from "./llmProviders";
 import { YISHAN_METHODS } from "./protocol";
 import { createRequestRouter } from "./requestRouter";
 import { YishanSessionExecutionOwner } from "./sessionExecutionOwner";
@@ -17,7 +18,7 @@ import { installSubagentLifecycleNotifications } from "./subagentLifecycle";
 /** Cordis plugin name for the Yishan-owned SDK JSON-RPC stdio server. */
 export const name = "yishan-sdk-jsonrpc-server";
 /** Session history and agent lifecycle services are required at activation. */
-export const inject = ["agents", "sessionQuery", "sessions", "sessionPersistence", "subagents"];
+export const inject = ["agents", "llm", "sessionQuery", "sessions", "sessionPersistence", "subagents"];
 
 /** Runtime-only stream hooks used by packaged launchers and tests. */
 export type YishanRuntimeServerConfig = {
@@ -48,6 +49,7 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
       readFrom: async (sessionId, fromSeq) => await ctx.sessionPersistence.readFrom(sessionId as SessionId, fromSeq),
     },
     notify: (method, params) => transport.notify(method as never, params as never),
+    validateProviderSelection: async (selection) => await validateYishanProviderSelection(ctx.llm, selection),
   });
   installSubagentLifecycleNotifications(ctx, {
     incarnation: owner.getIncarnation(),
@@ -90,6 +92,7 @@ export function apply(ctx: Context, config: YishanRuntimeServerConfig = {}): voi
       isInitialized = true;
       return result;
     }
+    if (method === YISHAN_METHODS.providersList) return await listYishanProviders(ctx.llm);
     if (method === "shutdown") {
       shutdownTask ??= shutdownRuntime(owner, stock);
       const result = await shutdownTask;
@@ -151,6 +154,7 @@ function getInitializeOptions(params: Record<string, unknown>): {
 function isExecutionExtension(method: string): boolean {
   return new Set<string>([
     YISHAN_METHODS.start,
+    YISHAN_METHODS.setModel,
     YISHAN_METHODS.prompt,
     YISHAN_METHODS.cancel,
     YISHAN_METHODS.subscribe,

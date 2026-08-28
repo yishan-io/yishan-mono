@@ -39,6 +39,10 @@ async function mountRuntime(): Promise<Harness> {
   ctx.provide("sessionPersistence", {
     readFrom: async () => [],
   });
+  vi.spyOn(ctx.llm, "listProviders").mockReturnValue([{ id: "deepseek-official", name: "DeepSeek" }]);
+  vi.spyOn(ctx.llm, "listModels").mockImplementation(async (provider: string) => [
+    { provider, id: "test-model", name: "Test model" },
+  ]);
   ctx.provide("subagents", {
     listChildren: async () => [],
     listDescendants: async () => [],
@@ -79,7 +83,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe("Yishan runtime server", () => {
   it("declares each runtime service it accesses for injection", () => {
     expect(runtimeServer.inject).toEqual(
-      expect.arrayContaining(["agents", "sessionQuery", "sessions", "sessionPersistence", "subagents"]),
+      expect.arrayContaining(["agents", "llm", "sessionQuery", "sessions", "sessionPersistence", "subagents"]),
     );
   });
 
@@ -107,6 +111,33 @@ describe("Yishan runtime server", () => {
           sessions: [{ sessionId: "session-1", createdAt: 1, live: false, persisted: true }],
         },
       });
+    } finally {
+      await harness.ctx.fiber.dispose();
+    }
+  });
+
+  it("returns a secret-free allowlisted provider catalog before initialize", async () => {
+    const harness = await mountRuntime();
+    try {
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 8, method: "yishan.v1.providers.list", params: {} })}\n`,
+      );
+      const frame = await waitForFrame(harness, 8);
+      expect(frame).toEqual({
+        jsonrpc: "2.0",
+        id: 8,
+        result: {
+          providers: [
+            {
+              id: "deepseek-official",
+              authentication: "api-key",
+              setupRequired: true,
+              models: [{ provider: "deepseek-official", id: "test-model", name: "Test model" }],
+            },
+          ],
+        },
+      });
+      expect(JSON.stringify(frame)).not.toContain("openai-codex");
     } finally {
       await harness.ctx.fiber.dispose();
     }

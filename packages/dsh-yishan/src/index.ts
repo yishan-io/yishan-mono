@@ -12,6 +12,15 @@ export {
   yishanMethod,
 } from "./protocol";
 export {
+  listYishanProviders,
+  validateYishanProviderSelection,
+  YishanProviderSelectionError,
+  type YishanProviderAuthentication,
+  type YishanProviderCatalog,
+  type YishanProviderCatalogEntry,
+  type YishanProviderCatalogModel,
+} from "./llmProviders";
+export {
   MAX_REQUEST_LIFETIME_MS,
   parseCapabilityRequest,
   type CapabilityRequest,
@@ -42,6 +51,7 @@ export {
   parseSessionStartResult,
   parseSessionSubscribeRequest,
   parseSessionSubscribeResult,
+  parseSetModelRequest,
   parseTranscriptResetNotification,
   type SessionCancelRequest,
   type SessionCancelResult,
@@ -53,6 +63,7 @@ export {
   type SessionStartResult,
   type SessionSubscribeRequest,
   type SessionSubscribeResult,
+  type SetModelRequest,
   type SequencedSessionEvent,
   type TextPromptContentBlock,
   type TranscriptResetNotification,
