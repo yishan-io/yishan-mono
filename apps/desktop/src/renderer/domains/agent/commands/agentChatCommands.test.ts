@@ -478,9 +478,7 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
           displayName: "Anthropic",
           authentication: "api-key",
           credentialRef: "ANTHROPIC_API_KEY",
-          setupRequired: false,
-          setupStatus: "ready",
-          setupGuidance: "API key configured.",
+          configured: true,
           models: [{ id: "claude", name: "Claude" }],
         },
       ],
@@ -496,6 +494,52 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
       providerName: "Anthropic",
       credentialRef: "ANTHROPIC_API_KEY",
     });
+  });
+});
+
+describe("loadDSHSessionModels configured providers", () => {
+  it("excludes unconfigured provider models from the DSH model picker", async () => {
+    tabStore.setState({
+      ...initialTabStoreState,
+      tabs: [
+        {
+          id: "dsh-tab",
+          workspaceId: "workspace",
+          title: "DSH",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/workspace", runtime: "dsh" },
+        },
+      ],
+    });
+    agentChatStore.getState().initSession("dsh-tab", "dsh-session");
+    mocks.listDSHProviders.mockResolvedValue({
+      providers: [
+        {
+          id: "configured-provider",
+          displayName: "Configured",
+          authentication: "api-key",
+          credentialRef: "CONFIGURED_API_KEY",
+          configured: true,
+          models: [{ id: "configured-model", name: "Configured model" }],
+        },
+        {
+          id: "unconfigured-provider",
+          displayName: "Unconfigured",
+          authentication: "api-key",
+          credentialRef: "UNCONFIGURED_API_KEY",
+          configured: false,
+          models: [{ id: "unconfigured-model", name: "Unconfigured model" }],
+        },
+      ],
+    });
+    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true, transcriptProtocolVersion: 2 } });
+
+    await loadDSHSessionModels("dsh-tab");
+
+    expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.availableModels).toEqual([
+      expect.objectContaining({ id: "configured-model", provider: "configured-provider" }),
+    ]);
   });
 });
 
@@ -526,9 +570,7 @@ describe("loadDSHSessionModels selection recovery", () => {
           id: "available-route",
           displayName: "Available",
           authentication: "api-key",
-          setupRequired: false,
-          setupStatus: "ready",
-          setupGuidance: "Configured.",
+          configured: true,
           models: [{ id: "shared-model", name: "Shared model" }],
         },
       ],
@@ -565,9 +607,7 @@ describe("loadDSHSessionModels selection recovery", () => {
           id: "deepseek-official",
           displayName: "DeepSeek",
           authentication: "api-key",
-          setupRequired: false,
-          setupStatus: "ready",
-          setupGuidance: "Configured.",
+          configured: true,
           models: [{ id: "deepseek-chat", name: "DeepSeek Chat" }],
         },
       ],

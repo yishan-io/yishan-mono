@@ -203,9 +203,7 @@ export type DSHProviderCatalogEntry = {
   displayName: string;
   authentication: "api-key" | "ambient";
   credentialRef?: string;
-  setupRequired: boolean;
-  setupStatus: "ready" | "needs-credential" | "ambient";
-  setupGuidance: string;
+  configured: boolean;
   models: Array<{ id: string; name: string }>;
 };
 

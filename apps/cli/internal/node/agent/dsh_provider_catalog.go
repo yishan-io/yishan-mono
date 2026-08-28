@@ -8,12 +8,6 @@ import (
 	"yishan/apps/cli/internal/rpc"
 )
 
-const (
-	dshSetupStatusReady           = "ready"
-	dshSetupStatusNeedsCredential = "needs-credential"
-	dshSetupStatusAmbient         = "ambient"
-)
-
 // DSHProviderCatalog is the optional safe provider-discovery capability of a DSH runtime.
 type DSHProviderCatalog interface {
 	ListProviderCatalog(context.Context) (dsh.ProviderCatalog, error)
@@ -57,17 +51,11 @@ func mapDSHProviderCatalog(catalog dsh.ProviderCatalog, credentialRefs map[strin
 		entry := rpc.DSHProviderCatalogEntry{ID: provider.ID, DisplayName: dshProviderDisplayName(provider.ID), Authentication: provider.Authentication}
 		if provider.Authentication == "api-key" {
 			entry.CredentialRef = dshProviderCredentialRef(provider.ID)
-			_, isConfigured := credentialRefs[entry.CredentialRef]
-			entry.SetupRequired = !isConfigured
-			entry.SetupStatus = dshSetupStatusNeedsCredential
-			entry.SetupGuidance = "Add an API key to use this provider."
-			if isConfigured {
-				entry.SetupStatus = dshSetupStatusReady
-				entry.SetupGuidance = "API key configured."
-			}
+			_, entry.Configured = credentialRefs[entry.CredentialRef]
 		} else {
-			entry.SetupStatus = dshSetupStatusAmbient
-			entry.SetupGuidance = "Uses system or cloud credentials configured on this computer."
+			// The runtime's setup capability is the only safe signal for ambient routes.
+			// It does not assert that a system credential exists.
+			entry.Configured = !provider.SetupRequired
 		}
 		entry.Models = make([]rpc.DSHProviderCatalogModel, 0, len(provider.Models))
 		for _, model := range provider.Models {

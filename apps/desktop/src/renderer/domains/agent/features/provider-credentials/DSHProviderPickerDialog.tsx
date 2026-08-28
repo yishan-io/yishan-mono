@@ -27,7 +27,10 @@ export function DSHProviderPickerDialog({ open, providers, onClose, onSelect }: 
         <List disablePadding aria-label="DSH providers">
           {providers.map((provider) => (
             <ListItemButton key={provider.id} onClick={() => onSelect(provider)}>
-              <ListItemText primary={provider.displayName} secondary={provider.setupGuidance} />
+              <ListItemText
+                primary={provider.displayName}
+                secondary={provider.configured ? "Ready to use" : "Needs setup"}
+              />
             </ListItemButton>
           ))}
         </List>

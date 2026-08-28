@@ -170,15 +170,17 @@ export async function loadDSHSessionModels(
       listDSHProviders(),
       cachedCapabilities ? Promise.resolve(cachedCapabilities) : getAgentCapabilities(),
     ]);
-    const models = catalog.providers.flatMap((provider) =>
-      provider.models.map((model) => ({
-        id: model.id,
-        name: model.name,
-        provider: provider.id,
-        providerName: provider.displayName,
-        ...(provider.credentialRef ? { credentialRef: provider.credentialRef } : {}),
-      })),
-    );
+    const models = catalog.providers
+      .filter((provider) => provider.configured)
+      .flatMap((provider) =>
+        provider.models.map((model) => ({
+          id: model.id,
+          name: model.name,
+          provider: provider.id,
+          providerName: provider.displayName,
+          ...(provider.credentialRef ? { credentialRef: provider.credentialRef } : {}),
+        })),
+      );
     const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
     const selectedProvider = tab?.kind === "agent-chat" ? tab.data.dshSelectedProviderId?.trim() : undefined;
     const selectedModel = tab?.kind === "agent-chat" ? tab.data.dshSelectedModelId?.trim() : undefined;
