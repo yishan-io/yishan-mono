@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   DIRECT_DEEPSEEK_PROVIDER,
   PI_AI_DEEPSEEK_PROVIDER,
+  YISHAN_AMBIENT_PI_AI_PROVIDER_IDS,
   YISHAN_DSH_ACTIVE_PROVIDER_COUNT,
   YISHAN_DSH_ACTIVE_PROVIDER_IDS,
   YISHAN_DSH_ACTIVE_PROVIDER_SET,
@@ -58,14 +59,19 @@ describe("Yishan pi-ai provider manifest", () => {
     );
   });
 
-  it("maps references only for API-key routes", () => {
+  it("permits fallback behavior only for the four ambient-classified routes", () => {
+    const ambientProviderIds = YISHAN_PI_AI_ACTIVE_PROVIDER_MANIFEST.flatMap((entry) =>
+      entry.authentication === "ambient" ? [entry.provider] : [],
+    );
+
+    expect(new Set(ambientProviderIds)).toEqual(new Set(YISHAN_AMBIENT_PI_AI_PROVIDER_IDS));
+    expect(ambientProviderIds).toHaveLength(YISHAN_AMBIENT_PI_AI_PROVIDER_IDS.length);
     for (const entry of YISHAN_PI_AI_ACTIVE_PROVIDER_MANIFEST) {
       const profile = YISHAN_PI_AI_CONFIG.providers?.[entry.provider];
       if (entry.authentication === "api-key") {
         expect(entry.apiKeyEnv).toMatch(/^[A-Z][A-Z0-9_]*$/);
         expect(profile).toEqual({ apiKeyEnv: entry.apiKeyEnv });
       } else {
-        expect(entry.apiKeyEnv).toBeUndefined();
         expect(profile).toEqual({});
       }
     }

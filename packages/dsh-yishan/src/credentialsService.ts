@@ -5,8 +5,11 @@
  * API keys by their env-var reference name (e.g. "DEEPSEEK_API_KEY").
  *
  * This account-scoped file is DSH credential storage, not DSH configuration
- * YAML. A mounted credentials service deliberately makes direct DeepSeek use
- * only saved references; it must not fall back to the launcher process environment.
+ * YAML or Pi `auth.json`. A mounted credentials service makes every named
+ * API-key reference (including direct DeepSeek) resolve only from this file;
+ * a missing reference must not fall back to the launcher process environment.
+ * Only pi-ai routes that name no reference may use provider-native system or
+ * cloud ambient credential discovery.
  *
  * Reads from `<dataDirectory>/.credentials.yaml`:
  *   version: 1
@@ -74,8 +77,9 @@ export function createCredentialsService(dataDirectory: string): CredentialsServ
       return value !== undefined ? { value } : undefined;
     },
     async readRecord(_key: string): Promise<undefined> {
-      // pi-ai checks its credential record before falling back to ambient auth.
-      // This store only owns API-key references, never durable OAuth grants.
+      // Only reference-less, ambient-classified pi-ai routes reach this fallback.
+      // This store owns API-key references only; it never reads Pi auth.json or
+      // exposes durable OAuth grants.
       return undefined;
     },
   };

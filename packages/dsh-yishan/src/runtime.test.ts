@@ -115,29 +115,31 @@ describe("Yishan production runtime", () => {
     }
   });
 
-  it("requires stored credentials for the direct DeepSeek route even when its process environment key exists", async () => {
+  it("requires stored DSH credentials for direct and API-key DeepSeek routes despite a process environment key", async () => {
     vi.stubEnv("DEEPSEEK_API_KEY", "process-environment-value");
     const runtime = await createYishanRuntime({
-      dataDirectory: await mkdtemp(join(tmpdir(), "yishan-dsh-missing-direct-deepseek-credential-")),
+      dataDirectory: await mkdtemp(join(tmpdir(), "yishan-dsh-missing-deepseek-credential-")),
       input: new PassThrough(),
       output: new Writable({ write: (_chunk, _encoding, callback) => callback() }),
       exit: () => undefined,
     });
 
     try {
-      const chunks = [];
-      for await (const chunk of runtime.context.llm.stream({
-        provider: DIRECT_DEEPSEEK_PROVIDER,
-        model: "deepseek-v4-flash",
-        messages: [],
-      })) {
-        chunks.push(chunk);
-      }
+      for (const provider of [DIRECT_DEEPSEEK_PROVIDER, PI_AI_DEEPSEEK_PROVIDER]) {
+        const chunks = [];
+        for await (const chunk of runtime.context.llm.stream({
+          provider,
+          model: "deepseek-v4-flash",
+          messages: [],
+        })) {
+          chunks.push(chunk);
+        }
 
-      expect(chunks).toMatchObject([
-        { type: "finish", reason: { kind: "error", failure: { code: "MISSING_CREDENTIAL" } } },
-      ]);
-      expect(JSON.stringify(chunks)).not.toContain("process-environment-value");
+        expect(chunks).toMatchObject([
+          { type: "finish", reason: { kind: "error", failure: { code: "MISSING_CREDENTIAL" } } },
+        ]);
+        expect(JSON.stringify(chunks)).not.toContain("process-environment-value");
+      }
     } finally {
       await runtime.shutdown();
     }

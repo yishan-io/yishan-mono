@@ -10,15 +10,35 @@ export const YISHAN_PI_AI_ACTIVE_PROVIDER_COUNT = 36;
 /** The required number of final active DSH routes: pi-ai routes plus direct DeepSeek. */
 export const YISHAN_DSH_ACTIVE_PROVIDER_COUNT = 37;
 
+/** The only routes permitted to defer authentication to system or cloud credentials. */
+export const YISHAN_AMBIENT_PI_AI_PROVIDER_IDS = [
+  "amazon-bedrock",
+  "google-vertex",
+  "cloudflare-ai-gateway",
+  "cloudflare-workers-ai",
+] as const;
+
+/** A provider identifier explicitly permitted to use system or cloud ambient credentials. */
+export type AmbientPiAiProviderId = (typeof YISHAN_AMBIENT_PI_AI_PROVIDER_IDS)[number];
+
 /** The authentication method a fixed pi-ai catalog route can use in Yishan. */
 export type PiAiAuthenticationKind = "api-key" | "ambient";
 
-/** One fixed route from the installed pi-ai catalog. */
-export type PiAiProviderManifestEntry = {
+/** A route whose API key must resolve only from the account-scoped DSH reference store. */
+export type ApiKeyPiAiProviderManifestEntry = {
   provider: string;
-  authentication: PiAiAuthenticationKind;
-  apiKeyEnv?: string;
+  authentication: "api-key";
+  apiKeyEnv: string;
 };
+
+/** A route explicitly permitted to use its provider's system or cloud ambient credentials. */
+export type AmbientPiAiProviderManifestEntry = {
+  provider: AmbientPiAiProviderId;
+  authentication: "ambient";
+};
+
+/** One fixed route from the installed pi-ai catalog. */
+export type PiAiProviderManifestEntry = ApiKeyPiAiProviderManifestEntry | AmbientPiAiProviderManifestEntry;
 
 const API_KEY = "api-key" as const;
 const AMBIENT = "ambient" as const;
@@ -26,10 +46,12 @@ const AMBIENT = "ambient" as const;
 /**
  * Fixed inventory for pi-ai 0.82.1, which is bundled by dsh-llm-pi-ai 0.1.1-rc.2.
  *
- * API-key routes use only reference names. Ambient routes rely on the provider's
- * native environment discovery. This is the exported 36-route pi-ai portion of the active Yishan DSH set.
+ * API-key routes name a DSH reference and fail when that account-scoped
+ * `.credentials.yaml` value is absent; they cannot fall back to process variables
+ * or Pi `auth.json`. Only the four listed ambient routes omit a reference and may
+ * use their provider's system or cloud ambient credential discovery.
  */
-export const YISHAN_PI_AI_ACTIVE_PROVIDER_MANIFEST: readonly PiAiProviderManifestEntry[] = [
+export const YISHAN_PI_AI_ACTIVE_PROVIDER_MANIFEST = [
   { provider: "amazon-bedrock", authentication: AMBIENT },
   { provider: "ant-ling", authentication: API_KEY, apiKeyEnv: "ANT_LING_API_KEY" },
   { provider: "anthropic", authentication: API_KEY, apiKeyEnv: "ANTHROPIC_API_KEY" },
@@ -66,7 +88,7 @@ export const YISHAN_PI_AI_ACTIVE_PROVIDER_MANIFEST: readonly PiAiProviderManifes
   { provider: "xiaomi-token-plan-sgp", authentication: API_KEY, apiKeyEnv: "XIAOMI_TOKEN_PLAN_SGP_API_KEY" },
   { provider: "zai", authentication: API_KEY, apiKeyEnv: "ZAI_API_KEY" },
   { provider: "zai-coding-cn", authentication: API_KEY, apiKeyEnv: "ZAI_CODING_CN_API_KEY" },
-];
+] as const satisfies readonly PiAiProviderManifestEntry[];
 
 /** Routes that Yishan does not support in this fixed runtime. */
 export const YISHAN_UNSUPPORTED_PI_AI_PROVIDERS = ["openai-codex", "radius"] as const;
@@ -78,7 +100,7 @@ export const YISHAN_PI_AI_PROVIDER_ALLOWLIST = new Set(
 );
 
 /** The catalog exported to the adapter after applying Yishan's fixed allowlist. */
-export const YISHAN_PI_AI_CATALOG = YISHAN_PI_AI_ACTIVE_PROVIDER_MANIFEST;
+export const YISHAN_PI_AI_CATALOG: readonly PiAiProviderManifestEntry[] = YISHAN_PI_AI_ACTIVE_PROVIDER_MANIFEST;
 
 /** Final fixed DSH route IDs: 36 allowlisted pi-ai routes and direct DeepSeek. */
 export const YISHAN_DSH_ACTIVE_PROVIDER_IDS = [
@@ -92,9 +114,9 @@ export const YISHAN_DSH_ACTIVE_PROVIDER_SET = new Set<string>(YISHAN_DSH_ACTIVE_
 /** Static plugin configuration; no user settings, YAML, or dynamic provider loading is used. */
 export const YISHAN_PI_AI_CONFIG: Config = {
   providers: Object.fromEntries(
-    YISHAN_PI_AI_CATALOG.map(({ provider, authentication, apiKeyEnv }) => [
-      provider,
-      authentication === API_KEY ? { apiKeyEnv } : {},
+    YISHAN_PI_AI_CATALOG.map((entry) => [
+      entry.provider,
+      entry.authentication === API_KEY ? { apiKeyEnv: entry.apiKeyEnv } : {},
     ]),
   ) as Record<string, PiAiProviderProfile>,
 };
@@ -122,8 +144,11 @@ export function assertPiAiProviderManifest(): void {
     if (entry.provider === DIRECT_DEEPSEEK_PROVIDER || providers.has(entry.provider)) {
       throw new Error(`invalid Yishan pi-ai provider route: ${entry.provider}`);
     }
-    if ((entry.authentication === API_KEY) !== (entry.apiKeyEnv !== undefined)) {
+    if (entry.authentication === API_KEY && !entry.apiKeyEnv) {
       throw new Error(`invalid Yishan pi-ai credential classification: ${entry.provider}`);
+    }
+    if (entry.authentication === AMBIENT && !YISHAN_AMBIENT_PI_AI_PROVIDER_IDS.includes(entry.provider)) {
+      throw new Error(`invalid Yishan ambient pi-ai provider route: ${entry.provider}`);
     }
     providers.add(entry.provider);
   }
