@@ -260,7 +260,7 @@ func runHelperMode(mode string, input *bufio.Reader) {
 	case "stderr":
 		_, _ = os.Stderr.WriteString("runtime diagnostic\n")
 		writeShutdownResponse(input)
-	case "rpc", "rpc-notify", "rpc-exit", "rpc-invalid-notify", "rpc-subscribe-exit", "rpc-subscribe-lifecycle-gap":
+	case "rpc", "rpc-notify", "rpc-exit", "rpc-invalid-notify", "rpc-provider", "rpc-subscribe-exit", "rpc-subscribe-lifecycle-gap":
 		handleRPCRequests(mode, input)
 	case "exit":
 		return
@@ -300,6 +300,9 @@ func handleRPCRequests(mode string, input *bufio.Reader) {
 		if json.Unmarshal(line, &request) != nil {
 			return
 		}
+		if mode == "rpc-provider" && !hasDefaultProvider(request.Method, line) {
+			return
+		}
 		if request.Method == "shutdown" {
 			_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{}}`+"\n", request.ID)
 			return
@@ -320,6 +323,24 @@ func handleRPCRequests(mode string, input *bufio.Reader) {
 		}
 		writeRPCResponse(request)
 	}
+}
+
+func hasDefaultProvider(method string, line []byte) bool {
+	if method == yishanSessionStartMethod {
+		var request struct {
+			Params struct {
+				AgentOptions SessionAgentOptions `json:"agentOptions"`
+			} `json:"params"`
+		}
+		return json.Unmarshal(line, &request) == nil && request.Params.AgentOptions.Provider == defaultLegacyProvider
+	}
+	if method == yishanSessionSetModelMethod {
+		var request struct {
+			Params SetModelRequest `json:"params"`
+		}
+		return json.Unmarshal(line, &request) == nil && request.Params.Provider == defaultLegacyProvider
+	}
+	return true
 }
 
 func writeLifecycleGapResponse(request struct {

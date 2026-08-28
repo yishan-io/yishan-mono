@@ -7,6 +7,8 @@ import (
 )
 
 const (
+	defaultLegacyProvider        = "deepseek-official"
+	defaultLegacyModel           = "deepseek-v4-flash"
 	yishanSessionStartMethod     = "yishan.v1.session.start"
 	yishanSessionSetModelMethod  = "yishan.v1.session.set-model"
 	yishanSessionPromptMethod    = "yishan.v1.session.prompt"
@@ -150,9 +152,7 @@ type SessionSubscription struct {
 }
 
 func (s *Supervisor) StartSession(ctx context.Context, request SessionStartRequest) (SessionStartResult, error) {
-	if request.AgentOptions == nil {
-		request.AgentOptions = &SessionAgentOptions{Provider: "deepseek-official", Model: "deepseek-v4-flash"}
-	}
+	request.AgentOptions = normalizeSessionAgentOptions(request.AgentOptions)
 	if err := validateStartRequest(request); err != nil {
 		return SessionStartResult{}, err
 	}
@@ -182,9 +182,26 @@ func (s *Supervisor) SetModelSession(ctx context.Context, request SetModelReques
 	if request.CWD == "" || request.SessionID == "" || request.Model == "" {
 		return errors.New("SetModelSession requires cwd, sessionId, and model")
 	}
+	request.Provider = normalizeLegacyProvider(request.Provider)
 	var response map[string]any
 	return s.call(ctx, yishanSessionSetModelMethod, request, &response)
 }
+func normalizeSessionAgentOptions(options *SessionAgentOptions) *SessionAgentOptions {
+	if options == nil {
+		return &SessionAgentOptions{Provider: defaultLegacyProvider, Model: defaultLegacyModel}
+	}
+	normalized := *options
+	normalized.Provider = normalizeLegacyProvider(normalized.Provider)
+	return &normalized
+}
+
+func normalizeLegacyProvider(provider string) string {
+	if provider == "" {
+		return defaultLegacyProvider
+	}
+	return provider
+}
+
 func (s *Supervisor) CancelSession(ctx context.Context, request SessionCancelRequest) (SessionCancelResult, error) {
 	if err := validateExecutionRequest(request); err != nil {
 		return SessionCancelResult{}, err
