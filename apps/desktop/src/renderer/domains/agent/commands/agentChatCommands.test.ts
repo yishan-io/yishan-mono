@@ -562,7 +562,7 @@ describe("loadDSHSessionModels selection recovery", () => {
     mocks.listDSHProviders.mockResolvedValue({
       providers: [
         {
-          id: "deepseek",
+          id: "deepseek-official",
           displayName: "DeepSeek",
           authentication: "api-key",
           setupRequired: false,
@@ -578,7 +578,7 @@ describe("loadDSHSessionModels selection recovery", () => {
 
     expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.currentModel).toMatchObject({
       id: "deepseek-chat",
-      provider: "deepseek",
+      provider: "deepseek-official",
     });
   });
 });

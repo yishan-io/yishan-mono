@@ -185,7 +185,7 @@ export async function loadDSHSessionModels(
     const hasExplicitSelection = Boolean(selectedProvider && selectedModel);
     const selectedProviderId = selectedProvider?.toLowerCase();
     const selectedModelId = selectedModel || undefined;
-    const directDeepSeekProviderId = "deepseek";
+    const directDeepSeekProviderId = "deepseek-official";
     const persistedModel = selectedModelId
       ? models.find(
           (model) =>
