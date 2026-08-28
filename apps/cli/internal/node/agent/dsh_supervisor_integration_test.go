@@ -34,7 +34,7 @@ func newLifecycleForwardingSupervisor(t *testing.T) *dsh.Supervisor {
 		Command: func(context.Context) (*exec.Cmd, error) {
 			return newAgentDSHIntegrationCommand("lifecycle", ""), nil
 		},
-		Initialize: dsh.InitializeConfig{CWD: "/authoritative", Provider: "deepseek-official", Model: "deepseek-chat"},
+		Initialize: dsh.InitializeConfig{CWD: "/authoritative", Provider: "deepseek-official", Model: "deepseek-v4-flash"},
 	})
 }
 
@@ -137,7 +137,7 @@ func newCrashFlowSupervisor(t *testing.T, operationsPath string, backoffStarted 
 			mu.Unlock()
 			return newAgentDSHIntegrationCommand(mode, operationsPath), nil
 		},
-		Initialize:   dsh.InitializeConfig{CWD: "/authoritative", Provider: "deepseek-official", Model: "deepseek-chat"},
+		Initialize:   dsh.InitializeConfig{CWD: "/authoritative", Provider: "deepseek-official", Model: "deepseek-v4-flash"},
 		RestartLimit: 1,
 		RestartWait:  func(context.Context, time.Duration) { backoffStarted <- struct{}{}; <-releaseRestart },
 	})

@@ -195,7 +195,7 @@ func TestSupervisor_Close_KillsProcessAfterDeadline(t *testing.T) {
 }
 
 func newTestSupervisor(config Config) *Supervisor {
-	config.Initialize = InitializeConfig{CWD: "/workspace", Provider: "deepseek-official", Model: "deepseek-chat"}
+	config.Initialize = InitializeConfig{CWD: "/workspace", Provider: "deepseek-official", Model: "deepseek-v4-flash"}
 	return NewSupervisor(config)
 }
 

@@ -190,7 +190,7 @@ func TestBootstrap_DSHFailureKeepsPiFallbackActive(t *testing.T) {
 	database := openTestDB(t)
 	app, err := Bootstrap(Config{
 		NodeID: "node-1", Database: database, EnvDir: t.TempDir(), DataDir: t.TempDir(), DSHEnabled: true,
-		DSHDataDir: t.TempDir(), DSHProvider: "deepseek-official", DSHModel: "deepseek-chat",
+		DSHDataDir: t.TempDir(), DSHProvider: "deepseek-official", DSHModel: "deepseek-v4-flash",
 	})
 	if err != nil {
 		t.Fatalf("Bootstrap: %v", err)

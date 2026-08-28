@@ -17,7 +17,7 @@ const (
 	PiAgentDirEnvKey = "PI_CODING_AGENT_DIR"
 
 	DefaultDSHProvider = "deepseek-official"
-	DefaultDSHModel    = "deepseek-chat"
+	DefaultDSHModel    = "deepseek-v4-flash"
 
 	// AccountDirName is the per-account layer under a profile (env sandbox).
 	// profiles/<env>/accounts/<userId>/ holds the account-scoped data files.

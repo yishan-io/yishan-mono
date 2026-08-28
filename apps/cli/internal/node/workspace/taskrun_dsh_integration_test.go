@@ -95,7 +95,7 @@ func newTaskRunDSHSupervisor(t *testing.T, operationsPath, cwd string) *dsh.Supe
 			command.Env = append(os.Environ(), "GO_WANT_TASKRUN_DSH_INTEGRATION=1", "TASKRUN_DSH_OPERATIONS="+operationsPath)
 			return command, nil
 		},
-		Initialize: dsh.InitializeConfig{CWD: cwd, Provider: "deepseek-official", Model: "deepseek-chat"},
+		Initialize: dsh.InitializeConfig{CWD: cwd, Provider: "deepseek-official", Model: "deepseek-v4-flash"},
 	})
 }
 

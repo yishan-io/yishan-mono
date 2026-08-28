@@ -21,8 +21,12 @@ func TestLoad_UsesDSHProviderAndModelDefaults(t *testing.T) {
 	if loaded.Daemon.DSHProvider != DefaultDSHProvider {
 		t.Fatalf("provider = %q, want %q", loaded.Daemon.DSHProvider, DefaultDSHProvider)
 	}
-	if loaded.Daemon.DSHModel != DefaultDSHModel {
-		t.Fatalf("model = %q, want %q", loaded.Daemon.DSHModel, DefaultDSHModel)
+	const expectedDefaultDSHModel = "deepseek-v4-flash"
+	if DefaultDSHModel != expectedDefaultDSHModel {
+		t.Fatalf("default DSH model = %q, want %q", DefaultDSHModel, expectedDefaultDSHModel)
+	}
+	if loaded.Daemon.DSHModel != expectedDefaultDSHModel {
+		t.Fatalf("model = %q, want %q", loaded.Daemon.DSHModel, expectedDefaultDSHModel)
 	}
 }
 

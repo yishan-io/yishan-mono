@@ -66,7 +66,7 @@ func newCloseDSHSupervisor(t *testing.T, markerPath, releasePath, cwd string) *d
 		command := exec.Command(os.Args[0], "-test.run=TestCloseDSHIntegrationHelper", "--")
 		command.Env = append(os.Environ(), "GO_WANT_CLOSE_DSH_INTEGRATION=1", "CLOSE_DSH_MARKER="+markerPath, "CLOSE_DSH_RELEASE="+releasePath)
 		return command, nil
-	}, Initialize: dsh.InitializeConfig{CWD: cwd, Provider: "deepseek-official", Model: "deepseek-chat"}})
+	}, Initialize: dsh.InitializeConfig{CWD: cwd, Provider: "deepseek-official", Model: "deepseek-v4-flash"}})
 }
 
 func openCloseDSHWorkspaces(t *testing.T, svc *Service) (string, string) {
