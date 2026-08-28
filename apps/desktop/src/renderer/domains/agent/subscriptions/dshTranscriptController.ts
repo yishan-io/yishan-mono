@@ -38,6 +38,7 @@ export class DSHTranscriptController {
   private isBlocked = false;
   private controllerState: "normal" | "recovering" | "failed" = "normal";
   private recoveryIncarnation = "";
+  private recoveryReplayThroughSeq: number | null = null;
   private recoveryGeneration = 0;
   private recoveryPromise: Promise<void> | null = null;
   private isReplayingBufferedUpdates = false;
@@ -101,6 +102,10 @@ export class DSHTranscriptController {
   /** Applies a validated notification. */
   public handle(payload: DSHFrontendPayload): void {
     if (payload.tabId !== this.tabId || payload.sessionId !== this.sessionId || this.isBlocked) return;
+    if (payload.update.reset) {
+      this.startRecovery(payload.update.reset.incarnation, false, payload.update.reset.headSeq);
+      return;
+    }
     if (this.controllerState === "recovering") {
       if (payload.incarnation !== this.recoveryIncarnation) this.startRecovery(payload.incarnation);
       if (!payload.update.reset) this.bufferUpdate(payload.incarnation, payload.update);
@@ -209,7 +214,7 @@ export class DSHTranscriptController {
 
   private applyUpdate(update: DSHUpdate): void {
     if (update.reset) {
-      this.startRecovery(update.reset.incarnation);
+      this.startRecovery(update.reset.incarnation, false, update.reset.headSeq);
       return;
     }
     if (update.cursor) this.applyCursor(update.cursor);
@@ -269,11 +274,20 @@ export class DSHTranscriptController {
     if (event.type === "assistant/chunk") this.applyChunk(event);
   }
 
-  private startRecovery(incarnation: string, preserveBufferedUpdates = false): void {
-    if (this.isBlocked || (this.controllerState === "recovering" && incarnation === this.recoveryIncarnation)) return;
+  private startRecovery(
+    incarnation: string,
+    preserveBufferedUpdates = false,
+    replayThroughSeq: number | null = null,
+  ): void {
+    if (this.isBlocked) return;
+    if (this.controllerState === "recovering" && incarnation === this.recoveryIncarnation) {
+      if (replayThroughSeq !== null) this.recoveryReplayThroughSeq = replayThroughSeq;
+      return;
+    }
     this.discardSpeculativeEvents();
     this.controllerState = "recovering";
     this.recoveryIncarnation = incarnation;
+    this.recoveryReplayThroughSeq = replayThroughSeq;
     this.recoveryGeneration++;
     if (!preserveBufferedUpdates) this.bufferedUpdates = [];
     this.actions.setDSHTranscriptRetryAvailable(this.tabId, false);
@@ -292,6 +306,9 @@ export class DSHTranscriptController {
   }
 
   private bufferUpdate(incarnation: string, update: DSHUpdate): void {
+    if (update.event && this.recoveryReplayThroughSeq !== null && update.event.seq <= this.recoveryReplayThroughSeq) {
+      return;
+    }
     if (this.bufferedUpdates.length >= MAX_BUFFERED_UPDATES) {
       this.markBlocked("DSH transcript reload buffer overflow");
       return;
@@ -324,6 +341,7 @@ export class DSHTranscriptController {
       if (attachSnapshot) this.applyAttachSnapshot(attachSnapshot);
       const bufferedUpdates = this.bufferedUpdates;
       this.bufferedUpdates = [];
+      this.recoveryReplayThroughSeq = null;
       this.controllerState = "normal";
       this.actions.setDSHTranscriptRetryAvailable(this.tabId, false);
       this.isReplayingBufferedUpdates = true;

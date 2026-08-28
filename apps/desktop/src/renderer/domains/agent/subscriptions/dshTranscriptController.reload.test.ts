@@ -7,6 +7,45 @@ import {
 } from "./dshTranscriptController.testSupport";
 
 describe("DSHTranscriptController durable reload", () => {
+  it("does not buffer historical replay events already covered by a reset", async () => {
+    let resolveSnapshot:
+      | ((snapshot: {
+          session: { sessionId: string; createdAt: number };
+          events: unknown[];
+          incarnation: string;
+          asOfSeq: number;
+          durableThroughSeq: number;
+        }) => void)
+      | undefined;
+    const { actions } = setup();
+    const controller = new DSHTranscriptController(
+      "tab",
+      "session",
+      actions,
+      () =>
+        new Promise((resolve) => {
+          resolveSnapshot = resolve;
+        }),
+      () => {},
+    );
+    const replayEvents = Array.from({ length: 129 }, (_, sequence) => event(sequence));
+    controller.handle({
+      ...event(0),
+      update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 128 } },
+    });
+    for (const replayEvent of replayEvents) controller.handle({ ...replayEvent, incarnation: "inc" });
+    expect(actions.setSessionError).not.toHaveBeenCalledWith("tab", "DSH transcript reload buffer overflow");
+
+    resolveSnapshot?.({
+      session: { sessionId: "session", createdAt: 0 },
+      events: replayEvents.map((replayEvent) => replayEvent.update.event),
+      incarnation: "inc",
+      asOfSeq: 128,
+      durableThroughSeq: 128,
+    });
+    await vi.waitFor(() => expect(controller.getDurableThroughSeq()).toBe(128));
+  });
+
   it("replays one event received during a durable reload", async () => {
     let resolveSnapshot:
       | ((snapshot: {
