@@ -158,6 +158,13 @@ function validUserSource(input: unknown): boolean {
   const source = asRecord(input);
   if (!source) return false;
   if (source.kind === "user") return hasExactKeys(source, ["kind"]);
+  if (source.kind === "skill-catalog") {
+    return (
+      hasExactKeys(source, ["kind", "form", "entries"]) &&
+      typeof source.form === "string" &&
+      isJsonValue(source.entries)
+    );
+  }
   if (source.kind !== "plugin" || typeof source.plugin !== "string") return false;
   if (source.form === undefined) return hasExactKeys(source, ["kind", "plugin"]);
   if (["instructions", "catalog", "relay", "recall"].includes(String(source.form)))

@@ -168,6 +168,20 @@ describe("DSH transcript", () => {
         surfaceOp: "append",
       }),
     ).not.toBeNull();
+    expect(
+      parseEvent({
+        type: "user/message",
+        seq: 0,
+        time: 0,
+        data: {
+          id: "skill-catalog",
+          role: "user",
+          content: [{ type: "text", text: "Available skills" }],
+          source: { kind: "skill-catalog", form: "catalog", entries: [] },
+        },
+        surfaceOp: "append",
+      }),
+    ).not.toBeNull();
   });
   it("accepts exact lifecycle hints only when their parent and incarnation match the envelope", () => {
     const envelope = { sessionId: "parent", tabId: "tab", workspaceId: "workspace", incarnation: "inc" };
