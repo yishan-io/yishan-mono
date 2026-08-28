@@ -8,11 +8,11 @@ import (
 )
 
 type dshLiveSession struct {
-	sessionID, tabID, workspaceID, cwd, incarnation string
-	connection                                      *rpc.Connection
-	available                                       bool
-	subscription                                    dsh.SessionSubscription
-	generation                                      uint64
+	sessionID, tabID, workspaceID, cwd, incarnation, provider, model string
+	connection                                                       *rpc.Connection
+	available                                                        bool
+	subscription                                                     dsh.SessionSubscription
+	generation                                                       uint64
 }
 
 type dshRoute struct {
@@ -162,4 +162,13 @@ func (r *dshLiveRegistry) workspaceEntries(workspaceID string) []*dshLiveSession
 		}
 	}
 	return entries
+}
+
+func (r *dshLiveRegistry) setSelection(sessionID, workspaceID, cwd, provider, model string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	entry := r.sessions[sessionID]
+	if entry != nil && entry.workspaceID == workspaceID && entry.cwd == cwd {
+		entry.provider, entry.model = provider, model
+	}
 }

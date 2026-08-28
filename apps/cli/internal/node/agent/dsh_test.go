@@ -18,6 +18,7 @@ type recordingDSHSessions struct {
 	disposeCWD       string
 	startRequest     dsh.SessionStartRequest
 	promptRequest    dsh.SessionPromptRequest
+	setModelRequest  dsh.SetModelRequest
 	startErr         error
 	promptErr        error
 	subscribeErr     error
@@ -206,7 +207,8 @@ func (r *recordingDSHSessions) StartSession(_ context.Context, request dsh.Sessi
 	r.startRequest = request
 	return dsh.SessionStartResult{SessionID: request.SessionID, Incarnation: "test-incarnation"}, r.startErr
 }
-func (r *recordingDSHSessions) SetModelSession(context.Context, dsh.SetModelRequest) error {
+func (r *recordingDSHSessions) SetModelSession(_ context.Context, request dsh.SetModelRequest) error {
+	r.setModelRequest = request
 	return nil
 }
 func (r *recordingDSHSessions) PromptSession(_ context.Context, request dsh.SessionPromptRequest) (dsh.SessionPromptResult, error) {

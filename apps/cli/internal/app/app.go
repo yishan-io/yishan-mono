@@ -211,7 +211,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	backgroundJobRecoveryCtx, cancelBackgroundJobRecovery := context.WithCancel(context.Background())
 
 	computerSvc := nodesystem.NewDefaultComputerService()
-	modelList := modellist.NewService()
+	modelList := modellist.NewService(dshSupervisor)
 	agentMgr := agentmanager.NewManager()
 	piAuth := nodeagent.NewManagedPiAuthStore()
 	contextStore := contextstore.NewStore(cfg.SettingsPath)

@@ -35,10 +35,10 @@ type SessionBinding struct {
 
 // SessionStartRequest creates a session with its authoritative ownership binding.
 type SessionStartRequest struct {
-	CWD          string                `json:"cwd"`
-	SessionID    string                `json:"sessionId"`
-	Binding      SessionBinding        `json:"binding"`
-	AgentOptions *SessionAgentOptions  `json:"agentOptions,omitempty"`
+	CWD          string               `json:"cwd"`
+	SessionID    string               `json:"sessionId"`
+	Binding      SessionBinding       `json:"binding"`
+	AgentOptions *SessionAgentOptions `json:"agentOptions,omitempty"`
 }
 
 // SessionAgentOptions carries optional per-session model/provider overrides.
@@ -150,6 +150,9 @@ type SessionSubscription struct {
 }
 
 func (s *Supervisor) StartSession(ctx context.Context, request SessionStartRequest) (SessionStartResult, error) {
+	if request.AgentOptions == nil {
+		request.AgentOptions = &SessionAgentOptions{Provider: "deepseek-official", Model: "deepseek-v4-flash"}
+	}
 	if err := validateStartRequest(request); err != nil {
 		return SessionStartResult{}, err
 	}

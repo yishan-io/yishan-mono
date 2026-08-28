@@ -91,8 +91,8 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 		}
 	} else if _, err := s.dshRuntime().StartSession(ctx, dsh.SessionStartRequest{
 		SessionID: req.SessionID, CWD: cwd,
-		Binding:   dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd},
-		AgentOptions: dshAgentOptionsFrom(req.ModelID, s.deps.DSHProvider),
+		Binding:      dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd},
+		AgentOptions: dshAgentOptionsPointer(req.ModelID, req.Provider, s.deps.DSHModel),
 	}); err != nil {
 		return nil, mapDSHExecutionError(err)
 	}
@@ -109,7 +109,8 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 }
 
 func (s *Service) registerStartedDSHSession(connection *rpc.Connection, req rpc.AgentStartParams, cwd string, claim runtimeIdentityClaim, subscription dsh.SessionSubscription) (any, error) {
-	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, workspaceID: req.WorkspaceID, cwd: cwd, incarnation: subscription.Incarnation, connection: connection, available: true, subscription: subscription}
+	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHModel)
+	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, workspaceID: req.WorkspaceID, cwd: cwd, incarnation: subscription.Incarnation, provider: selection.Provider, model: selection.Model, connection: connection, available: true, subscription: subscription}
 	if !s.dshSessions.register(entry) {
 		subscription.Unsubscribe()
 		// The registry winner owns this external session. Never compensate-dispose it.
@@ -391,12 +392,21 @@ func dshRequestErrorCode(raw json.RawMessage) string {
 	return data.Code
 }
 
-// dshAgentOptionsFrom builds a per-session model override when a non-default
-// modelID is requested. Returns nil when the model is empty or matches the
-// daemon-configured default (no override needed).
-func dshAgentOptionsFrom(modelID, defaultProvider string) *dsh.SessionAgentOptions {
-	if modelID == "" {
-		return nil
+const defaultDSHProvider = "deepseek-official"
+
+// dshAgentOptionsFrom always makes DSH provider selection explicit. Legacy
+// callers that omit a provider are constrained to the deepseek-official route.
+func dshAgentOptionsPointer(modelID, provider, defaultModel string) *dsh.SessionAgentOptions {
+	selection := dshAgentOptionsFrom(modelID, provider, defaultModel)
+	return &selection
+}
+
+func dshAgentOptionsFrom(modelID, provider, defaultModel string) dsh.SessionAgentOptions {
+	if provider == "" {
+		provider = defaultDSHProvider
 	}
-	return &dsh.SessionAgentOptions{Model: modelID, Provider: defaultProvider}
+	if modelID == "" {
+		modelID = defaultModel
+	}
+	return dsh.SessionAgentOptions{Model: modelID, Provider: provider}
 }

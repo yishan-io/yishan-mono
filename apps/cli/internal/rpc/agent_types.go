@@ -28,6 +28,7 @@ type AgentStartParams struct {
 	CWD                       string       `json:"cwd"`
 	Resume                    bool         `json:"resume,omitempty"`
 	ModelID                   string       `json:"modelId,omitempty"`
+	Provider                  string       `json:"provider,omitempty"`
 	TranscriptProtocolVersion int          `json:"transcriptProtocolVersion,omitempty"`
 }
 

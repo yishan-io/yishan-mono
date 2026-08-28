@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	yishanProvidersListMethod     = "yishan.v1.providers.list"
 	yishanSessionDisposeMethod    = "yishan.v1.session.dispose"
 	yishanSessionListMethod       = "yishan.v1.session.list"
 	yishanSessionReadMethod       = "yishan.v1.session.read"
@@ -32,6 +33,36 @@ type RequestError struct {
 
 func (e *RequestError) Error() string {
 	return fmt.Sprintf("DSH request %s failed (%d): %s", e.Method, e.Code, e.Message)
+}
+
+// ProviderCatalog lists the runtime routes that may be selected for DSH sessions.
+// It deliberately contains no credential values or credential references.
+type ProviderCatalog struct {
+	Providers []ProviderCatalogProvider `json:"providers"`
+}
+
+// ProviderCatalogProvider is one selectable DSH provider route.
+type ProviderCatalogProvider struct {
+	ID             string                 `json:"id"`
+	Authentication string                 `json:"authentication"`
+	SetupRequired  bool                   `json:"setupRequired"`
+	Models         []ProviderCatalogModel `json:"models"`
+}
+
+// ProviderCatalogModel is one selectable model on a provider route.
+type ProviderCatalogModel struct {
+	Provider string `json:"provider"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+}
+
+// ListProviderCatalog reads the safe runtime-owned provider catalog.
+func (s *Supervisor) ListProviderCatalog(ctx context.Context) (ProviderCatalog, error) {
+	var response providerCatalogWire
+	if err := s.call(ctx, yishanProvidersListMethod, struct{}{}, &response); err != nil {
+		return ProviderCatalog{}, err
+	}
+	return response.validate()
 }
 
 // SessionListRequest lists persisted top-level sessions for a workspace.

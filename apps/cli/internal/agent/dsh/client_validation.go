@@ -128,3 +128,51 @@ func validateSubagentInterruptRequest(request SubagentInterruptRequest) error {
 	}
 	return nil
 }
+
+type providerCatalogWire struct {
+	Providers []providerCatalogProviderWire `json:"providers"`
+}
+
+type providerCatalogProviderWire struct {
+	ID             string                     `json:"id"`
+	Authentication string                     `json:"authentication"`
+	SetupRequired  *bool                      `json:"setupRequired"`
+	Models         []providerCatalogModelWire `json:"models"`
+}
+
+type providerCatalogModelWire struct {
+	Provider string `json:"provider"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+}
+
+func (response providerCatalogWire) validate() (ProviderCatalog, error) {
+	if response.Providers == nil {
+		return ProviderCatalog{}, errors.New("invalid DSH provider catalog")
+	}
+	providers := make([]ProviderCatalogProvider, 0, len(response.Providers))
+	seenProviders := make(map[string]struct{}, len(response.Providers))
+	for _, provider := range response.Providers {
+		if provider.ID == "" || provider.SetupRequired == nil || (provider.Authentication != "api-key" && provider.Authentication != "ambient") || provider.Models == nil {
+			return ProviderCatalog{}, errors.New("invalid DSH provider catalog entry")
+		}
+		if _, exists := seenProviders[provider.ID]; exists {
+			return ProviderCatalog{}, errors.New("invalid DSH provider catalog entry")
+		}
+		seenProviders[provider.ID] = struct{}{}
+		models := make([]ProviderCatalogModel, 0, len(provider.Models))
+		seenModels := make(map[string]struct{}, len(provider.Models))
+		for _, model := range provider.Models {
+			if model.Provider != provider.ID || model.ID == "" || model.Name == "" {
+				return ProviderCatalog{}, errors.New("invalid DSH provider catalog model")
+			}
+			if _, exists := seenModels[model.ID]; exists {
+				return ProviderCatalog{}, errors.New("invalid DSH provider catalog model")
+			}
+			seenModels[model.ID] = struct{}{}
+			models = append(models, ProviderCatalogModel{Provider: model.Provider, ID: model.ID, Name: model.Name})
+		}
+		providers = append(providers, ProviderCatalogProvider{ID: provider.ID, Authentication: provider.Authentication, SetupRequired: *provider.SetupRequired, Models: models})
+	}
+	return ProviderCatalog{Providers: providers}, nil
+}

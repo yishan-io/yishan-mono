@@ -312,3 +312,22 @@ func TestSupervisor_StartSession_RejectsMissingAuthoritativeBinding(t *testing.T
 func testSessionBinding(cwd string) SessionBinding {
 	return SessionBinding{Version: 1, WorkspaceID: "workspace", OwnerNodeID: "node", CWD: cwd}
 }
+
+func TestProviderCatalogWire_RejectsSecretFields(t *testing.T) {
+	var response providerCatalogWire
+	err := decodeStrictJSON([]byte(`{"providers":[{"id":"deepseek-official","authentication":"api-key","setupRequired":true,"models":[{"provider":"deepseek-official","id":"deepseek-v4-flash","name":"DeepSeek"}],"apiKey":"secret"}]}`), &response)
+	if err == nil {
+		t.Fatal("accepted provider catalog secret field")
+	}
+}
+
+func TestProviderCatalogWire_RejectsUnknownModelRoute(t *testing.T) {
+	setupRequired := true
+	_, err := (providerCatalogWire{Providers: []providerCatalogProviderWire{{
+		ID: "deepseek-official", Authentication: "api-key", SetupRequired: &setupRequired,
+		Models: []providerCatalogModelWire{{Provider: "other", ID: "model", Name: "Model"}},
+	}}}).validate()
+	if err == nil {
+		t.Fatal("accepted a model under the wrong provider route")
+	}
+}

@@ -127,14 +127,16 @@ func (s *Service) AgentSetModel(ctx context.Context, req rpc.AgentSetModelParams
 	if err != nil {
 		return nil, err
 	}
+	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHModel)
 	if err := s.deps.DSH.SetModelSession(ctx, dsh.SetModelRequest{
 		CWD:       workspaceInstance.Path,
 		SessionID: req.SessionID,
-		Model:     req.ModelID,
-		Provider:  req.Provider,
+		Model:     selection.Model,
+		Provider:  selection.Provider,
 	}); err != nil {
 		return nil, mapDSHExecutionError(err)
 	}
+	s.dshSessions.setSelection(req.SessionID, req.WorkspaceID, workspaceInstance.Path, selection.Provider, selection.Model)
 	return rpc.AgentAckResult{Runtime: rpc.AgentRuntimeDSH, OK: true}, nil
 }
 
