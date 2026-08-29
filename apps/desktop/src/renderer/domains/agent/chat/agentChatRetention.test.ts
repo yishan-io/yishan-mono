@@ -18,6 +18,47 @@ describe("mergeActiveTurnHistory", () => {
     expect(mergeActiveTurnHistory([historyMessage], [committedMessage], {})).toEqual([historyMessage]);
   });
 
+  it("deduplicates same-ID history messages while retaining their tool result", () => {
+    const toolCall = {
+      id: "assistant-1",
+      role: "assistant" as const,
+      content: [{ type: "toolCall" as const, id: "tool-call-1", name: "Read", arguments: {} }],
+    } satisfies AgentMessage;
+    const toolResult = {
+      id: "tool-result-1",
+      role: "toolResult" as const,
+      toolCallId: "tool-call-1",
+      toolName: "Read",
+      content: "file contents",
+    } satisfies AgentMessage;
+
+    expect(mergeActiveTurnHistory([toolCall, toolCall, toolResult], [], {})).toEqual([toolCall, toolResult]);
+  });
+
+  it("retains the latest same-ID assistant so its matching tool result remains associated", () => {
+    const olderAssistant = {
+      id: "assistant-1",
+      role: "assistant" as const,
+      content: [{ type: "toolCall" as const, id: "tool-call-old", name: "Read", arguments: {} }],
+    } satisfies AgentMessage;
+    const newerAssistant = {
+      ...olderAssistant,
+      content: [{ type: "toolCall" as const, id: "tool-call-new", name: "Read", arguments: {} }],
+    } satisfies AgentMessage;
+    const newerToolResult = {
+      id: "tool-result-1",
+      role: "toolResult" as const,
+      toolCallId: "tool-call-new",
+      toolName: "Read",
+      content: "newer file contents",
+    } satisfies AgentMessage;
+
+    expect(mergeActiveTurnHistory([olderAssistant, newerAssistant, newerToolResult], [], {})).toEqual([
+      newerAssistant,
+      newerToolResult,
+    ]);
+  });
+
   it("keeps live subagent lifecycle messages missing from RPC history", () => {
     const liveLifecycle = {
       id: "child-1:started",

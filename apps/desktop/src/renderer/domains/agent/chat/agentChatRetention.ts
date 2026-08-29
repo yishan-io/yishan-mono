@@ -44,22 +44,40 @@ export function mergeActiveTurnHistory(
   const retainedLifecycleMessageIds = new Set(retainedLifecycleMessages.map((message) => message.id));
   const retainedToolResults = getRetainedToolResults(historyMessageIds, committedMessages, isRendererFinalAssistant);
   const retainedToolResultIds = new Set(retainedToolResults.map((message) => message.id));
-  return [
+  return getUniqueMessagesById(
     // Keep live metadata before history so transcript trimming drops it before
     // it drops persisted conversation messages.
-    ...retainedLifecycleMessages,
-    ...historyWithoutStaleLifecycleMessages.map((message) =>
+    retainedLifecycleMessages,
+    historyWithoutStaleLifecycleMessages.map((message) =>
       isRendererFinalAssistant(message) ? (committedMessagesById.get(message.id) ?? message) : message,
     ),
-    ...committedMessages.filter(
+    committedMessages.filter(
       (message) =>
         isRendererFinalAssistant(message) &&
         !historyMessageIds.has(message.id) &&
         !retainedLifecycleMessageIds.has(message.id) &&
         !retainedToolResultIds.has(message.id),
     ),
-    ...retainedToolResults,
-  ];
+    retainedToolResults,
+  );
+}
+
+function getUniqueMessagesById(...messageSources: AgentMessage[][]): AgentMessage[] {
+  const messageIds = new Set<string>();
+  const uniqueMessages: AgentMessage[] = [];
+  for (const messages of messageSources) {
+    const sourceMessageIds = new Set<string>();
+    const uniqueSourceMessages: AgentMessage[] = [];
+    for (let index = messages.length - 1; index >= 0; index--) {
+      const message = messages[index];
+      if (!message || sourceMessageIds.has(message.id) || messageIds.has(message.id)) continue;
+      sourceMessageIds.add(message.id);
+      messageIds.add(message.id);
+      uniqueSourceMessages.unshift(message);
+    }
+    uniqueMessages.push(...uniqueSourceMessages);
+  }
+  return uniqueMessages;
 }
 
 /** Returns live tool-result IDs that require their renderer-final assistant to remain after trimming. */
