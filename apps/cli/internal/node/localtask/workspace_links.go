@@ -23,7 +23,12 @@ func (s *Service) LinkWorkspace(ctx context.Context, req rpc.LocalTaskLinkWorksp
 	if err := domain.ValidateWorkspaceLink(link); err != nil {
 		return nil, err
 	}
-	return s.deps.Repository.LinkWorkspace(ctx, link)
+	linked, err := s.deps.Repository.LinkWorkspace(ctx, link)
+	if err != nil {
+		return linked, err
+	}
+	s.publishTaskChanged()
+	return linked, nil
 }
 
 // UnlinkWorkspace removes a current association while preserving history.
@@ -35,6 +40,7 @@ func (s *Service) UnlinkWorkspace(ctx context.Context, req rpc.LocalTaskLinkIDPa
 	if err := s.deps.Repository.UnlinkWorkspace(ctx, linkID); err != nil {
 		return nil, err
 	}
+	s.publishTaskChanged()
 	return nil, nil
 }
 
@@ -48,7 +54,11 @@ func (s *Service) UpdateWorkspaceLinkStatus(ctx context.Context, req rpc.LocalTa
 		return nil, err
 	}
 	link, err := s.deps.Repository.UpdateWorkspaceLinkStatus(ctx, linkID, req.Status)
-	return link, err
+	if err != nil {
+		return link, err
+	}
+	s.publishTaskChanged()
+	return link, nil
 }
 
 // ListWorkspaceLinks loads all historical task links for a local workspace.

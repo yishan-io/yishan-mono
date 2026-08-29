@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceTaskLinkRow } from "./WorkspaceTaskLinkRow";
 
 vi.mock("../../commands/localTaskCommands", () => ({
@@ -39,6 +39,24 @@ const link = {
 };
 
 describe("WorkspaceTaskLinkRow", () => {
+  afterEach(cleanup);
+
+  it("renders the linked task status instead of the stale link status", () => {
+    render(
+      <WorkspaceTaskLinkRow
+        link={link}
+        task={{ ...task, status: "done" }}
+        selected={false}
+        isMutationLoading={false}
+        onSelect={vi.fn()}
+        tagCatalog={[]}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "localTask.status.done" })).toBeTruthy();
+    expect(screen.queryByRole("img", { name: "localTask.status.progressing" })).toBeNull();
+  });
+
   it("renders tags in a separate row below the task title", () => {
     render(
       <WorkspaceTaskLinkRow
