@@ -33,6 +33,69 @@ describe("DSHTranscriptController stream handling", () => {
     expect(controller.getDurableThroughSeq()).toBe(0);
     expect(actions.setSessionState).not.toHaveBeenCalledWith("tab", "error");
   });
+  it("accepts an attach snapshot with a binding marker and standard session title", () => {
+    const { controller, actions } = setup();
+
+    controller.applyAttachSnapshot({
+      runtime: "dsh",
+      sessionId: "session",
+      instanceId: "inc",
+      events: [
+        { type: "dsh/hidden.v1", seq: 0, time: 0, data: { version: 1 }, ignorable: true },
+        {
+          type: "session/title",
+          seq: 1,
+          time: 1,
+          data: { title: "Example title", messageSeqs: [0], source: { kind: "fallback" } },
+        },
+      ],
+      asOfSeq: 1,
+      durableThroughSeq: 1,
+      headSeq: 1,
+    });
+
+    expect(controller.getDurableThroughSeq()).toBe(1);
+    expect(actions.setSessionState).not.toHaveBeenCalledWith("tab", "error");
+  });
+
+  it.each([
+    ["unexpected fallback field", "Example title", { kind: "fallback", unexpected: true }],
+    ["whitespace-only title", " \t\n ", { kind: "fallback" }],
+    ["empty title-provider ID", "Example title", { kind: "provider", provider: "" }],
+    [
+      "empty title-model provider ID",
+      "Example title",
+      { kind: "provider", provider: "title-provider", model: { provider: "", model: "title-model" } },
+    ],
+    [
+      "empty title-model ID",
+      "Example title",
+      { kind: "provider", provider: "title-provider", model: { provider: "model-provider", model: "" } },
+    ],
+  ])("rejects an attach snapshot with %s", (_description, title, source) => {
+    const { controller } = setup();
+
+    expect(() =>
+      controller.applyAttachSnapshot({
+        runtime: "dsh",
+        sessionId: "session",
+        instanceId: "inc",
+        events: [
+          { type: "dsh/hidden.v1", seq: 0, time: 0, data: { version: 1 }, ignorable: true },
+          {
+            type: "session/title",
+            seq: 1,
+            time: 1,
+            data: { title, messageSeqs: [0], source },
+          },
+        ],
+        asOfSeq: 1,
+        durableThroughSeq: 1,
+        headSeq: 1,
+      }),
+    ).toThrow("DSH attach event is invalid");
+  });
+
   it("keeps ahead notifications when a verified attach snapshot is a stale prefix", () => {
     const { controller, actions } = setup();
     controller.handle(event(0));

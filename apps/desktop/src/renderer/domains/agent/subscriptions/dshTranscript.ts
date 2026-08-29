@@ -17,6 +17,7 @@ const KNOWN_TYPES = new Set([
   "request/header",
   "request/context",
   "session/end-seed",
+  "session/title",
   "agent/inbox/spliced",
 ]);
 type JsonRecord = Record<string, unknown>;
