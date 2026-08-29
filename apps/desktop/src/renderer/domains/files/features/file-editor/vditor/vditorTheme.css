@@ -414,6 +414,15 @@
   border-bottom: 1px solid var(--vditor-app-border);
   background: var(--vditor-app-surface);
   padding: 4px 8px;
+  /* Vditor sets an inline padding-left based on the dynamically measured,
+   * centered document column. The toolbar itself must stay pane-aligned. */
+  padding-left: 8px !important;
+  /* Vditor toolbar items float and therefore wrap at narrow pane widths.
+   * A single flex row keeps them stable; overflow exposes the remaining
+   * controls without creating a second toolbar line. */
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   /* Stacking context above the content area: toolbar dropdowns (hint/panel)
    * must always paint over the editor content, never behind it. */
   position: relative;

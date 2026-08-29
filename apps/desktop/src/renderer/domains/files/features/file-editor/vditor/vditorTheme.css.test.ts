@@ -16,13 +16,16 @@ import { describe, expect, it } from "vitest";
 
 const css = readFileSync(fileURLToPath(new URL("./vditorTheme.css", import.meta.url)), "utf8");
 
-function extractTaskRule(): string {
-  const start = css.indexOf(".vditor-app-editor .vditor-task");
+function extractRule(selector: string): string {
+  const start = css.indexOf(selector);
   expect(start).toBeGreaterThanOrEqual(0);
-  expect(css.slice(start, start + 40)).toContain(".vditor-task");
   const blockStart = css.indexOf("{", start);
   const blockEnd = css.indexOf("}", blockStart);
   return css.slice(start, blockEnd + 1);
+}
+
+function extractTaskRule(): string {
+  return extractRule(".vditor-app-editor .vditor-task");
 }
 
 describe("vditorTheme.css task list wrapping", () => {
@@ -32,5 +35,16 @@ describe("vditorTheme.css task list wrapping", () => {
 
   it("does not inherit vditor's mid-word break-all behavior", () => {
     expect(extractTaskRule()).not.toMatch(/word-break:\s*break-all/);
+  });
+});
+
+describe("vditorTheme.css toolbar layout", () => {
+  it("pins the toolbar to a single horizontally scrollable row with a fixed leading inset", () => {
+    const toolbarRule = extractRule(".vditor-app-editor .vditor-toolbar");
+
+    expect(toolbarRule).toMatch(/display:\s*flex/);
+    expect(toolbarRule).toMatch(/flex-wrap:\s*nowrap/);
+    expect(toolbarRule).toMatch(/overflow-x:\s*auto/);
+    expect(toolbarRule).toMatch(/padding-left:\s*8px\s*!important/);
   });
 });
