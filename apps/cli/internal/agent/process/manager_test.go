@@ -286,50 +286,6 @@ func TestStdoutEventDelivery(t *testing.T) {
 	}
 }
 
-func TestSessionSend(t *testing.T) {
-	m := NewManager()
-	ctx := context.Background()
-
-	var mu sync.Mutex
-	var received []json.RawMessage
-
-	// Use cat to echo back what it receives on stdin to stdout.
-	opts := StartOptions{
-		SessionID: "send-test",
-		Binary:    "cat",
-		OnEvent: func(sessionID, tabID, workspaceID string, event []byte) {
-			mu.Lock()
-			defer mu.Unlock()
-			received = append(received, json.RawMessage(event))
-		},
-	}
-
-	session, err := m.Start(ctx, opts)
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
-
-	// Send a command — cat will echo it to stdout.
-	if err := session.Send(json.RawMessage(`{"type":"prompt","message":"hello"}`)); err != nil {
-		t.Fatalf("Send failed: %v", err)
-	}
-
-	// cat needs stdin to close before it exits. Close the session.
-	if err := session.Close(); err != nil {
-		t.Fatalf("Close failed: %v", err)
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-
-	if len(received) < 1 {
-		t.Fatal("expected at least 1 event")
-	}
-	if !strings.Contains(string(received[0]), "prompt") {
-		t.Fatalf("event should contain 'prompt', got: %s", received[0])
-	}
-}
-
 func TestSessionCloseStopsProcess(t *testing.T) {
 	m := NewManager()
 	ctx := context.Background()

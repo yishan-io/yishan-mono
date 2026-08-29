@@ -18,12 +18,19 @@ func dshSessionsFor(supervisor *dsh.Supervisor) nodeagent.DSHSessions {
 	return supervisor
 }
 
+func dshPluginRuntimeFor(supervisor *dsh.Supervisor) nodeagent.DSHPluginRuntime {
+	if supervisor == nil {
+		return nil
+	}
+	return supervisor
+}
+
 func newDSHSupervisor(cfg Config) *dsh.Supervisor {
 	if !cfg.DSHEnabled {
 		return nil
 	}
 	return dsh.NewSupervisor(dsh.Config{
-		Command:     dsh.NewCommandFactory(cfg.DSHNodePath, cfg.DSHRuntimePath, cfg.DSHDataDir),
+		Command:     dsh.NewCommandFactory(cfg.DSHNodePath, cfg.DSHRuntimePath, cfg.DSHDataDir, cfg.DSHDeveloperMode),
 		Initialize:  dsh.InitializeConfig{CWD: cfg.DSHDataDir, Provider: cfg.DSHProvider, Model: cfg.DSHModel},
 		Diagnostics: logDSHDiagnostic,
 	})

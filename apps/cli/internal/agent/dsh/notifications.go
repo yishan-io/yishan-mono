@@ -90,7 +90,7 @@ func parseSessionStatusNotification(raw json.RawMessage) (SessionStatus, error) 
 }
 func parseDurableCursorNotification(raw json.RawMessage) (DurableCursor, error) {
 	var cursor durableCursorWire
-	if err := parseExactNotification(raw, &cursor, "sessionId", "durableThroughSeq", "incarnation"); err != nil {
+	if err := parseExactNotification(raw, &cursor, "sessionId", "durableThroughSeq", "instanceId"); err != nil {
 		return DurableCursor{}, err
 	}
 	return cursor.validate(cursor.SessionID)
@@ -99,7 +99,7 @@ func parseDurableCursorNotification(raw json.RawMessage) (DurableCursor, error) 
 type subagentLifecycleWire struct {
 	Version         int    `json:"version"`
 	ParentSessionID string `json:"parentSessionId"`
-	Incarnation     string `json:"incarnation"`
+	InstanceID      string `json:"instanceId"`
 	Revision        int64  `json:"revision"`
 	Event           string `json:"event"`
 	RunID           string `json:"runId"`
@@ -118,7 +118,7 @@ func parseSubagentLifecycleNotification(raw json.RawMessage) (SubagentLifecycle,
 		return SubagentLifecycle{}, errors.New("subagent lifecycle is invalid")
 	}
 	lifecycle := SubagentLifecycle{
-		Version: wire.Version, ParentSessionID: wire.ParentSessionID, Incarnation: wire.Incarnation,
+		Version: wire.Version, ParentSessionID: wire.ParentSessionID, InstanceID: wire.InstanceID,
 		Revision: wire.Revision, Event: wire.Event, RunID: wire.RunID, ChildSessionID: wire.ChildSessionID,
 		Provider: wire.Provider, Local: *wire.Local, StopReason: wire.StopReason,
 	}
@@ -134,13 +134,13 @@ func lifecycleKeys(raw json.RawMessage) []string {
 		return nil
 	}
 	if _, hasStopReason := fields["stopReason"]; hasStopReason {
-		return []string{"version", "parentSessionId", "incarnation", "revision", "event", "runId", "childSessionId", "provider", "local", "stopReason"}
+		return []string{"version", "parentSessionId", "instanceId", "revision", "event", "runId", "childSessionId", "provider", "local", "stopReason"}
 	}
-	return []string{"version", "parentSessionId", "incarnation", "revision", "event", "runId", "childSessionId", "provider", "local"}
+	return []string{"version", "parentSessionId", "instanceId", "revision", "event", "runId", "childSessionId", "provider", "local"}
 }
 
 func isValidLifecycle(lifecycle SubagentLifecycle) bool {
-	if lifecycle.Version != 1 || lifecycle.ParentSessionID == "" || lifecycle.Incarnation == "" || !isSafeSequence(lifecycle.Revision, 0) || lifecycle.RunID == "" || lifecycle.ChildSessionID == "" || lifecycle.Provider == "" {
+	if lifecycle.Version != 1 || lifecycle.ParentSessionID == "" || lifecycle.InstanceID == "" || !isSafeSequence(lifecycle.Revision, 0) || lifecycle.RunID == "" || lifecycle.ChildSessionID == "" || lifecycle.Provider == "" {
 		return false
 	}
 	if lifecycle.Event == "started" {
@@ -155,10 +155,10 @@ func isSubagentStopReason(reason string) bool {
 
 func parseTranscriptResetNotification(raw json.RawMessage) (TranscriptReset, error) {
 	var reset TranscriptReset
-	if err := parseExactNotification(raw, &reset, "sessionId", "incarnation", "headSeq"); err != nil {
+	if err := parseExactNotification(raw, &reset, "sessionId", "instanceId", "headSeq"); err != nil {
 		return TranscriptReset{}, err
 	}
-	if reset.SessionID == "" || reset.Incarnation == "" || !isSafeSequence(reset.HeadSeq, -1) {
+	if reset.SessionID == "" || reset.InstanceID == "" || !isSafeSequence(reset.HeadSeq, -1) {
 		return TranscriptReset{}, errors.New("transcript reset is invalid")
 	}
 	return reset, nil
@@ -194,6 +194,6 @@ func (s *Supervisor) markProcessUnavailable(process *runtimeProcess, cause error
 	process.isInvalidated = true
 	s.process = nil
 	s.health.IsReady = false
-	s.health.Incarnation = ""
+	s.health.InstanceID = ""
 	s.health.LastError = cause.Error()
 }

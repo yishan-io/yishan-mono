@@ -8,8 +8,13 @@ import {
   loadDSHSessionModels,
   restartAgentSessionForProvider,
 } from "../../../commands/agentChatCommands";
+import { saveDSHCredential } from "../../../commands/dshCredentialCommands";
 import { listDSHProviders } from "../../../daemon/daemonAgentProcedures";
 import type { AgentRuntime, DSHProviderCatalogEntry } from "../../../daemon/daemonAgentTypes";
+import type {
+  ProviderCredentialCatalogEntry,
+  ProviderCredentialSaveInput,
+} from "../../provider-credentials/ProviderCredentialDialog";
 
 type UseAgentChatProviderAddParams = {
   tabId: string;
@@ -19,42 +24,41 @@ type UseAgentChatProviderAddParams = {
   sessionId: string | null;
   sessionState: AgentSessionState;
   runtime?: AgentRuntime;
-  /** For DSH sessions: the env-var ref name for the provider's API key (e.g. "DEEPSEEK_API_KEY"). */
-  dshCredentialRef?: string;
-  /** For DSH sessions: display name for the provider (e.g. "DeepSeek"). */
-  dshProviderName?: string;
 };
 
 export type UseAgentChatProviderAddResult = {
   openAddProviderDialog: () => void;
-  /** Props for Pi's ProviderCredentialDialog (runtime !== "dsh"). */
-  providerCredentialDialogProps: {
+  /** Props for Pi's credential adapter (runtime !== "dsh"). */
+  piProviderCredentialDialogProps: {
     open: boolean;
     mode: "add";
     onClose: () => void;
     onSaved: (providerId?: string) => void;
   };
-  /** Props for the DSH provider picker. */
-  dshProviderPickerDialogProps: {
+  /** Props for the shared dialog backed by DSH's provider catalog and credential procedure. */
+  providerCredentialDialogProps: {
     open: boolean;
-    providers: DSHProviderCatalogEntry[];
+    mode: "add";
+    providers: ProviderCredentialCatalogEntry[];
+    emptyMessage: string;
     onClose: () => void;
-    onSelect: (provider: DSHProviderCatalogEntry) => void;
-  };
-  /** Props for DSH's DSHCredentialDialog (runtime === "dsh"). */
-  dshCredentialDialogProps: {
-    open: boolean;
-    credentialRef: string;
-    providerName: string;
-    onClose: () => void;
-    onSaved: () => void;
+    onSave: (input: ProviderCredentialSaveInput) => Promise<void>;
+    onSaved: (providerId?: string) => void;
   };
 };
 
-/**
- * Owns the "add provider" dialog for the agent chat composer.
- * Pi sessions use ProviderCredentialDialog; DSH sessions use DSHCredentialDialog.
- */
+/** Maps DSH's safe catalog contract to the shared credential presentation contract. */
+function mapDSHProviderCatalog(providers: DSHProviderCatalogEntry[]): ProviderCredentialCatalogEntry[] {
+  return providers.map((provider) => ({
+    id: provider.id,
+    displayName: provider.displayName,
+    authMode: provider.authentication === "api-key" && provider.credentialRef ? "api-key" : "ambient",
+    credentialRef: provider.credentialRef,
+    setupGuidance: provider.setupGuidance,
+  }));
+}
+
+/** Owns runtime-specific provider catalog loading and post-save session refresh behavior. */
 export function useAgentChatProviderAdd({
   tabId,
   workspaceId,
@@ -63,18 +67,21 @@ export function useAgentChatProviderAdd({
   sessionId,
   sessionState,
   runtime,
-  dshCredentialRef = "",
-  dshProviderName = "Provider",
 }: UseAgentChatProviderAddParams): UseAgentChatProviderAddResult {
   const [isOpen, setIsOpen] = useState(false);
-  const [providers, setProviders] = useState<DSHProviderCatalogEntry[]>([]);
-  const [pendingProvider, setPendingProvider] = useState<DSHProviderCatalogEntry | null>(null);
+  const [dshProviders, setDSHProviders] = useState<ProviderCredentialCatalogEntry[]>([]);
 
   const handleDSHCredentialSaved = useCallback(async () => {
-    setPendingProvider(null);
     setIsOpen(false);
     await loadDSHSessionModels(tabId);
   }, [tabId]);
+
+  const handleDSHCredentialSave = useCallback(async ({ provider, key }: ProviderCredentialSaveInput) => {
+    if (!provider.credentialRef) {
+      throw new Error(`DSH provider ${provider.id} does not declare a credential reference.`);
+    }
+    await saveDSHCredential({ ref: provider.credentialRef, value: key });
+  }, []);
 
   const handlePiProviderSaved = useCallback(
     async (providerId?: string) => {
@@ -89,49 +96,40 @@ export function useAgentChatProviderAdd({
     [cwd, paneId, sessionId, sessionState, tabId, workspaceId],
   );
 
-  return {
-    openAddProviderDialog: () => {
-      if (runtime !== "dsh") {
+  const openAddProviderDialog = useCallback(() => {
+    if (runtime !== "dsh") {
+      setIsOpen(true);
+      return;
+    }
+    void listDSHProviders()
+      .then((catalog) => {
+        setDSHProviders(mapDSHProviderCatalog(catalog.providers));
         setIsOpen(true);
-        return;
-      }
-      void listDSHProviders()
-        .then((catalog) => {
-          setProviders(catalog.providers);
-          setIsOpen(true);
-        })
-        .catch((error) => {
-          console.warn("Failed to load DSH providers", getErrorMessage(error));
-          setProviders([]);
-          setIsOpen(true);
-        });
-    },
-    dshProviderPickerDialogProps: {
-      open: isOpen && runtime === "dsh" && pendingProvider === null,
-      providers,
-      onClose: () => setIsOpen(false),
-      onSelect: (provider) => {
-        if (provider.authentication === "ambient") {
-          setIsOpen(false);
-          return;
-        }
-        setPendingProvider(provider);
-      },
-    },
-    providerCredentialDialogProps: {
+      })
+      .catch((error) => {
+        console.warn("Failed to load DSH providers", getErrorMessage(error));
+        setDSHProviders([]);
+        setIsOpen(true);
+      });
+  }, [runtime]);
+
+  const handleClose = useCallback(() => setIsOpen(false), []);
+
+  return {
+    openAddProviderDialog,
+    piProviderCredentialDialogProps: {
       open: isOpen && runtime !== "dsh",
-      mode: "add" as const,
-      onClose: () => setIsOpen(false),
+      mode: "add",
+      onClose: handleClose,
       onSaved: handlePiProviderSaved,
     },
-    dshCredentialDialogProps: {
-      open: isOpen && runtime === "dsh" && pendingProvider !== null,
-      credentialRef: pendingProvider?.credentialRef ?? dshCredentialRef,
-      providerName: pendingProvider?.displayName ?? dshProviderName,
-      onClose: () => {
-        setPendingProvider(null);
-        setIsOpen(false);
-      },
+    providerCredentialDialogProps: {
+      open: isOpen && runtime === "dsh",
+      mode: "add",
+      providers: dshProviders,
+      emptyMessage: "No DSH providers are available.",
+      onClose: handleClose,
+      onSave: handleDSHCredentialSave,
       onSaved: handleDSHCredentialSaved,
     },
   };

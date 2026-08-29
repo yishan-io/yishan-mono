@@ -85,13 +85,15 @@ type Config struct {
 	RelayURL     string
 	RelayToken   string
 
-	// DSHEnabled starts the experimental bundled DSH runtime supervisor.
-	DSHEnabled     bool
-	DSHNodePath    string
-	DSHRuntimePath string
-	DSHDataDir     string
-	DSHProvider    string
-	DSHModel       string
+	// DSHEnabled starts the experimental bundled DSH runtime supervisor. The
+	// executable and runtime paths must be explicitly provided; no PATH lookup occurs.
+	DSHEnabled       bool
+	DSHDeveloperMode bool
+	DSHNodePath      string
+	DSHRuntimePath   string
+	DSHDataDir       string
+	DSHProvider      string
+	DSHModel         string
 }
 
 // App is the daemon's composition root. It owns the composed service graph,
@@ -289,10 +291,23 @@ func Bootstrap(cfg Config) (*App, error) {
 		},
 		UnlinkLocalTaskWorkspace: localTaskSvc.UnlinkWorkspaceAssociations,
 	})
+	var localPluginStore nodeagent.DSHLocalPluginStore
+	if cfg.DSHDeveloperMode {
+		localPluginStore, err = nodeagent.NewDSHLocalPluginStore(cfg.DSHDataDir, true)
+		if err != nil {
+			cancelAgentLifecycle()
+			cancelCleanup()
+			cancelBackgroundJobRecovery()
+			return nil, fmt.Errorf("create DSH local plugin store: %w", err)
+		}
+	}
 	agentSvc = nodeagent.NewService(nodeagent.Deps{
 		Workspace:         workspaceSvc,
 		DSH:               dshSessionsFor(dshSupervisor),
 		DSHCredentials:    nodeagent.NewDSHCredentialStore(cfg.DSHDataDir),
+		DSHPlugins:        nodeagent.NewDSHPluginManager(cfg.DSHDataDir),
+		DSHPluginRuntime:  dshPluginRuntimeFor(dshSupervisor),
+		DSHLocalPlugins:   localPluginStore,
 		OwnerNodeID:       cfg.NodeID,
 		DSHProvider:       cfg.DSHProvider,
 		DSHModel:          cfg.DSHModel,

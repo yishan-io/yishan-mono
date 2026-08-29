@@ -17,6 +17,7 @@ const KNOWN_TYPES = new Set([
   "request/header",
   "request/context",
   "session/end-seed",
+  "session/title",
   "agent/inbox/spliced",
 ]);
 type JsonRecord = Record<string, unknown>;
@@ -33,8 +34,8 @@ export type DSHEvent = {
 export type DSHUpdate = {
   event?: DSHEvent;
   status?: { sessionId: string; status: "idle" | "running" };
-  cursor?: { sessionId: string; durableThroughSeq: number; incarnation: string };
-  reset?: { sessionId: string; incarnation: string; headSeq: number };
+  cursor?: { sessionId: string; durableThroughSeq: number; instanceId: string };
+  reset?: { sessionId: string; instanceId: string; headSeq: number };
   lifecycle?: DSHLifecycle;
   lifecycleResync?: DSHLifecycleResync;
   unavailable?: true;
@@ -42,7 +43,7 @@ export type DSHUpdate = {
 export type DSHLifecycle = {
   version: 1;
   parentSessionId: string;
-  incarnation: string;
+  instanceId: string;
   revision: number;
   event: "started" | "finished";
   runId: string;
@@ -51,27 +52,27 @@ export type DSHLifecycle = {
   local: boolean;
   stopReason?: "completed" | "aborted" | "error" | "max-tokens" | "refusal";
 };
-export type DSHLifecycleResync = { parentSessionId: string; incarnation: string; revision: number };
+export type DSHLifecycleResync = { parentSessionId: string; instanceId: string; revision: number };
 export type DSHFrontendRouteIdentity = { sessionId: string; tabId: string };
 export type DSHFrontendPayload = {
   sessionId: string;
   tabId: string;
   workspaceId: string;
-  incarnation: string;
+  instanceId: string;
   update: DSHUpdate;
 };
 
 /** Validates the exact untrusted DSH frontend notification wire contract. */
 export function parseDSHFrontendPayload(input: unknown): DSHFrontendPayload | null {
-  const payload = exactRecord(input, ["sessionId", "tabId", "workspaceId", "incarnation", "update"]);
+  const payload = exactRecord(input, ["sessionId", "tabId", "workspaceId", "instanceId", "update"]);
   if (!payload) return null;
   const sessionId = requiredString(payload, "sessionId");
   const tabId = requiredString(payload, "tabId");
   const workspaceId = requiredString(payload, "workspaceId");
-  const incarnation = requiredString(payload, "incarnation");
-  const update = sessionId && incarnation ? parseUpdate(payload.update, sessionId, incarnation) : null;
-  return sessionId && tabId && workspaceId && incarnation && update
-    ? { sessionId, tabId, workspaceId, incarnation, update }
+  const instanceId = requiredString(payload, "instanceId");
+  const update = sessionId && instanceId ? parseUpdate(payload.update, sessionId, instanceId) : null;
+  return sessionId && tabId && workspaceId && instanceId && update
+    ? { sessionId, tabId, workspaceId, instanceId, update }
     : null;
 }
 
@@ -115,7 +116,7 @@ export function projectDSHTranscript(events: readonly DSHEvent[]): AgentMessage[
   return surface.map((entry) => entry.message);
 }
 
-function parseUpdate(input: unknown, sessionId: string, incarnation: string): DSHUpdate | null {
+function parseUpdate(input: unknown, sessionId: string, instanceId: string): DSHUpdate | null {
   const update = asRecord(input);
   if (!update || Object.keys(update).length !== 1) return null;
   if ("event" in update) {
@@ -127,19 +128,19 @@ function parseUpdate(input: unknown, sessionId: string, incarnation: string): DS
     return status ? { status } : null;
   }
   if ("cursor" in update) {
-    const cursor = parseCursor(update.cursor, sessionId, incarnation);
+    const cursor = parseCursor(update.cursor, sessionId, instanceId);
     return cursor ? { cursor } : null;
   }
   if ("reset" in update) {
-    const reset = parseReset(update.reset, sessionId, incarnation);
+    const reset = parseReset(update.reset, sessionId, instanceId);
     return reset ? { reset } : null;
   }
   if ("lifecycle" in update) {
-    const lifecycle = parseLifecycle(update.lifecycle, sessionId, incarnation);
+    const lifecycle = parseLifecycle(update.lifecycle, sessionId, instanceId);
     return lifecycle ? { lifecycle } : null;
   }
   if ("lifecycleResync" in update) {
-    const lifecycleResync = parseLifecycleResync(update.lifecycleResync, sessionId, incarnation);
+    const lifecycleResync = parseLifecycleResync(update.lifecycleResync, sessionId, instanceId);
     return lifecycleResync ? { lifecycleResync } : null;
   }
   return update.unavailable === true ? { unavailable: true } : null;
@@ -200,26 +201,26 @@ function parseStatus(input: unknown, sessionId: string): { sessionId: string; st
 function parseCursor(
   input: unknown,
   sessionId: string,
-  incarnation: string,
-): { sessionId: string; durableThroughSeq: number; incarnation: string } | null {
-  const cursor = exactRecord(input, ["sessionId", "durableThroughSeq", "incarnation"]);
+  instanceId: string,
+): { sessionId: string; durableThroughSeq: number; instanceId: string } | null {
+  const cursor = exactRecord(input, ["sessionId", "durableThroughSeq", "instanceId"]);
   const sequence = cursor && safeSequence(cursor.durableThroughSeq, -1);
-  return cursor && cursor.sessionId === sessionId && cursor.incarnation === incarnation && sequence !== null
-    ? { sessionId, incarnation, durableThroughSeq: sequence }
+  return cursor && cursor.sessionId === sessionId && cursor.instanceId === instanceId && sequence !== null
+    ? { sessionId, instanceId, durableThroughSeq: sequence }
     : null;
 }
 function parseReset(
   input: unknown,
   sessionId: string,
-  incarnation: string,
-): { sessionId: string; incarnation: string; headSeq: number } | null {
-  const reset = exactRecord(input, ["sessionId", "incarnation", "headSeq"]);
+  instanceId: string,
+): { sessionId: string; instanceId: string; headSeq: number } | null {
+  const reset = exactRecord(input, ["sessionId", "instanceId", "headSeq"]);
   const sequence = reset && safeSequence(reset.headSeq, -1);
-  return reset && reset.sessionId === sessionId && reset.incarnation === incarnation && sequence !== null
-    ? { sessionId, incarnation, headSeq: sequence }
+  return reset && reset.sessionId === sessionId && reset.instanceId === instanceId && sequence !== null
+    ? { sessionId, instanceId, headSeq: sequence }
     : null;
 }
-function parseLifecycle(input: unknown, sessionId: string, incarnation: string): DSHLifecycle | null {
+function parseLifecycle(input: unknown, sessionId: string, instanceId: string): DSHLifecycle | null {
   const lifecycle = asRecord(input);
   if (!lifecycle) return null;
   const hasStopReason = "stopReason" in lifecycle;
@@ -230,7 +231,7 @@ function parseLifecycle(input: unknown, sessionId: string, incarnation: string):
         ? [
             "version",
             "parentSessionId",
-            "incarnation",
+            "instanceId",
             "revision",
             "event",
             "runId",
@@ -242,7 +243,7 @@ function parseLifecycle(input: unknown, sessionId: string, incarnation: string):
         : [
             "version",
             "parentSessionId",
-            "incarnation",
+            "instanceId",
             "revision",
             "event",
             "runId",
@@ -253,7 +254,7 @@ function parseLifecycle(input: unknown, sessionId: string, incarnation: string):
     )
   )
     return null;
-  const isIdentityMatch = lifecycle.parentSessionId === sessionId && lifecycle.incarnation === incarnation;
+  const isIdentityMatch = lifecycle.parentSessionId === sessionId && lifecycle.instanceId === instanceId;
   const hasRequiredValues =
     lifecycle.version === 1 &&
     safeSequence(lifecycle.revision, 0) !== null &&
@@ -269,11 +270,11 @@ function parseLifecycle(input: unknown, sessionId: string, incarnation: string):
     return lifecycle as DSHLifecycle;
   return null;
 }
-function parseLifecycleResync(input: unknown, sessionId: string, incarnation: string): DSHLifecycleResync | null {
-  const resync = exactRecord(input, ["parentSessionId", "incarnation", "revision"]);
+function parseLifecycleResync(input: unknown, sessionId: string, instanceId: string): DSHLifecycleResync | null {
+  const resync = exactRecord(input, ["parentSessionId", "instanceId", "revision"]);
   return resync &&
     resync.parentSessionId === sessionId &&
-    resync.incarnation === incarnation &&
+    resync.instanceId === instanceId &&
     safeSequence(resync.revision, 0) !== null
     ? (resync as DSHLifecycleResync)
     : null;

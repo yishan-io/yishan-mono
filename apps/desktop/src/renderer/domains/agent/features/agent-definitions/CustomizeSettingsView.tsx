@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { SettingsSectionHeader } from "../../../../ui/components/SettingsPrimitives";
 import { SkillsSettingsView } from "../manage-skills/SkillsSettingsView";
 import { AgentsSettingsView } from "./AgentsSettingsView";
+import { DSHLocalPluginsSettingsView } from "./DSHLocalPluginsSettingsView";
+import { DSHPluginsSettingsView } from "./DSHPluginsSettingsView";
 import { ExtensionsSettingsView } from "./ExtensionsSettingsView";
 
 type CustomizeSettingsViewProps = {
@@ -40,7 +42,13 @@ export function CustomizeSettingsView({ focus }: CustomizeSettingsViewProps) {
         <Tab value="skills" label={t("settings.customize.panels.skills")} />
         <Tab value="agents" label={t("settings.customize.panels.agents")} />
       </Tabs>
-      {panel === "extensions" ? <ExtensionsSettingsView /> : null}
+      {panel === "extensions" ? (
+        <>
+          <ExtensionsSettingsView />
+          <DSHPluginsSettingsView />
+          <DSHLocalPluginsSettingsView />
+        </>
+      ) : null}
       {panel === "skills" ? <SkillsSettingsView /> : null}
       {panel === "agents" ? <AgentsSettingsView /> : null}
     </Box>

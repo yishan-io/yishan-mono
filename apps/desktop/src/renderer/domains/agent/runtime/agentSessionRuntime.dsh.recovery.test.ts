@@ -114,7 +114,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
       dsh: {
         session: { sessionId: "dsh-recovery-attach", createdAt: 0 },
         events: [],
-        incarnation: "run-1",
+        instanceId: "run-1",
         asOfSeq: -1,
         durableThroughSeq: -1,
       },
@@ -122,7 +122,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
     mocks.attachAgent.mockResolvedValue({
       runtime: "dsh",
       sessionId: "dsh-recovery-attach",
-      incarnation: "run-1",
+      instanceId: "run-1",
       events: [
         {
           type: "user/message",
@@ -153,8 +153,8 @@ describe("agentSessionRuntime.DSH recovery", () => {
       sessionId: "dsh-recovery-attach",
       tabId: "tab-dsh-recovery-attach",
       workspaceId: "workspace-1",
-      incarnation: "run-1",
-      update: { reset: { sessionId: "dsh-recovery-attach", incarnation: "run-1", headSeq: -1 } },
+      instanceId: "run-1",
+      update: { reset: { sessionId: "dsh-recovery-attach", instanceId: "run-1", headSeq: -1 } },
     });
 
     await vi.waitFor(() =>
@@ -182,15 +182,15 @@ describe("agentSessionRuntime.DSH recovery", () => {
       sessionId: "dsh-cursor-session",
       tabId: "tab-dsh-cursor",
       workspaceId: "workspace-1",
-      incarnation: "run-1",
+      instanceId: "run-1",
       update: { event: { type: "turn/end", seq: 0, time: 0, data: { turn: 0, reason: { kind: "completed" } } } },
     });
     mocks.dshEventHandler?.({
       sessionId: "dsh-cursor-session",
       tabId: "tab-dsh-cursor",
       workspaceId: "workspace-1",
-      incarnation: "run-1",
-      update: { cursor: { sessionId: "dsh-cursor-session", incarnation: "run-1", durableThroughSeq: 0 } },
+      instanceId: "run-1",
+      update: { cursor: { sessionId: "dsh-cursor-session", instanceId: "run-1", durableThroughSeq: 0 } },
     });
 
     await recoverAgentSessionAfterReconnect({
@@ -204,7 +204,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
     expect(mocks.attachAgent).toHaveBeenLastCalledWith(expect.objectContaining({ runtime: "dsh", afterSeq: 0 }));
   });
 
-  it("recovers a restarted DSH incarnation after an unavailable durable read without Pi calls", async () => {
+  it("recovers a restarted DSH instance ID after an unavailable durable read without Pi calls", async () => {
     mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-restarted" });
     mocks.readHistory
       .mockRejectedValueOnce(
@@ -218,7 +218,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
         dsh: {
           session: { sessionId: "dsh-restarted", createdAt: 0 },
           events: [],
-          incarnation: "new-inc",
+          instanceId: "new-inc",
           asOfSeq: -1,
           durableThroughSeq: -1,
         },
@@ -241,8 +241,8 @@ describe("agentSessionRuntime.DSH recovery", () => {
       sessionId: "dsh-restarted",
       tabId: "tab-dsh-restarted",
       workspaceId: "workspace-1",
-      incarnation: "old-inc",
-      update: { reset: { sessionId: "dsh-restarted", incarnation: "old-inc", headSeq: -1 } },
+      instanceId: "old-inc",
+      update: { reset: { sessionId: "dsh-restarted", instanceId: "old-inc", headSeq: -1 } },
     });
 
     await vi.waitFor(() =>
@@ -269,7 +269,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
           dsh: {
             session: { sessionId: "dsh-supervisor-restart", createdAt: 0 },
             events: [],
-            incarnation: "run-1",
+            instanceId: "run-1",
             asOfSeq: -1,
             durableThroughSeq: -1,
           },
@@ -291,8 +291,8 @@ describe("agentSessionRuntime.DSH recovery", () => {
         sessionId: "dsh-supervisor-restart",
         tabId: "tab-dsh-supervisor-restart",
         workspaceId: "workspace-1",
-        incarnation: "run-1",
-        update: { reset: { sessionId: "dsh-supervisor-restart", incarnation: "run-1", headSeq: -1 } },
+        instanceId: "run-1",
+        update: { reset: { sessionId: "dsh-supervisor-restart", instanceId: "run-1", headSeq: -1 } },
       });
 
       await vi.advanceTimersByTimeAsync(1_100);
@@ -311,7 +311,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
       dsh: {
         session: { sessionId: "dsh-retry-session", createdAt: 0 },
         events: [],
-        incarnation: "run-1",
+        instanceId: "run-1",
         asOfSeq: -1,
         durableThroughSeq: -1,
       },
@@ -327,8 +327,8 @@ describe("agentSessionRuntime.DSH recovery", () => {
       sessionId: "dsh-retry-session",
       tabId: "tab-dsh-retry",
       workspaceId: "workspace-1",
-      incarnation: "run-1",
-      update: { reset: { sessionId: "dsh-retry-session", incarnation: "run-1", headSeq: -1 } },
+      instanceId: "run-1",
+      update: { reset: { sessionId: "dsh-retry-session", instanceId: "run-1", headSeq: -1 } },
     });
     await vi.waitFor(() => expect(agentChatStore.getState().sessionsByTabId["tab-dsh-retry"]?.state).toBe("error"));
     await recoverAgentSessionAfterReconnect({

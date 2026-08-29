@@ -10,48 +10,29 @@ export {
   YISHAN_PROTOCOL_VERSION,
   YISHAN_REVERSE_METHODS,
   yishanMethod,
-} from "./protocol";
+} from "./protocol/protocol";
 export {
-  listYishanProviders,
-  validateYishanProviderSelection,
-  YishanProviderSelectionError,
-  type YishanProviderAuthentication,
-  type YishanProviderCatalog,
-  type YishanProviderCatalogEntry,
-  type YishanProviderCatalogModel,
-} from "./llmProviders";
+  listProviders,
+  validateProviderSelection,
+  ProviderSelectionError,
+  type ProviderAuthentication,
+  type ProviderCatalog,
+  type ProviderCatalogEntry,
+  type ProviderCatalogModel,
+} from "./provider/providers";
 export {
   MAX_REQUEST_LIFETIME_MS,
   parseCapabilityRequest,
   type CapabilityRequest,
-} from "./capabilityRequest";
-export { parseDurableCursor, type DurableCursor } from "./durableCursor";
-export { installSubagentLifecycleNotifications, type SubagentLifecycleNotification } from "./subagentLifecycle";
+} from "./protocol/capability";
+export { parseDurableCursor, type DurableCursor } from "./shared/cursor";
 export {
-  isYishanSessionBoundEvent,
-  isYishanSessionSummaryEvent,
-  isYishanSessionTitleEvent,
+  isSessionBoundEvent,
   parseSessionBoundData,
-  registerYishanSessionEventTypes,
-  parseSessionSummaryData,
-  parseSessionTitleData,
+  registerSessionEventTypes,
   type SessionBoundData,
-  type SessionGenerationUsage,
-  type SessionSummaryData,
-  type SessionTitleData,
-} from "./sessionBindingContracts";
+} from "./session/binding";
 export {
-  parseSessionCancelRequest,
-  parseSessionCancelResult,
-  parseSessionFlushRequest,
-  parseSessionFlushResult,
-  parseSessionPromptRequest,
-  parseSessionPromptResult,
-  parseSessionStartRequest,
-  parseSessionStartResult,
-  parseSessionSubscribeRequest,
-  parseSessionSubscribeResult,
-  parseSetModelRequest,
   parseTranscriptResetNotification,
   type SessionCancelRequest,
   type SessionCancelResult,
@@ -67,81 +48,78 @@ export {
   type SequencedSessionEvent,
   type TextPromptContentBlock,
   type TranscriptResetNotification,
-} from "./executionContracts";
+} from "./session/protocol";
 export {
   parseInteractionRequest,
   type InteractionKind,
   type InteractionRequest,
-} from "./interactionRequest";
-export { parseInteractionResponse, type InteractionResponse } from "./interactionResponse";
-export {
-  createRequestRouter,
-  YishanRequestPolicyError,
-  YISHAN_REQUEST_POLICY_DENIAL_MESSAGE,
-  type JsonRpcRequestHandler,
-  type YishanRequestPolicyErrorCode,
-} from "./requestRouter";
-export {
-  YishanSessionExecutionError,
-  YishanSessionExecutionOwner,
-  type DurableSessionSnapshot,
-  type YishanSessionExecutionDependencies,
-} from "./sessionExecutionOwner";
+} from "./protocol/interactionRequest";
+export { parseInteractionResponse, type InteractionResponse } from "./protocol/interactionResponse";
+export { SessionRuntime, type DurableSessionSnapshot } from "./session/runtime";
+export { SessionExecutionError, type SessionExecutionErrorCode } from "./session/errors";
 export {
   apply,
   inject,
   name,
-  type YishanRuntimeServerConfig,
-} from "./runtimeServer";
+  type RuntimeServerConfig,
+} from "./rpc-server/plugin";
+export { RpcServer } from "./rpc-server/server";
+export type {
+  SessionDisposeRequest,
+  SessionDisposeResult,
+  SessionHeaderResult,
+  SessionLineageEntry,
+  SessionLineageRequest,
+  SessionLineageResult,
+  SessionListEntry,
+  SessionListRequest,
+  SessionListResult,
+  SessionReadRequest,
+  SessionReadResult,
+  SessionResumeRequest,
+  SessionResumeResult,
+} from "./protocol/session";
 export {
-  parseSessionDisposeRequest,
-  parseSessionLineageRequest,
-  parseSessionListRequest,
-  parseSessionReadRequest,
-  parseSessionResumeRequest,
-  type SessionDisposeRequest,
-  type SessionDisposeResult,
-  type SessionHeaderResult,
-  type SessionLineageEntry,
-  type SessionLineageRequest,
-  type SessionLineageResult,
-  type SessionListEntry,
-  type SessionListRequest,
-  type SessionListResult,
-  type SessionReadRequest,
-  type SessionReadResult,
-  type SessionResumeRequest,
-  type SessionResumeResult,
-} from "./sessionContracts";
-export {
-  createSessionHandler,
-  YishanSessionError,
-  YishanSessionIdMismatchError,
-  YishanSessionNotFoundError,
-  YishanSessionNotPersistedError,
-  YishanSessionWorkspaceMismatchError,
-  YishanUnsupportedMethodError,
-  type YishanSessionErrorCode,
-  type YishanSessionHandlerDependencies,
-} from "./sessionHandler";
+  SessionError,
+  SessionIdMismatchError,
+  SessionNotFoundError,
+  SessionNotPersistedError,
+  SessionWorkspaceMismatchError,
+  UnsupportedMethodError,
+  RequestPolicyError,
+  YISHAN_REQUEST_POLICY_DENIAL_MESSAGE,
+  type RequestPolicyErrorCode,
+  type SessionErrorCode,
+} from "./protocol/errors";
+
+export { RuntimeHost, type RuntimeConfig } from "./runtime/host";
+export { isDeveloperMode } from "./runtime/config";
+export { YISHAN_AGENT_SPINE_CONFIG, YISHAN_RUNTIME_MCP_ENABLED } from "./runtime/core";
 
 export {
-  createYishanRuntime,
-  installRuntimeShutdownHandlers,
-  YISHAN_AGENT_SPINE_CONFIG,
-  YISHAN_RUNTIME_MCP_ENABLED,
-  runYishanRuntime,
-  type YishanRuntime,
-  type YishanRuntimeConfig,
-} from "./runtime";
+  parsePluginPatch,
+  PluginPatchError,
+  type PluginPatchConfig,
+  type PluginPatchEntry,
+  type PluginPatchInject,
+  type PluginPatchParseOptions,
+} from "./plugin-loader/patch";
 
 export {
-  parseSubagentInterruptRequest,
-  type SubagentInterruptRequest,
-  type SubagentInterruptResult,
-} from "./subagentInterruptContracts";
+  AdaptationManifestError,
+  parseAuditedAdaptationManifest,
+} from "./plugin-loader/adaptation";
+
 export {
-  createSubagentInterruptHandler,
-  YishanSubagentInterruptError,
-  type YishanSubagentInterruptDependencies,
-} from "./subagentInterruptHandler";
+  loadVerifiedPluginLock,
+  PluginLockError,
+  type PluginLockFile,
+  type VerifiedPluginLock,
+  type VerifiedPluginPackage,
+} from "./plugin-loader/lock";
+export {
+  mountVerifiedPluginLoader,
+  PluginLoaderPolicyError,
+  type MountedPluginLoader,
+  type PluginLoadState,
+} from "./plugin-loader/loader";

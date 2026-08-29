@@ -157,10 +157,10 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
   }
   const { dsh } = payload as { dsh: unknown };
   if (typeof dsh !== "object" || dsh === null) throw new TypeError("invalid agent capabilities");
-  const { configured, ready, incarnation, transcriptProtocolVersion, provider, model, credentialRef } = dsh as {
+  const { configured, ready, instanceId, transcriptProtocolVersion, provider, model, credentialRef } = dsh as {
     configured: unknown;
     ready: unknown;
-    incarnation?: unknown;
+    instanceId?: unknown;
     transcriptProtocolVersion?: unknown;
     provider?: unknown;
     model?: unknown;
@@ -169,8 +169,8 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
   if (typeof configured !== "boolean" || typeof ready !== "boolean") {
     throw new TypeError("invalid agent capabilities");
   }
-  if (incarnation !== undefined && (typeof incarnation !== "string" || incarnation.trim() === "")) {
-    throw new TypeError("invalid DSH runtime incarnation");
+  if (instanceId !== undefined && (typeof instanceId !== "string" || instanceId.trim() === "")) {
+    throw new TypeError("invalid DSH runtime instance ID");
   }
   if (transcriptProtocolVersion !== DSH_TRANSCRIPT_PROTOCOL_VERSION) {
     throw new TypeError("unsupported DSH transcript protocol");
@@ -179,7 +179,7 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
     dsh: {
       configured,
       ready,
-      ...(incarnation === undefined ? {} : { incarnation }),
+      ...(instanceId === undefined ? {} : { instanceId }),
       transcriptProtocolVersion,
       ...(typeof provider === "string" && provider ? { provider } : {}),
       ...(typeof model === "string" && model ? { model } : {}),
@@ -397,4 +397,51 @@ export async function removeAgentDefinition(input: { name: string }): Promise<{ 
 
 export async function restoreAgentDefinition(input: { name: string }): Promise<{ restored: boolean }> {
   return (await request("customize.agents.restore", input)) as { restored: boolean };
+}
+
+// ─── dsh: managed bundles ───────────────────────────────────────────────────
+
+export type DSHPluginBundleWire = { name: string; version: string; enabled: boolean };
+
+export async function listDSHPlugins(): Promise<{ bundles: DSHPluginBundleWire[] }> {
+  return (await request("dsh.listPlugins", {})) as { bundles: DSHPluginBundleWire[] };
+}
+
+export type DSHOfficialPluginBundleWire = { name: string; version: string };
+
+export async function listOfficialDSHPlugins(): Promise<{ bundles: DSHOfficialPluginBundleWire[] }> {
+  return (await request("dsh.listOfficialPlugins", {})) as { bundles: DSHOfficialPluginBundleWire[] };
+}
+
+export async function installOfficialDSHPlugin(input: { name: string }): Promise<void> {
+  await request("dsh.installPlugin", input);
+}
+
+export async function setDSHPluginEnabled(input: { name: string; enabled: boolean }): Promise<void> {
+  await request("dsh.setPluginEnabled", input);
+}
+
+export async function removeDSHPlugin(input: { name: string }): Promise<void> {
+  await request("dsh.removePlugin", input);
+}
+
+export async function updateDSHPlugin(input: { name: string }): Promise<void> {
+  await request("dsh.updatePlugin", input);
+}
+
+export type DSHLocalPluginBundleWire = { id: string; path: string };
+
+/** Lists explicit developer-only DSH local bundle registrations. */
+export async function listDSHLocalPlugins(): Promise<{ bundles: DSHLocalPluginBundleWire[] }> {
+  return (await request("dsh.listLocalPlugins", {})) as { bundles: DSHLocalPluginBundleWire[] };
+}
+
+/** Registers one explicitly confirmed local DSH bundle in Developer Mode. */
+export async function registerDSHLocalPlugin(input: { id: string; path: string }): Promise<void> {
+  await request("dsh.registerLocalPlugin", input);
+}
+
+/** Removes one explicitly registered Developer Mode local DSH bundle. */
+export async function removeDSHLocalPlugin(input: { id: string }): Promise<void> {
+  await request("dsh.removeLocalPlugin", input);
 }

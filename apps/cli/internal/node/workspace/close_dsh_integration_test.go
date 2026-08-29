@@ -248,9 +248,9 @@ func recordCloseDSHDispose(sessionID string) {
 func closeDSHResult(request closeDSHRequest) string {
 	switch request.Method {
 	case "yishan.v1.session.start":
-		return `{"sessionId":"` + request.Params.SessionID + `","incarnation":"runtime"}`
+		return `{"sessionId":"` + request.Params.SessionID + `","instanceId":"runtime"}`
 	case "yishan.v1.session.subscribe":
-		return `{"sessionId":"` + request.Params.SessionID + `","incarnation":"runtime","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}`
+		return `{"sessionId":"` + request.Params.SessionID + `","instanceId":"runtime","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}`
 	case "yishan.v1.session.list":
 		return `{"sessions":[]}`
 	case "shutdown":

@@ -13,7 +13,7 @@ func TestNewCommandFactory_BuildsBundledRuntimeCommand(t *testing.T) {
 	runtimePath := filepath.Join(t.TempDir(), "dsh-runtime.mjs")
 	dataDir := filepath.Join(t.TempDir(), "account-dsh")
 
-	command, err := NewCommandFactory(nodePath, runtimePath, dataDir)(context.Background())
+	command, err := NewCommandFactory(nodePath, runtimePath, dataDir, false)(context.Background())
 	if err != nil {
 		t.Fatalf("build command: %v", err)
 	}
@@ -31,6 +31,9 @@ func TestNewCommandFactory_BuildsBundledRuntimeCommand(t *testing.T) {
 	}
 	if !hasEnvironment(command.Env, "YISHAN_DSH_DATA_DIR", dataDir) {
 		t.Fatalf("command env = %#v, want account DSH data directory", command.Env)
+	}
+	if !hasEnvironment(command.Env, "YISHAN_DSH_DEVELOPER_MODE", "false") {
+		t.Fatalf("command env = %#v, want explicit disabled developer mode", command.Env)
 	}
 	if hasEnvironmentKey(command.Env, dshTestReplayEnvKey) {
 		t.Fatalf("command env = %#v, must not forward the test-only replay switch", command.Env)
@@ -52,7 +55,7 @@ func TestNewCommandFactory_RejectsMissingExplicitPaths(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := NewCommandFactory(testCase.nodePath, testCase.runtimePath, testCase.dataDir)(context.Background())
+			_, err := NewCommandFactory(testCase.nodePath, testCase.runtimePath, testCase.dataDir, false)(context.Background())
 			if err == nil {
 				t.Fatal("factory accepted missing explicit path")
 			}
@@ -77,4 +80,35 @@ func hasEnvironmentKey(environment []string, key string) bool {
 		}
 	}
 	return false
+}
+
+func TestNewCommandFactory_NormalizesDeveloperModeAndStripsInheritedValue(t *testing.T) {
+	t.Setenv("yishan_dsh_developer_mode", "true")
+	pathRoot := t.TempDir()
+	command, err := NewCommandFactory(
+		filepath.Join(pathRoot, "node"),
+		filepath.Join(pathRoot, "dsh-runtime.mjs"),
+		filepath.Join(pathRoot, "data"),
+		true,
+	)(context.Background())
+	if err != nil {
+		t.Fatalf("build command: %v", err)
+	}
+	if !hasEnvironment(command.Env, "YISHAN_DSH_DEVELOPER_MODE", "true") {
+		t.Fatalf("command env = %#v, want explicit enabled developer mode", command.Env)
+	}
+	if environmentKeyCount(command.Env, "YISHAN_DSH_DEVELOPER_MODE") != 1 {
+		t.Fatalf("command env = %#v, want exactly one developer mode entry", command.Env)
+	}
+}
+
+func environmentKeyCount(environment []string, key string) int {
+	count := 0
+	for _, variable := range environment {
+		environmentKey, _, _ := strings.Cut(variable, "=")
+		if strings.EqualFold(environmentKey, key) {
+			count++
+		}
+	}
+	return count
 }

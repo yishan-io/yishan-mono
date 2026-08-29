@@ -144,8 +144,8 @@ function getDSHEvent(notification) {
 function assertDSHTranscript(transcript, sessionId, shouldContainReplay = false) {
   assert.equal(transcript.runtime, "dsh");
   assert.equal(transcript.sessionId, sessionId);
-  assert.equal(typeof transcript.incarnation, "string");
-  assert.ok(transcript.incarnation.length > 0);
+  assert.equal(typeof transcript.instanceId, "string");
+  assert.ok(transcript.instanceId.length > 0);
   assert.ok(Array.isArray(transcript.events));
   assert.equal(typeof transcript.asOfSeq, "number");
   assert.equal(typeof transcript.durableThroughSeq, "number");
@@ -158,8 +158,8 @@ function assertDSHTranscript(transcript, sessionId, shouldContainReplay = false)
 function assertDSHUpdate(payload, sessionId, workspaceId) {
   assert.equal(payload.sessionId, sessionId);
   assert.equal(payload.workspaceId, workspaceId);
-  assert.equal(typeof payload.incarnation, "string");
-  assert.ok(payload.incarnation.length > 0);
+  assert.equal(typeof payload.instanceId, "string");
+  assert.ok(payload.instanceId.length > 0);
   assert.equal(typeof payload.update, "object");
   assert.notEqual(payload.update, null);
   assert.equal(typeof payload.update.event, "object");
@@ -312,7 +312,7 @@ try {
     runtime: "dsh", sessionId, tabId: sessionId, workspaceId, cwd: worktreePath, afterSeq: -1, transcriptProtocolVersion: 2,
   });
   assertDSHTranscript(attached, sessionId);
-  const initialIncarnation = attached.incarnation;
+  const initialInstanceId = attached.instanceId;
   const dshEvent = await client.waitForNotification(
     (notification) => {
       const payload = getDSHEvent(notification);
@@ -337,13 +337,13 @@ try {
   assert.notEqual(restartedPid, firstPid);
   await waitFor("restarted DSH runtime readiness", async () => {
     const capabilities = await client.request("agent.getCapabilities", {});
-    return capabilities.dsh?.ready && capabilities.dsh.incarnation !== initialIncarnation;
+    return capabilities.dsh?.ready && capabilities.dsh.instanceId !== initialInstanceId;
   });
 
   const replayed = await client.request("agent.attach", {
     runtime: "dsh", sessionId, tabId: sessionId, workspaceId, cwd: worktreePath, afterSeq: -1, transcriptProtocolVersion: 2,
   });
-  assert.notEqual(replayed.incarnation, initialIncarnation);
+  assert.notEqual(replayed.instanceId, initialInstanceId);
   assertDSHTranscript(replayed, sessionId, true);
 
   assert.deepEqual(await client.request("agent.abort", { runtime: "dsh", sessionId, workspaceId, cwd: worktreePath }), { runtime: "dsh", ok: true });

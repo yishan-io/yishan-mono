@@ -34,7 +34,7 @@ const validEnvelope = {
   sessionId: "session-a",
   tabId: "tab-a",
   workspaceId: "workspace-a",
-  incarnation: "inc-a",
+  instanceId: "inc-a",
 };
 
 describe("agentChatDSHEventRouter", () => {
@@ -75,7 +75,7 @@ describe("agentChatDSHEventRouter", () => {
     const lifecycle = {
       version: 1,
       parentSessionId: "session-a",
-      incarnation: "inc-a",
+      instanceId: "inc-a",
       revision: 0,
       event: "started",
       runId: "run-a",
@@ -90,7 +90,7 @@ describe("agentChatDSHEventRouter", () => {
       update: {
         lifecycleResync: {
           parentSessionId: "session-a",
-          incarnation: "inc-a",
+          instanceId: "inc-a",
           revision: 0,
         },
       },
@@ -104,7 +104,7 @@ describe("agentChatDSHEventRouter", () => {
     const loader = vi.fn().mockResolvedValue({
       session: { sessionId: "session-a", createdAt: 0 },
       events: [],
-      incarnation: "inc-a",
+      instanceId: "inc-a",
       asOfSeq: -1,
       durableThroughSeq: -1,
     });

@@ -272,8 +272,8 @@ vi.mock("@renderer/domains/agent/features/select-model/AgentModelSelector", () =
   },
 }));
 
-vi.mock("../../provider-credentials/ProviderCredentialDialog", () => ({
-  ProviderCredentialDialog: (props: {
+vi.mock("../../provider-credentials/PiProviderCredentialDialog", () => ({
+  PiProviderCredentialDialog: (props: {
     open: boolean;
     mode: "add" | "edit";
     onClose: () => void;

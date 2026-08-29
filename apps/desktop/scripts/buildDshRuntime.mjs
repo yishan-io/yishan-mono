@@ -35,7 +35,7 @@ await rm(resolve(resourcesDirectory, "node_modules"), { recursive: true, force: 
 await mkdir(resourcesDirectory, { recursive: true });
 
 await build({
-  entryPoints: [resolve(desktopDirectory, "..", "..", "packages", "dsh-yishan", "src", "bin.ts")],
+  entryPoints: [resolve(desktopDirectory, "..", "..", "packages", "dsh-yishan", "src", "runtime", "bin.ts")],
   banner: { js: 'import { createRequire as createNodeRequire } from "node:module"; const require = createNodeRequire(import.meta.url);' },
   bundle: true,
   external: ["koffi", "node-pty"],

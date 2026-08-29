@@ -189,7 +189,7 @@ export type AgentCapabilities = {
   dsh: {
     configured: boolean;
     ready: boolean;
-    incarnation?: string;
+    instanceId?: string;
     transcriptProtocolVersion: number;
     provider?: string;
     model?: string;
@@ -342,7 +342,7 @@ export type AgentAckResult = {
 export type AgentDSHAttachResult = {
   runtime: "dsh";
   sessionId: string;
-  incarnation: string;
+  instanceId: string;
   events: unknown[];
   /** Durable baseline cursor; it equals durableThroughSeq for the current protocol. */
   asOfSeq: number;
@@ -392,7 +392,7 @@ export type AgentDSHSessionMetadata = {
 export type AgentDSHHistory = {
   session: AgentDSHSessionMetadata;
   events: unknown[];
-  incarnation: string;
+  instanceId: string;
   asOfSeq: number;
   durableThroughSeq: number;
 };

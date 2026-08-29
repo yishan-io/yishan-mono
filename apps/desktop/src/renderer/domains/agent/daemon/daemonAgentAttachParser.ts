@@ -20,7 +20,7 @@ function parseDSHAttach(result: WireRecord, sessionId: string): AgentDSHAttachRe
   requireExactKeys(result, [
     "runtime",
     "sessionId",
-    "incarnation",
+    "instanceId",
     "events",
     "asOfSeq",
     "durableThroughSeq",
@@ -29,7 +29,7 @@ function parseDSHAttach(result: WireRecord, sessionId: string): AgentDSHAttachRe
   if (
     result.runtime !== "dsh" ||
     result.sessionId !== sessionId ||
-    !isNonEmptyString(result.incarnation) ||
+    !isNonEmptyString(result.instanceId) ||
     !Array.isArray(result.events)
   ) {
     throw new TypeError("invalid DSH attach result identity");
@@ -42,7 +42,7 @@ function parseDSHAttach(result: WireRecord, sessionId: string): AgentDSHAttachRe
   return {
     runtime: "dsh",
     sessionId,
-    incarnation: result.incarnation,
+    instanceId: result.instanceId,
     events: result.events,
     asOfSeq,
     durableThroughSeq,

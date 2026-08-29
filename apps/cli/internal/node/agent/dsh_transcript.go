@@ -68,8 +68,7 @@ type transcriptEventEnvelope struct {
 }
 
 func isHiddenDSHEventType(eventType string) bool {
-	return eventType == "yishan/session-bound.v1" || eventType == "yishan/session-summary.v1" || eventType == "yishan/session-title.v1" ||
-		eventType == "session/title" || eventType == "session/title-llm-request"
+	return eventType == "yishan/session-bound.v1"
 }
 
 func marshalHiddenDSHEvent(sequence int64, eventTime json.RawMessage) (json.RawMessage, error) {

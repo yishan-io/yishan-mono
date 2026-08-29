@@ -188,6 +188,7 @@ func buildRunConfig(logFilePath string, hasCustomLogFile ...bool) daemon.RunConf
 		MemorySummarizerAgent: appConfig.Memory.SummarizerAgentKind,
 		MemorySummarizerModel: appConfig.Memory.SummarizerModel,
 		DSHEnabled:            appConfig.Daemon.DSHEnabled,
+		DSHDeveloperMode:      appConfig.Daemon.DSHDeveloperMode,
 		DSHNodePath:           appConfig.Daemon.DSHNodePath,
 		DSHRuntimePath:        appConfig.Daemon.DSHRuntimePath,
 		DSHProvider:           appConfig.Daemon.DSHProvider,
@@ -286,6 +287,7 @@ func init() {
 	daemonCmd.PersistentFlags().String("relay-token", "", "static relay JWT for local dev (bypasses API token minting)")
 	daemonCmd.PersistentFlags().String("log-file", "", "daemon log file path (default: ~/.yishan/profiles/<profile>/logs/system.log)")
 	daemonCmd.PersistentFlags().Bool("dsh-enabled", false, "enable the experimental bundled DSH runtime")
+	daemonCmd.PersistentFlags().Bool("dsh-developer-mode", false, "enable DSH developer mode")
 	daemonCmd.PersistentFlags().String("dsh-node-path", "", "bundled Electron executable path for DSH")
 	daemonCmd.PersistentFlags().String("dsh-runtime-path", "", "bundled DSH JavaScript runtime path")
 	daemonCmd.PersistentFlags().String("dsh-provider", config.DefaultDSHProvider, "DSH provider default")
@@ -298,6 +300,7 @@ func init() {
 	cobra.CheckErr(viper.BindPFlag("daemon_relay_token", daemonCmd.PersistentFlags().Lookup("relay-token")))
 	cobra.CheckErr(viper.BindPFlag("daemon_log_file", daemonCmd.PersistentFlags().Lookup("log-file")))
 	cobra.CheckErr(viper.BindPFlag("daemon_dsh_enabled", daemonCmd.PersistentFlags().Lookup("dsh-enabled")))
+	cobra.CheckErr(viper.BindPFlag("daemon_dsh_developer_mode", daemonCmd.PersistentFlags().Lookup("dsh-developer-mode")))
 	cobra.CheckErr(viper.BindPFlag("daemon_dsh_node_path", daemonCmd.PersistentFlags().Lookup("dsh-node-path")))
 	cobra.CheckErr(viper.BindPFlag("daemon_dsh_runtime_path", daemonCmd.PersistentFlags().Lookup("dsh-runtime-path")))
 	cobra.CheckErr(viper.BindPFlag("daemon_dsh_provider", daemonCmd.PersistentFlags().Lookup("dsh-provider")))

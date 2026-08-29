@@ -37,8 +37,8 @@ type AgentRuntimeSessionRecord = {
   closeRequested: boolean;
   startPromise: Promise<void> | null;
   dshTranscriptController: DSHTranscriptController | null;
-  lifecycleRevisionsByIncarnation: Map<string, number>;
-  currentLifecycleIncarnation: string | null;
+  lifecycleRevisionsByInstanceId: Map<string, number>;
+  currentLifecycleInstanceId: string | null;
 };
 
 const activeSessions = new Map<string, AgentRuntimeSessionRecord>();
@@ -99,8 +99,8 @@ export async function ensureAgentSession(opts: EnsureAgentSessionOptions): Promi
     closeRequested: false,
     startPromise: null,
     dshTranscriptController: null,
-    lifecycleRevisionsByIncarnation: new Map(),
-    currentLifecycleIncarnation: null,
+    lifecycleRevisionsByInstanceId: new Map(),
+    currentLifecycleInstanceId: null,
   };
   record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
   record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
@@ -359,19 +359,19 @@ function refreshDshSubagentLineageForLifecycle(
     .catch((error: unknown) => console.warn("Failed to load DSH subagent lineage refresh", getErrorMessage(error)));
 }
 
-/** Advances the current lifecycle incarnation only for a newer lifecycle or resync revision. */
+/** Advances the current lifecycle instance ID only for a newer lifecycle or resync revision. */
 function advanceDshLifecycleWatermark(record: AgentRuntimeSessionRecord, payload: DSHFrontendPayload): boolean {
   const lifecycleUpdate = payload.update.lifecycle ?? payload.update.lifecycleResync;
   if (!lifecycleUpdate) return false;
 
-  const isNewIncarnation = record.currentLifecycleIncarnation !== lifecycleUpdate.incarnation;
-  if (isNewIncarnation && record.lifecycleRevisionsByIncarnation.has(lifecycleUpdate.incarnation)) return false;
+  const isNewInstanceId = record.currentLifecycleInstanceId !== lifecycleUpdate.instanceId;
+  if (isNewInstanceId && record.lifecycleRevisionsByInstanceId.has(lifecycleUpdate.instanceId)) return false;
 
-  const latestRevision = record.lifecycleRevisionsByIncarnation.get(lifecycleUpdate.incarnation);
+  const latestRevision = record.lifecycleRevisionsByInstanceId.get(lifecycleUpdate.instanceId);
   if (latestRevision !== undefined && lifecycleUpdate.revision <= latestRevision) return false;
 
-  record.lifecycleRevisionsByIncarnation.set(lifecycleUpdate.incarnation, lifecycleUpdate.revision);
-  if (isNewIncarnation) record.currentLifecycleIncarnation = lifecycleUpdate.incarnation;
+  record.lifecycleRevisionsByInstanceId.set(lifecycleUpdate.instanceId, lifecycleUpdate.revision);
+  if (isNewInstanceId) record.currentLifecycleInstanceId = lifecycleUpdate.instanceId;
   return true;
 }
 
@@ -380,8 +380,8 @@ function isCurrentDshLifecycleWatermark(record: AgentRuntimeSessionRecord, paylo
   const lifecycle = payload.update.lifecycle;
   return (
     lifecycle !== undefined &&
-    record.currentLifecycleIncarnation === lifecycle.incarnation &&
-    record.lifecycleRevisionsByIncarnation.get(lifecycle.incarnation) === lifecycle.revision
+    record.currentLifecycleInstanceId === lifecycle.instanceId &&
+    record.lifecycleRevisionsByInstanceId.get(lifecycle.instanceId) === lifecycle.revision
   );
 }
 
@@ -480,8 +480,8 @@ async function adoptExistingChatSession(
     closeRequested: false,
     startPromise: null,
     dshTranscriptController: null,
-    lifecycleRevisionsByIncarnation: new Map(),
-    currentLifecycleIncarnation: null,
+    lifecycleRevisionsByInstanceId: new Map(),
+    currentLifecycleInstanceId: null,
   };
   record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
   record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);

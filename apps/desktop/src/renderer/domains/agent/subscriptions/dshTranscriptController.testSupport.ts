@@ -26,7 +26,7 @@ export function setup() {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
-        incarnation: "inc",
+        instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
       }),
@@ -48,7 +48,7 @@ export function handleFixtureEvents(controller: DSHTranscriptController): void {
       sessionId: "session",
       tabId: "tab",
       workspaceId: "workspace",
-      incarnation: "inc",
+      instanceId: "inc",
       update: { event: { sessionId: "session", seq: (event as { seq: number }).seq, event } },
     });
     expect(payload).not.toBeNull();
@@ -61,7 +61,7 @@ export function event(seq: number) {
     sessionId: "session",
     tabId: "tab",
     workspaceId: "workspace",
-    incarnation: "inc",
+    instanceId: "inc",
     update: {
       event: {
         type: "user/message",

@@ -17,6 +17,15 @@ type DSHCredentialService interface {
 	DSHListCredentials(ctx context.Context) (any, error)
 	DSHSaveCredential(ctx context.Context, req DSHSaveCredentialParams) (any, error)
 	DSHRemoveCredential(ctx context.Context, req DSHRemoveCredentialParams) (any, error)
+	DSHListPlugins(ctx context.Context) (any, error)
+	DSHListOfficialPlugins(ctx context.Context) (any, error)
+	DSHInstallPlugin(ctx context.Context, req DSHPluginNameParams) (any, error)
+	DSHSetPluginEnabled(ctx context.Context, req DSHSetPluginEnabledParams) (any, error)
+	DSHRemovePlugin(ctx context.Context, req DSHPluginNameParams) (any, error)
+	DSHUpdatePlugin(ctx context.Context, req DSHPluginNameParams) (any, error)
+	DSHListLocalPlugins(ctx context.Context) (any, error)
+	DSHRegisterLocalPlugin(ctx context.Context, req DSHLocalPluginRegisterParams) (any, error)
+	DSHRemoveLocalPlugin(ctx context.Context, req DSHLocalPluginNameParams) (any, error)
 }
 
 // PiService backs the pi.* RPC methods. PiStart and PiAttach are
@@ -388,6 +397,15 @@ func (h *AgentHandler) callCustomizeAgents(ctx context.Context, method string, p
 }
 
 func (h *AgentHandler) callDSH(ctx context.Context, method string, params json.RawMessage) (any, error) {
+	switch method {
+	case MethodDSHListProviders, MethodDSHListCredentials, MethodDSHSaveCredential, MethodDSHRemoveCredential:
+		return h.callDSHCredentials(ctx, method, params)
+	default:
+		return h.callDSHPlugins(ctx, method, params)
+	}
+}
+
+func (h *AgentHandler) callDSHCredentials(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodDSHListProviders:
 		return h.DSH.DSHListProviders(ctx)

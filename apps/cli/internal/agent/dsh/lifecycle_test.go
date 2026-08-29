@@ -8,12 +8,12 @@ import (
 )
 
 func TestParseSubagentLifecycleNotification_ValidatesExactLifecyclePayload(t *testing.T) {
-	valid := []byte(`{"version":1,"parentSessionId":"parent","incarnation":"run-1","revision":0,"event":"started","runId":"child","childSessionId":"child","provider":"spawn","local":true}`)
+	valid := []byte(`{"version":1,"parentSessionId":"parent","instanceId":"run-1","revision":0,"event":"started","runId":"child","childSessionId":"child","provider":"spawn","local":true}`)
 	lifecycle, err := parseSubagentLifecycleNotification(valid)
 	if err != nil || lifecycle.Event != "started" || lifecycle.StopReason != "" {
 		t.Fatalf("parse started = %#v, %v", lifecycle, err)
 	}
-	finished := []byte(`{"version":1,"parentSessionId":"parent","incarnation":"run-1","revision":1,"event":"finished","runId":"child","childSessionId":"child","provider":"spawn","local":false,"stopReason":"completed"}`)
+	finished := []byte(`{"version":1,"parentSessionId":"parent","instanceId":"run-1","revision":1,"event":"finished","runId":"child","childSessionId":"child","provider":"spawn","local":false,"stopReason":"completed"}`)
 	if _, err := parseSubagentLifecycleNotification(finished); err != nil {
 		t.Fatalf("parse finished: %v", err)
 	}
@@ -24,13 +24,13 @@ func TestParseSubagentLifecycleNotification_RejectsInvalidFields(t *testing.T) {
 		name string
 		json string
 	}{
-		{"extra", `{"version":1,"parentSessionId":"parent","incarnation":"run","revision":0,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":true,"extra":true}`},
-		{"negative revision", `{"version":1,"parentSessionId":"parent","incarnation":"run","revision":-1,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":true}`},
-		{"unsafe revision", `{"version":1,"parentSessionId":"parent","incarnation":"run","revision":9007199254740992,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":true}`},
-		{"null local", `{"version":1,"parentSessionId":"parent","incarnation":"run","revision":0,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":null}`},
-		{"missing local", `{"version":1,"parentSessionId":"parent","incarnation":"run","revision":0,"event":"started","runId":"run","childSessionId":"child","provider":"spawn"}`},
-		{"started stop reason", `{"version":1,"parentSessionId":"parent","incarnation":"run","revision":0,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":true,"stopReason":"completed"}`},
-		{"unknown stop reason", `{"version":1,"parentSessionId":"parent","incarnation":"run","revision":0,"event":"finished","runId":"run","childSessionId":"child","provider":"spawn","local":true,"stopReason":"unknown"}`},
+		{"extra", `{"version":1,"parentSessionId":"parent","instanceId":"run","revision":0,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":true,"extra":true}`},
+		{"negative revision", `{"version":1,"parentSessionId":"parent","instanceId":"run","revision":-1,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":true}`},
+		{"unsafe revision", `{"version":1,"parentSessionId":"parent","instanceId":"run","revision":9007199254740992,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":true}`},
+		{"null local", `{"version":1,"parentSessionId":"parent","instanceId":"run","revision":0,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":null}`},
+		{"missing local", `{"version":1,"parentSessionId":"parent","instanceId":"run","revision":0,"event":"started","runId":"run","childSessionId":"child","provider":"spawn"}`},
+		{"started stop reason", `{"version":1,"parentSessionId":"parent","instanceId":"run","revision":0,"event":"started","runId":"run","childSessionId":"child","provider":"spawn","local":true,"stopReason":"completed"}`},
+		{"unknown stop reason", `{"version":1,"parentSessionId":"parent","instanceId":"run","revision":0,"event":"finished","runId":"run","childSessionId":"child","provider":"spawn","local":true,"stopReason":"unknown"}`},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -100,9 +100,9 @@ func TestReplayCoordinator_LifecycleRejectsConflictRegressionAndGap(t *testing.T
 	}
 }
 
-func TestReplayCoordinator_LifecycleFencesParentToCurrentIncarnation(t *testing.T) {
+func TestReplayCoordinator_LifecycleFencesParentToCurrentInstanceID(t *testing.T) {
 	coordinator := newReplayCoordinator(4)
-	subscription, err := coordinator.subscribe(SessionSubscribeResult{SessionID: "parent", Incarnation: "old", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}, emptySubscriptionRequest())
+	subscription, err := coordinator.subscribe(SessionSubscribeResult{SessionID: "parent", InstanceID: "old", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}, emptySubscriptionRequest())
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
 	}
@@ -112,14 +112,14 @@ func TestReplayCoordinator_LifecycleFencesParentToCurrentIncarnation(t *testing.
 	if err := coordinator.recordLifecycle(testLifecycle(0, "old", "started")); err != nil {
 		t.Fatalf("record old: %v", err)
 	}
-	if update := <-subscription.Updates; update.Lifecycle == nil || update.Lifecycle.Incarnation != "old" {
+	if update := <-subscription.Updates; update.Lifecycle == nil || update.Lifecycle.InstanceID != "old" {
 		t.Fatalf("old lifecycle = %#v", update)
 	}
-	coordinator.setIncarnation("parent", "new")
+	coordinator.setInstanceID("parent", "new")
 	if err := coordinator.recordLifecycle(testLifecycle(0, "new", "started")); err != nil {
 		t.Fatalf("record new: %v", err)
 	}
-	if update := <-subscription.Updates; update.Lifecycle == nil || update.Lifecycle.Incarnation != "new" {
+	if update := <-subscription.Updates; update.Lifecycle == nil || update.Lifecycle.InstanceID != "new" {
 		t.Fatalf("new lifecycle = %#v", update)
 	}
 	if err := coordinator.recordLifecycle(testLifecycle(1, "old", "finished")); err != nil {
@@ -146,7 +146,7 @@ func TestSupervisor_SubscribeResyncsLifecycleObservedInResponseGap(t *testing.T)
 	assertInitialDurableCursor(t, subscription.Updates, "run", -1)
 	assertInitialSessionStatus(t, subscription.Updates, "idle")
 	resync := <-subscription.Updates
-	if resync.Lifecycle != nil || resync.LifecycleResync == nil || resync.LifecycleResync.ParentSessionID != "parent" || resync.LifecycleResync.Incarnation != "run" || resync.LifecycleResync.Revision != 0 {
+	if resync.Lifecycle != nil || resync.LifecycleResync == nil || resync.LifecycleResync.ParentSessionID != "parent" || resync.LifecycleResync.InstanceID != "run" || resync.LifecycleResync.Revision != 0 {
 		t.Fatalf("lifecycle resync = %#v", resync)
 	}
 	if _, err := supervisor.PromptSession(context.Background(), SessionPromptRequest{CWD: "/workspace", SessionID: "parent", ContentBlocks: []TextPromptContentBlock{{Type: "text", Text: "continue"}}}); err != nil {
@@ -163,15 +163,15 @@ func TestSupervisor_SubscribeResyncsLifecycleObservedInResponseGap(t *testing.T)
 }
 
 func emptySubscriptionResult() SessionSubscribeResult {
-	return SessionSubscribeResult{SessionID: "parent", Incarnation: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}
+	return SessionSubscribeResult{SessionID: "parent", InstanceID: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}
 }
 
 func emptySubscriptionRequest() SessionSubscribeRequest {
 	return SessionSubscribeRequest{CWD: "/workspace", SessionID: "parent", AfterSeq: -1}
 }
 
-func testLifecycle(revision int64, incarnation string, event string) SubagentLifecycle {
-	lifecycle := SubagentLifecycle{Version: 1, ParentSessionID: "parent", Incarnation: incarnation, Revision: revision, Event: event, RunID: "child", ChildSessionID: "child", Provider: "spawn", Local: true}
+func testLifecycle(revision int64, instanceID string, event string) SubagentLifecycle {
+	lifecycle := SubagentLifecycle{Version: 1, ParentSessionID: "parent", InstanceID: instanceID, Revision: revision, Event: event, RunID: "child", ChildSessionID: "child", Provider: "spawn", Local: true}
 	if event == "finished" {
 		lifecycle.StopReason = "completed"
 	}

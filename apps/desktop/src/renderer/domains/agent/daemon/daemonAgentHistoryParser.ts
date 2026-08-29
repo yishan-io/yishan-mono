@@ -13,7 +13,7 @@ function parseDSHHistory(payload: unknown, requestedSessionId: string): AgentHis
   const dsh = requireExactRecord(payload, "DSH history", [
     "session",
     "events",
-    "incarnation",
+    "instanceId",
     "asOfSeq",
     "durableThroughSeq",
   ]);
@@ -29,7 +29,7 @@ function parseDSHHistory(payload: unknown, requestedSessionId: string): AgentHis
     dsh: {
       session,
       events,
-      incarnation: requireNonEmptyString(dsh.incarnation, "incarnation"),
+      instanceId: requireNonEmptyString(dsh.instanceId, "instanceId"),
       asOfSeq,
       durableThroughSeq,
     },

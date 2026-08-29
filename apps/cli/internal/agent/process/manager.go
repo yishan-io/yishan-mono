@@ -144,6 +144,12 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 	// Detach from daemon process group so signals sent to the daemon don't
 	// propagate to the agent subprocess.
 	execCmd.SysProcAttr = sysProcAttr()
+	// CommandContext invokes Cancel when ctx is cancelled. Kill the complete
+	// process tree rather than only the direct child.
+	execCmd.Cancel = func() error {
+		forceStopProcess(execCmd)
+		return nil
+	}
 
 	stdin, err := execCmd.StdinPipe()
 	if err != nil {
@@ -171,7 +177,9 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 		workspaceID: opts.WorkspaceID,
 		cmd:         execCmd,
 		stdin:       stdin,
+		stdout:      stdout,
 		cancel:      cancel,
+		waitForExit: execCmd.Wait,
 		done:        make(chan struct{}),
 		manager:     m,
 		onExit:      opts.OnExit,

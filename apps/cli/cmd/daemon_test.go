@@ -26,4 +26,18 @@ func TestBuildRunConfig_PropagatesDisabledDSHByDefault(t *testing.T) {
 	if runConfig.DSHEnabled {
 		t.Fatal("DSH is enabled by default")
 	}
+	if runConfig.DSHDeveloperMode {
+		t.Fatal("DSH developer mode is enabled by default")
+	}
+}
+
+func TestBuildRunConfig_PropagatesDSHDeveloperMode(t *testing.T) {
+	previousConfig := appConfig
+	defer func() { appConfig = previousConfig }()
+	appConfig.Daemon.DSHDeveloperMode = true
+
+	runConfig := buildRunConfig("")
+	if !runConfig.DSHDeveloperMode {
+		t.Fatal("DSH developer mode is disabled, want enabled")
+	}
 }
