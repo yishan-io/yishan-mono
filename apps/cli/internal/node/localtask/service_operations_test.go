@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	eventbus "yishan/apps/cli/internal/events"
 	domain "yishan/apps/cli/internal/localtask"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
@@ -76,6 +77,48 @@ func TestService_LinkWorkspaceRejectsMissingTask(t *testing.T) {
 	})
 	if !errors.Is(err, domain.ErrTaskNotFound) {
 		t.Fatalf("LinkWorkspace missing task error = %v", err)
+	}
+}
+
+func TestService_WorkspaceLinkMutationsPublishTaskChanged(t *testing.T) {
+	service, workspaceStore, repository := newTestService(t)
+	service.deps.Events = eventbus.NewHub()
+	subscriptionID, events := service.deps.Events.Subscribe()
+	defer service.deps.Events.Unsubscribe(subscriptionID)
+
+	createWorkspace(t, workspaceStore, "workspace-1")
+	task := createServiceTask(t, repository, "Link events")
+	linkedValue, err := service.LinkWorkspace(context.Background(), rpc.LocalTaskLinkWorkspaceParams{
+		TaskID: task.ID, WorkspaceID: "workspace-1",
+	})
+	if err != nil {
+		t.Fatalf("LinkWorkspace: %v", err)
+	}
+	assertLocalTaskChangedEvent(t, events)
+
+	linkID := linkedValue.(domain.WorkspaceLink).ID
+	if _, err := service.UpdateWorkspaceLinkStatus(context.Background(), rpc.LocalTaskUpdateLinkStatusParams{
+		LinkID: linkID, Status: domain.StatusCancelled,
+	}); err != nil {
+		t.Fatalf("UpdateWorkspaceLinkStatus: %v", err)
+	}
+	assertLocalTaskChangedEvent(t, events)
+
+	if _, err := service.UnlinkWorkspace(context.Background(), rpc.LocalTaskLinkIDParams{LinkID: linkID}); err != nil {
+		t.Fatalf("UnlinkWorkspace: %v", err)
+	}
+	assertLocalTaskChangedEvent(t, events)
+}
+
+func assertLocalTaskChangedEvent(t *testing.T, events <-chan eventbus.Event) {
+	t.Helper()
+	select {
+	case event := <-events:
+		if event.Topic != "localTaskChanged" {
+			t.Fatalf("event topic = %q, want localTaskChanged", event.Topic)
+		}
+	default:
+		t.Fatal("localTaskChanged event was not published")
 	}
 }
 

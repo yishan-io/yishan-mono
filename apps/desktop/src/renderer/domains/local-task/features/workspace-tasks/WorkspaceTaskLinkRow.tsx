@@ -31,8 +31,10 @@ export function WorkspaceTaskLinkRow({
   const [isConfirmingUnlink, setIsConfirmingUnlink] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const isUnlinked = link.unlinkedAt !== null;
-  const linkStatus = isUnlinked ? "unlinked" : link.status;
-  const linkStatusLabel = isUnlinked ? t("localTask.link.unlinked") : t(`localTask.status.${link.status}`);
+  const displayedStatus = isUnlinked ? "unlinked" : (task?.status ?? link.status);
+  const displayedStatusLabel = isUnlinked
+    ? t("localTask.link.unlinked")
+    : t(`localTask.status.${displayedStatus}`);
   const runLinkMutation = useCallback((operation: () => Promise<unknown>, message: string) => {
     void operation().catch((error) => console.error(message, error));
   }, []);
@@ -86,7 +88,7 @@ export function WorkspaceTaskLinkRow({
               />
             </Tooltip>
           ) : null}
-          <LocalTaskStatusIcon status={linkStatus} label={linkStatusLabel} />
+          <LocalTaskStatusIcon status={displayedStatus} label={displayedStatusLabel} />
           <Typography variant="body2" sx={{ fontSize: "0.875rem" }} noWrap>
             {task?.title ?? link.localTaskId}
           </Typography>
