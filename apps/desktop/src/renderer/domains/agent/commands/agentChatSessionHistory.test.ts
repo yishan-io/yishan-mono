@@ -124,7 +124,7 @@ describe("agentChatSessionHistory", () => {
       dsh: {
         session: { sessionId: "session-1", createdAt: 1 },
         events: [],
-        incarnation: "run-1",
+        instanceId: "run-1",
         asOfSeq: -1,
         durableThroughSeq: -1,
       },

@@ -100,7 +100,7 @@ describe("DSH transcript", () => {
       sessionId: "session",
       tabId: "tab",
       workspaceId: "workspace",
-      incarnation: "inc",
+      instanceId: "inc",
       update: {
         event: { sessionId: "session", seq: 0, event: { type: "future/event", seq: 0, time: 0, data: {} } },
       },
@@ -124,7 +124,7 @@ describe("DSH transcript", () => {
         sessionId: "session",
         tabId: "tab",
         workspaceId: "workspace",
-        incarnation: "inc",
+        instanceId: "inc",
         update: { event: { sessionId: "session", seq: (event as { seq: number }).seq, event } },
       }),
     );
@@ -139,7 +139,7 @@ describe("DSH transcript", () => {
         sessionId: "s",
         tabId: "t",
         workspaceId: "w",
-        incarnation: "i",
+        instanceId: "i",
         update: { event: { sessionId: "s", seq: 0, event } },
       });
     expect(parseEvent({ type: "turn/end", seq: 0, time: 0, data: { turn: 0 } })).toBeNull();
@@ -183,12 +183,12 @@ describe("DSH transcript", () => {
       }),
     ).not.toBeNull();
   });
-  it("accepts exact lifecycle hints only when their parent and incarnation match the envelope", () => {
-    const envelope = { sessionId: "parent", tabId: "tab", workspaceId: "workspace", incarnation: "inc" };
+  it("accepts exact lifecycle hints only when their parent and instanceId match the envelope", () => {
+    const envelope = { sessionId: "parent", tabId: "tab", workspaceId: "workspace", instanceId: "inc" };
     const lifecycle = {
       version: 1,
       parentSessionId: "parent",
-      incarnation: "inc",
+      instanceId: "inc",
       revision: 7,
       event: "started",
       runId: "run",
@@ -206,14 +206,14 @@ describe("DSH transcript", () => {
     expect(
       parseDSHFrontendPayload({
         ...envelope,
-        update: { lifecycleResync: { parentSessionId: "parent", incarnation: "inc", revision: 7 } },
+        update: { lifecycleResync: { parentSessionId: "parent", instanceId: "inc", revision: 7 } },
       }),
     ).not.toBeNull();
     expect(
       parseDSHFrontendPayload({ ...envelope, update: { lifecycle: { ...lifecycle, parentSessionId: "other" } } }),
     ).toBeNull();
     expect(
-      parseDSHFrontendPayload({ ...envelope, update: { lifecycle: { ...lifecycle, incarnation: "other" } } }),
+      parseDSHFrontendPayload({ ...envelope, update: { lifecycle: { ...lifecycle, instanceId: "other" } } }),
     ).toBeNull();
     expect(
       parseDSHFrontendPayload({
@@ -236,7 +236,7 @@ describe("DSH transcript", () => {
     expect(
       parseDSHFrontendPayload({
         ...envelope,
-        update: { lifecycle, lifecycleResync: { parentSessionId: "parent", incarnation: "inc", revision: 7 } },
+        update: { lifecycle, lifecycleResync: { parentSessionId: "parent", instanceId: "inc", revision: 7 } },
       }),
     ).toBeNull();
   });
@@ -246,7 +246,7 @@ describe("DSH transcript", () => {
         sessionId: "s",
         tabId: "t",
         workspaceId: "w",
-        incarnation: "i",
+        instanceId: "i",
         update: {
           event: { sessionId: "s", seq: 0, event: { type: "turn/start", seq: 0, time: 1, data: { turn: 1 } } },
         },
@@ -257,7 +257,7 @@ describe("DSH transcript", () => {
         sessionId: "s",
         tabId: "t",
         workspaceId: "w",
-        incarnation: "i",
+        instanceId: "i",
         update: {
           event: { sessionId: "s", seq: -1, event: { type: "turn/start", seq: -1, time: 1, data: { turn: 1 } } },
         },
@@ -269,7 +269,7 @@ describe("DSH transcript", () => {
       sessionId: "s",
       tabId: "t",
       workspaceId: "w",
-      incarnation: "i",
+      instanceId: "i",
       update: {
         event: {
           sessionId: "s",

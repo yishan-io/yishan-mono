@@ -44,7 +44,7 @@ type executionDSH struct {
 	listResult                                                          dsh.SessionListResult
 	health                                                              dsh.Health
 	subscribeSnapshot                                                   dsh.SessionSubscribeResult
-	subscribeIncarnation                                                string
+	subscribeInstanceID                                                 string
 	readResult                                                          dsh.SessionReadResult
 	reads                                                               int
 }
@@ -69,7 +69,7 @@ func (f *executionDSH) StartSession(_ context.Context, req dsh.SessionStartReque
 	if startErr != nil {
 		return dsh.SessionStartResult{}, startErr
 	}
-	return dsh.SessionStartResult{SessionID: req.SessionID, Incarnation: "inc-1"}, nil
+	return dsh.SessionStartResult{SessionID: req.SessionID, InstanceID: "inc-1"}, nil
 }
 func (f *executionDSH) SetModelSession(_ context.Context, _ dsh.SetModelRequest) error {
 	return nil
@@ -117,7 +117,7 @@ func (f *executionDSH) SubscribeSession(_ context.Context, req dsh.SessionSubscr
 	f.subscriptions = append(f.subscriptions, updates)
 	f.mu.Unlock()
 	var once sync.Once
-	subscription := dsh.SessionSubscription{Updates: updates, Incarnation: f.subscribeIncarnation, Unsubscribe: func() { once.Do(func() { close(updates) }) }}
+	subscription := dsh.SessionSubscription{Updates: updates, InstanceID: f.subscribeInstanceID, Unsubscribe: func() { once.Do(func() { close(updates) }) }}
 	f.mu.Lock()
 	subscription.Snapshot = f.subscribeSnapshot
 	f.mu.Unlock()
@@ -277,15 +277,15 @@ func TestAgentGetCapabilities_ReportsConfiguredAndReady(t *testing.T) {
 	if err != nil || withoutCapabilities.Configured || withoutCapabilities.TranscriptProtocolVersion != rpc.DSHTranscriptProtocolVersion {
 		t.Fatalf("without runtime = %#v, %v", result, err)
 	}
-	with := newDSHExecutionService(&executionDSH{health: dsh.Health{IsReady: true, Incarnation: "runtime-2"}})
+	with := newDSHExecutionService(&executionDSH{health: dsh.Health{IsReady: true, InstanceID: "runtime-2"}})
 	result, err = with.AgentGetCapabilities(context.Background())
 	capabilities := result.(rpc.AgentCapabilitiesResult).DSH
-	if err != nil || !capabilities.Ready || capabilities.Incarnation != "runtime-2" {
+	if err != nil || !capabilities.Ready || capabilities.InstanceID != "runtime-2" {
 		t.Fatalf("with runtime = %#v, %v", result, err)
 	}
 	with.deps.DSH.(*executionDSH).health = dsh.Health{IsReady: false}
 	result, err = with.AgentGetCapabilities(context.Background())
-	if err != nil || result.(rpc.AgentCapabilitiesResult).DSH.Incarnation != "" {
+	if err != nil || result.(rpc.AgentCapabilitiesResult).DSH.InstanceID != "" {
 		t.Fatalf("unavailable runtime = %#v, %v", result, err)
 	}
 }
@@ -332,13 +332,13 @@ func TestDSHExecution_AttachRejectsUnsafeExplicitAfterSeqBeforeDSH(t *testing.T)
 
 func TestDSHFrontendEvent_UsesCanonicalSessionUpdateWire(t *testing.T) {
 	payload, err := json.Marshal(dshFrontendEvent{
-		SessionID: "session", TabID: "tab", WorkspaceID: "workspace", Incarnation: "inc",
+		SessionID: "session", TabID: "tab", WorkspaceID: "workspace", InstanceID: "inc",
 		Update: dsh.SessionUpdate{Event: &dsh.SessionEvent{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"type":"user/message","seq":0,"time":1,"data":{"message":{"id":"user","role":"user","content":[{"type":"text","text":"hello"}],"source":{"kind":"user"}},"surfaceOp":"append"}}`)}},
 	})
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
-	want := `{"sessionId":"session","tabId":"tab","workspaceId":"workspace","incarnation":"inc","update":{"event":{"sessionId":"session","seq":0,"event":{"type":"user/message","seq":0,"time":1,"data":{"message":{"id":"user","role":"user","content":[{"type":"text","text":"hello"}],"source":{"kind":"user"}},"surfaceOp":"append"}}}}}`
+	want := `{"sessionId":"session","tabId":"tab","workspaceId":"workspace","instanceId":"inc","update":{"event":{"sessionId":"session","seq":0,"event":{"type":"user/message","seq":0,"time":1,"data":{"message":{"id":"user","role":"user","content":[{"type":"text","text":"hello"}],"source":{"kind":"user"}},"surfaceOp":"append"}}}}}`
 	if string(payload) != want {
 		t.Fatalf("wire JSON = %s, want %s", payload, want)
 	}
@@ -376,7 +376,7 @@ func startDSHExecutionOnConnection(t *testing.T, service *Service, connection *r
 
 func TestDSHExecution_AttachReturnsMergedReplaySnapshot(t *testing.T) {
 	runtime := &executionDSH{subscribeSnapshot: dsh.SessionSubscribeResult{
-		SessionID: "s", Incarnation: "inc-2", Events: []dsh.SessionEvent{
+		SessionID: "s", InstanceID: "inc-2", Events: []dsh.SessionEvent{
 			{SessionID: "s", Seq: 0, Event: json.RawMessage(`{"type":"turn/end","seq":0,"time":0,"data":{"turn":0,"reason":{"kind":"completed"}}}`)},
 		},
 		AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 1,
@@ -393,7 +393,7 @@ func TestDSHExecution_AttachReturnsMergedReplaySnapshot(t *testing.T) {
 	if !ok {
 		t.Fatalf("attach result = %T, want rpc.AgentDSHAttachResult", result)
 	}
-	if attach.Runtime != rpc.AgentRuntimeDSH || attach.SessionID != "s" || attach.Incarnation != "inc-2" ||
+	if attach.Runtime != rpc.AgentRuntimeDSH || attach.SessionID != "s" || attach.InstanceID != "inc-2" ||
 		attach.AsOfSeq != 0 || attach.DurableThroughSeq != 0 || attach.HeadSeq != 1 || len(attach.Events) != 1 {
 		t.Fatalf("attach result = %#v", attach)
 	}

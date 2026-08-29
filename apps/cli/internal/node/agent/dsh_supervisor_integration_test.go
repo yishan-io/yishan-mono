@@ -51,7 +51,7 @@ type lifecycleForwardingNotification struct {
 			SessionID   string            `json:"sessionId"`
 			TabID       string            `json:"tabId"`
 			WorkspaceID string            `json:"workspaceId"`
-			Incarnation string            `json:"incarnation"`
+			InstanceID  string            `json:"instanceId"`
 			Update      dsh.SessionUpdate `json:"update"`
 		} `json:"payload"`
 	} `json:"params"`
@@ -92,15 +92,91 @@ func readForwardedLifecycle(t *testing.T, client interface {
 func assertLifecycleForwardingEnvelope(t *testing.T, notification lifecycleForwardingNotification) {
 	t.Helper()
 	payload := notification.Params.Payload
-	if notification.Params.Topic != dshEventTopic || payload.SessionID != "s" || payload.TabID != "tab" || payload.WorkspaceID != "w" || payload.Incarnation != "runtime-1" {
+	if notification.Params.Topic != dshEventTopic || payload.SessionID != "s" || payload.TabID != "tab" || payload.WorkspaceID != "w" || payload.InstanceID != "runtime-1" {
 		t.Fatalf("notification envelope = %#v", notification.Params)
 	}
 }
 
 func assertForwardedLifecycle(t *testing.T, lifecycle *dsh.SubagentLifecycle, want lifecycleForwardingExpectation) {
 	t.Helper()
-	if lifecycle.ParentSessionID != "s" || lifecycle.ChildSessionID != "child-1" || lifecycle.RunID != "run-1" || lifecycle.Incarnation != "runtime-1" || lifecycle.Revision != want.revision || lifecycle.Event != want.event || lifecycle.StopReason != want.stopReason {
+	if lifecycle.ParentSessionID != "s" || lifecycle.ChildSessionID != "child-1" || lifecycle.RunID != "run-1" || lifecycle.InstanceID != "runtime-1" || lifecycle.Revision != want.revision || lifecycle.Event != want.event || lifecycle.StopReason != want.stopReason {
 		t.Fatalf("lifecycle = %#v, want revision=%d event=%q stopReason=%q", lifecycle, want.revision, want.event, want.stopReason)
+	}
+}
+
+type rollbackRecoveryRuntime struct {
+	supervisor *dsh.Supervisor
+	mu         sync.Mutex
+	wasStopped bool
+}
+
+func (r *rollbackRecoveryRuntime) Restart(ctx context.Context) error {
+	return r.supervisor.Restart(ctx)
+}
+
+func (r *rollbackRecoveryRuntime) Recover(ctx context.Context) error {
+	r.mu.Lock()
+	r.wasStopped = !r.supervisor.Health().IsReady
+	r.mu.Unlock()
+	return r.supervisor.Recover(ctx)
+}
+
+func (r *rollbackRecoveryRuntime) recoveredFromStoppedState() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.wasStopped
+}
+
+func TestDSHIntegration_FailedReplacementRollsBackLockAndRecoversStoppedSupervisor(t *testing.T) {
+	manager := &snapshotDSHPluginManager{
+		snapshot:       "prior",
+		firstMutation:  make(chan struct{}, 1),
+		secondMutation: make(chan struct{}, 1),
+	}
+	starts := make(chan string, 3)
+	supervisor := dsh.NewSupervisor(dsh.Config{
+		Command: func(context.Context) (*exec.Cmd, error) {
+			snapshot := manager.currentSnapshot()
+			starts <- snapshot
+			mode := "ready"
+			if snapshot == "replacement" {
+				mode = "startup-fail"
+			}
+			return newAgentDSHIntegrationCommand(mode, ""), nil
+		},
+		Initialize: dsh.InitializeConfig{CWD: "/authoritative", Provider: "deepseek-official", Model: "deepseek-v4-flash"},
+	})
+	startDSHSupervisor(t, supervisor)
+	runtime := &rollbackRecoveryRuntime{supervisor: supervisor}
+	service := NewService(Deps{DSHPlugins: manager, DSHPluginRuntime: runtime})
+
+	_, err := service.DSHSetPluginEnabled(context.Background(), rpc.DSHSetPluginEnabledParams{Name: "replacement"})
+	if err == nil {
+		t.Fatal("mutation succeeded after failed replacement")
+	}
+	if got := manager.currentSnapshot(); got != "prior" {
+		t.Fatalf("active plugin lock = %q, want restored prior lock", got)
+	}
+	if !runtime.recoveredFromStoppedState() {
+		t.Fatal("rollback recovery did not observe the stopped supervisor")
+	}
+	if !supervisor.Health().IsReady {
+		t.Fatal("supervisor did not launch the restored snapshot")
+	}
+	assertPluginRecoveryLaunches(t, starts)
+}
+
+func assertPluginRecoveryLaunches(t *testing.T, starts <-chan string) {
+	t.Helper()
+	for _, want := range []string{"prior", "replacement", "prior"} {
+		select {
+		case got := <-starts:
+			if got != want {
+				t.Fatalf("runtime launch snapshot = %q, want %q", got, want)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("runtime did not launch %q snapshot", want)
+		}
 	}
 }
 
@@ -259,7 +335,7 @@ func attachCrashFlowSession(t *testing.T, service *Service, operationsPath strin
 
 func assertCrashFlowReplay(t *testing.T, attach rpc.AgentDSHAttachResult, operationsPath string) {
 	t.Helper()
-	if attach.Incarnation != "runtime-2" || attach.AsOfSeq != 0 || attach.DurableThroughSeq != 0 || attach.HeadSeq != 0 {
+	if attach.InstanceID != "runtime-2" || attach.AsOfSeq != 0 || attach.DurableThroughSeq != 0 || attach.HeadSeq != 0 {
 		t.Fatalf("attach snapshot = %#v", attach)
 	}
 	if len(attach.Events) != 1 || string(attach.Events[0]) != `{"seq":0,"type":"turn/start"}` {
@@ -282,8 +358,12 @@ func TestAgentDSHIntegrationHelper(t *testing.T) {
 	if !input.Scan() || !isAgentIntegrationInitialize(input.Bytes()) {
 		os.Exit(2)
 	}
+	mode := os.Getenv("DSH_INTEGRATION_MODE")
+	if mode == "startup-fail" {
+		return
+	}
 	writeAgentIntegrationResponse(1, `{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}`)
-	runAgentIntegrationScenario(input, os.Getenv("DSH_INTEGRATION_MODE"), os.Getenv("DSH_INTEGRATION_OPERATIONS"))
+	runAgentIntegrationScenario(input, mode, os.Getenv("DSH_INTEGRATION_OPERATIONS"))
 }
 
 func runAgentIntegrationScenario(input *bufio.Scanner, mode, operationsPath string) {
@@ -355,14 +435,14 @@ func writeAgentSpeculativeEvent() {
 }
 
 func writeAgentCommittedLifecycle() {
-	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"s","incarnation":"runtime-1","revision":0,"event":"started","runId":"run-1","childSessionId":"child-1","provider":"spawn","local":true}}` + "\n")
-	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"s","incarnation":"runtime-1","revision":1,"event":"finished","runId":"run-1","childSessionId":"child-1","provider":"spawn","local":true,"stopReason":"completed"}}` + "\n")
+	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"s","instanceId":"runtime-1","revision":0,"event":"started","runId":"run-1","childSessionId":"child-1","provider":"spawn","local":true}}` + "\n")
+	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"s","instanceId":"runtime-1","revision":1,"event":"finished","runId":"run-1","childSessionId":"child-1","provider":"spawn","local":true,"stopReason":"completed"}}` + "\n")
 }
 
 func writeAgentIntegrationMethodResponse(request agentIntegrationRequest, mode string) {
 	result := `{"sessionId":"s"}`
 	if request.Method == "yishan.v1.session.start" {
-		result = `{"sessionId":"s","incarnation":"runtime-1"}`
+		result = `{"sessionId":"s","instanceId":"runtime-1"}`
 	}
 	if request.Method == "yishan.v1.session.resume" {
 		result = `{"sessionId":"s"}`
@@ -384,9 +464,9 @@ func writeAgentIntegrationMethodResponse(request agentIntegrationRequest, mode s
 
 func agentSubscribeResult(mode string) string {
 	if mode == "restart" {
-		return `{"sessionId":"s","incarnation":"runtime-2","events":[{"seq":0,"type":"turn/start"}],"asOfSeq":0,"durableThroughSeq":0,"headSeq":0}`
+		return `{"sessionId":"s","instanceId":"runtime-2","events":[{"seq":0,"type":"turn/start"}],"asOfSeq":0,"durableThroughSeq":0,"headSeq":0}`
 	}
-	return `{"sessionId":"s","incarnation":"runtime-1","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}`
+	return `{"sessionId":"s","instanceId":"runtime-1","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}`
 }
 func writeAgentIntegrationResponse(id uint64, result string) {
 	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":%s}`+"\n", id, result)

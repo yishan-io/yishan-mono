@@ -8,7 +8,7 @@ export function dshAttachResult(sessionId: string) {
   return {
     runtime: "dsh" as const,
     sessionId,
-    incarnation: "run-1",
+    instanceId: "run-1",
     events: [],
     asOfSeq: -1,
     durableThroughSeq: -1,

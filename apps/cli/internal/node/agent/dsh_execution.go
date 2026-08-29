@@ -20,7 +20,7 @@ type dshFrontendEvent struct {
 	SessionID   string            `json:"sessionId"`
 	TabID       string            `json:"tabId"`
 	WorkspaceID string            `json:"workspaceId"`
-	Incarnation string            `json:"incarnation"`
+	InstanceID  string            `json:"instanceId"`
 	Update      dsh.SessionUpdate `json:"update"`
 }
 
@@ -33,7 +33,7 @@ func (s *Service) AgentGetCapabilities(context.Context) (any, error) {
 	health := s.deps.DSH.Health()
 	result.DSH.Configured, result.DSH.Ready = true, health.IsReady
 	if health.IsReady {
-		result.DSH.Incarnation = health.Incarnation
+		result.DSH.InstanceID = health.InstanceID
 	}
 	result.DSH.Provider = s.deps.DSHProvider
 	result.DSH.Model = s.deps.DSHModel
@@ -94,7 +94,7 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 
 func (s *Service) registerStartedDSHSession(connection *rpc.Connection, req rpc.AgentStartParams, cwd string, claim runtimeIdentityClaim, subscription dsh.SessionSubscription) (any, error) {
 	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHProvider, s.deps.DSHModel)
-	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, workspaceID: req.WorkspaceID, cwd: cwd, incarnation: subscription.Incarnation, provider: selection.Provider, model: selection.Model, connection: connection, available: true, subscription: subscription}
+	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, workspaceID: req.WorkspaceID, cwd: cwd, instanceID: subscription.InstanceID, provider: selection.Provider, model: selection.Model, connection: connection, available: true, subscription: subscription}
 	if !s.dshSessions.register(entry) {
 		subscription.Unsubscribe()
 		// The registry winner owns this external session. Never compensate-dispose it.
@@ -145,15 +145,15 @@ func (s *Service) attachDSHSession(ctx context.Context, connection *rpc.Connecti
 }
 
 func (s *Service) rebindDSHSession(connection *rpc.Connection, sessionID string, entry *dshLiveSession, subscription dsh.SessionSubscription) (any, error) {
-	generation, incarnationChanged, rebound := s.dshSessions.rebind(entry, connection, subscription)
+	generation, instanceIDChanged, rebound := s.dshSessions.rebind(entry, connection, subscription)
 	if !rebound {
 		subscription.Unsubscribe()
 		return nil, dshSessionNotFound(sessionID)
 	}
 	s.bindDSHConnectionGeneration(entry, connection, generation)
-	if incarnationChanged {
+	if instanceIDChanged {
 		if route, found := s.dshSessions.route(entry, generation); found {
-			if err := s.publishDSHUpdate(route, dsh.SessionUpdate{Reset: &dsh.TranscriptReset{SessionID: route.sessionID, Incarnation: subscription.Incarnation, HeadSeq: subscription.Baseline}}); err != nil {
+			if err := s.publishDSHUpdate(route, dsh.SessionUpdate{Reset: &dsh.TranscriptReset{SessionID: route.sessionID, InstanceID: subscription.InstanceID, HeadSeq: subscription.Baseline}}); err != nil {
 				s.dshSessions.detach(entry, route.generation, route.connection)
 				return nil, rpc.NewRPCError(rpc.CodeServerError, "dsh frontend notification failed")
 			}
@@ -175,7 +175,7 @@ func mapDSHAttachResult(subscription dsh.SessionSubscription) (rpc.AgentDSHAttac
 		return rpc.AgentDSHAttachResult{}, err
 	}
 	return rpc.AgentDSHAttachResult{
-		Runtime: rpc.AgentRuntimeDSH, SessionID: snapshot.SessionID, Incarnation: snapshot.Incarnation,
+		Runtime: rpc.AgentRuntimeDSH, SessionID: snapshot.SessionID, InstanceID: snapshot.InstanceID,
 		Events: events, AsOfSeq: snapshot.AsOfSeq, DurableThroughSeq: snapshot.DurableThroughSeq, HeadSeq: snapshot.HeadSeq,
 	}, nil
 }
@@ -298,7 +298,7 @@ func (s *Service) forwardDSHUpdates(entry *dshLiveSession, generation uint64, up
 		var route dshRoute
 		var found bool
 		if update.Reset != nil {
-			route, found = s.dshSessions.resetRoute(entry, generation, update.Reset.Incarnation)
+			route, found = s.dshSessions.resetRoute(entry, generation, update.Reset.InstanceID)
 		} else {
 			route, found = s.dshSessions.route(entry, generation)
 		}
@@ -328,7 +328,7 @@ func (s *Service) notifyDSHUpdate(route dshRoute, update dsh.SessionUpdate) erro
 	if s.publishDSHUpdateError != nil {
 		return s.publishDSHUpdateError
 	}
-	payload := dshFrontendEvent{SessionID: route.sessionID, TabID: route.tabID, WorkspaceID: route.workspaceID, Incarnation: route.incarnation, Update: update}
+	payload := dshFrontendEvent{SessionID: route.sessionID, TabID: route.tabID, WorkspaceID: route.workspaceID, InstanceID: route.instanceID, Update: update}
 	return route.connection.Notify(rpc.MethodFrontendEventsStream, map[string]any{"topic": dshEventTopic, "payload": payload})
 }
 

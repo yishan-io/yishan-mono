@@ -21,26 +21,26 @@ import {
 describe("runtime-neutral agent daemon procedures", () => {
   it("gets the daemon-owned DSH capability without a renderer flag", async () => {
     mocks.request.mockResolvedValue({
-      dsh: { configured: true, ready: true, incarnation: "run-1", transcriptProtocolVersion: 2 },
+      dsh: { configured: true, ready: true, instanceId: "run-1", transcriptProtocolVersion: 2 },
     });
 
     await expect(getAgentCapabilities()).resolves.toEqual({
-      dsh: { configured: true, ready: true, incarnation: "run-1", transcriptProtocolVersion: 2 },
+      dsh: { configured: true, ready: true, instanceId: "run-1", transcriptProtocolVersion: 2 },
     });
     expect(mocks.request).toHaveBeenCalledWith("agent.getCapabilities", {});
   });
 
-  it("rejects an invalid optional DSH runtime incarnation", async () => {
+  it("rejects an invalid optional DSH runtime instance ID", async () => {
     mocks.request.mockResolvedValue({
-      dsh: { configured: true, ready: true, incarnation: 7, transcriptProtocolVersion: 2 },
+      dsh: { configured: true, ready: true, instanceId: 7, transcriptProtocolVersion: 2 },
     });
 
-    await expect(getAgentCapabilities()).rejects.toThrow("invalid DSH runtime incarnation");
+    await expect(getAgentCapabilities()).rejects.toThrow("invalid DSH runtime instance ID");
   });
 
   it("rejects an unsupported DSH transcript protocol", async () => {
     mocks.request.mockResolvedValue({
-      dsh: { configured: true, ready: true, incarnation: "run-1", transcriptProtocolVersion: 1 },
+      dsh: { configured: true, ready: true, instanceId: "run-1", transcriptProtocolVersion: 1 },
     });
 
     await expect(getAgentCapabilities()).rejects.toThrow("unsupported DSH transcript protocol");
@@ -87,7 +87,7 @@ describe("runtime-neutral agent daemon procedures", () => {
     mocks.request.mockResolvedValueOnce({ runtime: "dsh", sessionId: "session-1" }).mockResolvedValueOnce({
       runtime: "dsh",
       sessionId: "session-1",
-      incarnation: "run-1",
+      instanceId: "run-1",
       events: [],
       asOfSeq: -1,
       durableThroughSeq: -1,
@@ -121,7 +121,7 @@ describe("runtime-neutral agent daemon procedures", () => {
       dsh: {
         session: { sessionId: "session-1", createdAt: 1 },
         events: [{ type: "message", seq: 0, time: 1, data: {} }],
-        incarnation: "run-1",
+        instanceId: "run-1",
         asOfSeq: 0,
         durableThroughSeq: 0,
       },
@@ -145,7 +145,7 @@ describe("runtime-neutral agent daemon procedures", () => {
       dsh: {
         session: { sessionId: "session-1", createdAt: 1 },
         events: [{ type: "message", seq: 0, time: 1, data: {} }],
-        incarnation: "run-1",
+        instanceId: "run-1",
         asOfSeq: 0,
         durableThroughSeq: 0,
       },

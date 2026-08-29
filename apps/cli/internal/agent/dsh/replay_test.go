@@ -10,7 +10,7 @@ import (
 func TestReplayCoordinator_SubscribeMergesLiveEventsAfterDurableTail(t *testing.T) {
 	coordinator := newReplayCoordinator(4)
 	coordinator.recordEvent("session", SessionEvent{SessionID: "session", Seq: 2, Event: json.RawMessage(`{"seq":2,"type":"turn/end"}`)})
-	result := SessionSubscribeResult{SessionID: "session", Incarnation: "run", Events: []SessionEvent{{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0,"type":"turn/end"}`)}, {SessionID: "session", Seq: 1, Event: json.RawMessage(`{"seq":1,"type":"turn/end"}`)}}, AsOfSeq: 1, DurableThroughSeq: 1, HeadSeq: 1}
+	result := SessionSubscribeResult{SessionID: "session", InstanceID: "run", Events: []SessionEvent{{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0,"type":"turn/end"}`)}, {SessionID: "session", Seq: 1, Event: json.RawMessage(`{"seq":1,"type":"turn/end"}`)}}, AsOfSeq: 1, DurableThroughSeq: 1, HeadSeq: 1}
 	subscription, err := coordinator.subscribe(result, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
@@ -27,7 +27,7 @@ func TestReplayCoordinator_SubscribeMergesLiveEventsAfterDurableTail(t *testing.
 func TestReplayCoordinator_SubscribeQueuesDurableCursorAfterReplayedEvents(t *testing.T) {
 	coordinator := newReplayCoordinator(4)
 	result := SessionSubscribeResult{
-		SessionID: "session", Incarnation: "run", Events: []SessionEvent{
+		SessionID: "session", InstanceID: "run", Events: []SessionEvent{
 			{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0}`)},
 			{SessionID: "session", Seq: 1, Event: json.RawMessage(`{"seq":1}`)},
 		},
@@ -45,7 +45,7 @@ func TestReplayCoordinator_SubscribeQueuesDurableCursorAfterReplayedEvents(t *te
 		}
 	}
 	cursor := <-subscription.Updates
-	if cursor.Cursor == nil || cursor.Cursor.Incarnation != "run" || cursor.Cursor.DurableThroughSeq != 1 {
+	if cursor.Cursor == nil || cursor.Cursor.InstanceID != "run" || cursor.Cursor.DurableThroughSeq != 1 {
 		t.Fatalf("cursor = %#v", cursor)
 	}
 }
@@ -54,7 +54,7 @@ func TestReplayCoordinator_ConflictingDuplicateInvalidatesSession(t *testing.T) 
 	coordinator := newReplayCoordinator(4)
 	coordinator.recordEvent("session", SessionEvent{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0,"type":"turn/end"}`)})
 	coordinator.recordEvent("session", SessionEvent{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0,"type":"other"}`)})
-	_, err := coordinator.subscribe(SessionSubscribeResult{SessionID: "session", Incarnation: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
+	_, err := coordinator.subscribe(SessionSubscribeResult{SessionID: "session", InstanceID: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if !errors.Is(err, ErrSessionReplayReset) {
 		t.Fatalf("subscribe error = %v", err)
 	}
@@ -64,7 +64,7 @@ func TestReplayCoordinator_RejectsMissingCoverageAfterEviction(t *testing.T) {
 	coordinator := newReplayCoordinator(1)
 	coordinator.recordEvent("session", SessionEvent{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0}`)})
 	coordinator.recordEvent("session", SessionEvent{SessionID: "session", Seq: 1, Event: json.RawMessage(`{"seq":1}`)})
-	_, err := coordinator.subscribe(SessionSubscribeResult{SessionID: "session", Incarnation: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
+	_, err := coordinator.subscribe(SessionSubscribeResult{SessionID: "session", InstanceID: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if !errors.Is(err, ErrSessionReplayReset) {
 		t.Fatalf("subscribe error = %v", err)
 	}
@@ -72,7 +72,7 @@ func TestReplayCoordinator_RejectsMissingCoverageAfterEviction(t *testing.T) {
 
 func TestReplayCoordinator_DeduplicatesExactLiveEvent(t *testing.T) {
 	coordinator := newReplayCoordinator(4)
-	result := SessionSubscribeResult{SessionID: "session", Incarnation: "run", Events: []SessionEvent{}, AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}
+	result := SessionSubscribeResult{SessionID: "session", InstanceID: "run", Events: []SessionEvent{}, AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}
 	subscription, err := coordinator.subscribe(result, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
@@ -99,7 +99,7 @@ func TestReplayCoordinator_DeduplicatesExactLiveEvent(t *testing.T) {
 
 func TestReplayCoordinator_OverflowDeliversTerminalResetAndCloses(t *testing.T) {
 	coordinator := newReplayCoordinator(1)
-	result := SessionSubscribeResult{SessionID: "session", Incarnation: "run", Events: []SessionEvent{}, AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}
+	result := SessionSubscribeResult{SessionID: "session", InstanceID: "run", Events: []SessionEvent{}, AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}
 	subscription, err := coordinator.subscribe(result, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
@@ -116,7 +116,7 @@ func TestReplayCoordinator_OverflowDeliversTerminalResetAndCloses(t *testing.T) 
 
 func TestReplayCoordinator_OverlapConflictResetsWithoutReplay(t *testing.T) {
 	coordinator := newReplayCoordinator(4)
-	initial := SessionSubscribeResult{SessionID: "session", Incarnation: "run", Events: []SessionEvent{}, AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}
+	initial := SessionSubscribeResult{SessionID: "session", InstanceID: "run", Events: []SessionEvent{}, AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}
 	subscription, err := coordinator.subscribe(initial, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
@@ -126,7 +126,7 @@ func TestReplayCoordinator_OverlapConflictResetsWithoutReplay(t *testing.T) {
 	if err := coordinator.recordEvent("session", SessionEvent{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0,"type":"live"}`)}); err != nil {
 		t.Fatalf("record: %v", err)
 	}
-	conflict := SessionSubscribeResult{SessionID: "session", Incarnation: "run", Events: []SessionEvent{{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0,"type":"durable"}`)}}, AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 0}
+	conflict := SessionSubscribeResult{SessionID: "session", InstanceID: "run", Events: []SessionEvent{{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0,"type":"durable"}`)}}, AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 0}
 	_, err = coordinator.subscribe(conflict, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if !errors.Is(err, ErrSessionReplayReset) {
 		t.Fatalf("subscribe error = %v", err)
@@ -134,10 +134,10 @@ func TestReplayCoordinator_OverlapConflictResetsWithoutReplay(t *testing.T) {
 	assertTerminalReset(t, subscription.Updates, 1)
 }
 
-func assertInitialDurableCursor(t *testing.T, updates <-chan SessionUpdate, incarnation string, durableThroughSeq int64) {
+func assertInitialDurableCursor(t *testing.T, updates <-chan SessionUpdate, instanceID string, durableThroughSeq int64) {
 	t.Helper()
 	update := <-updates
-	if update.Cursor == nil || update.Cursor.Incarnation != incarnation || update.Cursor.DurableThroughSeq != durableThroughSeq {
+	if update.Cursor == nil || update.Cursor.InstanceID != instanceID || update.Cursor.DurableThroughSeq != durableThroughSeq {
 		t.Fatalf("initial cursor = %#v", update)
 	}
 }
@@ -173,14 +173,14 @@ func TestReplayCoordinator_SubscribeReturnsSnapshotIdentityAndMergedBaseline(t *
 		t.Fatalf("record live event: %v", err)
 	}
 	subscription, err := coordinator.subscribe(SessionSubscribeResult{
-		SessionID: "session", Incarnation: "run-2", Events: []SessionEvent{{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0}`)}, {SessionID: "session", Seq: 1, Event: json.RawMessage(`{"seq":1}`)}}, AsOfSeq: 1, DurableThroughSeq: 1, HeadSeq: 1,
+		SessionID: "session", InstanceID: "run-2", Events: []SessionEvent{{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0}`)}, {SessionID: "session", Seq: 1, Event: json.RawMessage(`{"seq":1}`)}}, AsOfSeq: 1, DurableThroughSeq: 1, HeadSeq: 1,
 	}, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
 	}
 	defer subscription.Unsubscribe()
-	if subscription.Incarnation != "run-2" || subscription.Baseline != 2 {
-		t.Fatalf("snapshot = incarnation %q, baseline %d", subscription.Incarnation, subscription.Baseline)
+	if subscription.InstanceID != "run-2" || subscription.Baseline != 2 {
+		t.Fatalf("snapshot = instanceID %q, baseline %d", subscription.InstanceID, subscription.Baseline)
 	}
 	if subscription.Snapshot.AsOfSeq != 1 || subscription.Snapshot.DurableThroughSeq != 1 ||
 		subscription.Snapshot.HeadSeq != 2 || len(subscription.Snapshot.Events) != 3 {
@@ -188,20 +188,20 @@ func TestReplayCoordinator_SubscribeReturnsSnapshotIdentityAndMergedBaseline(t *
 	}
 }
 
-func TestReplayCoordinator_CursorIncarnationMismatchEmitsReset(t *testing.T) {
+func TestReplayCoordinator_CursorInstanceIDMismatchEmitsReset(t *testing.T) {
 	coordinator := newReplayCoordinator(4)
-	subscription, err := coordinator.subscribe(SessionSubscribeResult{SessionID: "session", Incarnation: "old", Events: []SessionEvent{}, AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
+	subscription, err := coordinator.subscribe(SessionSubscribeResult{SessionID: "session", InstanceID: "old", Events: []SessionEvent{}, AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1}, SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
 	}
 	defer subscription.Unsubscribe()
 	assertInitialDurableCursor(t, subscription.Updates, "old", -1)
 	assertInitialSessionStatus(t, subscription.Updates, "idle")
-	if err := coordinator.acceptCursor(DurableCursor{SessionID: "session", Incarnation: "new", DurableThroughSeq: -1}); err != nil {
+	if err := coordinator.acceptCursor(DurableCursor{SessionID: "session", InstanceID: "new", DurableThroughSeq: -1}); err != nil {
 		t.Fatalf("accept mismatched cursor: %v", err)
 	}
 	update := <-subscription.Updates
-	if update.Reset == nil || update.Reset.Incarnation != "new" {
+	if update.Reset == nil || update.Reset.InstanceID != "new" {
 		t.Fatalf("reset = %#v", update)
 	}
 }
@@ -210,7 +210,7 @@ func TestReplayCoordinator_SubscribeQueuesLatestStatusAfterCursor(t *testing.T) 
 	coordinator := newReplayCoordinator(4)
 	coordinator.publishStatus(SessionStatus{SessionID: "session", Status: "running"})
 	subscription, err := coordinator.subscribe(
-		SessionSubscribeResult{SessionID: "session", Incarnation: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1},
+		SessionSubscribeResult{SessionID: "session", InstanceID: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1},
 		SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1},
 	)
 	if err != nil {
@@ -227,7 +227,7 @@ func TestReplayCoordinator_SubscribeQueuesLatestStatusAfterCursor(t *testing.T) 
 func TestReplayCoordinator_SubscribeDefaultsQuiescentSessionToIdle(t *testing.T) {
 	coordinator := newReplayCoordinator(4)
 	subscription, err := coordinator.subscribe(
-		SessionSubscribeResult{SessionID: "session", Incarnation: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1},
+		SessionSubscribeResult{SessionID: "session", InstanceID: "run", AsOfSeq: -1, DurableThroughSeq: -1, HeadSeq: -1},
 		SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1},
 	)
 	if err != nil {

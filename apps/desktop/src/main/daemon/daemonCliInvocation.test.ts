@@ -48,15 +48,29 @@ describe("resolveCliInvocation", () => {
     });
   });
 
+  it("normalizes and explicitly forwards developer mode without inherited duplicates", () => {
+    vi.stubEnv("yishan_dsh_developer_mode", "true");
+    vi.stubEnv("YISHAN_DSH_DEVELOPER_MODE", "true");
+
+    const environment = resolveDaemonCliEnvironment();
+
+    expect(environment.YISHAN_DAEMON_DSH_DEVELOPER_MODE).toBe("true");
+    expect(Object.keys(environment).filter((key) => key.toLowerCase() === "yishan_dsh_developer_mode")).toEqual([]);
+  });
+
+  it("defaults developer mode to false for unrecognized values", () => {
+    vi.stubEnv("YISHAN_DSH_DEVELOPER_MODE", "TRUE");
+
+    expect(resolveDaemonCliEnvironment().YISHAN_DAEMON_DSH_DEVELOPER_MODE).toBe("false");
+  });
+
   it.each(["YISHAN_DSH_TEST_REPLAY", "yishan_dsh_test_replay"])(
     "does not forward the test-only replay switch to daemon launches regardless of casing",
     (environmentVariable) => {
       vi.stubEnv(environmentVariable, "1");
 
       expect(
-        Object.keys(resolveDaemonCliEnvironment()).some(
-          (key) => key.toLowerCase() === "yishan_dsh_test_replay",
-        ),
+        Object.keys(resolveDaemonCliEnvironment()).some((key) => key.toLowerCase() === "yishan_dsh_test_replay"),
       ).toBe(false);
     },
   );

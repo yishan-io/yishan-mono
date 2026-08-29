@@ -17,7 +17,7 @@ describe("DSHTranscriptController stream handling", () => {
     controller.applyAttachSnapshot({
       runtime: "dsh",
       sessionId: "session",
-      incarnation: "inc",
+      instanceId: "inc",
       events: [{ type: "turn/end", seq: 0, time: 0, data: { turn: 0, reason: { kind: "completed" } } }],
       asOfSeq: 0,
       durableThroughSeq: 0,
@@ -27,7 +27,7 @@ describe("DSHTranscriptController stream handling", () => {
       sessionId: "session",
       tabId: "tab",
       workspaceId: "workspace",
-      incarnation: "inc",
+      instanceId: "inc",
       update: { event: { type: "turn/end", seq: 0, time: 0, data: { turn: 0, reason: { kind: "completed" } } } },
     });
     expect(controller.getDurableThroughSeq()).toBe(0);
@@ -41,7 +41,7 @@ describe("DSHTranscriptController stream handling", () => {
     controller.applyAttachSnapshot({
       runtime: "dsh",
       sessionId: "session",
-      incarnation: "inc",
+      instanceId: "inc",
       events: [event(0).update.event],
       asOfSeq: 0,
       durableThroughSeq: 0,
@@ -63,7 +63,7 @@ describe("DSHTranscriptController stream handling", () => {
       controller.applyAttachSnapshot({
         runtime: "dsh",
         sessionId: "session",
-        incarnation: "inc",
+        instanceId: "inc",
         events: [event(0).update.event],
         asOfSeq: 0,
         durableThroughSeq: 0,
@@ -83,7 +83,7 @@ describe("DSHTranscriptController stream handling", () => {
         sessionId: "session",
         tabId: "tab",
         workspaceId: "workspace",
-        incarnation: "inc",
+        instanceId: "inc",
         update: { event: { sessionId: "session", seq: (event as { seq: number }).seq, event } },
       });
       expect(payload).not.toBeNull();
@@ -101,7 +101,7 @@ describe("DSHTranscriptController stream handling", () => {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
-        incarnation: "inc",
+        instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
       }),
@@ -111,7 +111,7 @@ describe("DSHTranscriptController stream handling", () => {
       sessionId: "session",
       tabId: "tab",
       workspaceId: "workspace",
-      incarnation: "inc",
+      instanceId: "inc",
       update: { status: { sessionId: "session", status: "running" } },
     });
 
@@ -133,7 +133,7 @@ describe("DSHTranscriptController stream handling", () => {
         sessionId: "session",
         tabId: "tab",
         workspaceId: "workspace",
-        incarnation: "inc",
+        instanceId: "inc",
         update: { event: { type, seq, time: seq, data, ...(surfaceOp ? { surfaceOp } : {}) } },
       });
 
@@ -177,7 +177,7 @@ describe("DSHTranscriptController stream handling", () => {
     const loader = vi.fn().mockResolvedValue({
       session: { sessionId: "session", createdAt: 0 },
       events: [],
-      incarnation: "inc",
+      instanceId: "inc",
       asOfSeq: -1,
       durableThroughSeq: -1,
     });
@@ -188,7 +188,7 @@ describe("DSHTranscriptController stream handling", () => {
       sessionId: "session",
       tabId: "tab",
       workspaceId: "workspace",
-      incarnation: "inc",
+      instanceId: "inc",
       update: { event: { type: "future/event", seq: 0, time: 0, data: {} } },
     });
 
@@ -203,7 +203,7 @@ describe("DSHTranscriptController stream handling", () => {
       sessionId: "session",
       tabId: "tab",
       workspaceId: "workspace",
-      incarnation: "inc",
+      instanceId: "inc",
       update: {
         event: {
           sessionId: "session",
@@ -228,22 +228,22 @@ describe("DSHTranscriptController stream handling", () => {
       sessionId: "session",
       tabId: "tab",
       workspaceId: "workspace",
-      incarnation: "inc",
-      update: { cursor: { sessionId: "session", incarnation: "inc", durableThroughSeq: 0 } },
+      instanceId: "inc",
+      update: { cursor: { sessionId: "session", instanceId: "inc", durableThroughSeq: 0 } },
     });
     controller.handle({
       sessionId: "session",
       tabId: "tab",
       workspaceId: "workspace",
-      incarnation: "inc",
-      update: { cursor: { sessionId: "session", incarnation: "inc", durableThroughSeq: -1 } },
+      instanceId: "inc",
+      update: { cursor: { sessionId: "session", instanceId: "inc", durableThroughSeq: -1 } },
     });
     controller.handle({
       sessionId: "session",
       tabId: "tab",
       workspaceId: "workspace",
-      incarnation: "inc",
-      update: { reset: { sessionId: "session", incarnation: "next", headSeq: -1 } },
+      instanceId: "inc",
+      update: { reset: { sessionId: "session", instanceId: "next", headSeq: -1 } },
     });
     expect(actions.replaceMessages).toHaveBeenLastCalledWith("tab", expect.any(Array));
     expect(actions.setSessionState).toHaveBeenLastCalledWith("tab", "starting");
@@ -253,7 +253,7 @@ describe("DSHTranscriptController stream handling", () => {
       | ((snapshot: {
           session: { sessionId: string; createdAt: number };
           events: unknown[];
-          incarnation: string;
+          instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
         }) => void)
@@ -263,7 +263,7 @@ describe("DSHTranscriptController stream handling", () => {
         new Promise<{
           session: { sessionId: string; createdAt: number };
           events: unknown[];
-          incarnation: string;
+          instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
         }>((resolve) => {
@@ -284,12 +284,12 @@ describe("DSHTranscriptController stream handling", () => {
     const controller = new DSHTranscriptController("tab", "session", actions, loader, () => {});
     controller.handle(event(0));
     controller.handle(event(1));
-    controller.handle({ ...event(1), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 0 } } });
+    controller.handle({ ...event(1), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: 0 } } });
     expect(actions.replaceMessages).toHaveBeenLastCalledWith("tab", expect.any(Array));
     resolveSnapshot?.({
       session: { sessionId: "session", createdAt: 0 },
       events: [event(0).update.event],
-      incarnation: "inc",
+      instanceId: "inc",
       asOfSeq: 0,
       durableThroughSeq: 0,
     });
@@ -340,14 +340,14 @@ describe("DSHTranscriptController stream handling", () => {
             surfaceOp: "append",
           },
         ],
-        incarnation: "inc",
+        instanceId: "inc",
         asOfSeq: 1,
         durableThroughSeq: 1,
       }),
       () => {},
     );
 
-    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: -1 } } });
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: -1 } } });
 
     await vi.waitFor(() =>
       expect(actions.replaceMessages).toHaveBeenLastCalledWith(

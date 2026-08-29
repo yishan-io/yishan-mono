@@ -9,7 +9,7 @@ describe("parseAgentHistoryResult", () => {
     dsh: {
       session: { sessionId: "session-1", createdAt: 1 },
       events: [{ type: "turn/end", seq: 0, time: 1, data: {} }],
-      incarnation: "run-1",
+      instanceId: "run-1",
       asOfSeq: 0,
       durableThroughSeq: 0,
     },
@@ -79,7 +79,7 @@ describe("parseAgentHistoryResult", () => {
   it.each([
     ["wrong runtime", { ...dshHistory, runtime: "pi" }],
     ["wrong session", { ...dshHistory, dsh: { ...dshHistory.dsh, session: { sessionId: "other", createdAt: 1 } } }],
-    ["empty incarnation", { ...dshHistory, dsh: { ...dshHistory.dsh, incarnation: "" } }],
+    ["empty instanceId", { ...dshHistory, dsh: { ...dshHistory.dsh, instanceId: "" } }],
     ["unequal cursors", { ...dshHistory, dsh: { ...dshHistory.dsh, durableThroughSeq: -1 } }],
     [
       "non-contiguous events",

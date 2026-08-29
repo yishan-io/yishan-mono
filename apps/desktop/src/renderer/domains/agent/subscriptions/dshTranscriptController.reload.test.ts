@@ -12,7 +12,7 @@ describe("DSHTranscriptController durable reload", () => {
       | ((snapshot: {
           session: { sessionId: string; createdAt: number };
           events: unknown[];
-          incarnation: string;
+          instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
         }) => void)
@@ -31,15 +31,15 @@ describe("DSHTranscriptController durable reload", () => {
     const replayEvents = Array.from({ length: 129 }, (_, sequence) => event(sequence));
     controller.handle({
       ...event(0),
-      update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 128 } },
+      update: { reset: { sessionId: "session", instanceId: "inc", headSeq: 128 } },
     });
-    for (const replayEvent of replayEvents) controller.handle({ ...replayEvent, incarnation: "inc" });
+    for (const replayEvent of replayEvents) controller.handle({ ...replayEvent, instanceId: "inc" });
     expect(actions.setSessionError).not.toHaveBeenCalledWith("tab", "DSH transcript reload buffer overflow");
 
     resolveSnapshot?.({
       session: { sessionId: "session", createdAt: 0 },
       events: replayEvents.map((replayEvent) => replayEvent.update.event),
-      incarnation: "inc",
+      instanceId: "inc",
       asOfSeq: 128,
       durableThroughSeq: 128,
     });
@@ -51,7 +51,7 @@ describe("DSHTranscriptController durable reload", () => {
       | ((snapshot: {
           session: { sessionId: string; createdAt: number };
           events: unknown[];
-          incarnation: string;
+          instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
         }) => void)
@@ -78,12 +78,12 @@ describe("DSHTranscriptController durable reload", () => {
       () => {},
     );
     controller.handle(event(0));
-    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 0 } } });
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: 0 } } });
     controller.handle(event(1));
     resolveSnapshot?.({
       session: { sessionId: "session", createdAt: 0 },
       events: [event(0).update.event],
-      incarnation: "inc",
+      instanceId: "inc",
       asOfSeq: 0,
       durableThroughSeq: 0,
     });
@@ -104,7 +104,7 @@ describe("DSHTranscriptController durable reload", () => {
       (snapshot: {
         session: { sessionId: string; createdAt: number };
         events: unknown[];
-        incarnation: string;
+        instanceId: string;
         asOfSeq: number;
         durableThroughSeq: number;
       }) => void
@@ -114,7 +114,7 @@ describe("DSHTranscriptController durable reload", () => {
         new Promise<{
           session: { sessionId: string; createdAt: number };
           events: unknown[];
-          incarnation: string;
+          instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
         }>((resolve) => resolvers.push(resolve)),
@@ -124,21 +124,21 @@ describe("DSHTranscriptController durable reload", () => {
 
     controller.handle({
       ...event(0),
-      incarnation: "A",
-      update: { reset: { sessionId: "session", incarnation: "A", headSeq: -1 } },
+      instanceId: "A",
+      update: { reset: { sessionId: "session", instanceId: "A", headSeq: -1 } },
     });
     await vi.waitFor(() => expect(loader).toHaveBeenCalledTimes(1));
     controller.handle({
       ...event(0),
-      incarnation: "B",
-      update: { reset: { sessionId: "session", incarnation: "B", headSeq: -1 } },
+      instanceId: "B",
+      update: { reset: { sessionId: "session", instanceId: "B", headSeq: -1 } },
     });
     await vi.waitFor(() => expect(loader).toHaveBeenCalledTimes(2));
 
     resolvers[0]?.({
       session: { sessionId: "session", createdAt: 0 },
       events: [],
-      incarnation: "A",
+      instanceId: "A",
       asOfSeq: -1,
       durableThroughSeq: -1,
     });
@@ -146,7 +146,7 @@ describe("DSHTranscriptController durable reload", () => {
     resolvers[1]?.({
       session: { sessionId: "session", createdAt: 0 },
       events: [event(0).update.event],
-      incarnation: "B",
+      instanceId: "B",
       asOfSeq: 0,
       durableThroughSeq: 0,
     });
@@ -162,14 +162,14 @@ describe("DSHTranscriptController durable reload", () => {
       .mockResolvedValueOnce({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
-        incarnation: "inc",
+        instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
       });
     const { actions } = setup();
     const controller = new DSHTranscriptController("tab", "session", actions, loader, () => {});
     controller.handle(event(0));
-    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 0 } } });
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: 0 } } });
     await vi.waitFor(() =>
       expect(actions.setSessionError).toHaveBeenLastCalledWith("tab", "DSH durable reload failed: offline"),
     );
@@ -200,7 +200,7 @@ describe("DSHTranscriptController durable reload", () => {
       .mockResolvedValueOnce({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
-        incarnation: "inc",
+        instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
       });
@@ -208,7 +208,7 @@ describe("DSHTranscriptController durable reload", () => {
     const controller = new DSHTranscriptController("tab", "session", actions, loader, () => {});
 
     controller.handle(event(0));
-    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 0 } } });
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: 0 } } });
 
     await vi.waitFor(() => expect(actions.setDSHTranscriptRetryAvailable).toHaveBeenLastCalledWith("tab", true));
 
@@ -217,14 +217,14 @@ describe("DSHTranscriptController durable reload", () => {
     expect(actions.setDSHTranscriptRetryAvailable).toHaveBeenLastCalledWith("tab", false);
   });
 
-  it("preserves same-incarnation events after a reload failure and replays them once on retry", async () => {
+  it("preserves same-instance-ID events after a reload failure and replays them once on retry", async () => {
     const loader = vi
       .fn()
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValueOnce({
         session: { sessionId: "session", createdAt: 0 },
         events: [event(0).update.event],
-        incarnation: "inc",
+        instanceId: "inc",
         asOfSeq: 0,
         durableThroughSeq: 0,
       });
@@ -232,7 +232,7 @@ describe("DSHTranscriptController durable reload", () => {
     const controller = new DSHTranscriptController("tab", "session", actions, loader, () => {});
 
     controller.handle(event(0));
-    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 0 } } });
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: 0 } } });
     await vi.waitFor(() =>
       expect(actions.setSessionError).toHaveBeenLastCalledWith("tab", "DSH durable reload failed: offline"),
     );
@@ -248,7 +248,7 @@ describe("DSHTranscriptController durable reload", () => {
     );
   });
 
-  it("re-attaches after a same-incarnation reset before replaying buffered updates", async () => {
+  it("re-attaches after a same-instance-ID reset before replaying buffered updates", async () => {
     let resolveAttach: ((snapshot: undefined) => void) | undefined;
     const attach = vi.fn(
       () =>
@@ -264,7 +264,7 @@ describe("DSHTranscriptController durable reload", () => {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [event(0).update.event],
-        incarnation: "inc",
+        instanceId: "inc",
         asOfSeq: 0,
         durableThroughSeq: 0,
       }),
@@ -273,11 +273,11 @@ describe("DSHTranscriptController durable reload", () => {
     );
 
     controller.handle(event(0));
-    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 0 } } });
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: 0 } } });
     controller.handle(event(1));
 
     await vi.waitFor(() =>
-      expect(attach).toHaveBeenCalledWith({ sessionId: "session", incarnation: "inc", durableThroughSeq: 0 }),
+      expect(attach).toHaveBeenCalledWith({ sessionId: "session", instanceId: "inc", durableThroughSeq: 0 }),
     );
     expect(actions.replaceMessages).not.toHaveBeenLastCalledWith(
       "tab",
@@ -300,7 +300,7 @@ describe("DSHTranscriptController durable reload", () => {
       .mockResolvedValueOnce({
         runtime: "dsh" as const,
         sessionId: "session",
-        incarnation: "inc",
+        instanceId: "inc",
         events: [{ ...event(0).update.event, seq: 0 }],
         asOfSeq: 0,
         durableThroughSeq: 0,
@@ -309,7 +309,7 @@ describe("DSHTranscriptController durable reload", () => {
       .mockResolvedValueOnce({
         runtime: "dsh" as const,
         sessionId: "session",
-        incarnation: "inc",
+        instanceId: "inc",
         events: [],
         asOfSeq: -1,
         durableThroughSeq: -1,
@@ -322,7 +322,7 @@ describe("DSHTranscriptController durable reload", () => {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
-        incarnation: "inc",
+        instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
       }),
@@ -330,7 +330,7 @@ describe("DSHTranscriptController durable reload", () => {
       attach,
     );
 
-    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: -1 } } });
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: -1 } } });
     await vi.waitFor(() => expect(actions.setDSHTranscriptRetryAvailable).toHaveBeenLastCalledWith("tab", true));
 
     await controller.retry();
@@ -339,7 +339,7 @@ describe("DSHTranscriptController durable reload", () => {
     expect(actions.setDSHTranscriptRetryAvailable).toHaveBeenLastCalledWith("tab", false);
   });
 
-  it("adopts a newer durable snapshot incarnation and attaches after its cursor", async () => {
+  it("adopts a newer durable snapshot instanceId and attaches after its cursor", async () => {
     const { actions } = setup();
     const attach = vi.fn().mockResolvedValue(undefined);
     const controller = new DSHTranscriptController(
@@ -349,7 +349,7 @@ describe("DSHTranscriptController durable reload", () => {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
-        incarnation: "other",
+        instanceId: "other",
         asOfSeq: -1,
         durableThroughSeq: -1,
       }),
@@ -357,9 +357,9 @@ describe("DSHTranscriptController durable reload", () => {
       attach,
     );
     controller.handle(event(0));
-    controller.handle({ ...event(0), update: { reset: { sessionId: "session", incarnation: "inc", headSeq: 0 } } });
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: 0 } } });
     await vi.waitFor(() =>
-      expect(attach).toHaveBeenCalledWith({ sessionId: "session", incarnation: "other", durableThroughSeq: -1 }),
+      expect(attach).toHaveBeenCalledWith({ sessionId: "session", instanceId: "other", durableThroughSeq: -1 }),
     );
     expect(actions.setSessionError).not.toHaveBeenCalled();
   });

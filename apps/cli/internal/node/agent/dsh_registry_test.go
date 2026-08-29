@@ -10,7 +10,7 @@ import (
 func TestDSHLiveRegistry_RebindInvalidatesOldPumpRoute(t *testing.T) {
 	registry := newDSHLiveRegistry()
 	connection := &rpc.Connection{}
-	entry := &dshLiveSession{sessionID: "session", tabID: "tab", workspaceID: "workspace", incarnation: "old", connection: connection}
+	entry := &dshLiveSession{sessionID: "session", tabID: "tab", workspaceID: "workspace", instanceID: "old", connection: connection}
 	if !registry.register(entry) {
 		t.Fatal("register")
 	}
@@ -18,7 +18,7 @@ func TestDSHLiveRegistry_RebindInvalidatesOldPumpRoute(t *testing.T) {
 	if !found {
 		t.Fatal("initial binding missing")
 	}
-	newGeneration, _, rebound := registry.rebind(entry, connection, dsh.SessionSubscription{Incarnation: "new"})
+	newGeneration, _, rebound := registry.rebind(entry, connection, dsh.SessionSubscription{InstanceID: "new"})
 	if !rebound || newGeneration == oldGeneration {
 		t.Fatalf("rebind = generation %d, rebound %t", newGeneration, rebound)
 	}
@@ -29,8 +29,8 @@ func TestDSHLiveRegistry_RebindInvalidatesOldPumpRoute(t *testing.T) {
 	if !reset {
 		t.Fatal("reset route")
 	}
-	if entry.incarnation != "reset" || route.incarnation != "reset" {
-		t.Fatalf("reset incarnation = %q / %q", entry.incarnation, route.incarnation)
+	if entry.instanceID != "reset" || route.instanceID != "reset" {
+		t.Fatalf("reset instanceID = %q / %q", entry.instanceID, route.instanceID)
 	}
 	if !registry.requiresResume(entry) {
 		t.Fatal("reset left the session available")
@@ -54,7 +54,7 @@ func TestDSHLiveRegistry_ConcurrentRebindAndOldPumpRoute(t *testing.T) {
 			_, _ = registry.route(entry, generation)
 			_, _ = registry.resetRoute(entry, generation, "old")
 		}(oldGeneration)
-		newGeneration, _, rebound := registry.rebind(entry, nil, dsh.SessionSubscription{Incarnation: "new"})
+		newGeneration, _, rebound := registry.rebind(entry, nil, dsh.SessionSubscription{InstanceID: "new"})
 		<-done
 		if !rebound || newGeneration <= oldGeneration {
 			t.Fatalf("generation transition %d -> %d, rebound %t", oldGeneration, newGeneration, rebound)

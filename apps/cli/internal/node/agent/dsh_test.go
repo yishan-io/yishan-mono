@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/agent/dsh"
+	"yishan/apps/cli/internal/agent/dsh/plugins"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -205,7 +206,7 @@ func TestService_DSHSessionMethodsRejectClosedWorkspaceBeforeRuntimeCall(t *test
 
 func (r *recordingDSHSessions) StartSession(_ context.Context, request dsh.SessionStartRequest) (dsh.SessionStartResult, error) {
 	r.startRequest = request
-	return dsh.SessionStartResult{SessionID: request.SessionID, Incarnation: "test-incarnation"}, r.startErr
+	return dsh.SessionStartResult{SessionID: request.SessionID, InstanceID: "test-instanceID"}, r.startErr
 }
 func (r *recordingDSHSessions) SetModelSession(_ context.Context, request dsh.SetModelRequest) error {
 	r.setModelRequest = request
@@ -324,5 +325,85 @@ func TestAgentListSessionLineage_MapsRuntimeUnavailable(t *testing.T) {
 	var rpcErr *rpc.Error
 	if !errors.As(err, &rpcErr) || rpcErr.Data["code"] != rpc.ErrorDataCodeDSHRuntimeUnavailable {
 		t.Fatalf("error = %#v, want stable runtime-unavailable code", err)
+	}
+}
+
+type recordingDSHPluginManager struct {
+	inventory       plugins.Inventory
+	officialBundles []plugins.ApprovedBundle
+	name            string
+	enabled         bool
+	operation       string
+}
+
+func (m *recordingDSHPluginManager) List(context.Context) (plugins.Inventory, error) {
+	return m.inventory, nil
+}
+func (m *recordingDSHPluginManager) ListOfficial() []plugins.ApprovedBundle { return m.officialBundles }
+func (m *recordingDSHPluginManager) Install(_ context.Context, name string) (plugins.Inventory, error) {
+	m.operation, m.name = "install", name
+	return m.inventory, nil
+}
+func (m *recordingDSHPluginManager) SetEnabled(_ context.Context, name string, enabled bool) (plugins.Inventory, error) {
+	m.operation, m.name, m.enabled = "setEnabled", name, enabled
+	return m.inventory, nil
+}
+func (m *recordingDSHPluginManager) Remove(_ context.Context, name string) (plugins.Inventory, error) {
+	m.operation, m.name = "remove", name
+	return m.inventory, nil
+}
+func (m *recordingDSHPluginManager) Update(_ context.Context, name string) (plugins.Inventory, error) {
+	m.operation, m.name = "update", name
+	return m.inventory, nil
+}
+func (m *recordingDSHPluginManager) CaptureSnapshot(context.Context) (plugins.Snapshot, error) {
+	return plugins.Snapshot{}, nil
+}
+func (m *recordingDSHPluginManager) RestoreSnapshot(context.Context, plugins.Snapshot) error {
+	return nil
+}
+
+type recordingDSHPluginRuntime struct{ restarts int }
+
+func (r *recordingDSHPluginRuntime) Restart(context.Context) error { r.restarts++; return nil }
+func (r *recordingDSHPluginRuntime) Recover(context.Context) error { r.restarts++; return nil }
+
+func TestService_DSHPluginMutationRestartsRuntimeAfterSuccessfulMutation(t *testing.T) {
+	manager := &recordingDSHPluginManager{inventory: plugins.Inventory{Plugins: []plugins.Plugin{{Name: "safe-plugin", Version: "1.0.0", Enabled: true}}}}
+	runtime := &recordingDSHPluginRuntime{}
+	service := NewService(Deps{DSHPlugins: manager, DSHPluginRuntime: runtime})
+
+	result, err := service.DSHSetPluginEnabled(context.Background(), rpc.DSHSetPluginEnabledParams{Name: "safe-plugin", Enabled: false})
+	if err != nil {
+		t.Fatalf("set enabled: %v", err)
+	}
+	if manager.operation != "setEnabled" || manager.name != "safe-plugin" || manager.enabled || runtime.restarts != 1 {
+		t.Fatalf("manager = %#v, restarts = %d", manager, runtime.restarts)
+	}
+	if got := result.(rpc.DSHPluginListResult).Bundles[0]; got.Name != "safe-plugin" || !got.Enabled {
+		t.Fatalf("result bundle = %#v", got)
+	}
+}
+
+func TestService_DSHOfficialPluginCatalogMapsEmptyAuditedCatalog(t *testing.T) {
+	service := NewService(Deps{DSHPlugins: &recordingDSHPluginManager{}})
+	result, err := service.DSHListOfficialPlugins(context.Background())
+	if err != nil {
+		t.Fatalf("list official plugins: %v", err)
+	}
+	bundles := result.(rpc.DSHPluginCatalogResult).Bundles
+	if len(bundles) != 0 {
+		t.Fatalf("official catalog = %#v, want empty compatible catalog", bundles)
+	}
+}
+func TestService_DSHInstallPluginUsesDaemonSelectedName(t *testing.T) {
+	manager := &recordingDSHPluginManager{inventory: plugins.Inventory{}}
+	runtime := &recordingDSHPluginRuntime{}
+	service := NewService(Deps{DSHPlugins: manager, DSHPluginRuntime: runtime})
+	if _, err := service.DSHInstallPlugin(context.Background(), rpc.DSHPluginNameParams{Name: "safe-plugin"}); err != nil {
+		t.Fatalf("install plugin: %v", err)
+	}
+	if manager.operation != "install" || manager.name != "safe-plugin" || runtime.restarts != 1 {
+		t.Fatalf("manager = %#v, restarts = %d", manager, runtime.restarts)
 	}
 }

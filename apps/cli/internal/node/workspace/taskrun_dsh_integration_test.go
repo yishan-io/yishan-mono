@@ -112,7 +112,7 @@ func attachTaskRunDSHSession(t *testing.T, agents *nodeagent.Service, sessionID,
 	if !ok {
 		t.Fatalf("attach result = %T, want DSH attach result", result)
 	}
-	if attach.Runtime != rpc.AgentRuntimeDSH || attach.SessionID != sessionID || attach.Incarnation != "task-run-incarnation" || attach.AsOfSeq != 1 || attach.DurableThroughSeq != 1 || attach.HeadSeq != 1 {
+	if attach.Runtime != rpc.AgentRuntimeDSH || attach.SessionID != sessionID || attach.InstanceID != "task-run-instanceID" || attach.AsOfSeq != 1 || attach.DurableThroughSeq != 1 || attach.HeadSeq != 1 {
 		t.Fatalf("attach snapshot = %#v", attach)
 	}
 	if len(attach.Events) != 2 || string(attach.Events[0]) != `{"seq":0,"type":"turn/start"}` || string(attach.Events[1]) != `{"seq":1,"type":"turn/end"}` {
@@ -311,9 +311,9 @@ func taskRunDSHResult(request taskRunDSHOperation) string {
 	sessionID := request.Params.SessionID
 	switch request.Method {
 	case "yishan.v1.session.start":
-		return `{"sessionId":"` + sessionID + `","incarnation":"task-run-incarnation"}`
+		return `{"sessionId":"` + sessionID + `","instanceId":"task-run-instanceID"}`
 	case "yishan.v1.session.subscribe":
-		return `{"sessionId":"` + sessionID + `","incarnation":"task-run-incarnation","events":[{"seq":0,"type":"turn/start"},{"seq":1,"type":"turn/end"}],"asOfSeq":1,"durableThroughSeq":1,"headSeq":1}`
+		return `{"sessionId":"` + sessionID + `","instanceId":"task-run-instanceID","events":[{"seq":0,"type":"turn/start"},{"seq":1,"type":"turn/end"}],"asOfSeq":1,"durableThroughSeq":1,"headSeq":1}`
 	case "yishan.v1.session.prompt":
 		return `{"messageId":"task-run-message"}`
 	case "yishan.v1.session.cancel":

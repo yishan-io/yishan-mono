@@ -27,23 +27,23 @@ export type DSHTranscriptActions = {
 };
 
 /** The last daemon-confirmed DSH event position. */
-export type DSHDurableCursor = { sessionId: string; incarnation: string; durableThroughSeq: number };
+export type DSHDurableCursor = { sessionId: string; instanceId: string; durableThroughSeq: number };
 
 /** Maintains one tab's contiguous DSH event stream and durable/speculative boundary. */
 export class DSHTranscriptController {
-  private incarnation = "";
+  private instanceId = "";
   private nextSeq = 0;
   private durableThroughSeq = -1;
   private events: DSHEvent[] = [];
   private activeTextStream: { key: string; text: string } | null = null;
   private isBlocked = false;
   private controllerState: "normal" | "recovering" | "failed" = "normal";
-  private recoveryIncarnation = "";
+  private recoveryInstanceId = "";
   private recoveryReplayThroughSeq: number | null = null;
   private recoveryGeneration = 0;
   private recoveryPromise: Promise<void> | null = null;
   private isReplayingBufferedUpdates = false;
-  private bufferedUpdates: Array<{ incarnation: string; update: DSHUpdate }> = [];
+  private bufferedUpdates: Array<{ instanceId: string; update: DSHUpdate }> = [];
 
   public constructor(
     private readonly tabId: string,
@@ -51,7 +51,7 @@ export class DSHTranscriptController {
     private readonly actions: DSHTranscriptActions,
     private readonly loadDurableSnapshot: () => Promise<AgentDSHHistory>,
     private readonly onDurableCursor: (cursor: DSHDurableCursor) => void,
-    private readonly attachSnapshotIncarnation: (
+    private readonly attachSnapshotInstanceId: (
       cursor: DSHDurableCursor,
     ) => Promise<AgentDSHAttachResult | undefined> = async () => undefined,
   ) {}
@@ -65,9 +65,9 @@ export class DSHTranscriptController {
   public applyAttachSnapshot(snapshot: AgentDSHAttachResult): void {
     try {
       const events = this.parseAttachEvents(snapshot);
-      const hasNewIncarnation = !this.incarnation || this.incarnation !== snapshot.incarnation;
-      if (hasNewIncarnation) this.replaceAttachState(snapshot.incarnation);
-      if (this.incarnation !== snapshot.incarnation) throw new TypeError("DSH attach incarnation mismatch");
+      const hasNewInstanceId = !this.instanceId || this.instanceId !== snapshot.instanceId;
+      if (hasNewInstanceId) this.replaceAttachState(snapshot.instanceId);
+      if (this.instanceId !== snapshot.instanceId) throw new TypeError("DSH attach instance ID mismatch");
       this.reconcileAttachEvents(events);
       if (snapshot.durableThroughSeq > this.nextSeq - 1) {
         throw new TypeError("DSH attach durable cursor exceeds transcript");
@@ -76,7 +76,7 @@ export class DSHTranscriptController {
         this.durableThroughSeq = snapshot.durableThroughSeq;
         this.onDurableCursor({
           sessionId: this.sessionId,
-          incarnation: snapshot.incarnation,
+          instanceId: snapshot.instanceId,
           durableThroughSeq: snapshot.durableThroughSeq,
         });
       }
@@ -90,43 +90,43 @@ export class DSHTranscriptController {
 
   /** Retries a failed DSH durable reload without changing runtimes. */
   public async retry(): Promise<void> {
-    if (this.isBlocked || this.controllerState !== "failed" || !this.recoveryIncarnation) return;
-    this.startRecovery(this.recoveryIncarnation, true);
+    if (this.isBlocked || this.controllerState !== "failed" || !this.recoveryInstanceId) return;
+    this.startRecovery(this.recoveryInstanceId, true);
     await this.recoveryPromise;
   }
 
   /** Starts a durable reload after the router identifies a malformed notification for this tab/session. */
   public handleMalformedPayload(): void {
-    if (!this.isBlocked && this.controllerState !== "failed") this.startRecovery(this.incarnation);
+    if (!this.isBlocked && this.controllerState !== "failed") this.startRecovery(this.instanceId);
   }
 
   /** Applies a validated notification. */
   public handle(payload: DSHFrontendPayload): void {
     if (payload.tabId !== this.tabId || payload.sessionId !== this.sessionId || this.isBlocked) return;
     if (payload.update.reset) {
-      this.startRecovery(payload.update.reset.incarnation, false, payload.update.reset.headSeq);
+      this.startRecovery(payload.update.reset.instanceId, false, payload.update.reset.headSeq);
       return;
     }
     if (this.controllerState === "recovering") {
-      if (payload.incarnation !== this.recoveryIncarnation) this.startRecovery(payload.incarnation);
-      if (!payload.update.reset) this.bufferUpdate(payload.incarnation, payload.update);
+      if (payload.instanceId !== this.recoveryInstanceId) this.startRecovery(payload.instanceId);
+      if (!payload.update.reset) this.bufferUpdate(payload.instanceId, payload.update);
       return;
     }
     if (this.controllerState === "failed") {
-      if (payload.incarnation !== this.recoveryIncarnation) {
-        this.startRecovery(payload.incarnation);
-        if (!payload.update.reset) this.bufferUpdate(payload.incarnation, payload.update);
+      if (payload.instanceId !== this.recoveryInstanceId) {
+        this.startRecovery(payload.instanceId);
+        if (!payload.update.reset) this.bufferUpdate(payload.instanceId, payload.update);
       } else if (!payload.update.reset) {
-        this.bufferUpdate(payload.incarnation, payload.update);
+        this.bufferUpdate(payload.instanceId, payload.update);
       }
       return;
     }
-    if (this.incarnation && payload.incarnation !== this.incarnation) {
-      this.startRecovery(payload.incarnation);
-      if (!payload.update.reset) this.bufferUpdate(payload.incarnation, payload.update);
+    if (this.instanceId && payload.instanceId !== this.instanceId) {
+      this.startRecovery(payload.instanceId);
+      if (!payload.update.reset) this.bufferUpdate(payload.instanceId, payload.update);
       return;
     }
-    this.incarnation ||= payload.incarnation;
+    this.instanceId ||= payload.instanceId;
     this.applyUpdate(payload.update);
   }
 
@@ -134,7 +134,7 @@ export class DSHTranscriptController {
     if (
       snapshot.runtime !== "dsh" ||
       snapshot.sessionId !== this.sessionId ||
-      !snapshot.incarnation ||
+      !snapshot.instanceId ||
       !this.isSafeSequence(snapshot.asOfSeq, -1) ||
       !this.isSafeSequence(snapshot.durableThroughSeq, -1) ||
       !this.isSafeSequence(snapshot.headSeq, -1) ||
@@ -149,7 +149,7 @@ export class DSHTranscriptController {
         sessionId: this.sessionId,
         tabId: this.tabId,
         workspaceId: "attach-snapshot",
-        incarnation: snapshot.incarnation,
+        instanceId: snapshot.instanceId,
         update: { event: { sessionId: this.sessionId, seq: sequence, event } },
       });
       if (!payload?.update.event || isUnknownRequiredDSHEvent(payload.update.event)) {
@@ -205,8 +205,8 @@ export class DSHTranscriptController {
     return seq;
   }
 
-  private replaceAttachState(incarnation: string): void {
-    this.incarnation = incarnation;
+  private replaceAttachState(instanceId: string): void {
+    this.instanceId = instanceId;
     this.nextSeq = 0;
     this.durableThroughSeq = -1;
     this.events = [];
@@ -215,22 +215,22 @@ export class DSHTranscriptController {
 
   private applyUpdate(update: DSHUpdate): void {
     if (update.reset) {
-      this.startRecovery(update.reset.incarnation, false, update.reset.headSeq);
+      this.startRecovery(update.reset.instanceId, false, update.reset.headSeq);
       return;
     }
     if (update.cursor) this.applyCursor(update.cursor);
     if (update.status) this.applyStatus(update.status.status);
-    if (update.unavailable) this.startRecovery(this.incarnation);
+    if (update.unavailable) this.startRecovery(this.instanceId);
     if (update.event) this.applyEvent(update.event);
   }
 
   private applyCursor(cursor: DSHDurableCursor): void {
     if (
-      cursor.incarnation !== this.incarnation ||
+      cursor.instanceId !== this.instanceId ||
       cursor.durableThroughSeq < this.durableThroughSeq ||
       cursor.durableThroughSeq >= this.nextSeq
     ) {
-      this.startRecovery(this.incarnation);
+      this.startRecovery(this.instanceId);
       return;
     }
     if (cursor.durableThroughSeq === this.durableThroughSeq) return;
@@ -240,19 +240,19 @@ export class DSHTranscriptController {
 
   private applyEvent(event: DSHEvent): void {
     if (isUnknownRequiredDSHEvent(event)) {
-      this.startRecovery(this.incarnation);
+      this.startRecovery(this.instanceId);
       return;
     }
     if (event.seq < this.nextSeq) {
       const prior = this.events[event.seq];
       if (prior && JSON.stringify(prior) === JSON.stringify(event)) return;
-      this.startRecovery(this.incarnation);
-      if (!this.isReplayingBufferedUpdates) this.bufferUpdate(this.incarnation, { event });
+      this.startRecovery(this.instanceId);
+      if (!this.isReplayingBufferedUpdates) this.bufferUpdate(this.instanceId, { event });
       return;
     }
     if (event.seq !== this.nextSeq) {
-      this.startRecovery(this.incarnation);
-      if (!this.isReplayingBufferedUpdates) this.bufferUpdate(this.incarnation, { event });
+      this.startRecovery(this.instanceId);
+      if (!this.isReplayingBufferedUpdates) this.bufferUpdate(this.instanceId, { event });
       return;
     }
     this.events.push(event);
@@ -276,25 +276,25 @@ export class DSHTranscriptController {
   }
 
   private startRecovery(
-    incarnation: string,
+    instanceId: string,
     preserveBufferedUpdates = false,
     replayThroughSeq: number | null = null,
   ): void {
     if (this.isBlocked) return;
-    if (this.controllerState === "recovering" && incarnation === this.recoveryIncarnation) {
+    if (this.controllerState === "recovering" && instanceId === this.recoveryInstanceId) {
       if (replayThroughSeq !== null) this.recoveryReplayThroughSeq = replayThroughSeq;
       return;
     }
     this.discardSpeculativeEvents();
     this.controllerState = "recovering";
-    this.recoveryIncarnation = incarnation;
+    this.recoveryInstanceId = instanceId;
     this.recoveryReplayThroughSeq = replayThroughSeq;
     this.recoveryGeneration++;
     if (!preserveBufferedUpdates) this.bufferedUpdates = [];
     this.actions.setDSHTranscriptRetryAvailable(this.tabId, false);
     this.actions.setTurnActive(this.tabId, false);
     this.actions.setSessionState(this.tabId, "starting");
-    this.recoveryPromise = this.loadAndReplay(incarnation, this.recoveryGeneration);
+    this.recoveryPromise = this.loadAndReplay(instanceId, this.recoveryGeneration);
     // fire-and-forget: incoming daemon notifications must not await durable I/O.
     void this.recoveryPromise.catch(() => undefined);
   }
@@ -306,7 +306,7 @@ export class DSHTranscriptController {
     this.projectEvents();
   }
 
-  private bufferUpdate(incarnation: string, update: DSHUpdate): void {
+  private bufferUpdate(instanceId: string, update: DSHUpdate): void {
     if (update.event && this.recoveryReplayThroughSeq !== null && update.event.seq <= this.recoveryReplayThroughSeq) {
       return;
     }
@@ -314,19 +314,19 @@ export class DSHTranscriptController {
       this.markBlocked("DSH transcript reload buffer overflow");
       return;
     }
-    this.bufferedUpdates.push({ incarnation, update });
+    this.bufferedUpdates.push({ instanceId, update });
   }
 
-  private async loadAndReplay(incarnation: string, generation: number): Promise<void> {
+  private async loadAndReplay(instanceId: string, generation: number): Promise<void> {
     try {
       const snapshot = await this.loadDurableSnapshot();
       if (this.controllerState !== "recovering" || generation !== this.recoveryGeneration) return;
       const events = this.validateSnapshot(snapshot);
-      const hasNewIncarnation = snapshot.incarnation !== incarnation;
+      const hasNewInstanceId = snapshot.instanceId !== instanceId;
       // The validated durable snapshot supersedes the reset target. Replay
       // notifications from the subsequent attach must be buffered under it.
-      if (hasNewIncarnation) this.recoveryIncarnation = snapshot.incarnation;
-      this.incarnation = snapshot.incarnation;
+      if (hasNewInstanceId) this.recoveryInstanceId = snapshot.instanceId;
+      this.instanceId = snapshot.instanceId;
       this.events = events;
       this.nextSeq = events.length;
       this.durableThroughSeq = snapshot.durableThroughSeq;
@@ -334,11 +334,11 @@ export class DSHTranscriptController {
       this.projectEvents();
       const cursor = {
         sessionId: this.sessionId,
-        incarnation: this.incarnation,
+        instanceId: this.instanceId,
         durableThroughSeq: this.durableThroughSeq,
       };
       this.onDurableCursor(cursor);
-      const attachSnapshot = await this.attachSnapshotIncarnation(cursor);
+      const attachSnapshot = await this.attachSnapshotInstanceId(cursor);
       if (attachSnapshot) this.applyAttachSnapshot(attachSnapshot);
       const bufferedUpdates = this.bufferedUpdates;
       this.bufferedUpdates = [];
@@ -349,7 +349,7 @@ export class DSHTranscriptController {
       try {
         for (const bufferedUpdate of bufferedUpdates) {
           if (this.isBlocked || this.controllerState !== "normal") break;
-          if (bufferedUpdate.incarnation === this.recoveryIncarnation) this.applyUpdate(bufferedUpdate.update);
+          if (bufferedUpdate.instanceId === this.recoveryInstanceId) this.applyUpdate(bufferedUpdate.update);
         }
       } finally {
         this.isReplayingBufferedUpdates = false;
@@ -367,7 +367,7 @@ export class DSHTranscriptController {
 
   private validateSnapshot(snapshot: AgentDSHHistory): DSHEvent[] {
     if (snapshot.session.sessionId !== this.sessionId) throw new TypeError("DSH durable history session mismatch");
-    if (!snapshot.incarnation || snapshot.asOfSeq !== snapshot.durableThroughSeq)
+    if (!snapshot.instanceId || snapshot.asOfSeq !== snapshot.durableThroughSeq)
       throw new TypeError("DSH durable history cursor mismatch");
     if (snapshot.events.length !== snapshot.durableThroughSeq + 1)
       throw new TypeError("DSH durable history is not contiguous");
@@ -376,7 +376,7 @@ export class DSHTranscriptController {
         sessionId: this.sessionId,
         tabId: this.tabId,
         workspaceId: "durable-history",
-        incarnation: snapshot.incarnation,
+        instanceId: snapshot.instanceId,
         update: { event: { sessionId: this.sessionId, seq, event } },
       });
       if (!payload?.update.event) throw new TypeError("DSH durable history event is invalid");

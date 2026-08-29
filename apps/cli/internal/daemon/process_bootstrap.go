@@ -127,6 +127,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *session.Session, dae
 		RelayURL:         cfg.RelayURL,
 		RelayToken:       cfg.RelayToken,
 		DSHEnabled:       cfg.DSHEnabled,
+		DSHDeveloperMode: cfg.DSHDeveloperMode,
 		DSHNodePath:      cfg.DSHNodePath,
 		DSHRuntimePath:   cfg.DSHRuntimePath,
 		DSHDataDir:       config.DSHDataDir(dataDir),

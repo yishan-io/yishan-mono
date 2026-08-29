@@ -8,17 +8,17 @@ import (
 )
 
 type dshLiveSession struct {
-	sessionID, tabID, workspaceID, cwd, incarnation, provider, model string
-	connection                                                       *rpc.Connection
-	available                                                        bool
-	subscription                                                     dsh.SessionSubscription
-	generation                                                       uint64
+	sessionID, tabID, workspaceID, cwd, instanceID, provider, model string
+	connection                                                      *rpc.Connection
+	available                                                       bool
+	subscription                                                    dsh.SessionSubscription
+	generation                                                      uint64
 }
 
 type dshRoute struct {
 	connection                    *rpc.Connection
 	sessionID, tabID, workspaceID string
-	incarnation                   string
+	instanceID                    string
 	generation                    uint64
 }
 
@@ -65,14 +65,14 @@ func (r *dshLiveRegistry) rebind(entry *dshLiveSession, connection *rpc.Connecti
 		return 0, false, false
 	}
 	previous := entry.subscription
-	incarnationChanged := entry.incarnation != "" && entry.incarnation != subscription.Incarnation
+	instanceIDChanged := entry.instanceID != "" && entry.instanceID != subscription.InstanceID
 	entry.connection, entry.subscription = connection, subscription
-	entry.incarnation = subscription.Incarnation
+	entry.instanceID = subscription.InstanceID
 	entry.available, entry.generation = true, entry.generation+1
 	if previous.Unsubscribe != nil {
 		previous.Unsubscribe()
 	}
-	return entry.generation, incarnationChanged, true
+	return entry.generation, instanceIDChanged, true
 }
 
 func (r *dshLiveRegistry) requiresResume(entry *dshLiveSession) bool {
@@ -105,21 +105,21 @@ func (r *dshLiveRegistry) route(entry *dshLiveSession, generation uint64) (dshRo
 	if r.sessions[entry.sessionID] != entry || entry.generation != generation || entry.connection == nil {
 		return dshRoute{}, false
 	}
-	return dshRoute{connection: entry.connection, sessionID: entry.sessionID, tabID: entry.tabID, workspaceID: entry.workspaceID, incarnation: entry.incarnation, generation: generation}, true
+	return dshRoute{connection: entry.connection, sessionID: entry.sessionID, tabID: entry.tabID, workspaceID: entry.workspaceID, instanceID: entry.instanceID, generation: generation}, true
 }
 
 // resetRoute atomically marks the subscription unavailable and retains the
 // current route snapshot needed to publish its terminal reset. An attaching
 // connection must therefore resume before it can subscribe again.
-func (r *dshLiveRegistry) resetRoute(entry *dshLiveSession, generation uint64, incarnation string) (dshRoute, bool) {
+func (r *dshLiveRegistry) resetRoute(entry *dshLiveSession, generation uint64, instanceID string) (dshRoute, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.sessions[entry.sessionID] != entry || entry.generation != generation || entry.connection == nil {
 		return dshRoute{}, false
 	}
-	entry.incarnation = incarnation
+	entry.instanceID = instanceID
 	entry.available = false
-	return dshRoute{connection: entry.connection, sessionID: entry.sessionID, tabID: entry.tabID, workspaceID: entry.workspaceID, incarnation: entry.incarnation, generation: generation}, true
+	return dshRoute{connection: entry.connection, sessionID: entry.sessionID, tabID: entry.tabID, workspaceID: entry.workspaceID, instanceID: entry.instanceID, generation: generation}, true
 }
 
 func (r *dshLiveRegistry) detach(entry *dshLiveSession, generation uint64, connection *rpc.Connection) {

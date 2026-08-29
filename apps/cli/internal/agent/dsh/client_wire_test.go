@@ -58,12 +58,12 @@ func TestSupervisor_RouteOutputKeepsUnknownMalformedEnvelopeDiagnostic(t *testin
 	}
 }
 
-func TestSessionReadWireResult_RequiresDurableSnapshotCursorsAndIncarnation(t *testing.T) {
+func TestSessionReadWireResult_RequiresDurableSnapshotCursorsAndInstanceID(t *testing.T) {
 	var response sessionReadWireResult
 	err := decodeStrictJSON([]byte(`{
 		"session":{"sessionId":"session","createdAt":1},
 		"events":[],
-		"incarnation":"run-1",
+		"instanceId":"run-1",
 		"asOfSeq":-1,
 		"durableThroughSeq":-1
 	}`), &response)
@@ -74,7 +74,7 @@ func TestSessionReadWireResult_RequiresDurableSnapshotCursorsAndIncarnation(t *t
 	if err != nil {
 		t.Fatalf("validate: %v", err)
 	}
-	if result.Incarnation != "run-1" || result.AsOfSeq != -1 || result.DurableThroughSeq != -1 {
+	if result.InstanceID != "run-1" || result.AsOfSeq != -1 || result.DurableThroughSeq != -1 {
 		t.Fatalf("result = %#v", result)
 	}
 }
@@ -84,7 +84,7 @@ func TestSessionReadWireResult_RejectsUnsafeDurableSnapshotCursors(t *testing.T)
 	err := decodeStrictJSON([]byte(`{
 		"session":{"sessionId":"session","createdAt":1},
 		"events":[],
-		"incarnation":"run-1",
+		"instanceId":"run-1",
 		"asOfSeq":0,
 		"durableThroughSeq":-1
 	}`), &response)
