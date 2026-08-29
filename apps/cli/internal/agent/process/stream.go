@@ -20,7 +20,6 @@ import (
 // trailing \r before JSON parsing.
 func readStdout(session *Session, stdout io.ReadCloser, onEvent func(sessionID, tabID, workspaceID string, event []byte)) {
 	defer func() {
-		stdout.Close()
 		session.manager.removeSession(session.id)
 		// OnExit runs before close(done) so a clean pi.stop (which deletes the
 		// registry entry right after Close returns) can never race it; a slow
@@ -60,7 +59,12 @@ func readStdout(session *Session, stdout io.ReadCloser, onEvent func(sessionID, 
 			Err(err).
 			Str("sessionId", session.id).
 			Msg("agentmanager: stdout scan error")
+		_ = stdout.Close() // scanner stopped, so no reader remains to drain stdout
 	}
+
+	// Cmd.Wait closes StdoutPipe. Call it only after Scanner has drained the
+	// pipe; otherwise a final event written during shutdown can be lost.
+	_ = session.waitForExit() // exit status is not part of the stream lifecycle
 }
 
 // scanLinesStrict splits on \n only. It is identical to bufio.ScanLines but

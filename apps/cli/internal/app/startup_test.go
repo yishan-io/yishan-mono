@@ -286,7 +286,7 @@ func TestAppStartDSHSupervisor_InitialFailureRestartsAndRunsQueuedRecoveryOnce(t
 			if attempts == 1 {
 				return nil, errors.New("initial startup unavailable")
 			}
-			return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; cat >/dev/null`), nil
+			return appDSHRuntimeCommand("ready")(context.Background())
 		},
 		Initialize:      dsh.InitializeConfig{CWD: "/workspace", Provider: "provider", Model: "model"},
 		RestartLimit:    1,
@@ -363,7 +363,7 @@ func (*transientRecoveryJobRunner) Close(context.Context) error { return nil }
 func TestAppStartDSHSupervisor_RecoveryFailureDoesNotPreventRuntimeOrQueuedRecovery(t *testing.T) {
 	supervisor := dsh.NewSupervisor(dsh.Config{
 		Command: func(context.Context) (*exec.Cmd, error) {
-			return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; cat >/dev/null`), nil
+			return appDSHRuntimeCommand("ready")(context.Background())
 		},
 		Initialize:      dsh.InitializeConfig{CWD: "/workspace", Provider: "provider", Model: "model"},
 		ShutdownTimeout: 10 * time.Millisecond,
@@ -432,43 +432,52 @@ func (r *queuedTransientRecoveryJobRunner) RecoverQueued(context.Context) error 
 
 func (*queuedTransientRecoveryJobRunner) Close(context.Context) error { return nil }
 
+func (r *queuedTransientRecoveryJobRunner) AttemptCount() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.attempts
+}
+
 func TestRegisterBackgroundJobRecovery_RetriesQueuedRecoveryAfterLaterDSHReady(t *testing.T) {
-	attempts := 0
 	supervisor := dsh.NewSupervisor(dsh.Config{
-		Command: func(context.Context) (*exec.Cmd, error) {
-			attempts++
-			if attempts == 1 {
-				return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; exit 0`), nil
-			}
-			return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; cat >/dev/null`), nil
-		},
+		Command:         appDSHRuntimeCommand("ready"),
 		Initialize:      dsh.InitializeConfig{CWD: "/workspace", Provider: "provider", Model: "model"},
-		RestartLimit:    1,
-		RestartBackoff:  time.Millisecond,
 		ShutdownTimeout: 10 * time.Millisecond,
 	})
-	defer supervisor.Close()
+	t.Cleanup(func() {
+		if err := supervisor.Close(); err != nil {
+			t.Errorf("cleanup DSH supervisor: %v", err)
+		}
+	})
 	jobs := &queuedTransientRecoveryJobRunner{calls: make(chan struct{}, 2), completed: make(chan struct{}, 1)}
 	registerBackgroundJobRecovery(supervisor, jobs)
 	if err := supervisor.Start(context.Background()); err != nil {
 		t.Fatalf("start DSH supervisor: %v", err)
 	}
-	for range 2 {
-		select {
-		case <-jobs.calls:
-		case <-time.After(time.Second):
-			t.Fatal("queued recovery was not retried after DSH became ready")
-		}
+	waitForQueuedRecoveryCall(t, jobs.calls)
+	if err := supervisor.Restart(context.Background()); err != nil {
+		t.Fatalf("restart DSH supervisor: %v", err)
 	}
+	waitForQueuedRecoveryCall(t, jobs.calls)
 	select {
 	case <-jobs.completed:
 	case <-time.After(time.Second):
-		t.Fatal("queued recovery did not complete after retry")
+		t.Fatal("queued recovery did not complete after the later DSH ready event")
 	}
+	if err := supervisor.Close(); err != nil {
+		t.Fatalf("close DSH supervisor: %v", err)
+	}
+	if got := jobs.AttemptCount(); got != 2 {
+		t.Fatalf("queued recovery attempts = %d, want 2", got)
+	}
+}
+
+func waitForQueuedRecoveryCall(t *testing.T, calls <-chan struct{}) {
+	t.Helper()
 	select {
-	case <-jobs.calls:
-		t.Fatal("queued recovery ran again after successful completion")
-	case <-time.After(10 * time.Millisecond):
+	case <-calls:
+	case <-time.After(time.Second):
+		t.Fatal("queued recovery was not called")
 	}
 }
 
@@ -490,7 +499,7 @@ func (blockingQueuedRecoveryRunner) Close(context.Context) error { return nil }
 func TestRegisterBackgroundJobRecovery_DoesNotBlockDSHStartup(t *testing.T) {
 	supervisor := dsh.NewSupervisor(dsh.Config{
 		Command: func(context.Context) (*exec.Cmd, error) {
-			return exec.Command("sh", "-c", `printf '{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}\n'; cat >/dev/null`), nil
+			return appDSHRuntimeCommand("ready")(context.Background())
 		},
 		Initialize:      dsh.InitializeConfig{CWD: "/workspace", Provider: "provider", Model: "model"},
 		ShutdownTimeout: 10 * time.Millisecond,
