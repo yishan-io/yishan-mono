@@ -4,6 +4,9 @@ import { resolve } from "node:path";
 import { isDevMode } from "../runtime/environment";
 const stateFileName = "daemon.state.json";
 const idFileName = "daemon.id";
+const systemLogFileName = "system.log";
+const runtimeLogFileName = "runtime.log";
+const legacyDaemonLogFileName = "daemon.log";
 type DaemonState = { host: string; port: number };
 /** Resolves the CLI profile with development mode taking precedence over YISHAN_PROFILE. */
 export function resolveCliProfileName(): string {
@@ -20,7 +23,56 @@ export function resolveDaemonIdFilePath(): string {
   return resolveDaemonProfilePath(idFileName);
 }
 export function resolveDaemonLogFilePath(): string {
-  return resolveDaemonProfilePath("logs", "daemon.log");
+  return resolveDaemonProfilePath("logs", systemLogFileName);
+}
+
+/** Resolves the legacy profile log path for read-only fallback support. */
+export function resolveLegacyDaemonLogFilePath(): string {
+  return resolveDaemonProfilePath("logs", legacyDaemonLogFileName);
+}
+
+/** Resolves an account-scoped daemon log path when the user id is a safe path segment. */
+export function resolveAccountDaemonLogFilePath(userId: string): string | null {
+  if (!isSafeAccountUserId(userId)) return null;
+  return resolveDaemonProfilePath("accounts", userId, "logs", runtimeLogFileName);
+}
+
+/** Reads the active account id from the profile credential file without exposing credential contents. */
+export async function readActiveAccountUserId(): Promise<string | null> {
+  try {
+    return parseCredentialUserId(await readFile(resolveDaemonProfilePath("credential.yaml"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function parseCredentialUserId(credential: string): string | null {
+  for (const credentialLine of credential.split(/\r?\n/)) {
+    const match = credentialLine.match(/^\s*user_id\s*:\s*(.*?)\s*(?:#.*)?$/);
+    if (!match) continue;
+    const rawUserId = match[1];
+    if (rawUserId === undefined) return null;
+    const value = rawUserId.trim();
+    const userId =
+      (value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))
+        ? value.slice(1, -1).trim()
+        : value;
+    return isSafeAccountUserId(userId) ? userId : null;
+  }
+  return null;
+}
+
+function isSafeAccountUserId(userId: string): boolean {
+  return (
+    Boolean(userId) &&
+    userId !== "." &&
+    userId !== ".." &&
+    !userId.includes("/") &&
+    !userId.includes("\\") &&
+    !userId.includes("\0") &&
+    !userId.includes("\r") &&
+    !userId.includes("\n")
+  );
 }
 /** Reads the persisted daemon id, returning an empty value if unavailable. */
 export async function readPersistedDaemonId(): Promise<string> {

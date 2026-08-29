@@ -503,7 +503,10 @@
         "label": "Daemon Log",
         "description": "View the raw daemon log entries for troubleshooting and diagnostics.",
         "action": "Show Log",
-        "title": "Daemon Log"
+        "title": "Daemon Log",
+        "sourceLabel": "Daemon log source",
+        "systemTab": "System",
+        "accountTab": "Account"
       },
       "relay": {
         "title": "Relay Connection",

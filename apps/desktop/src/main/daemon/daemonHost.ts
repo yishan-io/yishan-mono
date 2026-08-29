@@ -1,7 +1,18 @@
 import { readFile } from "node:fs/promises";
 import { getErrorMessage } from "../../shared/errors/getErrorMessage";
-import { resolveDaemonLogFilePath } from "./daemonEndpoint";
+import type { DaemonLogSource } from "../bridge/daemon";
+import {
+  readActiveAccountUserId,
+  resolveAccountDaemonLogFilePath,
+  resolveDaemonLogFilePath,
+  resolveLegacyDaemonLogFilePath,
+} from "./daemonEndpoint";
 import type { DaemonInfo } from "./daemonHealthCheck";
+
+function isFileNotFoundError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
 /** Renderer-facing daemon operations; DaemonManager remains the lifecycle owner. */
 export class DaemonHost {
   private cachedQuitOnExit: boolean | null = null;
@@ -29,14 +40,31 @@ export class DaemonHost {
     }
     await this.daemon.ensureStarted();
   }
-  async readLog() {
+  async readLog(source: DaemonLogSource) {
+    const logFilePath = await this.resolveLogFilePath(source);
+    if (typeof logFilePath !== "string") return logFilePath;
     try {
-      return { ok: true as const, content: await readFile(resolveDaemonLogFilePath(), "utf8") };
+      return { ok: true as const, content: await readFile(logFilePath, "utf8") };
     } catch (error: unknown) {
-      if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT")
-        return { ok: true as const, content: "" };
+      if (!isFileNotFoundError(error)) return { ok: false as const, error: getErrorMessage(error) };
+      if (source === "account") return { ok: false as const, error: "No account daemon log is available." };
+      return await this.readLegacySystemLog();
+    }
+  }
+  private async readLegacySystemLog() {
+    try {
+      return { ok: true as const, content: await readFile(resolveLegacyDaemonLogFilePath(), "utf8") };
+    } catch (error: unknown) {
+      if (isFileNotFoundError(error)) return { ok: true as const, content: "" };
       return { ok: false as const, error: getErrorMessage(error) };
     }
+  }
+  private async resolveLogFilePath(source: DaemonLogSource): Promise<string | { ok: false; error: string }> {
+    if (source === "system") return resolveDaemonLogFilePath();
+    const userId = await readActiveAccountUserId();
+    if (!userId) return { ok: false, error: "No active account is available for account logs." };
+    const logFilePath = resolveAccountDaemonLogFilePath(userId);
+    return logFilePath ?? { ok: false, error: "The active account cannot be used to resolve account logs." };
   }
   async getQuitOnExit(): Promise<boolean> {
     try {

@@ -8,7 +8,12 @@
  */
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
 
-export type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "../../../../main/bridge/daemon";
+export type {
+  DaemonInfoResult,
+  DaemonLogResult,
+  DaemonLogSource,
+  DaemonRestartResult,
+} from "../../../../main/bridge/daemon";
 
 /** Reads current daemon identity and version from desktop main-process IPC. */
 export async function getDaemonInfo() {
@@ -31,6 +36,6 @@ export async function setDaemonQuitOnExit(value: boolean): Promise<void> {
 }
 
 /** Reads the daemon log from the Electron host. */
-export async function getDaemonLog() {
-  return getDesktopHostBridge().readDaemonLog();
+export async function getDaemonLog(source: import("../../../../main/bridge/daemon").DaemonLogSource) {
+  return getDesktopHostBridge().readDaemonLog(source);
 }

@@ -1,7 +1,7 @@
 import { getVoiceTranscriptionUsage } from "@renderer/domains/agent";
 import { updateLanguagePreference as updateLanguagePreferenceFromApi } from "@renderer/domains/session";
 import { getDesktopHostBridge } from "@renderer/platform/hostBridge";
-import type { DaemonLogResult } from "../../../../main/bridge/daemon";
+import type { DaemonLogResult, DaemonLogSource } from "../../../../main/bridge/daemon";
 import {
   createServiceToken as createServiceTokenFromApi,
   listServiceTokens as listServiceTokensFromApi,
@@ -45,12 +45,12 @@ export function getVoiceUsage(orgId: string) {
 }
 
 /** Reads the daemon log from the Electron host. */
-export async function getDaemonLog(): Promise<DaemonLogResult> {
-  return getDesktopHostBridge().readDaemonLog();
+export async function getDaemonLog(source: DaemonLogSource): Promise<DaemonLogResult> {
+  return getDesktopHostBridge().readDaemonLog(source);
 }
 
 export { getDaemonQuitOnExit, setDaemonQuitOnExit };
-export type { DaemonLogResult } from "../../../../main/bridge/daemon";
+export type { DaemonLogResult, DaemonLogSource } from "../../../../main/bridge/daemon";
 
 /** Updates the preferred agent chat content width. */
 export function setAgentChatWidth(width: AgentChatWidth): void {

@@ -253,10 +253,18 @@ func defaultConfigPath(profile string) (string, error) {
 // dir as authoritative.
 func ResolveAccountDataDir(configPath string) (string, error) {
 	userID := ReadUserIDFromConfig(configPath)
-	if userID == "" {
+	if !IsSafeAccountUserID(userID) {
 		return filepath.Dir(configPath), nil
 	}
 	return filepath.Join(filepath.Dir(configPath), AccountDirName, userID), nil
+}
+
+// IsSafeAccountUserID reports whether userID can be used as one account-directory path segment.
+func IsSafeAccountUserID(userID string) bool {
+	return userID != "" &&
+		userID != "." &&
+		userID != ".." &&
+		!strings.ContainsAny(userID, "/\\\x00\r\n")
 }
 
 // ReadUserIDFromConfig returns the user_id recorded in the credential file at

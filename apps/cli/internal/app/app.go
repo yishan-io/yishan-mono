@@ -8,6 +8,7 @@ package app
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	"database/sql"
@@ -53,6 +54,9 @@ type Config struct {
 	Session     *session.Session
 	NodeID      string
 	LogFilePath string
+	// AgentStderr captures managed agent process stderr. It follows the active
+	// daemon log writer when account-scoped logging is enabled.
+	AgentStderr io.Writer
 	// DaemonWSEndpoint is the loopback endpoint injected into managed children.
 	DaemonWSEndpoint string
 	Database         *sql.DB
@@ -194,7 +198,7 @@ func Bootstrap(cfg Config) (*App, error) {
 
 	computerSvc := nodesystem.NewDefaultComputerService()
 	modelList := modellist.NewService()
-	agentMgr := agentmanager.NewManager()
+	agentMgr := agentmanager.NewManagerWithStderr(cfg.AgentStderr)
 	piAuth := nodeagent.NewManagedPiAuthStore()
 	contextStore := contextstore.NewStore(cfg.SettingsPath)
 	templateStore := nodelocaltask.NewTemplateStore(cfg.DataDir)

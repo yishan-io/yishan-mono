@@ -174,3 +174,97 @@ func TestFileWriter_RequiresPath(t *testing.T) {
 		t.Fatal("expected error for empty path")
 	}
 }
+
+func TestFileWriter_SwitchPathRestrictsAccountLogPermissions(t *testing.T) {
+	dir := t.TempDir()
+	writer, err := NewFileWriter(FileWriterConfig{Path: filepath.Join(dir, "logs", "system.log")})
+	if err != nil {
+		t.Fatalf("NewFileWriter: %v", err)
+	}
+	t.Cleanup(func() { _ = writer.Close() })
+
+	accountPath := filepath.Join(dir, "accounts", "user_123", "logs", "runtime.log")
+	if err := writer.SwitchPath(accountPath); err != nil {
+		t.Fatalf("SwitchPath: %v", err)
+	}
+
+	info, err := os.Stat(accountPath)
+	if err != nil {
+		t.Fatalf("stat account log: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("account log permissions = %o, want 600", got)
+	}
+	logDir, err := os.Stat(filepath.Dir(accountPath))
+	if err != nil {
+		t.Fatalf("stat account log directory: %v", err)
+	}
+	if got := logDir.Mode().Perm(); got != 0o700 {
+		t.Fatalf("account log directory permissions = %o, want 700", got)
+	}
+}
+
+func TestFileWriter_SwitchPathPreservesAccountLogPermissionsAfterRotation(t *testing.T) {
+	dir := t.TempDir()
+	writer, err := NewFileWriter(FileWriterConfig{
+		Path:     filepath.Join(dir, "logs", "system.log"),
+		MaxBytes: 1,
+	})
+	if err != nil {
+		t.Fatalf("NewFileWriter: %v", err)
+	}
+	t.Cleanup(func() { _ = writer.Close() })
+
+	accountPath := filepath.Join(dir, "accounts", "user_123", "logs", "runtime.log")
+	if err := writer.SwitchPath(accountPath); err != nil {
+		t.Fatalf("SwitchPath: %v", err)
+	}
+	if _, err := writer.Write([]byte("rotation")); err != nil {
+		t.Fatalf("write rotated account log: %v", err)
+	}
+
+	info, err := os.Stat(accountPath)
+	if err != nil {
+		t.Fatalf("stat account log: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("rotated account log permissions = %o, want 600", got)
+	}
+}
+
+func TestFileWriter_SwitchPathWritesFutureLogsToNewPath(t *testing.T) {
+	dir := t.TempDir()
+	profilePath := filepath.Join(dir, "logs", "system.log")
+	accountPath := filepath.Join(dir, "accounts", "user_123", "logs", "runtime.log")
+
+	writer, err := NewFileWriter(FileWriterConfig{Path: profilePath})
+	if err != nil {
+		t.Fatalf("NewFileWriter: %v", err)
+	}
+	t.Cleanup(func() { _ = writer.Close() })
+
+	if _, err := writer.Write([]byte("bootstrap\n")); err != nil {
+		t.Fatalf("write bootstrap log: %v", err)
+	}
+	if err := writer.SwitchPath(accountPath); err != nil {
+		t.Fatalf("SwitchPath: %v", err)
+	}
+	if _, err := writer.Write([]byte("runtime\n")); err != nil {
+		t.Fatalf("write runtime log: %v", err)
+	}
+
+	profileLogs, err := os.ReadFile(profilePath)
+	if err != nil {
+		t.Fatalf("read profile log: %v", err)
+	}
+	if string(profileLogs) != "bootstrap\n" {
+		t.Fatalf("profile logs = %q, want only bootstrap logs", profileLogs)
+	}
+	accountLogs, err := os.ReadFile(accountPath)
+	if err != nil {
+		t.Fatalf("read account log: %v", err)
+	}
+	if string(accountLogs) != "runtime\n" {
+		t.Fatalf("account logs = %q, want only runtime logs", accountLogs)
+	}
+}

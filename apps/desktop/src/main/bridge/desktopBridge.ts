@@ -1,7 +1,7 @@
 import type { DesktopEventEnvelope } from "../../shared/contracts/desktopEventEnvelope";
 import type { AuthLoginResult, AuthStatusResult } from "./auth";
 import type { AppendBrowserHistoryInput, LoadBrowserHistoryResult } from "./browser";
-import type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "./daemon";
+import type { DaemonInfoResult, DaemonLogResult, DaemonLogSource, DaemonRestartResult } from "./daemon";
 import type {
   CopyFilesInput,
   CopyFilesResult,
@@ -49,7 +49,7 @@ export type DesktopHostBridge = {
   login: () => Promise<AuthLoginResult>;
   getDaemonInfo: () => Promise<DaemonInfoResult>;
   restartDaemon: () => Promise<DaemonRestartResult>;
-  readDaemonLog: () => Promise<DaemonLogResult>;
+  readDaemonLog: (source: DaemonLogSource) => Promise<DaemonLogResult>;
   getDaemonQuitOnExit: () => Promise<boolean>;
   setDaemonQuitOnExit: (value: boolean) => Promise<{ ok: true }>;
   writeClipboardText: (text: string) => Promise<{ ok: true }>;
@@ -72,7 +72,7 @@ export type {
   BrowserHistoryGroup,
   LoadBrowserHistoryResult,
 } from "./browser";
-export type { DaemonInfoResult, DaemonLogResult, DaemonRestartResult } from "./daemon";
+export type { DaemonInfoResult, DaemonLogResult, DaemonLogSource, DaemonRestartResult } from "./daemon";
 export type {
   CopyFilesInput,
   CopyFilesResult,

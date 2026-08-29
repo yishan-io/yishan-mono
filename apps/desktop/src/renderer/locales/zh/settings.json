@@ -485,7 +485,10 @@
         "label": "守护进程日志",
         "description": "查看守护进程原始日志条目以进行故障排查和诊断。",
         "action": "查看日志",
-        "title": "守护进程日志"
+        "title": "守护进程日志",
+        "sourceLabel": "守护进程日志来源",
+        "systemTab": "系统",
+        "accountTab": "账户"
       },
       "cli": {
         "title": "Yishan CLI",

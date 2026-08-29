@@ -120,5 +120,14 @@ describe("registerDesktopHostIpc", () => {
     expect(operations.pickFolder).toHaveBeenCalledWith({ startingFolder: "/tmp" });
     expect(operations.append).toHaveBeenCalledWith({ url: "https://example.com" });
     expect(operations.writeText).toHaveBeenCalledWith("copied");
+    await expect(handlers.get(desktopHostChannels.readDaemonLog)?.({}, "account")).resolves.toEqual({
+      ok: true,
+      content: "log",
+    });
+    expect(operations.readLog).toHaveBeenCalledWith("account");
+    expect(handlers.get(desktopHostChannels.readDaemonLog)?.({}, "unknown")).toEqual({
+      ok: false,
+      error: "Unknown daemon log source.",
+    });
   });
 });

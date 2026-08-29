@@ -16,4 +16,7 @@ export type DaemonInfoResult = {
 
 export type DaemonRestartResult = { success: true; daemonInfo: DaemonInfoResult } | { success: false; error: string };
 
+/** Selects the daemon log scope to read from the active CLI profile. */
+export type DaemonLogSource = "system" | "account";
+
 export type DaemonLogResult = { ok: true; content: string } | { ok: false; error: string };

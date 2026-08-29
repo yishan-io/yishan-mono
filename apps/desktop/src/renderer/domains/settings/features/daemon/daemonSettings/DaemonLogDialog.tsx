@@ -1,8 +1,9 @@
-import { Alert, Box, Chip, Dialog, DialogContent, DialogTitle, IconButton, Typography } from "@mui/material";
+import { Alert, Box, Chip, Dialog, DialogContent, DialogTitle, IconButton, Tab, Tabs, Typography } from "@mui/material";
 import { CenteredSpinner } from "@renderer/ui/components/CenteredSpinner";
 import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { LuX } from "react-icons/lu";
+import type { DaemonLogSource } from "../../../host/daemonHost";
 
 type LogEntry = Record<string, unknown> & {
   _raw?: string;
@@ -16,6 +17,8 @@ type DaemonLogDialogState = {
   isLoading: boolean;
   isOpen: boolean;
   logContainerRef: RefObject<HTMLDivElement | null>;
+  selectSource: (source: DaemonLogSource) => Promise<void>;
+  source: DaemonLogSource;
 };
 
 type DaemonLogDialogProps = {
@@ -65,6 +68,15 @@ export function DaemonLogDialog(props: DaemonLogDialogProps) {
           <LuX />
         </IconButton>
       </DialogTitle>
+      <Tabs
+        value={state.source}
+        onChange={(_event, source: DaemonLogSource) => state.selectSource(source)}
+        aria-label={t("settings.daemon.log.sourceLabel")}
+        sx={{ px: 3 }}
+      >
+        <Tab value="system" label={t("settings.daemon.log.systemTab")} />
+        <Tab value="account" label={t("settings.daemon.log.accountTab")} />
+      </Tabs>
       <DialogContent sx={{ p: 0 }}>
         {state.isLoading ? (
           <CenteredSpinner />

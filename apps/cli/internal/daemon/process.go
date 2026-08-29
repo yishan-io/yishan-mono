@@ -14,6 +14,7 @@ import (
 	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/app"
 	"yishan/apps/cli/internal/memory"
+	"yishan/apps/cli/internal/platform/logging"
 
 	"github.com/rs/zerolog/log"
 )
@@ -31,9 +32,13 @@ type RunConfig struct {
 	MemorySummarizer      bool
 	MemorySummarizerAgent string
 	MemorySummarizerModel string
-	// LogFilePath is the resolved path to the daemon log file.
-	// Set by the command layer; passed through to handlers for diagnostics.
+	// LogFilePath is the initial daemon log file path. Default log output starts
+	// at the profile path and switches to the account path after user_id resolves.
 	LogFilePath string
+	// HasCustomLogFile keeps an explicit --log-file path unchanged for all phases.
+	HasCustomLogFile bool
+	// LogFileWriter receives the runtime path switch after account resolution.
+	LogFileWriter *logging.FileWriter
 }
 
 // daemonRuntime holds the initialized state produced during daemon bootstrap

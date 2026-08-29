@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DaemonSettingsView } from "./DaemonSettingsView";
 
@@ -170,6 +170,61 @@ describe("DaemonSettingsView", () => {
     });
     expect(screen.getByText("0.3.0")).toBeTruthy();
     expect(screen.getByText("daemon-456")).toBeTruthy();
+  });
+
+  it("loads the selected account log and renders its formatted entry", async () => {
+    mocked.getDaemonInfo.mockResolvedValue({
+      version: "0.2.0",
+      daemonId: "daemon-123",
+      wsUrl: "ws://127.0.0.1:4242/ws",
+    });
+    mocked.readDaemonLog.mockImplementation(async (source: string) =>
+      source === "account"
+        ? { ok: true, content: '{"time":"2026-01-01T00:00:00.000Z","level":"error","message":"account failed"}' }
+        : { ok: true, content: "" },
+    );
+
+    render(<DaemonSettingsView />);
+    fireEvent.click(await screen.findByRole("button", { name: "settings.daemon.log.action" }));
+    await screen.findByRole("tab", { name: "settings.daemon.log.systemTab" });
+
+    fireEvent.click(screen.getByRole("tab", { name: "settings.daemon.log.accountTab" }));
+
+    await waitFor(() => {
+      expect(mocked.readDaemonLog).toHaveBeenLastCalledWith("account");
+    });
+    expect(await screen.findByText("account failed")).toBeTruthy();
+    expect(screen.getByText("ERROR")).toBeTruthy();
+  });
+
+  it("keeps the selected account log when the system log resolves later", async () => {
+    mocked.getDaemonInfo.mockResolvedValue({
+      version: "0.2.0",
+      daemonId: "daemon-123",
+      wsUrl: "ws://127.0.0.1:4242/ws",
+    });
+    let resolveSystemLog: ((result: { ok: true; content: string }) => void) | undefined;
+    let resolveAccountLog: ((result: { ok: true; content: string }) => void) | undefined;
+    mocked.readDaemonLog.mockImplementation(
+      (source: string) =>
+        new Promise<{ ok: true; content: string }>((resolve) => {
+          if (source === "system") resolveSystemLog = resolve;
+          else resolveAccountLog = resolve;
+        }),
+    );
+
+    render(<DaemonSettingsView />);
+    fireEvent.click(await screen.findByRole("button", { name: "settings.daemon.log.action" }));
+    await waitFor(() => expect(resolveSystemLog).toBeDefined());
+    fireEvent.click(screen.getByRole("tab", { name: "settings.daemon.log.accountTab" }));
+    await waitFor(() => expect(resolveAccountLog).toBeDefined());
+
+    await act(async () => resolveAccountLog?.({ ok: true, content: '{"message":"account log"}' }));
+    expect(await screen.findByText("account log")).toBeTruthy();
+    await act(async () => resolveSystemLog?.({ ok: true, content: '{"message":"system log"}' }));
+
+    expect(screen.getByText("account log")).toBeTruthy();
+    expect(screen.queryByText("system log")).toBeNull();
   });
 
   it("shows a daemon log error when reading logs fails", async () => {

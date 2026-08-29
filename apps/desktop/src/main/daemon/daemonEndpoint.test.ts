@@ -12,11 +12,14 @@ vi.mock("node:os", () => ({ homedir: mocks.homedir }));
 vi.mock("../runtime/environment", () => ({ isDevMode: mocks.isDevMode }));
 
 import {
+  readActiveAccountUserId,
   readPersistedDaemonId,
+  resolveAccountDaemonLogFilePath,
   resolveCliProfileName,
   resolveDaemonHealthUrl,
   resolveDaemonIdFilePath,
   resolveDaemonLogFilePath,
+  resolveLegacyDaemonLogFilePath,
   resolveDaemonProfilePath,
   resolveDaemonStateFilePath,
   resolveDaemonWebSocketUrl,
@@ -59,7 +62,22 @@ describe("daemon endpoint resolution", () => {
     expect(resolveDaemonProfilePath()).toBe(profilePath);
     expect(resolveDaemonStateFilePath()).toBe(resolve(profilePath, "daemon.state.json"));
     expect(resolveDaemonIdFilePath()).toBe(resolve(profilePath, "daemon.id"));
-    expect(resolveDaemonLogFilePath()).toBe(resolve(profilePath, "logs", "daemon.log"));
+    expect(resolveDaemonLogFilePath()).toBe(resolve(profilePath, "logs", "system.log"));
+    expect(resolveLegacyDaemonLogFilePath()).toBe(resolve(profilePath, "logs", "daemon.log"));
+  });
+
+  it("resolves account log paths only for a safe active account id", async () => {
+    process.env.YISHAN_PROFILE = "personal";
+    mocks.readFile.mockResolvedValueOnce("user_id: user_123\napi_token: secret\n");
+
+    await expect(readActiveAccountUserId()).resolves.toBe("user_123");
+    expect(resolveAccountDaemonLogFilePath("user_123")).toBe(
+      "/test-home/.yishan/profiles/personal/accounts/user_123/logs/runtime.log",
+    );
+
+    mocks.readFile.mockResolvedValueOnce("user_id: ../../other-account\n");
+    await expect(readActiveAccountUserId()).resolves.toBeNull();
+    expect(resolveAccountDaemonLogFilePath("../other-account")).toBeNull();
   });
 
   it("prefers the explicit health URL over the WebSocket URL", async () => {
