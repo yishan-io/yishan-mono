@@ -8,7 +8,6 @@ import (
 	"io"
 	"os/exec"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -32,7 +31,12 @@ type Session struct {
 
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
+	stdout io.ReadCloser
 	cancel context.CancelFunc
+
+	// waitForExit reaps the process after stdout reaches EOF. It is replaceable
+	// in tests to verify that stdout is drained before process pipes close.
+	waitForExit func() error
 
 	// done is closed when the stdout reader goroutine exits.
 	done chan struct{}
@@ -99,29 +103,23 @@ func (s *Session) Close() error {
 	}
 	s.mu.Unlock()
 
-	// Wait for graceful exit.
-	done := make(chan error, 1)
-	go func() {
-		done <- s.cmd.Wait()
-	}()
-
+	// The stdout reader owns Cmd.Wait. Cmd.Wait closes StdoutPipe, so calling it
+	// here could close the pipe while the reader is still draining final events.
 	select {
-	case <-done:
-		// Process exited on its own.
+	case <-s.done:
+		// The process exited and stdout cleanup completed.
 	case <-time.After(abortGracePeriod):
-		// Force kill.
-		_ = s.cmd.Process.Signal(syscall.SIGKILL)
-		<-done
+		// Kill the complete process tree. A direct child may have already exited
+		// while a descendant still holds stdout open. Close the read end as a
+		// final fallback so this session always finishes even if a descendant
+		// escaped the tree.
+		forceStopProcess(s.cmd)
+		_ = s.stdout.Close()
+		<-s.done
 	}
 
 	// Cancel the context to clean up any remaining resources.
 	s.cancel()
-
-	// Do not report the session as stopped until the stdout reader goroutine has
-	// finished its deferred cleanup and unregistered the session from the
-	// manager. Callers rely on Stop returning only after the session ID can be
-	// reused safely.
-	<-s.done
 
 	return nil
 }

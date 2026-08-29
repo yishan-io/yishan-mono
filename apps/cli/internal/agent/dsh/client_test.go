@@ -215,7 +215,7 @@ func TestSupervisor_ExecutionCallsValidateExactResults(t *testing.T) {
 		t.Fatalf("Start: %v", err)
 	}
 	request := SessionExecutionRequest{CWD: "/workspace", SessionID: "session"}
-	if response, err := supervisor.StartSession(context.Background(), SessionStartRequest{CWD: request.CWD, SessionID: request.SessionID, Binding: testSessionBinding(request.CWD)}); err != nil || response.Incarnation != "run" {
+	if response, err := supervisor.StartSession(context.Background(), SessionStartRequest{CWD: request.CWD, SessionID: request.SessionID, Binding: testSessionBinding(request.CWD)}); err != nil || response.InstanceID != "run" {
 		t.Fatalf("StartSession = %#v, %v", response, err)
 	}
 	if response, err := supervisor.PromptSession(context.Background(), SessionPromptRequest{CWD: request.CWD, SessionID: request.SessionID, ContentBlocks: []TextPromptContentBlock{{Type: "text", Text: "hello"}}}); err != nil || response.MessageID != "message" {
@@ -227,15 +227,15 @@ func TestSupervisor_ExecutionCallsValidateExactResults(t *testing.T) {
 	if response, err := supervisor.CancelSession(context.Background(), request); err != nil || !response.Cancelled {
 		t.Fatalf("CancelSession = %#v, %v", response, err)
 	}
-	if response, err := supervisor.FlushSession(context.Background(), request); err != nil || response.Incarnation != "run" {
+	if response, err := supervisor.FlushSession(context.Background(), request); err != nil || response.InstanceID != "run" {
 		t.Fatalf("FlushSession = %#v, %v", response, err)
 	}
 	subscription, err := supervisor.SubscribeSession(context.Background(), SessionSubscribeRequest{CWD: request.CWD, SessionID: request.SessionID, AfterSeq: -1})
 	if err != nil {
 		t.Fatalf("SubscribeSession: %v", err)
 	}
-	if subscription.Incarnation != "run" || subscription.Baseline != -1 {
-		t.Fatalf("subscription snapshot = incarnation %q, baseline %d", subscription.Incarnation, subscription.Baseline)
+	if subscription.InstanceID != "run" || subscription.Baseline != -1 {
+		t.Fatalf("subscription snapshot = instanceID %q, baseline %d", subscription.InstanceID, subscription.Baseline)
 	}
 	subscription.Unsubscribe()
 }
@@ -261,8 +261,8 @@ func TestSupervisor_MalformedKnownNotificationKillsOnlyItsGeneration(t *testing.
 	if !errors.Is(err, ErrRequestInterrupted) {
 		t.Fatalf("ReadSession error = %v", err)
 	}
-	if health := supervisor.Health(); health.IsReady || health.Incarnation != "" {
-		t.Fatalf("health after invalid notification = %#v, want unavailable without incarnation", health)
+	if health := supervisor.Health(); health.IsReady || health.InstanceID != "" {
+		t.Fatalf("health after invalid notification = %#v, want unavailable without instanceID", health)
 	}
 	waitFor(t, func() bool { return supervisor.Health().RestartCount == 1 })
 }
@@ -272,11 +272,11 @@ func TestSupervisor_MalformedKnownNotificationPreservesNewerGenerationHealth(t *
 	stale := &runtimeProcess{pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(1)}
 	current := &runtimeProcess{pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(1)}
 	supervisor.process = current
-	supervisor.health = Health{IsReady: true, Incarnation: "dsh-2"}
+	supervisor.health = Health{IsReady: true, InstanceID: "dsh-2"}
 
 	supervisor.invalidateProcess(stale, errors.New("invalid notification"))
 
-	if health := supervisor.Health(); !health.IsReady || health.Incarnation != "dsh-2" {
+	if health := supervisor.Health(); !health.IsReady || health.InstanceID != "dsh-2" {
 		t.Fatalf("health after stale invalidation = %#v, want current generation health", health)
 	}
 }
@@ -286,13 +286,13 @@ func TestSequenceValidation_RejectsUnsafeValues(t *testing.T) {
 	if err := validateSubscribeRequest(SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: maxSafeInteger}); err == nil {
 		t.Fatal("accepted max afterSeq despite required increment")
 	}
-	if _, err := (durableCursorWire{SessionID: "session", Incarnation: "run", DurableThroughSeq: unsafe}).validate("session"); err == nil {
+	if _, err := (durableCursorWire{SessionID: "session", InstanceID: "run", DurableThroughSeq: unsafe}).validate("session"); err == nil {
 		t.Fatal("accepted unsafe durable cursor")
 	}
 	if _, err := parseEvent([]byte(`{"seq":9007199254740992}`), "session"); err == nil {
 		t.Fatal("accepted unsafe event sequence")
 	}
-	if _, err := parseTranscriptResetNotification([]byte(`{"sessionId":"session","incarnation":"run","headSeq":9007199254740992}`)); err == nil {
+	if _, err := parseTranscriptResetNotification([]byte(`{"sessionId":"session","instanceId":"run","headSeq":9007199254740992}`)); err == nil {
 		t.Fatal("accepted unsafe reset head")
 	}
 }

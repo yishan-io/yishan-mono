@@ -12,6 +12,7 @@ const timeoutMs = 30_000;
 const terminateGraceMs = 1_000;
 const forceKillWaitMs = 1_000;
 const dshTestReplayEnvironmentVariable = "YISHAN_DSH_TEST_REPLAY";
+const dshDeveloperModeEnvironmentVariable = "YISHAN_DSH_DEVELOPER_MODE";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
@@ -84,12 +85,15 @@ function resolveDshRuntimePath(): string {
 export function resolveDaemonCliEnvironment(): DaemonCliEnvironment {
   const environment = Object.fromEntries(
     Object.entries(process.env).filter(
-      ([environmentVariable]) => environmentVariable.toLowerCase() !== dshTestReplayEnvironmentVariable.toLowerCase(),
+      ([environmentVariable]) =>
+        environmentVariable.toLowerCase() !== dshTestReplayEnvironmentVariable.toLowerCase() &&
+        environmentVariable.toLowerCase() !== dshDeveloperModeEnvironmentVariable.toLowerCase(),
     ),
   );
   return {
     ...environment,
     YISHAN_DAEMON_DSH_ENABLED: process.env.YISHAN_DSH_ENABLED ?? process.env.YISHAN_DAEMON_DSH_ENABLED,
+    YISHAN_DAEMON_DSH_DEVELOPER_MODE: process.env.YISHAN_DSH_DEVELOPER_MODE === "true" ? "true" : "false",
     YISHAN_DAEMON_DSH_NODE_PATH: process.execPath,
     YISHAN_DAEMON_DSH_RUNTIME_PATH: resolveDshRuntimePath(),
   };

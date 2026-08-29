@@ -72,8 +72,8 @@ type SessionSubscribeRequest struct {
 	AfterSeq  int64  `json:"afterSeq"`
 }
 type SessionStartResult struct {
-	SessionID   string `json:"sessionId"`
-	Incarnation string `json:"incarnation"`
+	SessionID  string `json:"sessionId"`
+	InstanceID string `json:"instanceId"`
 }
 type SessionPromptResult struct {
 	MessageID string `json:"messageId"`
@@ -85,7 +85,7 @@ type SessionCancelResult struct {
 type DurableCursor struct {
 	SessionID         string `json:"sessionId"`
 	DurableThroughSeq int64  `json:"durableThroughSeq"`
-	Incarnation       string `json:"incarnation"`
+	InstanceID        string `json:"instanceId"`
 }
 type SessionEvent struct {
 	SessionID string          `json:"sessionId"`
@@ -97,16 +97,16 @@ type SessionStatus struct {
 	Status    string `json:"status"`
 }
 type TranscriptReset struct {
-	SessionID   string `json:"sessionId"`
-	Incarnation string `json:"incarnation"`
-	HeadSeq     int64  `json:"headSeq"`
+	SessionID  string `json:"sessionId"`
+	InstanceID string `json:"instanceId"`
+	HeadSeq    int64  `json:"headSeq"`
 }
 
 // SubagentLifecycle is one live-only child-run edge keyed by its parent session.
 type SubagentLifecycle struct {
 	Version         int    `json:"version"`
 	ParentSessionID string `json:"parentSessionId"`
-	Incarnation     string `json:"incarnation"`
+	InstanceID      string `json:"instanceId"`
 	Revision        int64  `json:"revision"`
 	Event           string `json:"event"`
 	RunID           string `json:"runId"`
@@ -119,13 +119,13 @@ type SubagentLifecycle struct {
 // LifecycleResync tells a newly attached subscriber to refresh live child lineage.
 type LifecycleResync struct {
 	ParentSessionID string `json:"parentSessionId"`
-	Incarnation     string `json:"incarnation"`
+	InstanceID      string `json:"instanceId"`
 	Revision        int64  `json:"revision"`
 }
 
 type SessionSubscribeResult struct {
 	SessionID         string
-	Incarnation       string
+	InstanceID        string
 	Events            []SessionEvent
 	AsOfSeq           int64
 	DurableThroughSeq int64
@@ -143,9 +143,9 @@ type SessionUpdate struct {
 type SessionSubscription struct {
 	Updates     <-chan SessionUpdate
 	Unsubscribe func()
-	// Incarnation and Baseline identify the transcript snapshot that seeded Updates.
-	Incarnation string
-	Baseline    int64
+	// InstanceID and Baseline identify the transcript snapshot that seeded Updates.
+	InstanceID string
+	Baseline   int64
 	// Snapshot is the authoritative subscribe result after the replay coordinator
 	// merges durable and in-memory events. It is a transport snapshot, not persistence.
 	Snapshot SessionSubscribeResult
@@ -165,7 +165,7 @@ func (s *Supervisor) StartSession(ctx context.Context, request SessionStartReque
 	if err != nil {
 		return SessionStartResult{}, err
 	}
-	process.replay.setIncarnation(request.SessionID, result.Incarnation)
+	process.replay.setInstanceID(request.SessionID, result.InstanceID)
 	return result, nil
 }
 func (s *Supervisor) PromptSession(ctx context.Context, request SessionPromptRequest) (SessionPromptResult, error) {

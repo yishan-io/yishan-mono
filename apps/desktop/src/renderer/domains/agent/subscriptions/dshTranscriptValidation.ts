@@ -35,6 +35,7 @@ export function validRecognizedData(type: string, data: JsonRecord): boolean {
     );
   if (type === "request/context") return validRequestContext(data);
   if (type === "session/end-seed") return Object.keys(data).length === 0;
+  if (type === "session/title") return validSessionTitle(data);
   return validInboxSplice(data);
 }
 function exactStepData(data: JsonRecord, optionalKeys: string[]): boolean {
@@ -355,6 +356,35 @@ function validRequestContext(data: JsonRecord): boolean {
     (data.contextWindow === undefined || isNonNegativeInteger(data.contextWindow))
   );
 }
+function validSessionTitle(data: JsonRecord): boolean {
+  if (!hasExactKeys(data, ["title", "messageSeqs", "source"]) || !isNonWhitespaceString(data.title)) {
+    return false;
+  }
+  const messageSeqs = data.messageSeqs;
+  if (!Array.isArray(messageSeqs) || !messageSeqs.every(isNonNegativeInteger)) return false;
+  if (new Set(messageSeqs).size !== messageSeqs.length) return false;
+  if (messageSeqs.some((messageSeq, index) => index > 0 && messageSeq <= messageSeqs[index - 1])) return false;
+  const source = asRecord(data.source);
+  if (!source || typeof source.kind !== "string") return false;
+  if (source.kind === "user") return hasExactKeys(source, ["kind"]) && messageSeqs.length === 0;
+  if (source.kind === "fallback") return hasExactKeys(source, ["kind"]) && messageSeqs.length > 0;
+  if (
+    source.kind !== "provider" ||
+    !hasOnlyKeys(source, ["kind", "provider", "model"]) ||
+    !isNonEmptyString(source.provider)
+  ) {
+    return false;
+  }
+  if (messageSeqs.length === 0) return false;
+  if (source.model === undefined) return true;
+  const model = asRecord(source.model);
+  return (
+    !!model &&
+    hasExactKeys(model, ["provider", "model"]) &&
+    isNonEmptyString(model.provider) &&
+    isNonEmptyString(model.model)
+  );
+}
 function validInboxSplice(data: JsonRecord): boolean {
   return (
     hasOnlyKeys(data, ["target", "start", "removedCount", "inserted", "outcome"]) &&
@@ -382,6 +412,12 @@ function hasExactKeys(record: JsonRecord, keys: string[]): boolean {
 }
 function hasOnlyKeys(record: JsonRecord, keys: string[]): boolean {
   return Object.keys(record).every((key) => keys.includes(key));
+}
+function isNonWhitespaceString(input: unknown): input is string {
+  return typeof input === "string" && input.trim().length > 0;
+}
+function isNonEmptyString(input: unknown): input is string {
+  return typeof input === "string" && input.length > 0;
 }
 function isNonNegativeInteger(input: unknown): boolean {
   return typeof input === "number" && Number.isSafeInteger(input) && input >= 0;

@@ -103,7 +103,7 @@ type SessionHeader struct {
 type SessionReadResult struct {
 	Session           SessionHeader     `json:"session"`
 	Events            []json.RawMessage `json:"events"`
-	Incarnation       string            `json:"incarnation"`
+	InstanceID        string            `json:"instanceId"`
 	AsOfSeq           int64             `json:"asOfSeq"`
 	DurableThroughSeq int64             `json:"durableThroughSeq"`
 }

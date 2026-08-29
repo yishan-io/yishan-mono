@@ -25,8 +25,8 @@ func TestSupervisor_Start_RetriesInitialCreationFailure(t *testing.T) {
 	assertRestartBackoff(t, backoffStarted)
 	close(allowRetry)
 	waitFor(t, func() bool { return supervisor.Health().IsReady })
-	if got := supervisor.Health().Incarnation; got != "dsh-1" {
-		t.Fatalf("retry incarnation = %q, want dsh-1", got)
+	if got := supervisor.Health().InstanceID; got != "dsh-1" {
+		t.Fatalf("retry instanceID = %q, want dsh-1", got)
 	}
 	assertAttempts(t, &mu, attempts, 2)
 }

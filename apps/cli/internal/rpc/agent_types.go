@@ -240,7 +240,7 @@ type AgentCapabilitiesResult struct {
 type AgentDSHCapabilities struct {
 	Configured                bool   `json:"configured"`
 	Ready                     bool   `json:"ready"`
-	Incarnation               string `json:"incarnation,omitempty"`
+	InstanceID                string `json:"instanceId,omitempty"`
 	TranscriptProtocolVersion int    `json:"transcriptProtocolVersion"`
 	Provider                  string `json:"provider,omitempty"`
 	Model                     string `json:"model,omitempty"`
@@ -261,7 +261,7 @@ type AgentAckResult struct {
 type AgentDSHAttachResult struct {
 	Runtime           AgentRuntime      `json:"runtime"`
 	SessionID         string            `json:"sessionId"`
-	Incarnation       string            `json:"incarnation"`
+	InstanceID        string            `json:"instanceId"`
 	Events            []json.RawMessage `json:"events"`
 	AsOfSeq           int64             `json:"asOfSeq"`
 	DurableThroughSeq int64             `json:"durableThroughSeq"`
@@ -305,7 +305,7 @@ type AgentDSHSessionMetadata struct {
 type AgentDSHHistory struct {
 	Session           AgentDSHSessionMetadata `json:"session"`
 	Events            []json.RawMessage       `json:"events"`
-	Incarnation       string                  `json:"incarnation"`
+	InstanceID        string                  `json:"instanceId"`
 	AsOfSeq           int64                   `json:"asOfSeq"`
 	DurableThroughSeq int64                   `json:"durableThroughSeq"`
 }

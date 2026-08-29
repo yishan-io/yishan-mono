@@ -13,7 +13,7 @@ import { listPiProviders } from "../../commands/piProviderCommands";
 import type { PiProviderStatus } from "../../commands/piProviderCommands";
 import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../providers/piProviders";
 import { ProviderMark } from "../../ui/ProviderMark";
-import { ProviderCredentialDialog } from "../provider-credentials/ProviderCredentialDialog";
+import { PiProviderCredentialDialog } from "../provider-credentials/PiProviderCredentialDialog";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";
 
 type ProviderCredentialDialogTarget = {
@@ -113,7 +113,7 @@ export function AgentProviderSettingsView() {
   const [credentialTarget, setCredentialTarget] = useState<ProviderCredentialDialogTarget | null>(null);
   const [removeTarget, setRemoveTarget] = useState<PiProviderStatus | null>(null);
 
-  const fetchProviders = useCallback(() => listPiProviders(), [listPiProviders]);
+  const fetchProviders = useCallback(() => listPiProviders(), []);
   const {
     data: providers,
     isLoading,
@@ -192,7 +192,7 @@ export function AgentProviderSettingsView() {
           {t("settings.providers.appliesToNewSessions")}
         </Typography>
       </SettingsCard>
-      <ProviderCredentialDialog
+      <PiProviderCredentialDialog
         open={credentialTarget !== null}
         mode={credentialTarget?.mode ?? "add"}
         initialProviderId={credentialTarget?.provider}

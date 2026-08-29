@@ -10,8 +10,8 @@ import (
 const maxSafeInteger int64 = 9_007_199_254_740_991
 
 type sessionStartWireResult struct {
-	SessionID   string `json:"sessionId"`
-	Incarnation string `json:"incarnation"`
+	SessionID  string `json:"sessionId"`
+	InstanceID string `json:"instanceId"`
 }
 type sessionPromptWireResult struct {
 	MessageID string `json:"messageId"`
@@ -23,7 +23,7 @@ type sessionCancelWireResult struct {
 type durableCursorWire DurableCursor
 type sessionSubscribeWireResult struct {
 	SessionID         string            `json:"sessionId"`
-	Incarnation       string            `json:"incarnation"`
+	InstanceID        string            `json:"instanceId"`
 	Events            []json.RawMessage `json:"events"`
 	AsOfSeq           *int64            `json:"asOfSeq"`
 	DurableThroughSeq *int64            `json:"durableThroughSeq"`
@@ -71,10 +71,10 @@ func validateSubscribeRequest(request SessionSubscribeRequest) error {
 	return nil
 }
 func (response sessionStartWireResult) validate(sessionID string) (SessionStartResult, error) {
-	if response.SessionID != sessionID || response.Incarnation == "" {
+	if response.SessionID != sessionID || response.InstanceID == "" {
 		return SessionStartResult{}, errors.New("invalid DSH session start response")
 	}
-	return SessionStartResult{SessionID: response.SessionID, Incarnation: response.Incarnation}, nil
+	return SessionStartResult{SessionID: response.SessionID, InstanceID: response.InstanceID}, nil
 }
 func (response sessionPromptWireResult) validate() (SessionPromptResult, error) {
 	if response.MessageID == "" {
@@ -90,16 +90,16 @@ func (response sessionCancelWireResult) validate(sessionID string) (SessionCance
 }
 func (response durableCursorWire) validate(sessionID string) (DurableCursor, error) {
 	cursor := DurableCursor(response)
-	if cursor.SessionID != sessionID || cursor.Incarnation == "" || !isSafeSequence(cursor.DurableThroughSeq, -1) {
+	if cursor.SessionID != sessionID || cursor.InstanceID == "" || !isSafeSequence(cursor.DurableThroughSeq, -1) {
 		return DurableCursor{}, errors.New("invalid DSH durable cursor")
 	}
 	return cursor, nil
 }
 func (response sessionSubscribeWireResult) validate(request SessionSubscribeRequest) (SessionSubscribeResult, error) {
-	if response.SessionID != request.SessionID || response.Incarnation == "" || response.Events == nil || response.AsOfSeq == nil || response.DurableThroughSeq == nil || response.HeadSeq == nil {
+	if response.SessionID != request.SessionID || response.InstanceID == "" || response.Events == nil || response.AsOfSeq == nil || response.DurableThroughSeq == nil || response.HeadSeq == nil {
 		return SessionSubscribeResult{}, errors.New("invalid DSH session subscribe response")
 	}
-	result := SessionSubscribeResult{SessionID: response.SessionID, Incarnation: response.Incarnation, AsOfSeq: *response.AsOfSeq, DurableThroughSeq: *response.DurableThroughSeq, HeadSeq: *response.HeadSeq}
+	result := SessionSubscribeResult{SessionID: response.SessionID, InstanceID: response.InstanceID, AsOfSeq: *response.AsOfSeq, DurableThroughSeq: *response.DurableThroughSeq, HeadSeq: *response.HeadSeq}
 	if !isSafeSequence(result.AsOfSeq, -1) || !isSafeSequence(result.DurableThroughSeq, -1) || !isSafeSequence(result.HeadSeq, -1) || result.DurableThroughSeq != result.AsOfSeq || result.HeadSeq < result.AsOfSeq {
 		return SessionSubscribeResult{}, errors.New("invalid DSH session subscribe cursor")
 	}

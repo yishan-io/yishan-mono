@@ -211,7 +211,7 @@ func TestDSHExecution_ResetPublicationMakesRacingAttachResumeBeforeSubscribe(t *
 	runtime.mu.Lock()
 	updates := runtime.subscriptions[0]
 	runtime.mu.Unlock()
-	updates <- dsh.SessionUpdate{Reset: &dsh.TranscriptReset{SessionID: "s", Incarnation: "reset", HeadSeq: 1}}
+	updates <- dsh.SessionUpdate{Reset: &dsh.TranscriptReset{SessionID: "s", InstanceID: "reset", HeadSeq: 1}}
 
 	client.SetReadDeadline(time.Now().Add(time.Second))
 	var notification map[string]any

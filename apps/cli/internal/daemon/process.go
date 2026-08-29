@@ -33,6 +33,7 @@ type RunConfig struct {
 	MemorySummarizerAgent string
 	MemorySummarizerModel string
 	DSHEnabled            bool
+	DSHDeveloperMode      bool
 	DSHNodePath           string
 	DSHRuntimePath        string
 	DSHProvider           string

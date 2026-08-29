@@ -236,6 +236,7 @@ func buildDetachedArgs(cfg StartConfig) []string {
 		args = appendOptionalArg(args, "--log-file", cfg.LogFile)
 	}
 	args = append(args, "--dsh-enabled="+strconv.FormatBool(cfg.Run.DSHEnabled))
+	args = append(args, "--dsh-developer-mode="+strconv.FormatBool(cfg.Run.DSHDeveloperMode))
 	args = appendOptionalArg(args, "--dsh-node-path", cfg.Run.DSHNodePath)
 	args = appendOptionalArg(args, "--dsh-runtime-path", cfg.Run.DSHRuntimePath)
 	args = appendOptionalArg(args, "--dsh-provider", cfg.Run.DSHProvider)

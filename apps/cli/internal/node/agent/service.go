@@ -12,6 +12,7 @@ import (
 	piauth "yishan/apps/cli/internal/agent/auth"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	"yishan/apps/cli/internal/agent/dsh"
+	"yishan/apps/cli/internal/agent/dsh/plugins"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/events"
@@ -33,6 +34,34 @@ type DSHCredentialStore interface {
 	List() ([]string, error)
 	Save(ref, value string) error
 	Remove(ref string) error
+}
+
+// DSHPluginManager owns account-scoped signed DSH bundle mutations.
+type DSHPluginManager interface {
+	List(context.Context) (plugins.Inventory, error)
+	ListOfficial() []plugins.ApprovedBundle
+	Install(context.Context, string) (plugins.Inventory, error)
+	SetEnabled(context.Context, string, bool) (plugins.Inventory, error)
+	Remove(context.Context, string) (plugins.Inventory, error)
+	Update(context.Context, string) (plugins.Inventory, error)
+	CaptureSnapshot(context.Context) (plugins.Snapshot, error)
+	RestoreSnapshot(context.Context, plugins.Snapshot) error
+}
+
+// DSHPluginRuntime reloads a managed DSH runtime after a bundle mutation and
+// recovers it from a stopped failed replacement after rollback.
+type DSHPluginRuntime interface {
+	Restart(context.Context) error
+	Recover(context.Context) error
+}
+
+// DSHLocalPluginStore owns explicit developer-only local bundle registrations.
+type DSHLocalPluginStore interface {
+	List() ([]plugins.LocalBundle, error)
+	Register(string, string) ([]plugins.LocalBundle, error)
+	Remove(string) ([]plugins.LocalBundle, error)
+	CaptureSnapshot() (plugins.LocalSnapshot, error)
+	RestoreSnapshot(plugins.LocalSnapshot) error
 }
 
 // DSHSessions is the internal DSH runtime boundary used by workspace-scoped
@@ -76,6 +105,12 @@ type Deps struct {
 	DSH DSHSessions
 	// DSHCredentials manages the DSH .credentials.yaml store.
 	DSHCredentials DSHCredentialStore
+	// DSHPlugins manages the account-scoped signed bundle inventory.
+	DSHPlugins DSHPluginManager
+	// DSHPluginRuntime reloads bundle state after an atomic mutation.
+	DSHPluginRuntime DSHPluginRuntime
+	// DSHLocalPlugins is available only when Developer Mode was explicitly enabled.
+	DSHLocalPlugins DSHLocalPluginStore
 	// OwnerNodeID identifies this daemon in authoritative DSH session bindings.
 	OwnerNodeID string
 	// DSHProvider and DSHModel are the configured DSH runtime provider and model.
@@ -132,6 +167,10 @@ type Service struct {
 	// publishDSHUpdateError lets focused tests simulate frontend notification failures.
 	publishDSHUpdateError error
 
+	// dshPluginMutationQueue serializes each snapshot mutation with its runtime
+	// restart, so the runtime cannot finish on an earlier snapshot.
+	dshPluginMutationQueue chan struct{}
+
 	workspaceStopsMu sync.Mutex
 	workspaceStops   map[string]*workspaceStop
 
@@ -158,15 +197,18 @@ func NewService(deps Deps) *Service {
 	if deps.AgentLifecycleCtx == nil {
 		deps.AgentLifecycleCtx = context.Background()
 	}
-	return &Service{
-		deps:              deps,
-		piSessions:        session.NewRegistry(),
-		dshSessions:       newDSHLiveRegistry(),
-		runtimeIdentities: newRuntimeIdentityRegistry(),
-		stopProcess:       func(proc *agentmanager.Session) error { return proc.Close() },
-		desktopConns:      make(map[*rpc.Connection]struct{}),
-		workspaceStops:    make(map[string]*workspaceStop),
+	service := &Service{
+		deps:                   deps,
+		piSessions:             session.NewRegistry(),
+		dshSessions:            newDSHLiveRegistry(),
+		runtimeIdentities:      newRuntimeIdentityRegistry(),
+		stopProcess:            func(proc *agentmanager.Session) error { return proc.Close() },
+		desktopConns:           make(map[*rpc.Connection]struct{}),
+		workspaceStops:         make(map[string]*workspaceStop),
+		dshPluginMutationQueue: make(chan struct{}, 1),
 	}
+	service.dshPluginMutationQueue <- struct{}{}
+	return service
 }
 
 // Shutdown stops pi agent processes and marks the service as shutting down:

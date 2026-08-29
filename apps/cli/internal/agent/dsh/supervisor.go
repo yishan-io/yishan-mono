@@ -49,7 +49,7 @@ type Health struct {
 	IsReady       bool
 	RestartCount  int
 	ServerVersion string
-	Incarnation   string
+	InstanceID    string
 	LastError     string
 }
 
@@ -66,10 +66,12 @@ type Supervisor struct {
 	isStarting         bool
 	isClosing          bool
 	isRestartScheduled bool
+	restartProcess     *runtimeProcess
+	restartDone        chan error
 	health             Health
 	readyListeners     []func()
 	nextID             uint64
-	runtimeIncarnation uint64
+	runtimeInstanceID  uint64
 }
 
 type runtimeProcess struct {
@@ -162,18 +164,22 @@ func validateInitialize(initialize InitializeConfig) error {
 }
 
 func (s *Supervisor) startProcess(ctx context.Context) error {
+	return s.startProcessWithRetry(ctx, true)
+}
+
+func (s *Supervisor) startProcessWithRetry(ctx context.Context, shouldRetry bool) error {
 	process, err := s.createProcess(s.ctx)
 	if err != nil {
-		return s.failStart(err)
+		return s.failStart(err, shouldRetry)
 	}
 	if err := s.publishStarting(process); err != nil {
-		return s.failProcess(process, err)
+		return s.failProcess(process, err, shouldRetry)
 	}
 	handshakeCtx, cancel := s.handshakeContext(ctx)
 	defer cancel()
 	serverVersion, err := s.initialize(handshakeCtx, process)
 	if err != nil {
-		return s.failProcess(process, err)
+		return s.failProcess(process, err, shouldRetry)
 	}
 	return s.markReady(process, serverVersion)
 }
@@ -194,17 +200,21 @@ func (s *Supervisor) handshakeContext(caller context.Context) (context.Context, 
 	return ctx, func() { stop(); cancel() }
 }
 
-func (s *Supervisor) failStart(err error) error {
+func (s *Supervisor) failStart(err error, shouldRetry bool) error {
 	s.recordFailure(err)
-	s.scheduleRestart()
+	if shouldRetry {
+		s.scheduleRestart()
+	}
 	return err
 }
 
-func (s *Supervisor) failProcess(process *runtimeProcess, err error) error {
+func (s *Supervisor) failProcess(process *runtimeProcess, err error, shouldRetry bool) error {
 	s.clearStartingProcess(process)
 	s.stopFailedProcess(process)
 	s.recordFailure(err)
-	s.scheduleRestart()
+	if shouldRetry {
+		s.scheduleRestart()
+	}
 	return err
 }
 
@@ -275,10 +285,10 @@ func (s *Supervisor) markReady(process *runtimeProcess, serverVersion string) er
 	}
 	s.startingProcess = nil
 	s.process = process
-	s.runtimeIncarnation++
+	s.runtimeInstanceID++
 	s.health.IsReady = true
 	s.health.ServerVersion = serverVersion
-	s.health.Incarnation = fmt.Sprintf("dsh-%d", s.runtimeIncarnation)
+	s.health.InstanceID = fmt.Sprintf("dsh-%d", s.runtimeInstanceID)
 	s.health.LastError = ""
 	readyListeners := append([]func(){}, s.readyListeners...)
 	s.mu.Unlock()
@@ -310,7 +320,12 @@ func (s *Supervisor) awaitExit(process *runtimeProcess) {
 	err := exitError(process.exitErr)
 	process.replay.invalidate()
 	process.failPending(err)
-	isClosing, shouldRestart := s.clearExitedProcess(process, err)
+	isClosing, shouldRestart, restartDone := s.clearExitedProcess(process, err)
+	if restartDone != nil {
+		restartDone <- s.startReplacement()
+		close(restartDone)
+		return
+	}
 	if isClosing || !shouldRestart {
 		return
 	}
@@ -318,18 +333,24 @@ func (s *Supervisor) awaitExit(process *runtimeProcess) {
 	s.scheduleRestart()
 }
 
-func (s *Supervisor) clearExitedProcess(process *runtimeProcess, err error) (bool, bool) {
+func (s *Supervisor) clearExitedProcess(process *runtimeProcess, err error) (bool, bool, chan error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	shouldRestart := process.isInvalidated
+	var restartDone chan error
+	if s.restartProcess == process {
+		s.restartProcess = nil
+		restartDone = s.restartDone
+		s.restartDone = nil
+	}
 	if s.process == process {
 		s.process = nil
 		s.health.IsReady = false
-		s.health.Incarnation = ""
+		s.health.InstanceID = ""
 		s.health.LastError = err.Error()
 		shouldRestart = true
 	}
-	return s.isClosing, shouldRestart
+	return s.isClosing, shouldRestart && restartDone == nil, restartDone
 }
 
 func exitError(err error) error {
@@ -457,7 +478,7 @@ func (s *Supervisor) killProcess(process *runtimeProcess, prior error) error {
 func (s *Supervisor) recordFailure(err error) {
 	s.mu.Lock()
 	s.health.IsReady = false
-	s.health.Incarnation = ""
+	s.health.InstanceID = ""
 	s.health.LastError = err.Error()
 	s.mu.Unlock()
 	s.diagnose(err.Error())

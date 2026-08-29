@@ -146,3 +146,117 @@ func TestAgentHandler_RejectsUnknownCancelSubagentParams(t *testing.T) {
 		t.Fatalf("Call error = %v, calls = %d", err, facade.calls)
 	}
 }
+
+type recordingDSHPluginFacade struct {
+	name    string
+	enabled bool
+	method  string
+}
+
+func (f *recordingDSHPluginFacade) DSHListProviders(context.Context) (any, error)   { return nil, nil }
+func (f *recordingDSHPluginFacade) DSHListCredentials(context.Context) (any, error) { return nil, nil }
+func (f *recordingDSHPluginFacade) DSHSaveCredential(context.Context, DSHSaveCredentialParams) (any, error) {
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHRemoveCredential(context.Context, DSHRemoveCredentialParams) (any, error) {
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHListPlugins(context.Context) (any, error) {
+	f.method = MethodDSHListPlugins
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHListOfficialPlugins(context.Context) (any, error) {
+	f.method = MethodDSHListOfficialPlugins
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHInstallPlugin(_ context.Context, params DSHPluginNameParams) (any, error) {
+	f.method, f.name = MethodDSHInstallPlugin, params.Name
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHSetPluginEnabled(_ context.Context, params DSHSetPluginEnabledParams) (any, error) {
+	f.method, f.name, f.enabled = MethodDSHSetPluginEnabled, params.Name, params.Enabled
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHRemovePlugin(_ context.Context, params DSHPluginNameParams) (any, error) {
+	f.method, f.name = MethodDSHRemovePlugin, params.Name
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHUpdatePlugin(_ context.Context, params DSHPluginNameParams) (any, error) {
+	f.method, f.name = MethodDSHUpdatePlugin, params.Name
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHListLocalPlugins(context.Context) (any, error) {
+	f.method = MethodDSHListLocalPlugins
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHRegisterLocalPlugin(_ context.Context, params DSHLocalPluginRegisterParams) (any, error) {
+	f.method, f.name = MethodDSHRegisterLocalPlugin, params.ID
+	return nil, nil
+}
+func (f *recordingDSHPluginFacade) DSHRemoveLocalPlugin(_ context.Context, params DSHLocalPluginNameParams) (any, error) {
+	f.method, f.name = MethodDSHRemoveLocalPlugin, params.ID
+	return nil, nil
+}
+
+func TestAgentHandler_DecodesExplicitLocalBundleRegistration(t *testing.T) {
+	facade := &recordingDSHPluginFacade{}
+	handler := &AgentHandler{DSH: facade}
+	if _, err := handler.Call(context.Background(), &Connection{}, MethodDSHRegisterLocalPlugin, json.RawMessage(`{"id":"local","path":"/tmp/local"}`)); err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if facade.method != MethodDSHRegisterLocalPlugin || facade.name != "local" {
+		t.Fatalf("facade = %#v", facade)
+	}
+	if _, err := handler.Call(context.Background(), &Connection{}, MethodDSHRegisterLocalPlugin, json.RawMessage(`{"id":"local","path":"/tmp/local","extra":true}`)); err == nil {
+		t.Fatal("accepted arbitrary local registration field")
+	}
+}
+
+func TestAgentHandler_DecodesDSHPluginEnabledPresence(t *testing.T) {
+	testCases := []struct {
+		name        string
+		params      json.RawMessage
+		wantEnabled bool
+		wantCall    bool
+	}{
+		{name: "omitted", params: json.RawMessage(`{"name":"safe-plugin"}`)},
+		{name: "false", params: json.RawMessage(`{"name":"safe-plugin","enabled":false}`), wantCall: true},
+		{name: "true", params: json.RawMessage(`{"name":"safe-plugin","enabled":true}`), wantEnabled: true, wantCall: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			facade := &recordingDSHPluginFacade{}
+			handler := &AgentHandler{DSH: facade}
+			_, err := handler.Call(context.Background(), &Connection{}, MethodDSHSetPluginEnabled, testCase.params)
+			if !testCase.wantCall {
+				var rpcErr *Error
+				if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams || facade.method != "" {
+					t.Fatalf("Call error = %v, facade = %#v", err, facade)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Call: %v", err)
+			}
+			if facade.method != MethodDSHSetPluginEnabled || facade.name != "safe-plugin" || facade.enabled != testCase.wantEnabled {
+				t.Fatalf("facade = %#v", facade)
+			}
+		})
+	}
+}
+
+func TestAgentHandler_DecodesDSHOfficialInstallWithoutSpecifier(t *testing.T) {
+	facade := &recordingDSHPluginFacade{}
+	handler := &AgentHandler{DSH: facade}
+	if _, err := handler.Call(context.Background(), &Connection{}, MethodDSHInstallPlugin, json.RawMessage(`{"name":"safe-plugin"}`)); err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if facade.method != MethodDSHInstallPlugin || facade.name != "safe-plugin" {
+		t.Fatalf("facade = %#v", facade)
+	}
+	_, err := handler.Call(context.Background(), &Connection{}, MethodDSHInstallPlugin, json.RawMessage(`{"name":"safe-plugin","version":"1.0.0"}`))
+	var rpcErr *Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeInvalidParams {
+		t.Fatalf("specifier input error = %v, want invalid params", err)
+	}
+}

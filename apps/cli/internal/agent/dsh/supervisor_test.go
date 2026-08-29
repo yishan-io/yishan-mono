@@ -25,20 +25,20 @@ func TestSupervisor_Start_ReportsReadyAfterCompatibleInitialize(t *testing.T) {
 	}
 }
 
-func TestSupervisor_HealthClearsRuntimeIncarnationAfterExit(t *testing.T) {
+func TestSupervisor_HealthClearsRuntimeInstanceIDAfterExit(t *testing.T) {
 	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc-exit"), RestartLimit: 1, RestartBackoff: time.Second})
 	defer supervisor.Close()
 	if err := supervisor.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	readyIncarnation := supervisor.Health().Incarnation
-	if readyIncarnation == "" {
-		t.Fatal("ready runtime incarnation is empty")
+	readyInstanceID := supervisor.Health().InstanceID
+	if readyInstanceID == "" {
+		t.Fatal("ready runtime instanceID is empty")
 	}
 	_, _ = supervisor.ListSessions(context.Background(), SessionListRequest{CWD: "/workspace"})
 	waitFor(t, func() bool { return !supervisor.Health().IsReady })
-	if got := supervisor.Health().Incarnation; got != "" {
-		t.Fatalf("unavailable runtime incarnation = %q, want empty", got)
+	if got := supervisor.Health().InstanceID; got != "" {
+		t.Fatalf("unavailable runtime instanceID = %q, want empty", got)
 	}
 }
 
@@ -95,9 +95,9 @@ func TestSupervisor_RestartInvalidatesAndTerminatesSubscriptions(t *testing.T) {
 	if err := supervisor.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	initialIncarnation := supervisor.Health().Incarnation
-	if initialIncarnation == "" {
-		t.Fatal("initial runtime incarnation is empty")
+	initialInstanceID := supervisor.Health().InstanceID
+	if initialInstanceID == "" {
+		t.Fatal("initial runtime instanceID is empty")
 	}
 	subscription, err := supervisor.SubscribeSession(context.Background(), SessionSubscribeRequest{CWD: "/workspace", SessionID: "session", AfterSeq: -1})
 	if err != nil {
@@ -108,8 +108,8 @@ func TestSupervisor_RestartInvalidatesAndTerminatesSubscriptions(t *testing.T) {
 	})
 	assertSubscriptionResetAndClosed(t, subscription.Updates)
 	waitFor(t, func() bool { return supervisor.Health().RestartCount == 1 && supervisor.Health().IsReady })
-	if restartedIncarnation := supervisor.Health().Incarnation; restartedIncarnation == "" || restartedIncarnation == initialIncarnation {
-		t.Fatalf("restarted runtime incarnation = %q, initial = %q", restartedIncarnation, initialIncarnation)
+	if restartedInstanceID := supervisor.Health().InstanceID; restartedInstanceID == "" || restartedInstanceID == initialInstanceID {
+		t.Fatalf("restarted runtime instanceID = %q, initial = %q", restartedInstanceID, initialInstanceID)
 	}
 }
 
@@ -257,6 +257,8 @@ func runHelperMode(mode string, input *bufio.Reader) {
 	switch mode {
 	case "ready", "other-version":
 		writeShutdownResponse(input)
+	case "shutdown-error":
+		writeShutdownErrorResponse(input)
 	case "stderr":
 		_, _ = os.Stderr.WriteString("runtime diagnostic\n")
 		writeShutdownResponse(input)
@@ -276,6 +278,14 @@ func writeShutdownResponse(input *bufio.Reader) {
 		return
 	}
 	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","id":2,"result":{}}` + "\n")
+}
+
+func writeShutdownErrorResponse(input *bufio.Reader) {
+	request, err := input.ReadBytes('\n')
+	if err != nil || !strings.Contains(string(request), `"method":"shutdown"`) {
+		return
+	}
+	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","id":2,"error":{"code":1,"message":"stop failed"}}` + "\n")
 }
 
 func handleRPCRequests(mode string, input *bufio.Reader) {
@@ -354,11 +364,11 @@ func writeLifecycleGapResponse(request struct {
 	} `json:"params"`
 }) {
 	if request.Method == yishanSessionSubscribeMethod {
-		_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"parent","incarnation":"run","revision":0,"event":"started","runId":"child","childSessionId":"child","provider":"spawn","local":true}}` + "\n")
+		_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"parent","instanceId":"run","revision":0,"event":"started","runId":"child","childSessionId":"child","provider":"spawn","local":true}}` + "\n")
 	}
 	writeSessionRPCResponse(request)
 	if request.Method == yishanSessionPromptMethod {
-		_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"parent","incarnation":"run","revision":1,"event":"finished","runId":"child","childSessionId":"child","provider":"spawn","local":true,"stopReason":"completed"}}` + "\n")
+		_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"yishan.v1.subagent.lifecycle","params":{"version":1,"parentSessionId":"parent","instanceId":"run","revision":1,"event":"finished","runId":"child","childSessionId":"child","provider":"spawn","local":true,"stopReason":"completed"}}` + "\n")
 	}
 }
 
@@ -418,7 +428,7 @@ func writeSessionRPCResponse(request struct {
 	} `json:"params"`
 }) {
 	if request.Method == yishanSessionStartMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","incarnation":"run"}}`+"\n", request.ID, request.Params.SessionID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","instanceId":"run"}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
 	if request.Method == yishanSessionPromptMethod {
@@ -443,11 +453,11 @@ func writeSessionControlResponse(request struct {
 		return
 	}
 	if request.Method == yishanSessionFlushMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","durableThroughSeq":-1,"incarnation":"run"}}`+"\n", request.ID, request.Params.SessionID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","durableThroughSeq":-1,"instanceId":"run"}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
 	if request.Method == yishanSessionSubscribeMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","incarnation":"run","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}}`+"\n", request.ID, request.Params.SessionID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","instanceId":"run","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
 	if request.Method == yishanSessionDisposeMethod {

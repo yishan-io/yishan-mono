@@ -18,7 +18,7 @@ func TestDSHTranscript_ProjectsInternalEventsAcrossRendererBoundaries(t *testing
 	hidden := json.RawMessage(`{"type":"yishan/session-bound.v1","seq":0,"time":10,"data":{"workspaceId":"secret"}}`)
 	visible := json.RawMessage(`{"type":"turn/end","seq":1,"time":11,"data":{"turn":0}}`)
 	runtime := &executionDSH{subscribeSnapshot: dsh.SessionSubscribeResult{
-		SessionID: "s", Incarnation: "inc", Events: []dsh.SessionEvent{
+		SessionID: "s", InstanceID: "inc", Events: []dsh.SessionEvent{
 			{SessionID: "s", Seq: 0, Event: hidden}, {SessionID: "s", Seq: 1, Event: visible},
 		}, AsOfSeq: 1, DurableThroughSeq: 1, HeadSeq: 1,
 	}}
@@ -43,8 +43,8 @@ func TestDSHTranscript_ProjectsInternalEventsAcrossRendererBoundaries(t *testing
 	assertLiveHiddenMarker(t, client, 0, 10)
 }
 
-func TestDSHTranscript_ReadHistoryProjectsInternalEvents(t *testing.T) {
-	hidden := json.RawMessage(`{"type":"yishan/session-title.v1","seq":2,"time":12,"data":{"title":"secret"}}`)
+func TestDSHTranscript_ReadHistoryProjectsBoundEvents(t *testing.T) {
+	hidden := json.RawMessage(`{"type":"yishan/session-bound.v1","seq":2,"time":12,"data":{"workspaceId":"secret"}}`)
 	visible := json.RawMessage(`{"type":"turn/end","seq":3,"time":13,"data":{}}`)
 	runtime := &executionDSH{}
 	runtime.readResult = dsh.SessionReadResult{Session: dsh.SessionHeader{SessionID: "s"}, Events: []json.RawMessage{hidden, visible}}
@@ -91,9 +91,35 @@ func TestDSHTranscript_RejectsUnavailableVersionBeforeRuntimeAccess(t *testing.T
 	}
 }
 
+func TestDSHTranscript_RejectsRemovedYishanMetadataEvents(t *testing.T) {
+	for _, eventType := range []string{"yishan/session-summary.v1", "yishan/session-title.v1"} {
+		t.Run(eventType, func(t *testing.T) {
+			_, err := projectDSHEventRaw(json.RawMessage(`{"type":"`+eventType+`","seq":0,"time":1,"data":{}}`), 0)
+			if !errors.Is(err, errDSHTranscriptProtocolUnavailable) {
+				t.Fatalf("project removed metadata event: %v", err)
+			}
+		})
+	}
+}
+
+func TestDSHTranscript_DoesNotHideStandardTitleEvents(t *testing.T) {
+	for _, eventType := range []string{"session/title", "session/title-llm-request"} {
+		t.Run(eventType, func(t *testing.T) {
+			raw := json.RawMessage(`{"type":"` + eventType + `","seq":0,"time":1,"data":{"title":"visible"}}`)
+			projected, err := projectDSHEventRaw(raw, 0)
+			if err != nil {
+				t.Fatalf("project title event: %v", err)
+			}
+			if string(projected) != string(raw) {
+				t.Fatalf("title event was hidden: %s", projected)
+			}
+		})
+	}
+}
+
 func TestDSHTranscript_RejectsUnknownInternalEvent(t *testing.T) {
 	runtime := &executionDSH{subscribeSnapshot: dsh.SessionSubscribeResult{
-		SessionID: "s", Incarnation: "inc", Events: []dsh.SessionEvent{{SessionID: "s", Seq: 0, Event: json.RawMessage(`{"type":"yishan/unknown.v1","seq":0,"time":1,"data":{"secret":true}}`)}},
+		SessionID: "s", InstanceID: "inc", Events: []dsh.SessionEvent{{SessionID: "s", Seq: 0, Event: json.RawMessage(`{"type":"yishan/unknown.v1","seq":0,"time":1,"data":{"secret":true}}`)}},
 		AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 0,
 	}}
 	service := newDSHExecutionService(runtime)

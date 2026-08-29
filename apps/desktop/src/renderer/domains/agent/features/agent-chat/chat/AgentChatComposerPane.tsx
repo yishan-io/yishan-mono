@@ -9,8 +9,7 @@ import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
 import { type AgentModel, isAgentSessionBusy } from "../../../chat/agentChatTypes";
 import { getCompactContextPercent } from "../../../chat/agentChatUsageSummary";
 import { agentChatStore } from "../../../state/agentChatStore";
-import { DSHCredentialDialog } from "../../provider-credentials/DSHCredentialDialog";
-import { DSHProviderPickerDialog } from "../../provider-credentials/DSHProviderPickerDialog";
+import { PiProviderCredentialDialog } from "../../provider-credentials/PiProviderCredentialDialog";
 import { ProviderCredentialDialog } from "../../provider-credentials/ProviderCredentialDialog";
 import { AgentModelSelector } from "../../select-model/AgentModelSelector";
 import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
@@ -169,22 +168,16 @@ function AgentChatComposerPaneComponent({
     consumeTabFocus(tabId);
   }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
 
-  const {
-    openAddProviderDialog,
-    providerCredentialDialogProps,
-    dshProviderPickerDialogProps,
-    dshCredentialDialogProps,
-  } = useAgentChatProviderAdd({
-    tabId,
-    workspaceId,
-    cwd,
-    paneId,
-    sessionId,
-    sessionState,
-    runtime: agentChatTab?.data.runtime,
-    dshCredentialRef: currentModel?.credentialRef ?? "",
-    dshProviderName: currentModel?.provider ?? "Provider",
-  });
+  const { openAddProviderDialog, piProviderCredentialDialogProps, providerCredentialDialogProps } =
+    useAgentChatProviderAdd({
+      tabId,
+      workspaceId,
+      cwd,
+      paneId,
+      sessionId,
+      sessionState,
+      runtime: agentChatTab?.data.runtime,
+    });
 
   return (
     <Box
@@ -259,9 +252,8 @@ function AgentChatComposerPaneComponent({
         onSubmitButtonClick={handleSubmitButtonClick}
         onVoiceText={handleVoiceText}
       />
+      <PiProviderCredentialDialog {...piProviderCredentialDialogProps} />
       <ProviderCredentialDialog {...providerCredentialDialogProps} />
-      <DSHProviderPickerDialog {...dshProviderPickerDialogProps} />
-      <DSHCredentialDialog {...dshCredentialDialogProps} />
     </Box>
   );
 }

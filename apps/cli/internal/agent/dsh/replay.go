@@ -15,7 +15,7 @@ type replayCoordinator struct {
 	isInvalid bool
 }
 type replaySession struct {
-	incarnation    string
+	instanceID     string
 	events         []SessionEvent
 	status         *SessionStatus
 	subscribers    map[uint64]replaySubscriber
@@ -72,10 +72,10 @@ func (c *replayCoordinator) recordLifecycle(lifecycle SubagentLifecycle) error {
 }
 
 func recordReplayLifecycle(entry *replaySession, lifecycle SubagentLifecycle) (bool, bool) {
-	if entry.incarnation == "" {
-		entry.incarnation = lifecycle.Incarnation
+	if entry.instanceID == "" {
+		entry.instanceID = lifecycle.InstanceID
 	}
-	if entry.incarnation != lifecycle.Incarnation {
+	if entry.instanceID != lifecycle.InstanceID {
 		return true, false
 	}
 	if entry.lifecycle == nil {
@@ -129,11 +129,11 @@ func (c *replayCoordinator) subscribe(result SessionSubscribeResult, request Ses
 	if c.isInvalid || entry.isInvalid {
 		return SessionSubscription{}, ErrSessionReplayReset
 	}
-	if entry.incarnation != "" && entry.incarnation != result.Incarnation {
-		resetReplaySession(entry, result.Incarnation)
+	if entry.instanceID != "" && entry.instanceID != result.InstanceID {
+		resetReplaySession(entry, result.InstanceID)
 		return SessionSubscription{}, ErrSessionReplayReset
 	}
-	entry.incarnation = result.Incarnation
+	entry.instanceID = result.InstanceID
 	updates, baseline, ok := buildReplayUpdates(entry.events, result, request.AfterSeq)
 	if !ok {
 		c.invalidateSession(entry, request.SessionID)
@@ -142,17 +142,17 @@ func (c *replayCoordinator) subscribe(result SessionSubscribeResult, request Ses
 	entry.nextSubscriber++
 	id := entry.nextSubscriber
 	initialUpdates := append(updates, SessionUpdate{Cursor: &DurableCursor{
-		SessionID: request.SessionID, Incarnation: result.Incarnation, DurableThroughSeq: result.DurableThroughSeq,
+		SessionID: request.SessionID, InstanceID: result.InstanceID, DurableThroughSeq: result.DurableThroughSeq,
 	}})
 	status := SessionStatus{SessionID: request.SessionID, Status: "idle"}
 	if entry.status != nil {
 		status = *entry.status
 	}
 	initialUpdates = append(initialUpdates, SessionUpdate{Status: &status})
-	if entry.lifecycle != nil && entry.lifecycle.Incarnation == result.Incarnation {
+	if entry.lifecycle != nil && entry.lifecycle.InstanceID == result.InstanceID {
 		initialUpdates = append(initialUpdates, SessionUpdate{LifecycleResync: &LifecycleResync{
 			ParentSessionID: request.SessionID,
-			Incarnation:     result.Incarnation,
+			InstanceID:      result.InstanceID,
 			Revision:        entry.lifecycle.Revision,
 		}})
 	}
@@ -165,7 +165,7 @@ func (c *replayCoordinator) subscribe(result SessionSubscribeResult, request Ses
 	snapshot := result
 	snapshot.Events = sessionEventsFromUpdates(updates)
 	snapshot.HeadSeq = baseline
-	return SessionSubscription{Updates: channel, Unsubscribe: func() { c.unsubscribe(request.SessionID, id) }, Incarnation: result.Incarnation, Baseline: baseline, Snapshot: snapshot}, nil
+	return SessionSubscription{Updates: channel, Unsubscribe: func() { c.unsubscribe(request.SessionID, id) }, InstanceID: result.InstanceID, Baseline: baseline, Snapshot: snapshot}, nil
 }
 
 func sessionEventsFromUpdates(updates []SessionUpdate) []SessionEvent {
@@ -247,26 +247,26 @@ func (c *replayCoordinator) unsubscribe(sessionID string, id uint64) {
 		close(subscriber.updates)
 	}
 }
-func (c *replayCoordinator) setIncarnation(sessionID, incarnation string) {
+func (c *replayCoordinator) setInstanceID(sessionID, instanceID string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	entry := c.session(sessionID)
-	if entry.incarnation != "" && entry.incarnation != incarnation {
-		resetReplaySession(entry, incarnation)
+	if entry.instanceID != "" && entry.instanceID != instanceID {
+		resetReplaySession(entry, instanceID)
 		return
 	}
-	entry.incarnation = incarnation
+	entry.instanceID = instanceID
 }
 func (c *replayCoordinator) acceptCursor(cursor DurableCursor) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	entry := c.session(cursor.SessionID)
-	if entry.incarnation == "" {
-		entry.incarnation = cursor.Incarnation
+	if entry.instanceID == "" {
+		entry.instanceID = cursor.InstanceID
 	}
-	if entry.incarnation != cursor.Incarnation {
-		resetReplaySession(entry, cursor.Incarnation)
-		reset := TranscriptReset{SessionID: cursor.SessionID, Incarnation: cursor.Incarnation, HeadSeq: -1}
+	if entry.instanceID != cursor.InstanceID {
+		resetReplaySession(entry, cursor.InstanceID)
+		reset := TranscriptReset{SessionID: cursor.SessionID, InstanceID: cursor.InstanceID, HeadSeq: -1}
 		publish(entry, cursor.SessionID, SessionUpdate{Reset: &reset})
 		return nil
 	}
@@ -284,7 +284,7 @@ func (c *replayCoordinator) reset(reset TranscriptReset) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	entry := c.session(reset.SessionID)
-	resetReplaySession(entry, reset.Incarnation)
+	resetReplaySession(entry, reset.InstanceID)
 	publish(entry, reset.SessionID, SessionUpdate{Reset: &reset})
 }
 func (c *replayCoordinator) invalidate() {
@@ -301,14 +301,14 @@ func (c *replayCoordinator) invalidateSession(entry *replaySession, sessionID st
 	entry.lifecycle = nil
 	terminateSubscribers(entry, sessionID)
 }
-func resetReplaySession(entry *replaySession, incarnation string) {
-	entry.incarnation = incarnation
+func resetReplaySession(entry *replaySession, instanceID string) {
+	entry.instanceID = instanceID
 	entry.events = nil
 	entry.lifecycle = nil
 	entry.isInvalid = false
 }
 func terminateSubscribers(entry *replaySession, sessionID string) {
-	reset := TranscriptReset{SessionID: sessionID, Incarnation: entry.incarnation, HeadSeq: -1}
+	reset := TranscriptReset{SessionID: sessionID, InstanceID: entry.instanceID, HeadSeq: -1}
 	for id, subscriber := range entry.subscribers {
 		delete(entry.subscribers, id)
 		subscriber.updates <- SessionUpdate{Reset: &reset}
@@ -319,7 +319,7 @@ func publish(entry *replaySession, sessionID string, update SessionUpdate) {
 	for id, subscriber := range entry.subscribers {
 		if len(subscriber.updates) >= subscriber.normalCapacity {
 			delete(entry.subscribers, id)
-			reset := TranscriptReset{SessionID: sessionID, Incarnation: entry.incarnation, HeadSeq: -1}
+			reset := TranscriptReset{SessionID: sessionID, InstanceID: entry.instanceID, HeadSeq: -1}
 			subscriber.updates <- SessionUpdate{Reset: &reset}
 			close(subscriber.updates)
 			continue
