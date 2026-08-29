@@ -42,7 +42,7 @@ const hostCallArguments = {
   login: [],
   getDaemonInfo: [],
   restartDaemon: [],
-  readDaemonLog: [],
+  readDaemonLog: ["system"],
   getDaemonQuitOnExit: [],
   setDaemonQuitOnExit: [true],
   writeClipboardText: ["text"],

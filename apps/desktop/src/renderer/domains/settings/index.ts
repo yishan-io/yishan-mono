@@ -19,6 +19,7 @@ export {
   setDaemonQuitOnExit,
   type DaemonInfoResult,
   type DaemonLogResult,
+  type DaemonLogSource,
   type DaemonRestartResult,
 } from "./host/daemonHost";
 export { listCLIToolStatuses } from "./commands/cliToolCommands";

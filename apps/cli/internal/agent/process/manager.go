@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -38,13 +39,23 @@ type Manager struct {
 	mu       sync.Mutex
 	sessions map[string]*Session
 	starting map[string]struct{}
+	stderr   io.Writer
 }
 
-// NewManager creates a new Manager with no active sessions.
+// NewManager creates a new Manager with agent stderr sent to the process stderr.
 func NewManager() *Manager {
+	return NewManagerWithStderr(os.Stderr)
+}
+
+// NewManagerWithStderr creates a new Manager that directs agent subprocess stderr to stderr.
+func NewManagerWithStderr(stderr io.Writer) *Manager {
+	if stderr == nil {
+		stderr = os.Stderr
+	}
 	return &Manager{
 		sessions: make(map[string]*Session),
 		starting: make(map[string]struct{}),
+		stderr:   stderr,
 	}
 }
 
@@ -146,8 +157,8 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 		return nil, fmt.Errorf("create stdout pipe: %w", err)
 	}
 
-	// Capture stderr to the daemon log so we can diagnose agent crashes.
-	execCmd.Stderr = os.Stderr
+	// Capture stderr to the active daemon log so we can diagnose agent crashes.
+	execCmd.Stderr = m.stderr
 
 	if err := execCmd.Start(); err != nil {
 		cancel()

@@ -22,6 +22,24 @@ func TestResolveAccountDataDir_UsesAccountDirWhenUserIDPresent(t *testing.T) {
 	}
 }
 
+func TestResolveAccountDataDir_FallsBackToEnvRootForUnsafeUserID(t *testing.T) {
+	for _, userID := range []string{"../../other-account", "victim/../other", "victim/."} {
+		t.Run(userID, func(t *testing.T) {
+			dir := t.TempDir()
+			configPath := filepath.Join(dir, "credential.yaml")
+			writeTestFile(t, configPath, "user_id: "+userID+"\n")
+
+			dataDir, err := ResolveAccountDataDir(configPath)
+			if err != nil {
+				t.Fatalf("ResolveAccountDataDir error: %v", err)
+			}
+			if dataDir != dir {
+				t.Fatalf("dataDir = %q, want env root %q", dataDir, dir)
+			}
+		})
+	}
+}
+
 func TestResolveAccountDataDir_FallsBackToEnvRootWhenUserIDAbsent(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "credential.yaml")

@@ -16,12 +16,13 @@ import (
 )
 
 type StartConfig struct {
-	Run        RunConfig
-	ConfigPath string
-	LogLevel   string
-	LogFile    string
-	Stdout     io.Writer
-	Stderr     io.Writer
+	Run              RunConfig
+	ConfigPath       string
+	LogLevel         string
+	LogFile          string
+	HasCustomLogFile bool
+	Stdout           io.Writer
+	Stderr           io.Writer
 }
 
 const (
@@ -244,7 +245,11 @@ func StartDetached(cfg StartConfig) (int, error) {
 	if cfg.LogLevel != "" {
 		args = append(args, "--log-level", cfg.LogLevel)
 	}
-	if cfg.LogFile != "" {
+	// Pass --log-file only when the caller explicitly configured it. The
+	// detached process still receives LogFile as its initial stderr destination,
+	// but resolving the default itself lets it switch structured logs to the
+	// active account after bootstrap.
+	if cfg.HasCustomLogFile && cfg.LogFile != "" {
 		args = append(args, "--log-file", cfg.LogFile)
 	}
 

@@ -11,9 +11,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"yishan/apps/cli/cmd/output"
 	"yishan/apps/cli/internal/daemon"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
-	"yishan/apps/cli/cmd/output"
 )
 
 var daemonCmd = &cobra.Command{
@@ -80,7 +80,7 @@ func runDaemon(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	logFile, err := resolveLogFilePath()
+	logFile, hasCustomLogFile, err := resolveLogFilePath()
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func runDaemon(_ *cobra.Command, _ []string) error {
 
 	log.Info().Str("log_file", logFile).Msg("daemon log file configured")
 
-	return daemon.Run(buildRunConfig(logFile), statePath, apiClientSession())
+	return daemon.Run(buildRunConfig(logFile, hasCustomLogFile), statePath, apiClientSession())
 }
 
 func startDaemon(_ *cobra.Command, _ []string) error {
@@ -101,16 +101,17 @@ func startDaemon(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	logFile, err := resolveLogFilePath()
+	logFile, hasCustomLogFile, err := resolveLogFilePath()
 	if err != nil {
 		return err
 	}
 
 	state, err := daemon.StartDaemon(daemon.StartConfig{
-		Run:        buildRunConfig(""),
-		ConfigPath: appConfig.ConfigPath,
-		LogLevel:   appConfig.LogLevel,
-		LogFile:    logFile,
+		Run:              buildRunConfig("", false),
+		ConfigPath:       appConfig.ConfigPath,
+		LogLevel:         appConfig.LogLevel,
+		LogFile:          logFile,
+		HasCustomLogFile: hasCustomLogFile,
 	}, statePath)
 	if err != nil {
 		return err
@@ -145,17 +146,18 @@ func restartDaemon(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	logFile, err := resolveLogFilePath()
+	logFile, hasCustomLogFile, err := resolveLogFilePath()
 	if err != nil {
 		return err
 	}
 
 	state, err := daemon.Restart(
 		daemon.StartConfig{
-			Run:        buildRunConfig(""),
-			ConfigPath: appConfig.ConfigPath,
-			LogLevel:   appConfig.LogLevel,
-			LogFile:    logFile,
+			Run:              buildRunConfig("", false),
+			ConfigPath:       appConfig.ConfigPath,
+			LogLevel:         appConfig.LogLevel,
+			LogFile:          logFile,
+			HasCustomLogFile: hasCustomLogFile,
 		},
 		statePath,
 		10*time.Second,
@@ -173,7 +175,7 @@ func restartDaemon(_ *cobra.Command, _ []string) error {
 // buildRunConfig assembles a daemon.RunConfig from the current appConfig.
 // logFilePath is only meaningful when running in the foreground (daemon run);
 // pass an empty string when building a config for StartDetached.
-func buildRunConfig(logFilePath string) daemon.RunConfig {
+func buildRunConfig(logFilePath string, hasCustomLogFile bool) daemon.RunConfig {
 	return daemon.RunConfig{
 		Host:                  appConfig.Daemon.Host,
 		Port:                  appConfig.Daemon.Port,
@@ -184,16 +186,19 @@ func buildRunConfig(logFilePath string) daemon.RunConfig {
 		MemorySummarizerAgent: appConfig.Memory.SummarizerAgentKind,
 		MemorySummarizerModel: appConfig.Memory.SummarizerModel,
 		LogFilePath:           logFilePath,
+		HasCustomLogFile:      hasCustomLogFile,
+		LogFileWriter:         activeLogFileWriter,
 	}
 }
 
 // resolveLogFilePath returns the daemon log file path from the --log-file flag
 // or falls back to the profile-default path.
-func resolveLogFilePath() (string, error) {
+func resolveLogFilePath() (string, bool, error) {
 	if logFile := viper.GetString("daemon_log_file"); logFile != "" {
-		return logFile, nil
+		return logFile, true, nil
 	}
-	return daemon.ResolveLogFilePath(appConfig.ConfigPath)
+	logFile, err := daemon.ResolveLogFilePath(appConfig.ConfigPath)
+	return logFile, false, err
 }
 
 func statusDaemon(_ *cobra.Command, _ []string) error {
@@ -207,7 +212,7 @@ func statusDaemon(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	logFile, _ := daemon.ResolveLogFilePath(appConfig.ConfigPath)
+	logFile, _, _ := resolveLogFilePath()
 
 	state, err := daemon.LoadState(statePath)
 	if err != nil {
@@ -272,7 +277,7 @@ func init() {
 	daemonCmd.PersistentFlags().Bool("relay-enabled", true, "connect daemon to relay over outbound websocket")
 	daemonCmd.PersistentFlags().String("relay-url", "https://relay.yishan.io", "relay websocket URL (wss://.../ws)")
 	daemonCmd.PersistentFlags().String("relay-token", "", "static relay JWT for local dev (bypasses API token minting)")
-	daemonCmd.PersistentFlags().String("log-file", "", "daemon log file path (default: ~/.yishan/profiles/<profile>/logs/daemon.log)")
+	daemonCmd.PersistentFlags().String("log-file", "", "daemon log file path (default: ~/.yishan/profiles/<profile>/logs/system.log)")
 
 	cobra.CheckErr(viper.BindPFlag("daemon_host", daemonCmd.PersistentFlags().Lookup("host")))
 	cobra.CheckErr(viper.BindPFlag("daemon_port", daemonCmd.PersistentFlags().Lookup("port")))

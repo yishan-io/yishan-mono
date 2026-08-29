@@ -16,20 +16,21 @@ const (
 
 // FileWriter is an io.Writer that writes to a file with size-based rotation.
 // When the current file reaches MaxBytes, it is rotated: existing rotated files
-// are shifted (daemon.log.1 -> daemon.log.2, etc.) and the current file becomes
-// daemon.log.1. At most MaxFiles rotated files are retained.
+// are shifted (system.log.1 -> system.log.2, etc.) and the current file becomes
+// system.log.1. At most MaxFiles rotated files are retained.
 type FileWriter struct {
 	mu       sync.Mutex
 	path     string
 	maxBytes int64
 	maxFiles int
 	file     *os.File
+	fileMode os.FileMode
 	size     int64
 }
 
 // FileWriterConfig configures a FileWriter.
 type FileWriterConfig struct {
-	// Path is the log file path (e.g. ~/.yishan/profiles/default/logs/daemon.log).
+	// Path is the log file path (e.g. ~/.yishan/profiles/default/logs/system.log).
 	Path string
 	// MaxBytes is the maximum size in bytes before rotation. Default: 10 MB.
 	MaxBytes int64
@@ -71,6 +72,7 @@ func NewFileWriter(cfg FileWriterConfig) (*FileWriter, error) {
 		maxBytes: cfg.MaxBytes,
 		maxFiles: cfg.MaxFiles,
 		file:     f,
+		fileMode: info.Mode().Perm(),
 		size:     info.Size(),
 	}, nil
 }
@@ -102,7 +104,48 @@ func (fw *FileWriter) Close() error {
 
 // Path returns the current log file path.
 func (fw *FileWriter) Path() string {
+	fw.mu.Lock()
+	defer fw.mu.Unlock()
 	return fw.path
+}
+
+// SwitchPath directs future writes to path without moving existing log files.
+// The new file inherits this writer's rotation configuration.
+func (fw *FileWriter) SwitchPath(path string) error {
+	if path == "" {
+		return fmt.Errorf("logging: file path is required")
+	}
+
+	fw.mu.Lock()
+	defer fw.mu.Unlock()
+	if path == fw.path {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("logging: create log dir %q: %w", filepath.Dir(path), err)
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return fmt.Errorf("logging: open log file %q: %w", path, err)
+	}
+	if err := file.Chmod(0o600); err != nil {
+		_ = file.Close() // cleanup after failed permission update
+		return fmt.Errorf("logging: secure log file %q: %w", path, err)
+	}
+	info, err := file.Stat()
+	if err != nil {
+		_ = file.Close() // cleanup after failed stat
+		return fmt.Errorf("logging: stat log file %q: %w", path, err)
+	}
+	if err := fw.file.Close(); err != nil {
+		_ = file.Close() // new file was not installed
+		return fmt.Errorf("logging: close previous log file: %w", err)
+	}
+	fw.file = file
+	fw.path = path
+	fw.fileMode = info.Mode().Perm()
+	fw.size = info.Size()
+	return nil
 }
 
 // rotate shifts existing rotated files and moves the current file to .1.
@@ -137,9 +180,13 @@ func (fw *FileWriter) rotate() error {
 	}
 
 	// Open a fresh file
-	f, err := os.OpenFile(fw.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	f, err := os.OpenFile(fw.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, fw.fileMode)
 	if err != nil {
 		return fmt.Errorf("open new log file: %w", err)
+	}
+	if err := f.Chmod(fw.fileMode); err != nil {
+		_ = f.Close() // cleanup after failed permission update
+		return fmt.Errorf("preserve log file permissions: %w", err)
 	}
 
 	fw.file = f

@@ -41,7 +41,12 @@ func bootstrapDaemon(cfg RunConfig, statePath string, runtime *session.Session) 
 	// derived, so db/memory/settings open under accounts/<userId>/. A running
 	// daemon only re-resolves on restart; token syncs update credential.yaml
 	// but open handles stay on the boot-time account.
-	ensureUserIDForAccountResolution(runtime, filepath.Join(filepath.Dir(statePath), "credential.yaml"))
+	credentialPath := filepath.Join(filepath.Dir(statePath), "credential.yaml")
+	ensureUserIDForAccountResolution(runtime, credentialPath)
+	if err := switchRuntimeLogFile(&cfg, credentialPath); err != nil {
+		_ = listener.Close() // listener is not owned by a daemon runtime yet
+		return nil, fmt.Errorf("switch daemon runtime log file: %w", err)
+	}
 
 	app, relayStatus, err := buildHandler(cfg, statePath, runtime, daemonID, resolveDaemonWSEndpoint(listener.Addr()))
 	if err != nil {
@@ -118,6 +123,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *session.Session, dae
 		NodeID:           daemonID,
 		DaemonWSEndpoint: daemonWSEndpoint,
 		LogFilePath:      cfg.LogFilePath,
+		AgentStderr:      cfg.LogFileWriter,
 		Database:         database,
 		EnvDir:           envDir,
 		DataDir:          dataDir,
