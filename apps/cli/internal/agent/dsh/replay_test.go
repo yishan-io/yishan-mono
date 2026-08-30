@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestReplayCoordinator_SubscribeMergesLiveEventsAfterDurableTail(t *testing.T) {
+func TestReplayCoordinator_SubscribeSeedsMergedHistoryOnlyInSnapshot(t *testing.T) {
 	coordinator := newReplayCoordinator(4)
 	coordinator.recordEvent("session", SessionEvent{SessionID: "session", Seq: 2, Event: json.RawMessage(`{"seq":2,"type":"turn/end"}`)})
 	result := SessionSubscribeResult{SessionID: "session", InstanceID: "run", Events: []SessionEvent{{SessionID: "session", Seq: 0, Event: json.RawMessage(`{"seq":0,"type":"turn/end"}`)}, {SessionID: "session", Seq: 1, Event: json.RawMessage(`{"seq":1,"type":"turn/end"}`)}}, AsOfSeq: 1, DurableThroughSeq: 1, HeadSeq: 1}
@@ -16,15 +16,26 @@ func TestReplayCoordinator_SubscribeMergesLiveEventsAfterDurableTail(t *testing.
 		t.Fatalf("subscribe: %v", err)
 	}
 	defer subscription.Unsubscribe()
-	for sequence := int64(0); sequence <= 2; sequence++ {
-		update := <-subscription.Updates
-		if update.Event == nil || update.Event.Seq != sequence {
-			t.Fatalf("update %d = %#v", sequence, update)
-		}
+	if len(subscription.Snapshot.Events) != 3 || subscription.Snapshot.Events[2].Seq != 2 {
+		t.Fatalf("snapshot events = %#v", subscription.Snapshot.Events)
+	}
+	assertInitialDurableCursor(t, subscription.Updates, "run", 1)
+	assertInitialSessionStatus(t, subscription.Updates, "idle")
+	select {
+	case update := <-subscription.Updates:
+		t.Fatalf("initial update = %#v, want no replay", update)
+	default:
+	}
+	if err := coordinator.recordEvent("session", SessionEvent{SessionID: "session", Seq: 3, Event: json.RawMessage(`{"seq":3,"type":"turn/end"}`)}); err != nil {
+		t.Fatalf("record live event: %v", err)
+	}
+	update := <-subscription.Updates
+	if update.Event == nil || update.Event.Seq != 3 {
+		t.Fatalf("incremental update = %#v", update)
 	}
 }
 
-func TestReplayCoordinator_SubscribeQueuesDurableCursorAfterReplayedEvents(t *testing.T) {
+func TestReplayCoordinator_SubscribeQueuesDurableCursorBeforeIncrementalUpdates(t *testing.T) {
 	coordinator := newReplayCoordinator(4)
 	result := SessionSubscribeResult{
 		SessionID: "session", InstanceID: "run", Events: []SessionEvent{
@@ -38,16 +49,8 @@ func TestReplayCoordinator_SubscribeQueuesDurableCursorAfterReplayedEvents(t *te
 		t.Fatalf("subscribe: %v", err)
 	}
 	defer subscription.Unsubscribe()
-	for sequence := int64(0); sequence <= 1; sequence++ {
-		update := <-subscription.Updates
-		if update.Event == nil || update.Event.Seq != sequence {
-			t.Fatalf("event %d = %#v", sequence, update)
-		}
-	}
-	cursor := <-subscription.Updates
-	if cursor.Cursor == nil || cursor.Cursor.InstanceID != "run" || cursor.Cursor.DurableThroughSeq != 1 {
-		t.Fatalf("cursor = %#v", cursor)
-	}
+	assertInitialDurableCursor(t, subscription.Updates, "run", 1)
+	assertInitialSessionStatus(t, subscription.Updates, "idle")
 }
 
 func TestReplayCoordinator_ConflictingDuplicateInvalidatesSession(t *testing.T) {

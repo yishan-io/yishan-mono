@@ -45,6 +45,7 @@ export class DSHTranscriptController {
   private isReplayingBufferedUpdates = false;
   private isProjectionScheduled = false;
   private projectionGeneration = 0;
+  private isAwaitingAttachSnapshot: boolean;
   private bufferedUpdates: Array<{ instanceId: string; update: DSHUpdate }> = [];
 
   public constructor(
@@ -56,14 +57,15 @@ export class DSHTranscriptController {
     private readonly attachSnapshotInstanceId: (
       cursor: DSHDurableCursor,
     ) => Promise<AgentDSHAttachResult | undefined> = async () => undefined,
-  ) {}
+    isAwaitingAttachSnapshot = false,
+  ) {
+    this.isAwaitingAttachSnapshot = isAwaitingAttachSnapshot;
+  }
 
-  /** Returns the sequence that may safely be used as an attach replay cursor. */
   public getDurableThroughSeq(): number {
     return this.durableThroughSeq;
   }
 
-  /** Strictly validates and applies the authoritative DSH attach snapshot. */
   public applyAttachSnapshot(snapshot: AgentDSHAttachResult): void {
     try {
       const events = this.parseAttachEvents(snapshot);
@@ -72,6 +74,7 @@ export class DSHTranscriptController {
       if (this.instanceId !== snapshot.instanceId) throw new TypeError("DSH attach instance ID mismatch");
       this.reconcileAttachEvents(events);
       this.projectEvents();
+      this.replayBufferedUpdates();
       if (this.controllerState === "failed" || this.isBlocked) {
         throw new TypeError("DSH attach event could not be applied");
       }
@@ -94,6 +97,20 @@ export class DSHTranscriptController {
     }
   }
 
+  private replayBufferedUpdates(): void {
+    const bufferedUpdates = this.bufferedUpdates;
+    this.bufferedUpdates = [];
+    this.isAwaitingAttachSnapshot = false;
+    for (const bufferedUpdate of bufferedUpdates)
+      this.handle({
+        sessionId: this.sessionId,
+        tabId: this.tabId,
+        workspaceId: "start-replay",
+        instanceId: bufferedUpdate.instanceId,
+        update: bufferedUpdate.update,
+      });
+  }
+
   /** Retries a failed DSH durable reload without changing runtimes. */
   public async retry(): Promise<void> {
     if (this.isBlocked || this.controllerState !== "failed" || !this.recoveryInstanceId) return;
@@ -109,6 +126,10 @@ export class DSHTranscriptController {
   /** Applies a validated notification. */
   public handle(payload: DSHFrontendPayload): void {
     if (payload.tabId !== this.tabId || payload.sessionId !== this.sessionId || this.isBlocked) return;
+    if (this.isAwaitingAttachSnapshot) {
+      this.bufferUpdate(payload.instanceId, payload.update);
+      return;
+    }
     if (payload.update.reset) {
       this.startRecovery(payload.update.reset.instanceId, false, payload.update.reset.headSeq);
       return;

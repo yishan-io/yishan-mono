@@ -45,6 +45,46 @@ describe("DSHTranscriptController stream handling", () => {
     expect(actions.replaceMessages).toHaveBeenCalledTimes(1);
   });
 
+  it("recovers when a newer-instance reset races the start snapshot", async () => {
+    const { actions } = setup();
+    const controller = new DSHTranscriptController(
+      "tab",
+      "session",
+      actions,
+      async () => ({
+        session: { sessionId: "session", createdAt: 0 },
+        events: [],
+        filePath: "",
+        instanceId: "run-2",
+        asOfSeq: -1,
+        durableThroughSeq: -1,
+      }),
+      () => {},
+      async () => undefined,
+      true,
+    );
+    controller.handle({
+      sessionId: "session",
+      tabId: "tab",
+      workspaceId: "workspace",
+      instanceId: "run-2",
+      update: { reset: { sessionId: "session", instanceId: "run-2", headSeq: -1 } },
+    });
+
+    controller.applyAttachSnapshot({
+      runtime: "dsh",
+      sessionId: "session",
+      instanceId: "run-1",
+      events: [],
+      asOfSeq: -1,
+      durableThroughSeq: -1,
+      headSeq: -1,
+    });
+
+    expect(actions.setSessionState).toHaveBeenCalledWith("tab", "starting");
+    await vi.waitFor(() => expect(controller.getDurableThroughSeq()).toBe(-1));
+  });
+
   it("projects a complete attach snapshot once", () => {
     const { controller, actions } = setup();
 

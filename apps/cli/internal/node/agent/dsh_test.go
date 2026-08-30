@@ -235,7 +235,7 @@ func TestAgentInspectionRPC_MapsDSHRuntimeErrorsToStableUnavailableCode(t *testi
 		runtime *recordingDSHSessions
 	}{
 		{"list", rpc.MethodAgentListSessions, map[string]any{"runtime": "dsh", "workspaceId": "workspace", "cwd": "/workspace"}, &recordingDSHSessions{listErr: dsh.ErrRuntimeUnavailable}},
-		{"read", rpc.MethodAgentReadHistory, map[string]any{"runtime": "dsh", "transcriptProtocolVersion": 2, "sessionId": "session", "workspaceId": "workspace", "cwd": "/workspace"}, &recordingDSHSessions{readErr: dsh.ErrRuntimeUnavailable}},
+		{"read", rpc.MethodAgentReadHistory, map[string]any{"runtime": "dsh", "transcriptProtocolVersion": 3, "sessionId": "session", "workspaceId": "workspace", "cwd": "/workspace"}, &recordingDSHSessions{readErr: dsh.ErrRuntimeUnavailable}},
 	} {
 		t.Run(operation.name, func(t *testing.T) {
 			service := newTestHandler(t)

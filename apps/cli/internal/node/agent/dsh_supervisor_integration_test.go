@@ -188,8 +188,8 @@ func TestDSHIntegration_CrashResetResumesBeforeReplayOnRestartedSupervisor(t *te
 	startDSHSupervisor(t, supervisor)
 	service := newDSHExecutionService(supervisor)
 	connection, client := newTestWSConnState(t)
-	startDSHExecutionOnConnection(t, service, connection)
-	assertCrashFlowSpeculativeEvent(t, client)
+	started := startDSHExecutionOnConnection(t, service, connection)
+	assertCrashFlowStartSnapshot(t, started)
 	crashDSHSession(t, service)
 	assertCrashFlowResetAndUnavailable(t, client, supervisor, backoffStarted)
 	close(releaseRestart)
@@ -233,19 +233,17 @@ func startDSHSupervisor(t *testing.T, supervisor *dsh.Supervisor) {
 	t.Cleanup(func() { _ = supervisor.Close() })
 }
 
-func assertCrashFlowSpeculativeEvent(t *testing.T, client interface {
-	ReadJSON(any) error
-	SetReadDeadline(time.Time) error
-}) {
+func assertCrashFlowStartSnapshot(t *testing.T, started rpc.AgentStartResult) {
 	t.Helper()
-	for range 3 {
-		var notification crashFlowNotification
-		readCrashFlowNotification(t, client, &notification)
-		if notification.Params.Payload.Update.Event != nil && notification.Params.Payload.Update.Event.Seq == 0 {
-			return
-		}
+	if started.DSHAttachSnapshot == nil || len(started.DSHAttachSnapshot.Events) != 1 {
+		t.Fatalf("start snapshot = %#v", started.DSHAttachSnapshot)
 	}
-	t.Fatal("speculative live event was not forwarded")
+	var event struct {
+		Seq int64 `json:"seq"`
+	}
+	if err := json.Unmarshal(started.DSHAttachSnapshot.Events[0], &event); err != nil || event.Seq != 0 {
+		t.Fatalf("start snapshot event = %s, error = %v", started.DSHAttachSnapshot.Events[0], err)
+	}
 }
 
 func crashDSHSession(t *testing.T, service *Service) {

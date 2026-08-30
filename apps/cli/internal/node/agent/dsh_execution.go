@@ -82,17 +82,25 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 	}
 	subscription, err := s.dshRuntime().SubscribeSession(ctx, dsh.SessionSubscribeRequest{SessionID: req.SessionID, CWD: cwd, AfterSeq: -1})
 	if err != nil {
-		cleanupErr, isDisposed := s.cleanupFailedDSHStart(ctx, req.SessionID, cwd, err)
+		cleanupErr, isDisposed := s.cleanupFailedDSHStart(ctx, req.SessionID, cwd, mapDSHTranscriptProtocolError(err))
 		s.runtimeIdentities.completeStart(req.SessionID, rpc.AgentRuntimeDSH, claim, false, !isDisposed)
 		startCompleted = true
 		return nil, cleanupErr
 	}
-	result, err := s.registerStartedDSHSession(connection, req, cwd, claim, subscription)
+	attachSnapshot, err := mapDSHAttachResult(subscription)
+	if err != nil {
+		subscription.Unsubscribe()
+		cleanupErr, isDisposed := s.cleanupFailedDSHStart(ctx, req.SessionID, cwd, mapDSHTranscriptProtocolError(err))
+		s.runtimeIdentities.completeStart(req.SessionID, rpc.AgentRuntimeDSH, claim, false, !isDisposed)
+		startCompleted = true
+		return nil, cleanupErr
+	}
+	result, err := s.registerStartedDSHSession(connection, req, cwd, claim, subscription, attachSnapshot)
 	startCompleted = true
 	return result, err
 }
 
-func (s *Service) registerStartedDSHSession(connection *rpc.Connection, req rpc.AgentStartParams, cwd string, claim runtimeIdentityClaim, subscription dsh.SessionSubscription) (any, error) {
+func (s *Service) registerStartedDSHSession(connection *rpc.Connection, req rpc.AgentStartParams, cwd string, claim runtimeIdentityClaim, subscription dsh.SessionSubscription, attachSnapshot rpc.AgentDSHAttachResult) (any, error) {
 	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHProvider, s.deps.DSHModel)
 	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, workspaceID: req.WorkspaceID, cwd: cwd, instanceID: subscription.InstanceID, provider: selection.Provider, model: selection.Model, connection: connection, available: true, subscription: subscription}
 	if !s.dshSessions.register(entry) {
@@ -104,7 +112,7 @@ func (s *Service) registerStartedDSHSession(connection *rpc.Connection, req rpc.
 	s.runtimeIdentities.completeStart(req.SessionID, rpc.AgentRuntimeDSH, claim, true, false)
 	s.bindDSHConnection(entry, connection)
 	s.pumpDSHSubscription(entry)
-	return rpc.AgentStartResult{Runtime: rpc.AgentRuntimeDSH, SessionID: req.SessionID}, nil
+	return rpc.AgentStartResult{Runtime: rpc.AgentRuntimeDSH, SessionID: req.SessionID, DSHAttachSnapshot: &attachSnapshot}, nil
 }
 
 func (s *Service) attachDSH(ctx context.Context, connection *rpc.Connection, req rpc.AgentAttachParams) (any, error) {

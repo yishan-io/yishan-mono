@@ -102,7 +102,7 @@ export async function ensureAgentSession(opts: EnsureAgentSessionOptions): Promi
     lifecycleRevisionsByInstanceId: new Map(),
     currentLifecycleInstanceId: null,
   };
-  record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
+  record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId, true);
   record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
   const deferredStart = createDeferred<void>();
   record.startPromise = deferredStart.promise;
@@ -399,6 +399,7 @@ function isCurrentDshRuntimeParent(record: AgentRuntimeSessionRecord, tabId: str
 function createDSHTranscriptController(
   record: AgentRuntimeSessionRecord,
   tabId: string,
+  isAwaitingStartSnapshot: boolean,
 ): DSHTranscriptController | null {
   if (record.runtime !== "dsh") return null;
   return new DSHTranscriptController(
@@ -424,6 +425,7 @@ function createDSHTranscriptController(
       if (!("events" in snapshot)) throw new TypeError("invalid DSH recovery attach response");
       return snapshot;
     },
+    isAwaitingStartSnapshot,
   );
 }
 // DSH's supervisor defaults to a one-second restart backoff. Keep polling long
@@ -483,7 +485,7 @@ async function adoptExistingChatSession(
     lifecycleRevisionsByInstanceId: new Map(),
     currentLifecycleInstanceId: null,
   };
-  record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
+  record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId, false);
   record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
   runtimeSessionRecords.set(opts.tabId, record);
   activeSessions.set(opts.tabId, record);
@@ -494,7 +496,7 @@ async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: Ensu
   // Use the model passed through opts (read before initSession cleared the store).
   const dshModelId = record.runtime === "dsh" && !shouldResumeDSH ? opts.dshModelId : undefined;
   const dshProviderId = record.runtime === "dsh" && !shouldResumeDSH ? opts.dshProviderId : undefined;
-  await startAgentSessionProcedure({
+  const result = await startAgentSessionProcedure({
     runtime: record.runtime,
     sessionId: record.sessionId,
     tabId: opts.tabId,
@@ -505,6 +507,10 @@ async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: Ensu
     ...(dshModelId ? { modelId: dshModelId } : {}),
     ...(dshProviderId ? { provider: dshProviderId } : {}),
   });
+  if (record.runtime === "dsh") {
+    if (result.runtime !== "dsh") throw new TypeError("DSH start returned another runtime");
+    record.dshTranscriptController?.applyAttachSnapshot(result.dshAttachSnapshot);
+  }
 }
 async function attachRuntimeSession(record: AgentRuntimeSessionRecord, tabId: string): Promise<void> {
   const result = await attachAgentSessionProcedure({

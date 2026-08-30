@@ -7,7 +7,7 @@ export function parseAgentAttachResult(payload: unknown, request: AgentAttachReq
   const result = requireRecord(payload, "agent attach result");
   if (result.runtime !== request.runtime) throw new TypeError("attach runtime does not match request");
   if (request.runtime === "pi") return parsePiAttach(result);
-  return parseDSHAttach(result, request.sessionId);
+  return parseDSHAttachResult(result, request.sessionId);
 }
 
 function parsePiAttach(result: WireRecord): AgentAttachResult {
@@ -16,16 +16,10 @@ function parsePiAttach(result: WireRecord): AgentAttachResult {
   return { runtime: "pi", ok: true };
 }
 
-function parseDSHAttach(result: WireRecord, sessionId: string): AgentDSHAttachResult {
-  requireExactKeys(result, [
-    "runtime",
-    "sessionId",
-    "instanceId",
-    "events",
-    "asOfSeq",
-    "durableThroughSeq",
-    "headSeq",
-  ]);
+/** Parses one embedded DSH attach snapshot against its requested session. */
+export function parseDSHAttachResult(payload: unknown, sessionId: string): AgentDSHAttachResult {
+  const result = requireRecord(payload, "DSH attach result");
+  requireExactKeys(result, ["runtime", "sessionId", "instanceId", "events", "asOfSeq", "durableThroughSeq", "headSeq"]);
   if (
     result.runtime !== "dsh" ||
     result.sessionId !== sessionId ||

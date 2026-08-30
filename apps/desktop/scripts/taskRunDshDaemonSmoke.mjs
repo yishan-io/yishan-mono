@@ -309,7 +309,7 @@ try {
   assert.ok(!terminalSessions.some((session) => session.workspaceId === workspaceId), "DSH task run started a terminal fallback");
 
   const attached = await client.request("agent.attach", {
-    runtime: "dsh", sessionId, tabId: sessionId, workspaceId, cwd: worktreePath, afterSeq: -1, transcriptProtocolVersion: 2,
+    runtime: "dsh", sessionId, tabId: sessionId, workspaceId, cwd: worktreePath, afterSeq: -1, transcriptProtocolVersion: 3,
   });
   assertDSHTranscript(attached, sessionId);
   const initialInstanceId = attached.instanceId;
@@ -324,7 +324,7 @@ try {
   assertDSHUpdate(dshEvent.params.payload, sessionId, workspaceId);
   await waitFor("durable DSH replay", async () => {
     const replay = await client.request("agent.attach", {
-      runtime: "dsh", sessionId, tabId: sessionId, workspaceId, cwd: worktreePath, afterSeq: -1, transcriptProtocolVersion: 2,
+      runtime: "dsh", sessionId, tabId: sessionId, workspaceId, cwd: worktreePath, afterSeq: -1, transcriptProtocolVersion: 3,
     });
     return containsReplay(replay.events);
   });
@@ -341,7 +341,7 @@ try {
   });
 
   const replayed = await client.request("agent.attach", {
-    runtime: "dsh", sessionId, tabId: sessionId, workspaceId, cwd: worktreePath, afterSeq: -1, transcriptProtocolVersion: 2,
+    runtime: "dsh", sessionId, tabId: sessionId, workspaceId, cwd: worktreePath, afterSeq: -1, transcriptProtocolVersion: 3,
   });
   assert.notEqual(replayed.instanceId, initialInstanceId);
   assertDSHTranscript(replayed, sessionId, true);

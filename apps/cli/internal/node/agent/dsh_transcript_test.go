@@ -12,7 +12,7 @@ import (
 	"yishan/apps/cli/internal/rpc"
 )
 
-const transcriptProtocolVersion = 2
+const transcriptProtocolVersion = 3
 
 func TestDSHTranscript_ProjectsInternalEventsAcrossRendererBoundaries(t *testing.T) {
 	hidden := json.RawMessage(`{"type":"yishan/session-bound.v1","seq":0,"time":10,"data":{"workspaceId":"secret"}}`)
@@ -126,8 +126,9 @@ func TestDSHTranscript_RejectsUnknownInternalEvent(t *testing.T) {
 		AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 0,
 	}}
 	service := newDSHExecutionService(runtime)
-	startDSHTranscript(t, service, nil)
-	_, err := service.AgentAttach(context.Background(), nil, dshAttachRequest(-1))
+	_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{
+		Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative", TranscriptProtocolVersion: transcriptProtocolVersion,
+	})
 	assertTranscriptProtocolUnavailable(t, err)
 }
 

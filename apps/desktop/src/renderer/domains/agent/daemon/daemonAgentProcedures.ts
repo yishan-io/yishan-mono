@@ -4,6 +4,7 @@ import { parseAgentAttachResult } from "./daemonAgentAttachParser";
 import { parseAgentCancelSubagentResult } from "./daemonAgentCancelSubagentParser";
 import { parseAgentHistoryResult } from "./daemonAgentHistoryParser";
 import { parseAgentSessionLineageResult } from "./daemonAgentSessionLineageParser";
+import { parseAgentStartResult } from "./daemonAgentStartParser";
 import type {
   AgentAbortRequest,
   AgentAckResult,
@@ -144,7 +145,7 @@ export async function removeDSHCredential(input: { ref: string }): Promise<{ ok:
 
 // ─── runtime-neutral agent ───────────────────────────────────────────────────
 
-const DSH_TRANSCRIPT_PROTOCOL_VERSION = 2;
+const DSH_TRANSCRIPT_PROTOCOL_VERSION = 3;
 
 /** Gets daemon-owned runtime availability for new top-level agent tabs. */
 export async function getAgentCapabilities(): Promise<AgentCapabilities> {
@@ -190,7 +191,7 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
 
 /** Starts one session in the runtime selected by the request. */
 export async function startAgentSession(input: AgentStartRequest): Promise<AgentStartResult> {
-  return (await request("agent.start", withDSHTranscriptProtocol(input))) as AgentStartResult;
+  return parseAgentStartResult(await request("agent.start", withDSHTranscriptProtocol(input)), input);
 }
 
 /** Attaches the current daemon connection to one existing agent session. */

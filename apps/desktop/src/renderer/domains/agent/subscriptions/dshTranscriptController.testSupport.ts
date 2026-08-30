@@ -26,6 +26,7 @@ export function setup() {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
+        filePath: "",
         instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
