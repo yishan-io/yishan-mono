@@ -482,7 +482,7 @@ describe("WorkspaceTasksView", () => {
   });
 
   it("renders loading, empty, and error workspace states", () => {
-    localTaskStore.setState({ workspaceLoadState: "loading" });
+    localTaskStore.setState({ workspaceLoadState: "loading", workspaceTasks: [] });
     const view = render(<WorkspaceTasksView workspaceId="workspace-1" />);
     expect(screen.getByRole("progressbar")).toBeTruthy();
     act(() => localTaskStore.setState({ workspaceLoadState: "loaded", workspaceLinks: [], workspaceTasks: [] }));
