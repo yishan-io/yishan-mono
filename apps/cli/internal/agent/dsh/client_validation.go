@@ -24,6 +24,7 @@ type sessionListWireEntry struct {
 	CreatedAt     *int64 `json:"createdAt"`
 	ParentSession string `json:"parentSession,omitempty"`
 	AgentPreset   string `json:"agentPreset,omitempty"`
+	SessionName   string `json:"sessionName,omitempty"`
 	Live          *bool  `json:"live"`
 	Persisted     *bool  `json:"persisted"`
 }
@@ -43,7 +44,7 @@ func (result sessionListWireResult) validate() (SessionListResult, error) {
 		}
 		sessions = append(sessions, SessionListEntry{
 			SessionID: entry.SessionID, CreatedAt: *entry.CreatedAt, ParentSession: entry.ParentSession,
-			AgentPreset: entry.AgentPreset, Live: *entry.Live, Persisted: *entry.Persisted,
+			AgentPreset: entry.AgentPreset, SessionName: entry.SessionName, Live: *entry.Live, Persisted: *entry.Persisted,
 		})
 	}
 	return SessionListResult{Sessions: sessions}, nil

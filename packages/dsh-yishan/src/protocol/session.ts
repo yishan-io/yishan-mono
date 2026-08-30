@@ -11,6 +11,7 @@ export type SessionListEntry = {
   createdAt: number;
   parentSession?: string;
   agentPreset?: string;
+  sessionName?: string;
   live: boolean;
   persisted: boolean;
 };

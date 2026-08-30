@@ -34,6 +34,10 @@ class FakeSessionQuery extends Service {
   async listSessions() {
     return FakeSessionQuery.records;
   }
+
+  async readTitleSnapshots(sessionIds: readonly string[]) {
+    return sessionIds.map((sessionId) => ({ sessionId, status: "fulfilled" as const, value: {} }));
+  }
 }
 
 function setSessionRecords(records: QueryRecord[]): void {

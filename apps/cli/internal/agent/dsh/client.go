@@ -76,6 +76,7 @@ type SessionListEntry struct {
 	CreatedAt     int64  `json:"createdAt"`
 	ParentSession string `json:"parentSession,omitempty"`
 	AgentPreset   string `json:"agentPreset,omitempty"`
+	SessionName   string `json:"sessionName,omitempty"`
 	Live          bool   `json:"live"`
 	Persisted     bool   `json:"persisted"`
 }

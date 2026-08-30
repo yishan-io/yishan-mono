@@ -226,11 +226,25 @@ export class RpcServer {
   }
 
   private async listSessions(request: SessionListRequest): Promise<SessionListResult> {
-    const sessions = await this.ctx.sessionQuery.listSessions();
+    const sessionRecords = await this.ctx.sessionQuery.listSessions();
+    const sessions = sessionRecords.filter(
+      ({ header }) => header.cwd === request.cwd && (header.delegationDepth ?? 0) === 0,
+    );
+    const titleSnapshots = await this.ctx.sessionQuery.readTitleSnapshots(sessions.map(({ header }) => header.id));
+    const sessionNames = new Map(
+      titleSnapshots.flatMap((snapshot) =>
+        snapshot.status === "fulfilled" && snapshot.value.title !== undefined
+          ? [[snapshot.sessionId, snapshot.value.title.title]]
+          : [],
+      ),
+    );
     return {
-      sessions: sessions
-        .filter(({ header }) => header.cwd === request.cwd && (header.delegationDepth ?? 0) === 0)
-        .map(({ header, live, persisted }) => ({ ...this.createSessionHeaderResult(header), live, persisted })),
+      sessions: sessions.map(({ header, live, persisted }) => ({
+        ...this.createSessionHeaderResult(header),
+        sessionName: sessionNames.get(header.id),
+        live,
+        persisted,
+      })),
     };
   }
 

@@ -34,6 +34,21 @@ func TestSessionListWireResult_RejectsMissingCreatedAt(t *testing.T) {
 	}
 }
 
+func TestSessionListWireResult_PreservesSessionName(t *testing.T) {
+	createdAt := int64(1)
+	live, persisted := false, true
+	result := sessionListWireResult{Sessions: []sessionListWireEntry{{
+		SessionID: "session-1", CreatedAt: &createdAt, SessionName: "Session title", Live: &live, Persisted: &persisted,
+	}}}
+	validated, err := result.validate()
+	if err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if validated.Sessions[0].SessionName != "Session title" {
+		t.Fatalf("SessionName = %q", validated.Sessions[0].SessionName)
+	}
+}
+
 func TestValidJSONObject_RejectsMissingSequence(t *testing.T) {
 	if validJSONObject([]byte(`{"type":"turn/end","time":1,"data":{}}`)) {
 		t.Fatal("accepted session event without seq")
