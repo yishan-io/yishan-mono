@@ -10,6 +10,9 @@
       "name": "模板名称",
       "save": "保存模板",
       "delete": "删除模板",
+      "deleteTitle": "删除模板？",
+      "deleteDescription": "要删除“{{name}}”吗？",
+      "confirmDelete": "删除模板",
       "agentDefault": "智能体默认模板",
       "setAgentDefault": "设为智能体默认模板",
       "loading": "正在加载模板…"

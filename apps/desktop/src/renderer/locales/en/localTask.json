@@ -10,6 +10,9 @@
       "name": "Template name",
       "save": "Save template",
       "delete": "Delete template",
+      "deleteTitle": "Delete template?",
+      "deleteDescription": "Delete “{{name}}”?",
+      "confirmDelete": "Delete template",
       "agentDefault": "Agent default",
       "setAgentDefault": "Set as agent default",
       "loading": "Loading templates…"

@@ -62,13 +62,13 @@ func parseLoadedTemplates(contents []byte) (domain.TemplatesData, bool) {
 	if templates.AgentDefaultID == "" || !hasTemplate(templates.Templates, templates.AgentDefaultID) {
 		templates.AgentDefaultID = builtInTemplateID
 	}
-	return templates, validateTemplates(templates, true) == nil
+	return templates, validateTemplates(templates) == nil
 }
 
 // Save validates then atomically writes the data.
 func (s *TemplateStore) Save(templates domain.TemplatesData) error {
 	templates = normalizeTemplates(templates)
-	if err := validateTemplates(templates, false); err != nil {
+	if err := validateTemplates(templates); err != nil {
 		return err
 	}
 	return s.write(templates)
@@ -132,12 +132,12 @@ func normalizeTemplates(templates domain.TemplatesData) domain.TemplatesData {
 	return templates
 }
 
-func validateTemplates(templates domain.TemplatesData, allowNoCustom bool) error {
+func validateTemplates(templates domain.TemplatesData) error {
 	if len(templates.Templates) == 0 || templates.Templates[0] != builtInTemplate {
 		return ErrInvalidTemplates
 	}
 	customCount := len(templates.Templates) - 1
-	if customCount > maxTemplates || (!allowNoCustom && customCount == 0) {
+	if customCount > maxTemplates {
 		return ErrInvalidTemplates
 	}
 	seenIDs := make(map[string]struct{}, customCount)

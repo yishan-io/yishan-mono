@@ -1,6 +1,7 @@
 import { Alert, Box, Button, CircularProgress, FormControl, MenuItem, Select, TextField, Tooltip } from "@mui/material";
-import { generateId } from "@shared/ids/generateId";
+import { ConfirmationDialog } from "@renderer/ui/components/ConfirmationDialog";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { generateId } from "@shared/ids/generateId";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { loadLocalTaskTemplates, saveLocalTaskTemplates } from "../../commands/localTaskCommands";
@@ -17,7 +18,11 @@ export interface LocalTaskTemplateControlsProps {
 }
 
 /** Selects and maintains daemon-backed Markdown templates for a new Local Task. */
-export function LocalTaskTemplateControls({ description, onDescriptionChange, disabled }: LocalTaskTemplateControlsProps) {
+export function LocalTaskTemplateControls({
+  description,
+  onDescriptionChange,
+  disabled,
+}: LocalTaskTemplateControlsProps) {
   const { t } = useTranslation();
   const templates = localTaskTemplateStore((state) => state.templates);
   const agentDefaultId = localTaskTemplateStore((state) => state.agentDefaultId);
@@ -26,6 +31,7 @@ export function LocalTaskTemplateControls({ description, onDescriptionChange, di
   const setSelectedTemplateId = localTaskTemplateStore((state) => state.setSelectedTemplateId);
   const [templateName, setTemplateName] = useState("");
   const [templateError, setTemplateError] = useState<string | null>(null);
+  const [templatePendingDeletion, setTemplatePendingDeletion] = useState<LocalTaskTemplate | null>(null);
 
   useEffect(() => {
     if (templates === null) void loadLocalTaskTemplates();
@@ -73,20 +79,33 @@ export function LocalTaskTemplateControls({ description, onDescriptionChange, di
     } catch (error) {
       setTemplateError(getErrorMessage(error));
     }
-  }, [agentDefaultId, description, isBuiltInTemplate, selectedTemplate.id, setSelectedTemplateId, templateName, templates]);
-  const handleDelete = useCallback(async () => {
-    if (!templates || isBuiltInTemplate) return;
+  }, [
+    agentDefaultId,
+    description,
+    isBuiltInTemplate,
+    selectedTemplate.id,
+    setSelectedTemplateId,
+    templateName,
+    templates,
+  ]);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!templates || !templatePendingDeletion) return;
     setTemplateError(null);
-    const updatedTemplates = templates.filter((template) => template.id !== selectedTemplate.id);
-    const updatedAgentDefaultId = agentDefaultId === selectedTemplate.id ? DEFAULT_LOCAL_TASK_TEMPLATE.id : agentDefaultId;
+    const updatedTemplates = templates.filter((template) => template.id !== templatePendingDeletion.id);
+    const updatedAgentDefaultId =
+      agentDefaultId === templatePendingDeletion.id ? DEFAULT_LOCAL_TASK_TEMPLATE.id : agentDefaultId;
     try {
       await saveLocalTaskTemplates({ templates: updatedTemplates, agentDefaultId: updatedAgentDefaultId });
+      const builtInTemplate = localTaskTemplateStore
+        .getState()
+        .templates?.find((template) => template.id === DEFAULT_LOCAL_TASK_TEMPLATE.id);
       setSelectedTemplateId(DEFAULT_LOCAL_TASK_TEMPLATE.id);
-      onDescriptionChange(DEFAULT_LOCAL_TASK_TEMPLATE.content);
+      onDescriptionChange(builtInTemplate?.content ?? DEFAULT_LOCAL_TASK_TEMPLATE.content);
+      setTemplatePendingDeletion(null);
     } catch (error) {
       setTemplateError(getErrorMessage(error));
     }
-  }, [agentDefaultId, isBuiltInTemplate, onDescriptionChange, selectedTemplate.id, setSelectedTemplateId, templates]);
+  }, [agentDefaultId, onDescriptionChange, setSelectedTemplateId, templatePendingDeletion, templates]);
   const handleSetAgentDefault = useCallback(
     async (templateId: string) => {
       if (!templates || templateId === agentDefaultId) return;
@@ -110,98 +129,123 @@ export function LocalTaskTemplateControls({ description, onDescriptionChange, di
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-      {templateError ? <Alert severity="error">{templateError}</Alert> : null}
-      <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-        <FormControl size="small" sx={{ flex: "1 1 0", minWidth: 0 }}>
-          <Select
-            value={selectedTemplate.id}
+    <>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        {templateError ? <Alert severity="error">{templateError}</Alert> : null}
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <FormControl size="small" sx={{ flex: "1 1 0", minWidth: 0 }}>
+            <Select
+              value={selectedTemplate.id}
+              disabled={isDisabled}
+              onChange={(event) => handleTemplateChange(event.target.value)}
+              inputProps={{ "aria-label": t("localTask.templates.select") }}
+              renderValue={(value) => templates.find((template) => template.id === value)?.name ?? ""}
+            >
+              {templates.map((template) => {
+                const isAgentDefault = template.id === agentDefaultId;
+                return (
+                  <MenuItem
+                    key={template.id}
+                    value={template.id}
+                    sx={{ display: "flex", alignItems: "center", flexWrap: "nowrap", gap: 0.5 }}
+                  >
+                    <Box
+                      sx={{
+                        flexGrow: 1,
+                        minWidth: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {template.name}
+                    </Box>
+                    {isAgentDefault ? (
+                      <Tooltip title={t("localTask.templates.agentDefault")}>
+                        <Box
+                          component="span"
+                          aria-label={t("localTask.templates.agentDefault")}
+                          sx={{ flexShrink: 0, fontSize: "0.875rem", lineHeight: 1 }}
+                        >
+                          ★
+                        </Box>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title={t("localTask.templates.setAgentDefault")}>
+                        <Box
+                          component="button"
+                          type="button"
+                          disabled={isDisabled}
+                          aria-label={t("localTask.templates.setAgentDefault")}
+                          sx={{
+                            flexShrink: 0,
+                            fontSize: "0.875rem",
+                            lineHeight: 1,
+                            border: 0,
+                            bgcolor: "transparent",
+                            cursor: isDisabled ? "default" : "pointer",
+                            opacity: isDisabled ? 0.38 : 1,
+                            p: 0,
+                          }}
+                          onClick={(event) => {
+                            if (isDisabled) return;
+                            event.preventDefault();
+                            event.stopPropagation();
+                            void handleSetAgentDefault(template.id);
+                          }}
+                        >
+                          ☆
+                        </Box>
+                      </Tooltip>
+                    )}
+                  </MenuItem>
+                );
+              })}
+            </Select>
+          </FormControl>
+          <TextField
+            size="small"
+            value={templateName}
             disabled={isDisabled}
-            onChange={(event) => handleTemplateChange(event.target.value)}
-            inputProps={{ "aria-label": t("localTask.templates.select") }}
-            renderValue={(value) => templates.find((template) => template.id === value)?.name ?? ""}
+            placeholder={t("localTask.templates.name")}
+            slotProps={{ htmlInput: { "aria-label": t("localTask.templates.name") } }}
+            onChange={(event) => setTemplateName(event.target.value)}
+            sx={{ flex: "2 1 0", minWidth: 0 }}
+          />
+          <Button
+            size="small"
+            disabled={isDisabled || !templateName.trim() || !description.trim()}
+            onClick={handleSave}
+            sx={{ flexShrink: 0 }}
           >
-            {templates.map((template) => {
-              const isAgentDefault = template.id === agentDefaultId;
-              const isBuiltIn = template.id === DEFAULT_LOCAL_TASK_TEMPLATE.id;
-              return (
-                <MenuItem
-                  key={template.id}
-                  value={template.id}
-                  sx={{ display: "flex", alignItems: "center", flexWrap: "nowrap", gap: 0.5 }}
-                >
-                  <Box sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {template.name}
-                  </Box>
-                  {isAgentDefault ? (
-                    <Tooltip title={t("localTask.templates.agentDefault")}>
-                      <Box
-                        component="span"
-                        aria-label={t("localTask.templates.agentDefault")}
-                        sx={{ flexShrink: 0, fontSize: "0.875rem", lineHeight: 1 }}
-                      >
-                        ★
-                      </Box>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip title={t("localTask.templates.setAgentDefault")}>
-                      <Box
-                        component="span"
-                        role="button"
-                        tabIndex={isDisabled ? -1 : 0}
-                        aria-label={t("localTask.templates.setAgentDefault")}
-                        sx={{
-                          flexShrink: 0,
-                          fontSize: "0.875rem",
-                          lineHeight: 1,
-                          cursor: isDisabled ? "default" : "pointer",
-                          opacity: isDisabled ? 0.38 : 1,
-                        }}
-                        onClick={(event) => {
-                          if (isDisabled) return;
-                          event.preventDefault();
-                          event.stopPropagation();
-                          void handleSetAgentDefault(template.id);
-                        }}
-                        onKeyDown={(event) => {
-                          if (isDisabled || event.key !== "Enter") return;
-                          event.preventDefault();
-                          event.stopPropagation();
-                          void handleSetAgentDefault(template.id);
-                        }}
-                      >
-                        ☆
-                      </Box>
-                    </Tooltip>
-                  )}
-                </MenuItem>
-              );
-            })}
-          </Select>
-        </FormControl>
-        <TextField
-          size="small"
-          value={templateName}
-          disabled={isDisabled}
-          placeholder={t("localTask.templates.name")}
-          slotProps={{ htmlInput: { "aria-label": t("localTask.templates.name") } }}
-          onChange={(event) => setTemplateName(event.target.value)}
-          sx={{ flex: "2 1 0", minWidth: 0 }}
-        />
-        <Button
-          size="small"
-          disabled={isDisabled || !templateName.trim() || !description.trim()}
-          onClick={handleSave}
-          sx={{ flexShrink: 0 }}
-        >
-          {t("localTask.templates.save")}
-        </Button>
-        {!isBuiltInTemplate ? (
-          <Button color="error" size="small" disabled={isDisabled} onClick={handleDelete} sx={{ flexShrink: 0 }}>
-            {t("localTask.templates.delete")}
+            {t("localTask.templates.save")}
           </Button>
-        ) : null}
+          {!isBuiltInTemplate ? (
+            <Button
+              color="error"
+              size="small"
+              disabled={isDisabled}
+              onClick={() => setTemplatePendingDeletion(selectedTemplate)}
+              sx={{ flexShrink: 0 }}
+            >
+              {t("localTask.templates.delete")}
+            </Button>
+          ) : null}
+        </Box>
       </Box>
-    </Box>
+      <ConfirmationDialog
+        open={Boolean(templatePendingDeletion)}
+        title={t("localTask.templates.deleteTitle")}
+        description={
+          templateError ?? t("localTask.templates.deleteDescription", { name: templatePendingDeletion?.name })
+        }
+        confirmLabel={t("localTask.templates.confirmDelete")}
+        cancelLabel={t("common.actions.cancel")}
+        confirmColor="error"
+        isSubmitting={isTemplatesLoading}
+        onCancel={() => setTemplatePendingDeletion(null)}
+        onConfirm={() => void handleConfirmDelete()}
+      />
+    </>
   );
 }

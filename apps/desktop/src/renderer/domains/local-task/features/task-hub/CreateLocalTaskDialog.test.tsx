@@ -2,8 +2,8 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_LOCAL_TASK_TEMPLATE, localTaskTemplateStore } from "../../state/localTaskTemplateStore";
 import { localTaskStore } from "../../state/localTaskStore";
+import { DEFAULT_LOCAL_TASK_TEMPLATE, localTaskTemplateStore } from "../../state/localTaskTemplateStore";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
 
 const commands = vi.hoisted(() => ({
@@ -13,6 +13,7 @@ const commands = vi.hoisted(() => ({
   linkLocalTaskWorkspace: vi.fn(),
   loadLocalTaskTagSuggestions: vi.fn(),
   loadLocalTaskTemplates: vi.fn(),
+  saveLocalTaskTemplates: vi.fn(),
 }));
 
 vi.mock("../../commands/localTaskCommands", () => commands);
@@ -116,8 +117,14 @@ describe("CreateLocalTaskDialog", () => {
     localTaskStore.setState({ ...initialState, tagCatalog: [] });
     localTaskTemplateStore
       .getState()
-      .setTemplates([DEFAULT_LOCAL_TASK_TEMPLATE, { id: "bug", name: "Bug", content: "## Reproduction\n\nSteps" }], "default");
+      .setTemplates(
+        [DEFAULT_LOCAL_TASK_TEMPLATE, { id: "bug", name: "Bug", content: "## Reproduction\n\nSteps" }],
+        "default",
+      );
     localTaskTemplateStore.getState().setSelectedTemplateId("");
+    commands.saveLocalTaskTemplates.mockImplementation(async (input) => {
+      localTaskTemplateStore.getState().setTemplates(input.templates, input.agentDefaultId);
+    });
   });
 
   afterEach(() => {
@@ -226,6 +233,28 @@ describe("CreateLocalTaskDialog", () => {
         tagIds: ["tag-Café"],
       }),
     );
+  });
+
+  it("confirms deletion of a selected template before saving or submitting the new task form", async () => {
+    localTaskTemplateStore.getState().setSelectedTemplateId("bug");
+    renderDialog();
+    fireEvent.change(getTitleInput(), { target: { value: "Do not create" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.templates.delete" }));
+
+    expect(screen.getByRole("heading", { name: "localTask.templates.deleteTitle" })).toBeTruthy();
+    expect(commands.saveLocalTaskTemplates).not.toHaveBeenCalled();
+    expect(commands.createLocalTask).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.templates.confirmDelete" }));
+
+    await waitFor(() =>
+      expect(commands.saveLocalTaskTemplates).toHaveBeenCalledWith({
+        templates: [DEFAULT_LOCAL_TASK_TEMPLATE],
+        agentDefaultId: "default",
+      }),
+    );
+    expect(commands.createLocalTask).not.toHaveBeenCalled();
   });
 
   it("disables every mutable control while a mutation is loading", () => {
