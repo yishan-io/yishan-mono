@@ -43,6 +43,8 @@ export class DSHTranscriptController {
   private recoveryGeneration = 0;
   private recoveryPromise: Promise<void> | null = null;
   private isReplayingBufferedUpdates = false;
+  private isProjectionScheduled = false;
+  private projectionGeneration = 0;
   private bufferedUpdates: Array<{ instanceId: string; update: DSHUpdate }> = [];
 
   public constructor(
@@ -69,6 +71,10 @@ export class DSHTranscriptController {
       if (hasNewInstanceId) this.replaceAttachState(snapshot.instanceId);
       if (this.instanceId !== snapshot.instanceId) throw new TypeError("DSH attach instance ID mismatch");
       this.reconcileAttachEvents(events);
+      this.projectEvents();
+      if (this.controllerState === "failed" || this.isBlocked) {
+        throw new TypeError("DSH attach event could not be applied");
+      }
       if (snapshot.durableThroughSeq > this.nextSeq - 1) {
         throw new TypeError("DSH attach durable cursor exceeds transcript");
       }
@@ -183,7 +189,7 @@ export class DSHTranscriptController {
         continue;
       }
       if (event.seq > this.nextSeq) throw new TypeError("DSH attach snapshot has a transcript gap");
-      this.applyEvent(event);
+      this.applyEvent(event, false);
       if (this.controllerState === "failed" || this.isBlocked) {
         throw new TypeError("DSH attach event could not be applied");
       }
@@ -238,7 +244,7 @@ export class DSHTranscriptController {
     this.onDurableCursor(cursor);
   }
 
-  private applyEvent(event: DSHEvent): void {
+  private applyEvent(event: DSHEvent, shouldProject = true): void {
     if (isUnknownRequiredDSHEvent(event)) {
       this.startRecovery(this.instanceId);
       return;
@@ -263,15 +269,19 @@ export class DSHTranscriptController {
     }
     if (event.type === "turn/end") {
       this.clearActiveTextStream();
-      const reason = typeof event.data.reason === "object" && event.data.reason !== null ? event.data.reason as Record<string, unknown> : null;
+      const reason =
+        typeof event.data.reason === "object" && event.data.reason !== null
+          ? (event.data.reason as Record<string, unknown>)
+          : null;
       if (reason?.kind === "error") {
-        const error = typeof reason.error === "object" && reason.error !== null ? reason.error as Record<string, unknown> : null;
+        const error =
+          typeof reason.error === "object" && reason.error !== null ? (reason.error as Record<string, unknown>) : null;
         const message = typeof error?.message === "string" ? error.message : "Agent turn failed";
         this.actions.setTurnError(this.tabId, message);
       }
     }
     if (event.type === "assistant/message") this.clearActiveTextStreamFor(event);
-    this.projectEvents();
+    if (shouldProject) this.scheduleProjection();
     if (event.type === "assistant/chunk") this.applyChunk(event);
   }
 
@@ -384,7 +394,18 @@ export class DSHTranscriptController {
     });
   }
 
+  private scheduleProjection(): void {
+    if (this.isProjectionScheduled) return;
+    this.isProjectionScheduled = true;
+    const generation = this.projectionGeneration;
+    queueMicrotask(() => {
+      this.isProjectionScheduled = false;
+      if (!this.isBlocked && generation === this.projectionGeneration) this.projectEvents();
+    });
+  }
+
   private projectEvents(): void {
+    this.projectionGeneration++;
     try {
       this.actions.replaceMessages(this.tabId, projectDSHTranscript(this.events));
     } catch (error) {
