@@ -106,6 +106,38 @@ describe("agentChatCommands.startAgentChatSession", () => {
     expect(agentChatStore.getState().sessionsByTabId["tab-fresh"]?.subagentSessionEndedAtMs).not.toBeNull();
   });
 
+  it("does not rehydrate an already loaded session when its UI remounts", async () => {
+    mocks.start.mockResolvedValue({ sessionId: "session-loaded" });
+    const options = {
+      tabId: "tab-loaded",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "session-loaded",
+      sessionView: "full" as const,
+    };
+
+    await startAgentChatSession(options);
+    agentChatStore.getState().replaceMessages("tab-loaded", []);
+    agentChatStore.getState().setAvailableModels("tab-loaded", []);
+    agentChatStore.getState().markStateLoaded("tab-loaded");
+    mocks.send.mockClear();
+
+    await startAgentChatSession(options);
+
+    expect(mocks.send).not.toHaveBeenCalledWith(
+      expect.objectContaining({ command: expect.objectContaining({ type: "get_messages" }) }),
+    );
+    expect(mocks.send).not.toHaveBeenCalledWith(
+      expect.objectContaining({ command: expect.objectContaining({ type: "get_state" }) }),
+    );
+    expect(mocks.send).not.toHaveBeenCalledWith(
+      expect.objectContaining({ command: expect.objectContaining({ type: "get_available_models" }) }),
+    );
+    expect(mocks.send).not.toHaveBeenCalledWith(
+      expect.objectContaining({ command: expect.objectContaining({ type: "get_session_stats" }) }),
+    );
+  });
+
   it("keeps rows live after an attach to a still-alive process", async () => {
     mocks.start.mockRejectedValueOnce({
       code: -32003,

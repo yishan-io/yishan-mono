@@ -78,6 +78,18 @@ export async function startAgentChatSession(opts: {
       paneId: opts.paneId,
     });
 
+    const session = agentChatStore.getState().sessionsByTabId[opts.tabId];
+    const isSessionLoaded =
+      session?.sessionId === startedSessionId &&
+      session.hasLoadedState &&
+      session.hasLoadedMessages &&
+      session.hasLoadedModels;
+    if (isSessionLoaded) {
+      // React remounts reuse the live session handle. Its snapshot is still in
+      // the store, so only reconnect recovery should explicitly rehydrate it.
+      return;
+    }
+
     // A fresh process means the previous owner is gone: any sub-agent rows
     // started before this moment are interrupted history, not live runs.
     // An attach means the process is still alive, so rows stay live.
