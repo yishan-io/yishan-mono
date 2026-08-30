@@ -366,6 +366,36 @@ describe("agentChatStore", () => {
       expect(session?.runningSubagents).toEqual([]);
     });
 
+    it("keeps a finalized tool-call owner when returning history contains its result after stats reconciliation", () => {
+      const tabId = "tab-history-after-overview";
+      agentChatStore.getState().initSession(tabId, "session-history-after-overview");
+      const finalizedAssistant: AgentMessage = {
+        id: "assistant-tool-call",
+        role: "assistant",
+        content: [{ type: "toolCall", id: "tool-call-1", name: "Read", arguments: {} }],
+      };
+      const toolResult: AgentMessage = {
+        id: "tool-result-1",
+        role: "toolResult",
+        toolCallId: "tool-call-1",
+        toolName: "Read",
+        content: "file contents",
+      };
+
+      agentChatStore.getState().appendMessage(tabId, finalizedAssistant);
+      agentChatStore.getState().appendMessage(tabId, toolResult);
+      agentChatStore.getState().setSessionStats(tabId, {
+        tokens: { input: 20, output: 0, cacheRead: 0, cacheWrite: 0, total: 20 },
+        cost: 0.2,
+      });
+
+      // Re-entering the workspace hydrates history. The snapshot can contain
+      // the tool result before its assistant tool-call message.
+      agentChatStore.getState().replaceMessages(tabId, [toolResult]);
+
+      expect(agentChatStore.getState().sessionsByTabId[tabId]?.messages).toEqual([finalizedAssistant, toolResult]);
+    });
+
     it("removes a transient retained result when count trimming evicts its assistant", () => {
       const tabId = "tab-retained-tool-result-count-cap";
       agentChatStore.getState().initSession(tabId, "session-retained-tool-result-count-cap");
