@@ -1,13 +1,15 @@
-import { Box, Checkbox, TextField } from "@mui/material";
+import { Box, TextField } from "@mui/material";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { getLocalTaskTagsValidationError, normalizeLocalTaskTag } from "../../localTaskTags";
 import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
+import { LocalTaskTagOptionCheckbox } from "../../ui/LocalTaskTagOptionCheckbox";
 import {
   getLocalTaskTagCatalogEntry,
   isLocalTaskTagSelected,
   toggleLocalTaskTagSelection,
 } from "../../ui/localTaskTagColorPresets";
+import { sortLocalTaskTagsSelectedFirst } from "../../ui/localTaskTagOptions";
 import { LocalTaskTagColorPicker } from "./LocalTaskTagColorPicker";
 
 const TAG_OPTION_HEIGHT = 36;
@@ -51,8 +53,9 @@ export function LocalTaskTagSelector({
   const candidateTags = useMemo(() => {
     const queryText = query.trim().toLocaleLowerCase();
     const availableTags = [...new Set([...suggestions, ...tags])];
-    return availableTags.filter((tag) => tag.toLocaleLowerCase().includes(queryText));
-  }, [query, suggestions, tags]);
+    const filteredTags = availableTags.filter((tag) => tag.toLocaleLowerCase().includes(queryText));
+    return sortLocalTaskTagsSelectedFirst(filteredTags, (tag) => isLocalTaskTagSelected(tag, tags, tagCatalog));
+  }, [query, suggestions, tagCatalog, tags]);
   useEffect(() => {
     if (previousRevisionRef.current !== selectorRevision) {
       previousRevisionRef.current = selectorRevision;
@@ -200,6 +203,7 @@ export function LocalTaskTagSelector({
                   key={tag}
                   aria-selected={isSelected}
                   component="li"
+                  data-local-task-tag-option
                   id={`${listboxId}-option-${virtualItem.index}`}
                   // biome-ignore lint/a11y/useSemanticElements: each list item is an ARIA option controlled by the search input.
                   role="option"
@@ -217,14 +221,13 @@ export function LocalTaskTagSelector({
                     top: virtualItem.start,
                     width: "100%",
                   })}
-                  onClick={() => commitToggle(tag)}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    commitToggle(tag);
+                  }}
                 >
-                  <Checkbox
-                    checked={isSelected}
-                    size="small"
-                    slotProps={{ input: { "aria-hidden": true, tabIndex: -1 } }}
-                    sx={{ p: 0.5, pointerEvents: "none" }}
-                  />
+                  <LocalTaskTagOptionCheckbox compact selected={isSelected} />
                   <Box
                     component="span"
                     aria-hidden="true"

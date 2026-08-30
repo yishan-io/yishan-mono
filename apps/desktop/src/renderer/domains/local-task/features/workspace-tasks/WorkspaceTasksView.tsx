@@ -41,6 +41,7 @@ type WorkspaceTasksViewProps = { workspaceId: string };
 export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
   const { t } = useTranslation();
   const links = localTaskStore((state) => state.workspaceLinks);
+  const workspaceTasks = localTaskStore((state) => state.workspaceTasks);
   const taskById = localTaskStore((state) => state.taskById);
   const selectedTaskId = localTaskStore((state) => state.selectedWorkspaceTaskId);
   const loadState = localTaskStore((state) => state.workspaceLoadState);
@@ -166,7 +167,7 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
     [detailTaskId, workspaceId],
   );
 
-  if (loadState === "loading" || loadState === "idle") {
+  if (loadState === "idle" || (loadState === "loading" && workspaceTasks.length === 0)) {
     return (
       <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <CircularProgress aria-label={t("localTask.states.loading")} />
