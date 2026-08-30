@@ -52,7 +52,7 @@ export type WorkspaceSplitPaneProps = {
   /** Refreshes open file/diff tabs after backend changes (App-composed; files/git-owned). */
   openTabRefreshCommands: OpenTabAutoRefreshCommands;
   /** Resolves one agent transcript file path for the tab context menu (App-supplied). */
-  fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
+  fetchAgentSessionFilePath?: (sessionId: string, cwd: string, runtime?: "pi" | "dsh") => Promise<string>;
   /** Renders one agent icon (App-supplied; agent-owned). */
   renderAgentIcon?: (agentKind: string, label?: string) => React.ReactNode;
   /** Resolves one file tab icon src (App-supplied; files-owned). */

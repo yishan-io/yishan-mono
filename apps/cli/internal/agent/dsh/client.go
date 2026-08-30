@@ -106,6 +106,7 @@ type SessionReadResult struct {
 	InstanceID        string            `json:"instanceId"`
 	AsOfSeq           int64             `json:"asOfSeq"`
 	DurableThroughSeq int64             `json:"durableThroughSeq"`
+	FilePath          string            `json:"filePath"`
 }
 
 // SessionResumeResult is the response to a session resume request.

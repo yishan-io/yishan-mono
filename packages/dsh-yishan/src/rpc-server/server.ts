@@ -242,6 +242,7 @@ export class RpcServer {
       instanceId: snapshot.instanceId,
       asOfSeq: snapshot.asOfSeq,
       durableThroughSeq: snapshot.durableThroughSeq,
+      filePath: snapshot.filePath,
     };
   }
 

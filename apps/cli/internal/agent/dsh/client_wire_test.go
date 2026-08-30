@@ -65,7 +65,8 @@ func TestSessionReadWireResult_RequiresDurableSnapshotCursorsAndInstanceID(t *te
 		"events":[],
 		"instanceId":"run-1",
 		"asOfSeq":-1,
-		"durableThroughSeq":-1
+		"durableThroughSeq":-1,
+		"filePath":"/dsh/sessions/session.jsonl"
 	}`), &response)
 	if err != nil {
 		t.Fatalf("decodeStrictJSON: %v", err)
@@ -74,8 +75,25 @@ func TestSessionReadWireResult_RequiresDurableSnapshotCursorsAndInstanceID(t *te
 	if err != nil {
 		t.Fatalf("validate: %v", err)
 	}
-	if result.InstanceID != "run-1" || result.AsOfSeq != -1 || result.DurableThroughSeq != -1 {
+	if result.InstanceID != "run-1" || result.AsOfSeq != -1 || result.DurableThroughSeq != -1 || result.FilePath != "/dsh/sessions/session.jsonl" {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestSessionReadWireResult_RejectsMissingFilePath(t *testing.T) {
+	var response sessionReadWireResult
+	err := decodeStrictJSON([]byte(`{
+		"session":{"sessionId":"session","createdAt":1},
+		"events":[],
+		"instanceId":"run-1",
+		"asOfSeq":-1,
+		"durableThroughSeq":-1
+	}`), &response)
+	if err != nil {
+		t.Fatalf("decodeStrictJSON: %v", err)
+	}
+	if _, err := response.validate(SessionReadRequest{CWD: "/workspace", SessionID: "session"}); err == nil {
+		t.Fatal("accepted session read response without filePath")
 	}
 }
 

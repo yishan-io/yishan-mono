@@ -112,7 +112,10 @@ export function createHarness() {
   const context = new Context();
   context.provide("agents", { get: (id: string) => agents.get(id), create, resume });
   context.provide("sessions", { get: (id: string) => sessions.get(id), flush });
-  context.provide("sessionPersistence", { readFrom });
+  context.provide("sessionPersistence", {
+    readFrom,
+    locate: (meta: { id: string }) => ({ kind: "jsonl", path: `/sessions/${meta.id}.jsonl` }),
+  });
   context.provide("llm", {
     listProviders: () => [{ id: "deepseek-official", name: "DeepSeek" }],
     listModels: async (provider: string) =>

@@ -118,6 +118,7 @@ describe("RpcServer session inspection", () => {
       instanceId: "run-1",
       asOfSeq: 2,
       durableThroughSeq: 1,
+      filePath: "/sessions/session-1.jsonl",
     });
     const resume = vi.spyOn(SessionRuntime.prototype, "resume").mockResolvedValue();
     const dispose = vi.spyOn(SessionRuntime.prototype, "disposeSession").mockResolvedValue(true);
@@ -131,6 +132,7 @@ describe("RpcServer session inspection", () => {
           session: { sessionId: "session-1" },
           asOfSeq: 2,
           durableThroughSeq: 1,
+          filePath: "/sessions/session-1.jsonl",
         },
       });
       harness.input.write(

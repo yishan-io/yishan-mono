@@ -395,6 +395,8 @@ export type AgentDSHHistory = {
   instanceId: string;
   asOfSeq: number;
   durableThroughSeq: number;
+  /** Absolute DSH JSONL artifact path, or empty when no durable artifact exists. */
+  filePath: string;
 };
 
 /** Returns Pi durable history for a Pi runtime request. */

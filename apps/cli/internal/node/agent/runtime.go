@@ -220,7 +220,7 @@ func (s *Service) AgentReadHistory(ctx context.Context, req rpc.AgentReadHistory
 		return rpc.AgentHistoryResult{Runtime: req.Runtime, DSH: &rpc.AgentDSHHistory{
 			Session: rpc.AgentDSHSessionMetadata{SessionID: history.Session.SessionID, CreatedAt: history.Session.CreatedAt, ParentSession: history.Session.ParentSession, AgentPreset: history.Session.AgentPreset},
 			Events:  projectedEvents, InstanceID: history.InstanceID, AsOfSeq: history.AsOfSeq,
-			DurableThroughSeq: history.DurableThroughSeq,
+			DurableThroughSeq: history.DurableThroughSeq, FilePath: history.FilePath,
 		}}, nil
 	}
 	history, err := s.GetSessionFile(ctx, rpc.PiGetSessionFileParams{CWD: workspaceInstance.Path, SessionID: req.SessionID})

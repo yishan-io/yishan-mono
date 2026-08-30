@@ -16,6 +16,7 @@ function parseDSHHistory(payload: unknown, requestedSessionId: string): AgentHis
     "instanceId",
     "asOfSeq",
     "durableThroughSeq",
+    "filePath",
   ]);
   const session = parseDSHSession(dsh.session, requestedSessionId);
   if (!Array.isArray(dsh.events)) throw new TypeError("DSH history events must be an array");
@@ -32,6 +33,7 @@ function parseDSHHistory(payload: unknown, requestedSessionId: string): AgentHis
       instanceId: requireNonEmptyString(dsh.instanceId, "instanceId"),
       asOfSeq,
       durableThroughSeq,
+      filePath: requireString(dsh.filePath, "filePath"),
     },
   };
 }
@@ -94,6 +96,11 @@ function requireAllowedRecord(payload: unknown, name: string, keys: readonly str
   const record = payload as WireRecord;
   if (Object.keys(record).some((key) => !keys.includes(key))) throw new TypeError(`${name} has unsupported fields`);
   return record;
+}
+
+function requireString(value: unknown, name: string): string {
+  if (typeof value !== "string") throw new TypeError(`${name} must be a string`);
+  return value;
 }
 
 function requireNonEmptyString(value: unknown, name: string): string {
