@@ -94,7 +94,6 @@ func TestTemplateStore_RejectsInvalidData(t *testing.T) {
 		name string
 		data domain.TemplatesData
 	}{
-		{name: "no custom templates", data: domain.TemplatesData{AgentDefaultID: "default"}},
 		{name: "duplicate IDs", data: domain.TemplatesData{Templates: []domain.Template{valid, valid}, AgentDefaultID: "custom"}},
 		{name: "missing ID", data: domain.TemplatesData{Templates: []domain.Template{{Name: "Name", Content: "Content"}}, AgentDefaultID: "default"}},
 		{name: "long name", data: domain.TemplatesData{Templates: []domain.Template{{ID: "custom", Name: strings.Repeat("x", maxTemplateNameLength+1), Content: "Content"}}, AgentDefaultID: "custom"}},
@@ -110,6 +109,18 @@ func TestTemplateStore_RejectsInvalidData(t *testing.T) {
 	}
 }
 
+func TestTemplateStore_SaveAllowsOnlyBuiltInTemplate(t *testing.T) {
+	store := NewTemplateStore(t.TempDir())
+	if err := store.Save(domain.TemplatesData{AgentDefaultID: builtInTemplateID}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	loaded, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	assertDefaultTemplates(t, loaded)
+}
+
 func TestTemplateStore_SaveIsAtomic(t *testing.T) {
 	directory := t.TempDir()
 	store := NewTemplateStore(directory)
@@ -121,7 +132,7 @@ func TestTemplateStore_SaveIsAtomic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read initial file: %v", err)
 	}
-	if err := store.Save(domain.TemplatesData{AgentDefaultID: "default"}); !errors.Is(err, ErrInvalidTemplates) {
+	if err := store.Save(domain.TemplatesData{AgentDefaultID: "missing"}); !errors.Is(err, ErrInvalidTemplates) {
 		t.Fatalf("invalid Save error = %v, want invalid templates", err)
 	}
 	after, err := os.ReadFile(filepath.Join(directory, templatesFileName))
