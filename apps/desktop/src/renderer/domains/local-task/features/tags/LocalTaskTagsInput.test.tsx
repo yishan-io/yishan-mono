@@ -36,6 +36,38 @@ describe("LocalTaskTagsInput", () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith([]));
   });
 
+  it("sorts selected tags first and hides unchecked checkboxes until hover", () => {
+    const unselectedTag: LocalTaskTagCatalogEntry = {
+      id: "tag-frontend",
+      key: "frontend",
+      name: "Frontend",
+      aliases: [],
+      color: null,
+    };
+    render(<LocalTaskTagsInput tagIds={["tag-backend"]} tagCatalog={[unselectedTag, backendTag]} onChange={vi.fn()} />);
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.tags" }));
+
+    const options = screen.getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["Backend", "Frontend"]);
+    expect(getComputedStyle(options[0]?.querySelector("[data-local-task-tag-checkbox]") as Element).opacity).toBe("1");
+    expect(getComputedStyle(options[1]?.querySelector("[data-local-task-tag-checkbox]") as Element).opacity).toBe("0");
+
+    const styleRules = Array.from(document.styleSheets)
+      .flatMap((styleSheet) => Array.from(styleSheet.cssRules).map((rule) => rule.cssText))
+      .join("\n");
+    expect(styleRules).toContain("[data-local-task-tag-option]:hover");
+  });
+
+  it("keeps the dropdown open after selecting a tag", () => {
+    render(<LocalTaskTagsInput tagIds={[]} tagCatalog={catalog} onChange={vi.fn()} />);
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.tags" }));
+    fireEvent.click(screen.getByRole("option", { name: "Backend" }));
+
+    expect(screen.getByRole("listbox")).toBeTruthy();
+  });
+
   it("creates a free-solo tag before emitting its catalog ID", async () => {
     const onChange = vi.fn();
     const onCreateTag = vi.fn(

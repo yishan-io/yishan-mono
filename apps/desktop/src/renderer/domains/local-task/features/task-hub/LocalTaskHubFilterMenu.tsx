@@ -12,6 +12,8 @@ import type {
 } from "../../localTaskTypes";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
+import { LocalTaskTagOptionCheckbox } from "../../ui/LocalTaskTagOptionCheckbox";
+import { sortLocalTaskTagsSelectedFirst } from "../../ui/localTaskTagOptions";
 import { LocalTaskHubVirtualizedFilterValues } from "./LocalTaskHubVirtualizedFilterValues";
 
 type ProjectFilterOption = Pick<WorkspaceProjectRecord, "id" | "name" | "icon">;
@@ -45,9 +47,12 @@ export function LocalTaskHubFilterMenu({
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const filteredTagCatalog = useMemo(() => {
     const normalizedQuery = tagSearchQuery.trim().toLocaleLowerCase();
-    if (!normalizedQuery) return tagCatalog;
-    return tagCatalog.filter((tag) => tag.name.toLocaleLowerCase().includes(normalizedQuery));
-  }, [tagCatalog, tagSearchQuery]);
+    const selectedTagIds = new Set(filters.tagIds);
+    const matchingTags = tagCatalog.filter(
+      (tag) => !normalizedQuery || tag.name.toLocaleLowerCase().includes(normalizedQuery),
+    );
+    return sortLocalTaskTagsSelectedFirst(matchingTags, (tag) => selectedTagIds.has(tag.id));
+  }, [filters.tagIds, tagCatalog, tagSearchQuery]);
   const handleClose = useCallback(() => {
     setSelectedField(null);
     setTagSearchQuery("");
@@ -170,8 +175,13 @@ export function LocalTaskHubFilterMenu({
           renderOption={(tag) => {
             const isSelected = (filters.tagIds ?? []).includes(tag.id);
             return (
-              <MenuItem key={tag.id} selected={isSelected} onClick={() => handleSelectTag(tag.id)}>
-                <Checkbox checked={isSelected} size="small" tabIndex={-1} />
+              <MenuItem
+                key={tag.id}
+                data-local-task-tag-option
+                selected={isSelected}
+                onClick={() => handleSelectTag(tag.id)}
+              >
+                <LocalTaskTagOptionCheckbox selected={isSelected} />
                 <Box
                   component="span"
                   aria-hidden="true"

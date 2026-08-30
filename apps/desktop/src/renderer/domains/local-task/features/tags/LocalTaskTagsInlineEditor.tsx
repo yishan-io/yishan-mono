@@ -135,18 +135,20 @@ export function LocalTaskTagsInlineEditor({
         onClose={handleClose}
         slotProps={{ paper: { sx: { width: 240, height: 300, display: "flex", flexDirection: "column", p: 1 } } }}
       >
-        <LocalTaskTagSelector
-          tags={selectedTagNames}
-          suggestions={suggestions}
-          tagCatalog={tagCatalog}
-          onChange={handleSelectorChange}
-          onTagColorChange={handleTagColorChange}
-          disabled={isMutationLoading}
-          label={t("localTask.fields.tags")}
-          autoFocus
-          selectorRevision={selectorRevision}
-          onEscape={handleClose}
-        />
+        <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
+          <LocalTaskTagSelector
+            tags={selectedTagNames}
+            suggestions={suggestions}
+            tagCatalog={tagCatalog}
+            onChange={handleSelectorChange}
+            onTagColorChange={handleTagColorChange}
+            disabled={isMutationLoading}
+            label={t("localTask.fields.tags")}
+            autoFocus
+            selectorRevision={selectorRevision}
+            onEscape={handleClose}
+          />
+        </Box>
       </Popover>
     </Box>
   );

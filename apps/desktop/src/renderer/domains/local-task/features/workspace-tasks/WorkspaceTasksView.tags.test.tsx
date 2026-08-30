@@ -118,6 +118,28 @@ describe("WorkspaceTasksView tags", () => {
     localTaskStore.setState(initialState, true);
   });
 
+  it("keeps the current detail mounted while workspace tasks refresh", () => {
+    render(<WorkspaceTasksView workspaceId="workspace-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
+
+    act(() => localTaskStore.setState({ workspaceLoadState: "loading" }));
+
+    expect(screen.getByText("Primary details")).toBeTruthy();
+  });
+
+  it("closes the detail tag selector when clicking outside it", () => {
+    render(<WorkspaceTasksView workspaceId="workspace-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /Primary task/ }));
+    fireEvent.click(screen.getByRole("button", { name: "localTask.tags.add" }));
+    expect(screen.getByRole("listbox")).toBeTruthy();
+
+    const backdrop = document.querySelector(".MuiBackdrop-root");
+    expect(backdrop).toBeTruthy();
+    fireEvent.click(backdrop as Element);
+
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
   it("removes a detail tag through its selector and disables selector changes during mutations", async () => {
     const taggedTask = { ...primaryTask, tagRefs: [{ id: "tag-backend", name: "backend" }] };
     localTaskStore.setState({
@@ -138,6 +160,7 @@ describe("WorkspaceTasksView tags", () => {
     fireEvent.click(screen.getByRole("button", { name: "localTask.tags.add" }));
     // LocalTaskTagSelector renders a listbox; click the "backend" option to deselect it.
     fireEvent.click(await screen.findByRole("option", { name: "backend" }));
+    expect(screen.getByRole("listbox")).toBeTruthy();
 
     await waitFor(() => expect(commands.updateLocalTask).toHaveBeenCalledWith("task-primary", { tagIds: [] }));
 

@@ -305,6 +305,7 @@ describe("TaskHubView", () => {
     expect(getComputedStyle(tagFilterDot as Element).backgroundColor).toBe("rgb(59, 130, 246)");
     fireEvent.click(screen.getByRole("menuitem", { name: "alpha" }));
     await waitFor(() => expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ tagIds: ["tag-alpha"] }));
+    expect(screen.getByRole("textbox", { name: "localTask.filters.searchTags" })).toBeTruthy();
     fireEvent.keyDown(screen.getByRole("textbox", { name: "localTask.filters.searchTags" }), { key: "Escape" });
   });
   it("renders daemon project metadata when renderer project state differs and omits global task chips", () => {

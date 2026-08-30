@@ -1,10 +1,12 @@
-import { Alert, Autocomplete, Box, Checkbox, TextField } from "@mui/material";
+import { Alert, Autocomplete, Box, TextField } from "@mui/material";
 import { VirtualizedListbox } from "@renderer/ui/components/VirtualizedListbox";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import { LocalTaskTagChip } from "../../ui/LocalTaskTagChip";
+import { LocalTaskTagOptionCheckbox } from "../../ui/LocalTaskTagOptionCheckbox";
+import { sortLocalTaskTagsSelectedFirst } from "../../ui/localTaskTagOptions";
 
 type LocalTaskTagsInputProps = {
   tagIds?: string[];
@@ -54,7 +56,16 @@ export function LocalTaskTagsInput({
 }: LocalTaskTagsInputProps) {
   const { t } = useTranslation();
   const [creationError, setCreationError] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const selectedTags = useMemo(() => getSelectedTags(tagIds, tags, tagCatalog), [tagIds, tags, tagCatalog]);
+  const selectedTagIds = useMemo(
+    () => new Set(selectedTags.flatMap((tag) => (typeof tag === "string" ? [] : [tag.id]))),
+    [selectedTags],
+  );
+  const sortedTagCatalog = useMemo(
+    () => sortLocalTaskTagsSelectedFirst(tagCatalog, (tag) => selectedTagIds.has(tag.id)),
+    [selectedTagIds, tagCatalog],
+  );
   const hasUnresolvedLegacyTag =
     tags !== undefined && tagIds === undefined && selectedTags.some((tag) => typeof tag === "string");
   const isDisabled = disabled || hasUnresolvedLegacyTag;
@@ -80,11 +91,8 @@ export function LocalTaskTagsInput({
     (optionProps: React.HTMLAttributes<HTMLLIElement>, option: LocalTaskTagCatalogEntry) => {
       const { key, ...listItemProps } = optionProps as React.HTMLAttributes<HTMLLIElement> & { key?: React.Key };
       return (
-        <li key={key ?? option.id} {...listItemProps}>
-          <Checkbox
-            checked={selectedTags.some((tag) => typeof tag !== "string" && tag.id === option.id)}
-            slotProps={{ input: { "aria-hidden": true, tabIndex: -1 } }}
-          />
+        <li key={key ?? option.id} {...listItemProps} data-local-task-tag-option>
+          <LocalTaskTagOptionCheckbox selected={selectedTagIds.has(option.id)} />
           <Box
             component="span"
             aria-hidden="true"
@@ -102,7 +110,7 @@ export function LocalTaskTagsInput({
         </li>
       );
     },
-    [selectedTags],
+    [selectedTagIds],
   );
   const inputLabel = label ?? t("localTask.fields.tags");
   return (
@@ -114,9 +122,14 @@ export function LocalTaskTagsInput({
         freeSolo
         size="small"
         disabled={isDisabled}
+        disableCloseOnSelect
         disablePortal={disablePortal}
-        open={isSelectorOpen}
-        options={tagCatalog}
+        open={isSelectorOpen ?? isDropdownOpen}
+        options={sortedTagCatalog}
+        onOpen={() => setIsDropdownOpen(true)}
+        onClose={(_event, reason) => {
+          if (reason !== "selectOption") setIsDropdownOpen(false);
+        }}
         value={selectedTags}
         getOptionLabel={(tag) => (typeof tag === "string" ? tag : tag.name)}
         isOptionEqualToValue={(option, value) => typeof value !== "string" && option.id === value.id}
