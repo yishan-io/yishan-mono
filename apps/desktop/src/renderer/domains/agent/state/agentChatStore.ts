@@ -73,6 +73,19 @@ function omitKeys<T>(record: Record<string, T>, removedIds: Set<string>): Record
   return Object.fromEntries(Object.entries(record).filter(([id]) => !removedIds.has(id)));
 }
 
+function retainMessageIds(messageIds: Record<string, true>, messages: AgentMessage[]): Record<string, true> {
+  const retainedMessageIds = new Set(messages.map((message) => message.id));
+  return Object.fromEntries(Object.entries(messageIds).filter(([messageId]) => retainedMessageIds.has(messageId)));
+}
+
+function hasToolCall(message: AgentMessage): boolean {
+  return (
+    message.role === "assistant" &&
+    Array.isArray(message.content) &&
+    message.content.some((block) => block.type === "toolCall")
+  );
+}
+
 export const agentChatStore = create<AgentChatStoreState>()(
   immer((set) => ({
     sessionsByTabId: {},
@@ -149,7 +162,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (message.role === "assistant") {
           session.rendererFinalAssistantIds[message.id] = true;
         }
+        if (hasToolCall(message)) {
+          session.rendererFinalToolCallAssistantIds[message.id] = true;
+        }
         session.messages = trimSessionMessages(session.messages);
+        session.rendererFinalAssistantIds = retainMessageIds(session.rendererFinalAssistantIds, session.messages);
+        session.rendererFinalToolCallAssistantIds = retainMessageIds(
+          session.rendererFinalToolCallAssistantIds,
+          session.messages,
+        );
         setRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
@@ -176,13 +197,20 @@ export const agentChatStore = create<AgentChatStoreState>()(
           historyMessages,
           session.messages,
           session.rendererFinalAssistantIds,
+          session.rendererFinalToolCallAssistantIds,
         );
         const nextMessages = mergeActiveTurnHistory(
           historyMessages,
           session.messages,
           session.rendererFinalAssistantIds,
+          session.rendererFinalToolCallAssistantIds,
         );
         session.messages = trimSessionMessages(nextMessages, retainedToolResultIds);
+        session.rendererFinalAssistantIds = retainMessageIds(session.rendererFinalAssistantIds, session.messages);
+        session.rendererFinalToolCallAssistantIds = retainMessageIds(
+          session.rendererFinalToolCallAssistantIds,
+          session.messages,
+        );
         session.hasLoadedMessages = true;
         if (!hasLiveStream) {
           session.streamingMessage = null;
@@ -228,7 +256,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (msg.role === "assistant") {
           session.rendererFinalAssistantIds[msg.id] = true;
         }
+        if (hasToolCall(msg)) {
+          session.rendererFinalToolCallAssistantIds[msg.id] = true;
+        }
         session.streamingMessage = null;
+        session.rendererFinalAssistantIds = retainMessageIds(session.rendererFinalAssistantIds, session.messages);
+        session.rendererFinalToolCallAssistantIds = retainMessageIds(
+          session.rendererFinalToolCallAssistantIds,
+          session.messages,
+        );
         setRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, undefined, session.subagentSessionEndedAtMs),

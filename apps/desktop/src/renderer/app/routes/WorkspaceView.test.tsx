@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { type ReactNode, useEffect } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { switchOrganization } from "../../domains/organization/commands/orgCommands";
@@ -37,6 +37,10 @@ const terminalRecoveryMocks = {
   restoreTerminalTabsFromDaemon: vi.fn(async () => undefined),
   startPersistingTerminalTabs: vi.fn(() => vi.fn()),
 };
+
+const mainPaneMocks = vi.hoisted(() => ({
+  unmount: vi.fn(),
+}));
 
 const rpcMocks = vi.hoisted(() => ({
   setCurrentOrg: vi.fn(async () => undefined),
@@ -82,6 +86,7 @@ vi.mock("../../app/commands/tabCloseHandler", () => ({
 vi.mock("@renderer/domains/local-task", () => ({
   refreshProgressingLocalTaskCount: commandMocks.refreshProgressingLocalTaskCount,
   selectLocalTaskWorkspace: commandMocks.selectLocalTaskWorkspace,
+  TaskHubView: () => <div data-testid="task-hub-view" />,
 }));
 
 vi.mock("@renderer/domains/git", async (importOriginal) => {
@@ -139,11 +144,15 @@ vi.mock("../../app/commands/workspaceSnapshotFlow", () => ({
 }));
 
 vi.mock("@renderer/domains/overview", () => ({
-  OverviewView: () => <div data-testid="overview-view" />,
+  OverviewView: ({ onClose }: { onClose: () => void }) => (
+    <button data-testid="overview-view" onClick={onClose} type="button" />
+  ),
 }));
 
 vi.mock("@renderer/domains/scheduled-job", () => ({
-  ScheduledJobView: () => <div data-testid="scheduled-job-view" />,
+  ScheduledJobView: ({ onClose }: { onClose: () => void }) => (
+    <button data-testid="scheduled-job-view" onClick={onClose} type="button" />
+  ),
 }));
 
 vi.mock("../../domains/workspace/ui/LeftPane/CreateProjectDialogView", () => ({
@@ -155,7 +164,10 @@ vi.mock("../features/main-workspace-shell/LeftPaneView", () => ({
 }));
 
 vi.mock("../features/main-workspace-shell/MainPaneView", () => ({
-  MainPaneView: () => <div data-testid="main-pane-view" />,
+  MainPaneView: () => {
+    useEffect(() => () => mainPaneMocks.unmount(), []);
+    return <div data-testid="main-pane-view" />;
+  },
 }));
 
 vi.mock("./OnboardingView", () => ({
@@ -305,6 +317,45 @@ describe("WorkspaceView", () => {
     });
   });
 
+  it.each([
+    ["overview", "overview-view", "scheduled-job-view", "task-hub-view"],
+    ["scheduledJob", "scheduled-job-view", "overview-view", "task-hub-view"],
+    ["tasks", "task-hub-view", "overview-view", "scheduled-job-view"],
+  ] as const)(
+    "keeps MainPane mounted beneath only the selected %s overlay",
+    (overlayPanel, selectedView, ...hiddenViews) => {
+      setWorkspaceProjectsLoaded();
+      workbenchNavigationStore.getState().setOverlayPanel(overlayPanel);
+
+      render(
+        <MemoryRouter>
+          <WorkspaceView />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByTestId("main-pane-view")).toBeTruthy();
+      expect(screen.getByTestId(selectedView)).toBeTruthy();
+      for (const hiddenView of hiddenViews) {
+        expect(screen.queryByTestId(hiddenView)).toBeNull();
+      }
+    },
+  );
+
+  it("does not unmount MainPane while changing overlays", () => {
+    setWorkspaceProjectsLoaded();
+
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    for (const overlayPanel of ["overview", "scheduledJob", "tasks"] as const) {
+      act(() => workbenchNavigationStore.getState().setOverlayPanel(overlayPanel));
+      expect(mainPaneMocks.unmount).not.toHaveBeenCalled();
+    }
+  });
+
   it("returns from the overview overlay to the workspace pane on organization switch", async () => {
     setWorkspaceProjectsLoaded();
     workbenchNavigationStore.getState().setOverlayPanel("overview");
@@ -315,6 +366,7 @@ describe("WorkspaceView", () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByTestId("main-pane-view")).toBeTruthy();
     expect(screen.getByTestId("overview-view")).toBeTruthy();
 
     await waitFor(() => {
@@ -342,6 +394,7 @@ describe("WorkspaceView", () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByTestId("main-pane-view")).toBeTruthy();
     expect(screen.getByTestId("scheduled-job-view")).toBeTruthy();
 
     await waitFor(() => {
@@ -357,6 +410,53 @@ describe("WorkspaceView", () => {
       expect(screen.queryByTestId("scheduled-job-view")).toBeNull();
       expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("returns from the tasks overlay to the workspace pane on organization switch", async () => {
+    setWorkspaceProjectsLoaded();
+    workbenchNavigationStore.getState().setOverlayPanel("tasks");
+
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("main-pane-view")).toBeTruthy();
+    expect(screen.getByTestId("task-hub-view")).toBeTruthy();
+
+    await waitFor(() => {
+      expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      await switchOrganization("org-2");
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("main-pane-view")).toBeTruthy();
+      expect(screen.queryByTestId("task-hub-view")).toBeNull();
+      expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it.each([
+    ["overview", "overview-view"],
+    ["scheduledJob", "scheduled-job-view"],
+  ] as const)("closes the %s overlay", (overlayPanel, overlayView) => {
+    setWorkspaceProjectsLoaded();
+    workbenchNavigationStore.getState().setOverlayPanel(overlayPanel);
+
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByTestId(overlayView));
+
+    expect(screen.getByTestId("main-pane-view")).toBeTruthy();
+    expect(screen.queryByTestId(overlayView)).toBeNull();
   });
 
   it("routes the close-tab app action through the App cleanup command", async () => {

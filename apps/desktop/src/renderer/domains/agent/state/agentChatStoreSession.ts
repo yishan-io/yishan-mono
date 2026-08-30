@@ -35,6 +35,7 @@ export type AgentChatSessionData = {
   sessionStats: AgentSessionStats | null;
   usageLedger: ReturnType<typeof createAgentChatUsageLedger>;
   rendererFinalAssistantIds: Record<string, true>;
+  rendererFinalToolCallAssistantIds: Record<string, true>;
   queue: AgentQueueState;
   pendingUiRequest: AgentPendingUiRequest | null;
   pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
@@ -67,6 +68,7 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
     sessionStats: null,
     usageLedger: createAgentChatUsageLedger(),
     rendererFinalAssistantIds: {},
+    rendererFinalToolCallAssistantIds: {},
     queue: { steering: [], followUp: [] },
     pendingUiRequest: null,
     pendingUiAutoResponse: null,

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { MAX_PER_TAB_AGGREGATE_UTF8_BYTES } from "./agentChatBudget";
-import { mergeActiveTurnHistory, trimSessionMessages } from "./agentChatRetention";
+import {
+  MAX_MESSAGES_PER_TAB,
+  getRetainedToolResultIds,
+  mergeActiveTurnHistory,
+  trimSessionMessages,
+} from "./agentChatRetention";
 import type { AgentMessage } from "./agentChatTypes";
 
 describe("mergeActiveTurnHistory", () => {
@@ -199,6 +204,72 @@ describe("mergeActiveTurnHistory", () => {
     expect(
       mergeActiveTurnHistory([finalizedAssistant], [finalizedAssistant, orphanToolResult], { "assistant-1": true }),
     ).toEqual([finalizedAssistant]);
+  });
+
+  it("keeps an injected tool-call owner immediately before its history result through count trimming", () => {
+    const toolCallOwner = {
+      id: "assistant-tool-call",
+      role: "assistant" as const,
+      content: [{ type: "toolCall" as const, id: "tool-call-1", name: "Read", arguments: {} }],
+    } satisfies AgentMessage;
+    const toolResult = {
+      id: "tool-result-1",
+      role: "toolResult" as const,
+      toolCallId: "tool-call-1",
+      toolName: "Read",
+      content: "file contents",
+    } satisfies AgentMessage;
+    const historyMessages: AgentMessage[] = [
+      ...Array.from({ length: MAX_MESSAGES_PER_TAB }, (_, index) => ({
+        id: `history-${index}`,
+        role: "assistant" as const,
+        content: [{ type: "text" as const, text: `History ${index}` }],
+      })),
+      toolResult,
+    ];
+
+    const merged = mergeActiveTurnHistory(historyMessages, [toolCallOwner], {}, { [toolCallOwner.id]: true });
+    const trimmed = trimSessionMessages(merged);
+
+    expect(trimmed).toHaveLength(MAX_MESSAGES_PER_TAB);
+    expect(trimmed.slice(-2)).toEqual([toolCallOwner, toolResult]);
+  });
+
+  it("evicts an injected history result when count trimming evicts its owner", () => {
+    const toolCallOwner = {
+      id: "assistant-tool-call",
+      role: "assistant" as const,
+      content: [{ type: "toolCall" as const, id: "tool-call-1", name: "Read", arguments: {} }],
+    } satisfies AgentMessage;
+    const toolResult = {
+      id: "tool-result-1",
+      role: "toolResult" as const,
+      toolCallId: "tool-call-1",
+      toolName: "Read",
+      content: "file contents",
+    } satisfies AgentMessage;
+    const historyMessages: AgentMessage[] = [
+      toolResult,
+      ...Array.from({ length: MAX_MESSAGES_PER_TAB }, (_, index) => ({
+        id: `history-${index}`,
+        role: "assistant" as const,
+        content: [{ type: "text" as const, text: `History ${index}` }],
+      })),
+    ];
+    const finalizedToolCallOwners: Record<string, true> = { [toolCallOwner.id]: true };
+
+    const merged = mergeActiveTurnHistory(historyMessages, [toolCallOwner], {}, finalizedToolCallOwners);
+    const retainedToolResultIds = getRetainedToolResultIds(
+      historyMessages,
+      [toolCallOwner],
+      {},
+      finalizedToolCallOwners,
+    );
+    const trimmed = trimSessionMessages(merged, retainedToolResultIds);
+
+    expect(retainedToolResultIds).toEqual(new Set([toolResult.id]));
+    expect(trimmed).toHaveLength(MAX_MESSAGES_PER_TAB);
+    expect(trimmed.some((message) => message.id === toolCallOwner.id || message.id === toolResult.id)).toBe(false);
   });
 
   it("removes a transient tool result when byte trimming evicts its matching assistant", () => {

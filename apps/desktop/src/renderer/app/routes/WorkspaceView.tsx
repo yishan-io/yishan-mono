@@ -39,6 +39,7 @@ import { useSelectedWorkspaceWithProject } from "../../app/selectors";
 import { LeftPaneView } from "../features/main-workspace-shell/LeftPaneView";
 import { MainPaneView } from "../features/main-workspace-shell/MainPaneView";
 import { OnboardingView } from "./OnboardingView";
+import { RouteOverlay } from "./RouteOverlay";
 import {
   type WorkspaceViewCommands,
   useElementWidthObserver,
@@ -188,15 +189,22 @@ export function WorkspaceView() {
           </Box>
         }
       >
-        {overlayPanel === "scheduledJob" ? (
-          <ScheduledJobView onClose={handleCloseOverlayPanel} />
-        ) : overlayPanel === "overview" ? (
-          <OverviewView onClose={handleCloseOverlayPanel} />
-        ) : overlayPanel === "tasks" ? (
-          <TaskHubView />
-        ) : (
+        <Box sx={{ position: "relative", width: "100%", height: "100%", minWidth: 0 }}>
           <MainPaneView />
-        )}
+          {overlayPanel === "scheduledJob" ? (
+            <RouteOverlay>
+              <ScheduledJobView onClose={handleCloseOverlayPanel} />
+            </RouteOverlay>
+          ) : overlayPanel === "overview" ? (
+            <RouteOverlay>
+              <OverviewView onClose={handleCloseOverlayPanel} />
+            </RouteOverlay>
+          ) : overlayPanel === "tasks" ? (
+            <RouteOverlay>
+              <TaskHubView />
+            </RouteOverlay>
+          ) : null}
+        </Box>
       </SplitPaneLayout>
       <CreateProjectDialogView open={isCreateRepoOpen} onClose={() => setIsCreateRepoOpen(false)} />
       <WorkspaceLifecycleNoticeView />

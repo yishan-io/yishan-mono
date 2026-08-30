@@ -15,6 +15,7 @@ export function mergeActiveTurnHistory(
   historyMessages: AgentMessage[],
   committedMessages: AgentMessage[],
   rendererFinalAssistantIds?: Record<string, true>,
+  rendererFinalToolCallAssistantIds?: Record<string, true>,
 ): AgentMessage[] {
   const committedMessagesById = new Map(committedMessages.map((message) => [message.id, message]));
   const terminalHistoryChildSessionIds = new Set(
@@ -42,20 +43,33 @@ export function mergeActiveTurnHistory(
     rendererFinalAssistantIds === undefined || rendererFinalAssistantIds[message.id] === true;
   const retainedLifecycleMessages = liveLifecycleMessages.filter((message) => !historyMessageIds.has(message.id));
   const retainedLifecycleMessageIds = new Set(retainedLifecycleMessages.map((message) => message.id));
-  const retainedToolResults = getRetainedToolResults(historyMessageIds, committedMessages, isRendererFinalAssistant);
+  const canRetainToolCallOwner = (message: AgentMessage): boolean =>
+    isRendererFinalAssistant(message) || rendererFinalToolCallAssistantIds?.[message.id] === true;
+  const retainedToolResults = getRetainedToolResults(historyMessageIds, committedMessages, canRetainToolCallOwner);
   const retainedToolResultIds = new Set(retainedToolResults.map((message) => message.id));
+  const retainedToolCallOwners = getRetainedToolCallOwners(
+    historyMessages,
+    historyMessageIds,
+    committedMessages,
+    canRetainToolCallOwner,
+  );
+  const retainedToolCallOwnerIds = new Set(retainedToolCallOwners.map((message) => message.id));
+  const mergedHistoryMessages = mergeHistoryWithRetainedToolCallOwners(
+    historyWithoutStaleLifecycleMessages,
+    retainedToolCallOwners,
+    (message) => (isRendererFinalAssistant(message) ? (committedMessagesById.get(message.id) ?? message) : message),
+  );
   return getUniqueMessagesById(
     // Keep live metadata before history so transcript trimming drops it before
     // it drops persisted conversation messages.
     retainedLifecycleMessages,
-    historyWithoutStaleLifecycleMessages.map((message) =>
-      isRendererFinalAssistant(message) ? (committedMessagesById.get(message.id) ?? message) : message,
-    ),
+    mergedHistoryMessages,
     committedMessages.filter(
       (message) =>
         isRendererFinalAssistant(message) &&
         !historyMessageIds.has(message.id) &&
         !retainedLifecycleMessageIds.has(message.id) &&
+        !retainedToolCallOwnerIds.has(message.id) &&
         !retainedToolResultIds.has(message.id),
     ),
     retainedToolResults,
@@ -85,13 +99,32 @@ export function getRetainedToolResultIds(
   historyMessages: AgentMessage[],
   committedMessages: AgentMessage[],
   rendererFinalAssistantIds?: Record<string, true>,
+  rendererFinalToolCallAssistantIds?: Record<string, true>,
 ): Set<string> {
   const historyMessageIds = new Set(historyMessages.map((message) => message.id));
-  const isRendererFinalAssistant = (message: AgentMessage): boolean =>
-    rendererFinalAssistantIds === undefined || rendererFinalAssistantIds[message.id] === true;
-  return new Set(
-    getRetainedToolResults(historyMessageIds, committedMessages, isRendererFinalAssistant).map((message) => message.id),
+  const canRetainToolCallOwner = (message: AgentMessage): boolean =>
+    rendererFinalAssistantIds === undefined ||
+    rendererFinalAssistantIds[message.id] === true ||
+    rendererFinalToolCallAssistantIds?.[message.id] === true;
+  const retainedToolResultIds = getRetainedToolResults(
+    historyMessageIds,
+    committedMessages,
+    canRetainToolCallOwner,
+  ).map((message) => message.id);
+  const injectedOwnerToolCallIds = new Set(
+    getRetainedToolCallOwners(historyMessages, historyMessageIds, committedMessages, canRetainToolCallOwner).flatMap(
+      (message) =>
+        Array.isArray(message.content)
+          ? message.content.flatMap((block) => (block.type === "toolCall" ? [block.id] : []))
+          : [],
+    ),
   );
+  for (const message of historyMessages) {
+    if (message.role === "toolResult" && message.toolCallId && injectedOwnerToolCallIds.has(message.toolCallId)) {
+      retainedToolResultIds.push(message.id);
+    }
+  }
+  return new Set(retainedToolResultIds);
 }
 
 function getRetainedToolResults(
@@ -106,6 +139,54 @@ function getRetainedToolResults(
       message.toolCallId !== undefined &&
       rendererFinalToolCallIds.has(message.toolCallId) &&
       !historyMessageIds.has(message.id),
+  );
+}
+
+function mergeHistoryWithRetainedToolCallOwners(
+  historyMessages: AgentMessage[],
+  retainedToolCallOwners: AgentMessage[],
+  replaceFinalAssistant: (message: AgentMessage) => AgentMessage,
+): AgentMessage[] {
+  const emittedOwnerIds = new Set<string>();
+  const mergedHistoryMessages: AgentMessage[] = [];
+  for (const historyMessage of historyMessages) {
+    if (historyMessage.role === "toolResult" && historyMessage.toolCallId) {
+      for (const owner of retainedToolCallOwners) {
+        if (
+          !emittedOwnerIds.has(owner.id) &&
+          Array.isArray(owner.content) &&
+          owner.content.some((block) => block.type === "toolCall" && block.id === historyMessage.toolCallId)
+        ) {
+          mergedHistoryMessages.push(owner);
+          emittedOwnerIds.add(owner.id);
+        }
+      }
+    }
+    mergedHistoryMessages.push(replaceFinalAssistant(historyMessage));
+  }
+  return mergedHistoryMessages;
+}
+
+function getRetainedToolCallOwners(
+  historyMessages: AgentMessage[],
+  historyMessageIds: Set<string>,
+  committedMessages: AgentMessage[],
+  isRendererFinalAssistant: (message: AgentMessage) => boolean,
+): AgentMessage[] {
+  const historyToolCallIds = new Set(
+    historyMessages.flatMap((message) =>
+      message.role === "toolResult" && message.toolCallId ? [message.toolCallId] : [],
+    ),
+  );
+  if (historyToolCallIds.size === 0) return [];
+
+  return committedMessages.filter(
+    (message) =>
+      message.role === "assistant" &&
+      isRendererFinalAssistant(message) &&
+      !historyMessageIds.has(message.id) &&
+      Array.isArray(message.content) &&
+      message.content.some((block) => block.type === "toolCall" && historyToolCallIds.has(block.id)),
   );
 }
 
