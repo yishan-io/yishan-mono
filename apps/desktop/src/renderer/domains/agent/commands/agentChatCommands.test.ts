@@ -260,7 +260,7 @@ describe("agentChatCommands.startAgentChatSession", () => {
   });
 
   it("does not rehydrate an already loaded session when its UI remounts", async () => {
-    mocks.start.mockResolvedValue({ sessionId: "session-loaded" });
+    mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "session-loaded" });
     const options = {
       tabId: "tab-loaded",
       workspaceId: "workspace-1",
