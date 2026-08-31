@@ -13,7 +13,7 @@ import {
   YISHAN_PI_AI_ACTIVE_PROVIDER_COUNT,
   YISHAN_PI_AI_PROVIDER_ALLOWLIST,
   YISHAN_UNSUPPORTED_PI_AI_PROVIDERS,
-} from "../provider/providers";
+} from "@yishan-io/dsh-yishan/provider";
 import { RuntimeHost } from "./host";
 
 async function waitForFrame(frames: Record<string, unknown>[], id: number): Promise<Record<string, unknown>> {
@@ -153,6 +153,13 @@ describe("Yishan production runtime", () => {
       input,
       output,
       exit,
+      workspaceBridge: {
+        admitWorkspace: async ({ workspaceId }) => ({
+          workspaceId,
+          cwd: "/workspace",
+          policy: { authorization: "daemon-authorized" },
+        }),
+      },
     });
 
     try {
@@ -183,6 +190,7 @@ describe("Yishan production runtime", () => {
               organizationId: "organization-1",
               ownerNodeId: "node-1",
               cwd: "/workspace",
+              policy: { authorization: "daemon-authorized" },
             },
           },
         })}\n`,

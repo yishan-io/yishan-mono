@@ -2,8 +2,8 @@ import type { Context } from "@deepseek-ai/cordis";
 import * as deepSeekOfficial from "@deepseek-ai/dsh-llm-deepseek";
 import * as piAi from "@deepseek-ai/dsh-llm-pi-ai";
 
-import { installCredentialsPlugin } from "../provider/credentials";
-import { YISHAN_PI_AI_CONFIG, assertPiAiProviderManifest } from "../provider/providers";
+import { installCredentialsPlugin } from "@yishan-io/dsh-yishan/provider";
+import { YISHAN_PI_AI_CONFIG, assertPiAiProviderManifest } from "@yishan-io/dsh-yishan/provider";
 
 /** Installs Yishan credential resolution and its fixed LLM provider catalog. */
 export async function installProviders(context: Context, dataDirectory: string): Promise<void> {

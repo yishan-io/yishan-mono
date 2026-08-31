@@ -1,4 +1,4 @@
-import { installDshTestReplayAdapter, isDshTestReplayEnabled } from "../provider/replay";
+import { installDshTestReplayAdapter, isDshTestReplayEnabled } from "@yishan-io/dsh-yishan/provider";
 import { RuntimeHost } from "./host";
 
 const runtime = await RuntimeHost.create();

@@ -83,9 +83,6 @@ export {
   type SessionErrorCode,
 } from "./protocol/errors";
 
-export { RuntimeHost, type RuntimeConfig } from "./runtime/host";
-export { isDeveloperMode } from "./runtime/config";
-export { YISHAN_AGENT_SPINE_CONFIG, YISHAN_RUNTIME_MCP_ENABLED } from "./runtime/core";
 
 export {
   parsePluginPatch,

@@ -12,6 +12,7 @@ const runtimeMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@deepseek-ai/cordis", () => ({
+  Service: class {},
   Context: class {
     fiber = { dispose: runtimeMocks.dispose };
     plugin = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);

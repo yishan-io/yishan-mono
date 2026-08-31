@@ -15,10 +15,10 @@ Runtime RPC routes are now mounted directly by `rpc-server/plugin.ts`. `RpcServe
 
 ### Migration
 
-Remove imports of `createSessionHandler` and `SessionHandlerDependencies` and delete custom dependency wiring. Create the supported runtime with `RuntimeHost.create()`; it mounts the RPC plugin and its `yishan.v1.*` routes automatically.
+Remove imports of `createSessionHandler` and `SessionHandlerDependencies` and delete custom dependency wiring. Create the supported runtime with `RuntimeHost.create()` from `@yishan-io/dsh-runtime`; it mounts the RPC plugin and its `yishan.v1.*` routes automatically.
 
 ```ts
-import { RuntimeHost } from "@yishan-io/dsh-yishan";
+import { RuntimeHost } from "@yishan-io/dsh-runtime";
 
 const host = await RuntimeHost.create();
 // Call host.close() when the embedding application stops.

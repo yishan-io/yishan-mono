@@ -9,8 +9,10 @@ import { SessionProjectionRegistry } from "@deepseek-ai/dsh-session-projection";
 import SqliteSessionQueryEngine from "@deepseek-ai/dsh-session-query-sqlite";
 import { SubagentRuntime } from "@deepseek-ai/dsh-subagent";
 import * as subagentSpawnInProcess from "@deepseek-ai/dsh-subagent-spawn-in-process";
+
 import { LocalSubprocessRuntime } from "@deepseek-ai/dsh-subprocess-local";
 import * as toolSubagent from "@deepseek-ai/dsh-tool-subagent";
+import * as workspacePlugin from "@yishan-io/dsh-workspace";
 
 const SESSION_LOG_DIRECTORY_NAME = "sessions";
 const SESSION_QUERY_DATABASE_NAME = "session-query.sqlite";
@@ -62,6 +64,7 @@ export async function installCoreServices(context: Context, dataDirectory: strin
   new LocalSubprocessRuntime(context);
   new LocalBashExecutor(context, YISHAN_LOCAL_BASH_CONFIG);
   await context.plugin(agentSpine, YISHAN_AGENT_SPINE_CONFIG);
+  await context.plugin(workspacePlugin);
   new SessionProjectionRegistry(context);
   new SubagentRuntime(context);
   await context.plugin(subagentSpawnInProcess, YISHAN_SUBAGENT_SPAWN_CONFIG);

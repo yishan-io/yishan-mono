@@ -11,13 +11,13 @@ const resourcesDirectory = resolve(desktopDirectory, "dist", "resources");
 const outputPath = resolve(resourcesDirectory, "dsh-runtime.mjs");
 const dshVersionLookup = 'var { version } = createRequire(import.meta.url)("../package.json");';
 const bundledDshVersion = 'var version = "0.1.1-rc.2";';
-const dshPackageRequire = createRequire(resolve(desktopDirectory, "..", "..", "packages", "dsh-yishan", "package.json"));
-const subprocessPackagePath = dshPackageRequire.resolve("@deepseek-ai/dsh-subprocess-local/package.json");
+const dshRuntimePackageRequire = createRequire(resolve(desktopDirectory, "..", "..", "packages", "dsh-runtime", "package.json"));
+const subprocessPackagePath = dshRuntimePackageRequire.resolve("@deepseek-ai/dsh-subprocess-local/package.json");
 const subprocessPackageDirectory = dirname(subprocessPackagePath);
 const koffiNativePackageName = `@koromix/koffi-${process.platform}-${process.arch}`;
 
 function resolveNativeRuntimePackage(packageName) {
-  let packageDirectory = dirname(dshPackageRequire.resolve(packageName, { paths: [subprocessPackageDirectory] }));
+  let packageDirectory = dirname(dshRuntimePackageRequire.resolve(packageName, { paths: [subprocessPackageDirectory] }));
   while (!existsSync(resolve(packageDirectory, "package.json"))) {
     const parentDirectory = dirname(packageDirectory);
     if (parentDirectory === packageDirectory) throw new Error(`Unable to find package root for ${packageName}.`);
@@ -35,7 +35,7 @@ await rm(resolve(resourcesDirectory, "node_modules"), { recursive: true, force: 
 await mkdir(resourcesDirectory, { recursive: true });
 
 await build({
-  entryPoints: [resolve(desktopDirectory, "..", "..", "packages", "dsh-yishan", "src", "runtime", "bin.ts")],
+  entryPoints: [resolve(desktopDirectory, "..", "..", "packages", "dsh-runtime", "src", "index.ts")],
   banner: { js: 'import { createRequire as createNodeRequire } from "node:module"; const require = createNodeRequire(import.meta.url);' },
   bundle: true,
   external: ["koffi", "node-pty"],

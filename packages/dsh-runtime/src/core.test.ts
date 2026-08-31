@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { Context } from "@deepseek-ai/cordis";
+import { name as workspacePluginName } from "@yishan-io/dsh-workspace";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -46,6 +47,8 @@ describe("runtime core services", () => {
         inheritsParentContext: false,
       });
       expect(context.tools.get("subagent")).toBeDefined();
+      expect(context.yishanWorkspaceHost).toBeDefined();
+      expect(workspacePluginName).toBe("dsh-workspace");
     } finally {
       await context.fiber.dispose();
     }

@@ -1,6 +1,10 @@
 import type { Context } from "@deepseek-ai/cordis";
 
-import { type PluginLoadState, mountLocalPluginLoader, mountVerifiedPluginLoader } from "../plugin-loader/loader";
+import {
+  type PluginLoadState,
+  mountLocalPluginLoader,
+  mountVerifiedPluginLoader,
+} from "@yishan-io/dsh-yishan/plugin-loader";
 import { isDeveloperMode } from "./config";
 
 /** Deterministic official and developer-local plugin outcomes for one runtime. */

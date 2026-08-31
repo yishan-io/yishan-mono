@@ -5,7 +5,7 @@ import { PassThrough, Writable } from "node:stream";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { listProviders, validateProviderSelection } from "../provider/providers";
+import { listProviders, validateProviderSelection } from "@yishan-io/dsh-yishan/provider";
 import {
   YISHAN_DSH_TEST_REPLAY_ENVIRONMENT_VALUE,
   YISHAN_DSH_TEST_REPLAY_ENVIRONMENT_VARIABLE,
@@ -13,7 +13,7 @@ import {
   YISHAN_DSH_TEST_REPLAY_PROVIDER,
   installDshTestReplayAdapter,
   isDshTestReplayEnabled,
-} from "../provider/replay";
+} from "@yishan-io/dsh-yishan/provider";
 import { RuntimeHost } from "./host";
 
 afterEach(() => vi.unstubAllEnvs());

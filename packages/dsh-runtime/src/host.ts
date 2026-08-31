@@ -2,8 +2,8 @@ import { mkdir } from "node:fs/promises";
 
 import { Context } from "@deepseek-ai/cordis";
 
-import type { PluginLoadState } from "../plugin-loader/loader";
-import * as rpcPlugin from "../rpc-server/plugin";
+import type { PluginLoadState } from "@yishan-io/dsh-yishan/plugin-loader";
+import * as rpcPlugin from "@yishan-io/dsh-yishan/rpc-server";
 import { resolveDataDirectory } from "./config";
 import { installCoreServices } from "./core";
 import { loadPlugins } from "./plugins";
