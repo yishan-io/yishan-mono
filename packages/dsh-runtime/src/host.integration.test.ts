@@ -5,6 +5,7 @@ import { PassThrough, Writable } from "node:stream";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { RuntimeHost } from "./host";
 import {
   DIRECT_DEEPSEEK_PROVIDER,
   PI_AI_DEEPSEEK_PROVIDER,
@@ -13,8 +14,7 @@ import {
   YISHAN_PI_AI_ACTIVE_PROVIDER_COUNT,
   YISHAN_PI_AI_PROVIDER_ALLOWLIST,
   YISHAN_UNSUPPORTED_PI_AI_PROVIDERS,
-} from "@yishan-io/dsh-yishan/provider";
-import { RuntimeHost } from "./host";
+} from "./private/provider";
 
 async function waitForFrame(frames: Record<string, unknown>[], id: number): Promise<Record<string, unknown>> {
   const deadline = Date.now() + 5_000;
@@ -153,10 +153,11 @@ describe("Yishan production runtime", () => {
       input,
       output,
       exit,
-      workspaceBridge: {
-        admitWorkspace: async ({ workspaceId }) => ({
+      workspaceBindingResolver: {
+        resolveWorkspaceBinding: async ({ workspaceId }) => ({
           workspaceId,
           cwd: "/workspace",
+          generation: 1,
           policy: { authorization: "daemon-authorized" },
         }),
       },

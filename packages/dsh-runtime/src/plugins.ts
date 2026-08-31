@@ -1,11 +1,7 @@
 import type { Context } from "@deepseek-ai/cordis";
 
-import {
-  type PluginLoadState,
-  mountLocalPluginLoader,
-  mountVerifiedPluginLoader,
-} from "@yishan-io/dsh-yishan/plugin-loader";
 import { isDeveloperMode } from "./config";
+import { type PluginLoadState, mountLocalPluginLoader, mountVerifiedPluginLoader } from "./private/plugin-loader";
 
 /** Deterministic official and developer-local plugin outcomes for one runtime. */
 export type PluginLoadReport = { states: readonly PluginLoadState[] };

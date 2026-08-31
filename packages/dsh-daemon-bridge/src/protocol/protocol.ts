@@ -25,7 +25,7 @@ export const YISHAN_METHODS = {
 export const YISHAN_REVERSE_METHODS = {
   capabilityRequest: yishanMethod("capability.request"),
   interactionRequest: yishanMethod("interaction.request"),
-  workspaceAdmit: yishanMethod("workspace.admit"),
+  workspaceBindingResolve: yishanMethod("workspace.binding.resolve"),
 } as const;
 
 /** Durable/runtime notifications emitted in addition to stock SDK events. */

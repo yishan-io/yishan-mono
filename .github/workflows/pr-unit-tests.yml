@@ -53,8 +53,8 @@ jobs:
               - 'apps/desktop/src/main/daemon/**'
             design_tokens:
               - 'packages/design-tokens/**'
-            dsh_yishan:
-              - 'packages/dsh-yishan/**'
+            dsh_session:
+              - 'packages/dsh-session/**'
             pi_memory:
               - 'packages/pi-memory/**'
             pi_task:
@@ -88,7 +88,7 @@ jobs:
           DESKTOP_CHANGED: ${{ steps.changes.outputs.desktop }}
           DESKTOP_DSH_RUNTIME_CHANGED: ${{ steps.changes.outputs.desktop_dsh_runtime }}
           DESIGN_TOKENS_CHANGED: ${{ steps.changes.outputs.design_tokens }}
-          DSH_YISHAN_CHANGED: ${{ steps.changes.outputs.dsh_yishan }}
+          DSH_SESSION_CHANGED: ${{ steps.changes.outputs.dsh_session }}
           PI_MEMORY_CHANGED: ${{ steps.changes.outputs.pi_memory }}
           PI_TASK_CHANGED: ${{ steps.changes.outputs.pi_task }}
           PI_DEV_FLOW_CHANGED: ${{ steps.changes.outputs.pi_dev_flow }}
@@ -129,7 +129,7 @@ jobs:
             has('CORE_CHANGED') ||
             has('DESIGN_TOKENS_CHANGED') ||
             has('PI_SUBAGENTS_CHANGED') ||
-            has('DSH_YISHAN_CHANGED')
+            has('DSH_SESSION_CHANGED')
           ) {
             addTarget('desktop', 'apps/desktop', 'bunx vitest run');
           }
@@ -138,8 +138,8 @@ jobs:
             addTarget('design-tokens', 'packages/design-tokens', 'bun run test');
           }
 
-          if (has('DSH_YISHAN_CHANGED')) {
-            addTarget('dsh-yishan', 'packages/dsh-yishan', 'bun run test && bun run typecheck && bun run lint');
+          if (has('DSH_SESSION_CHANGED')) {
+            addTarget('dsh-session', 'packages/dsh-session', 'bun run test && bun run typecheck && bun run lint');
           }
 
           if (has('PI_MEMORY_CHANGED')) {
@@ -181,9 +181,9 @@ jobs:
           const outputs = [
             `bun_matrix=${JSON.stringify({ include: bunTargets })}`,
             `run_bun=${bunTargets.length > 0}`,
-            `run_cli=${has('CLI_CHANGED') || has('DSH_YISHAN_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
-            `run_dsh_smoke=${has('DSH_YISHAN_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
-            `run_dsh_daemon_smoke=${has('CLI_CHANGED') || has('DSH_YISHAN_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_cli=${has('CLI_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_dsh_smoke=${has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_dsh_daemon_smoke=${has('CLI_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
             `run_relay=${has('RELAY_CHANGED')}`,
           ];
 

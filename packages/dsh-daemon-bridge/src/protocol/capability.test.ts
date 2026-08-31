@@ -10,7 +10,7 @@ describe("parseCapabilityRequest", () => {
     cancellationId: "cancel-1",
     sessionId: "session-1",
     workspaceId: "workspace-1",
-    workspaceGeneration: 2,
+    generation: 2,
     deadlineAtMs: NOW_MS + 10_000,
     operation: "workspace.readFile",
     input: { path: "README.md" },
@@ -19,7 +19,7 @@ describe("parseCapabilityRequest", () => {
   it("requires session, workspace, cancellation, and deadline authority context", () => {
     expect(parseCapabilityRequest(request, NOW_MS)).toMatchObject({
       operation: "workspace.readFile",
-      workspaceGeneration: 2,
+      generation: 2,
       cancellationId: "cancel-1",
     });
   });

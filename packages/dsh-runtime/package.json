@@ -3,7 +3,12 @@
   "version": "0.1.0",
   "description": "Yishan DeepSeek Harness runtime bootstrap and composition.",
   "type": "module",
-  "files": ["src", "!src/**/*.test.ts", "LICENSE", "README.md"],
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -11,23 +16,24 @@
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.1",
-    "@deepseek-ai/dsh-agent-spine-demo": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-bash-local": "0.1.1-rc.2",
     "@deepseek-ai/dsh-llm-deepseek": "0.1.1-rc.2",
     "@deepseek-ai/dsh-llm-pi-ai": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-session-checkpoint-policy": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-session-projection": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-session-query-sqlite": "0.1.1-rc.2",
+    "@yishan-io/dsh-daemon-bridge": "workspace:*",
+    "@yishan-io/dsh-workspace": "workspace:*",
+    "@deepseek-ai/cordis-plugin-loader": "1.0.2",
+    "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+    "yaml": "2.9.0",
+    "@yishan-io/dsh-session": "workspace:*",
+    "@deepseek-ai/dsh-agent-spine-demo": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-bash-local": "0.1.1-rc.2",
     "@deepseek-ai/dsh-subagent": "0.1.1-rc.2",
     "@deepseek-ai/dsh-subagent-spawn-in-process": "0.1.1-rc.2",
     "@deepseek-ai/dsh-subprocess-local": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-tool-subagent": "0.1.1-rc.2",
-    "@yishan-io/dsh-workspace": "workspace:*",
-    "@yishan-io/dsh-yishan": "workspace:*"
+    "@deepseek-ai/dsh-tool-subagent": "0.1.1-rc.2"
   },
   "devDependencies": {
-    "@types/node": "^24.12.4"
+    "@types/node": "^24.12.4",
+    "@earendil-works/pi-ai": "0.82.1"
   },
   "repository": {
     "type": "git",

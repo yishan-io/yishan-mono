@@ -6,34 +6,72 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const runtimeMocks = vi.hoisted(() => ({
   dispose: vi.fn<() => Promise<void>>(),
-  installCore: vi.fn<() => Promise<void>>(),
+  installCorePlugins: vi.fn<() => Promise<void>>(),
+  validateModelSelection: vi.fn(async () => undefined),
   installProviders: vi.fn<() => Promise<void>>(),
   loadPlugins: vi.fn<() => Promise<{ states: readonly [] }>>(),
+  bridgeStart: vi.fn(),
 }));
 
 vi.mock("@deepseek-ai/cordis", () => ({
   Service: class {},
   Context: class {
-    fiber = { dispose: runtimeMocks.dispose };
-    plugin = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    root = { fiber: { dispose: runtimeMocks.dispose } };
+    daemonBridge: { start: () => void } | undefined;
+    plugin = async (
+      plugin:
+        | ((context: object, config?: unknown) => unknown)
+        | { apply: (context: object, config?: unknown) => unknown },
+      config?: unknown,
+    ) => {
+      const apply = typeof plugin === "function" ? plugin : plugin.apply;
+      await apply(this, config);
+    };
   },
 }));
-vi.mock("./core", () => ({ installCoreServices: runtimeMocks.installCore }));
-vi.mock("./providers", () => ({ installProviders: runtimeMocks.installProviders }));
+
+vi.mock("@yishan-io/dsh-daemon-bridge", () => ({
+  apply: (context: { daemonBridge?: { start: () => void } }) => {
+    context.daemonBridge = { start: runtimeMocks.bridgeStart };
+  },
+}));
+vi.mock("@yishan-io/dsh-workspace", () => ({ apply: vi.fn() }));
+vi.mock("@yishan-io/dsh-session", () => ({ apply: vi.fn() }));
+vi.mock("./corePlugins", () => ({ installCorePlugins: runtimeMocks.installCorePlugins }));
+vi.mock("./providers", () => ({
+  installProviders: runtimeMocks.installProviders,
+  validateModelSelection: runtimeMocks.validateModelSelection,
+}));
 vi.mock("./plugins", () => ({ loadPlugins: runtimeMocks.loadPlugins }));
 
 import { RuntimeHost } from "./host";
 
 beforeEach(() => {
   runtimeMocks.dispose.mockReset().mockResolvedValue(undefined);
-  runtimeMocks.installCore.mockReset().mockResolvedValue(undefined);
+  runtimeMocks.installCorePlugins.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installProviders.mockReset().mockResolvedValue(undefined);
+  runtimeMocks.validateModelSelection.mockReset().mockResolvedValue(undefined);
   runtimeMocks.loadPlugins.mockReset().mockResolvedValue({ states: [] });
+  runtimeMocks.bridgeStart.mockReset();
 });
 
 afterEach(() => vi.restoreAllMocks());
 
 describe("RuntimeHost", () => {
+  it("starts the bridge only after runtime and managed plugins are installed", async () => {
+    const dataDirectory = await mkdtemp(join(tmpdir(), "yishan-dsh-host-order-"));
+    try {
+      await RuntimeHost.create({ dataDirectory });
+      expect(runtimeMocks.bridgeStart).toHaveBeenCalledOnce();
+      const pluginsOrder = runtimeMocks.loadPlugins.mock.invocationCallOrder[0];
+      const bridgeOrder = runtimeMocks.bridgeStart.mock.invocationCallOrder[0];
+      if (pluginsOrder === undefined || bridgeOrder === undefined) throw new Error("startup calls were not recorded");
+      expect(pluginsOrder).toBeLessThan(bridgeOrder);
+    } finally {
+      await rm(dataDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("closes its context once when close is called repeatedly", async () => {
     const dataDirectory = await mkdtemp(join(tmpdir(), "yishan-dsh-host-close-"));
     try {
@@ -47,8 +85,8 @@ describe("RuntimeHost", () => {
   });
 
   it("cleans up the context when startup fails", async () => {
-    const startupError = new Error("core installation failed");
-    runtimeMocks.installCore.mockRejectedValueOnce(startupError);
+    const startupError = new Error("core plugin installation failed");
+    runtimeMocks.installCorePlugins.mockRejectedValueOnce(startupError);
     const dataDirectory = await mkdtemp(join(tmpdir(), "yishan-dsh-host-startup-"));
     try {
       await expect(RuntimeHost.create({ dataDirectory })).rejects.toBe(startupError);
@@ -59,9 +97,9 @@ describe("RuntimeHost", () => {
   });
 
   it("reports both startup and cleanup failures", async () => {
-    const startupError = new Error("core installation failed");
+    const startupError = new Error("core plugin installation failed");
     const cleanupError = new Error("cleanup failed");
-    runtimeMocks.installCore.mockRejectedValueOnce(startupError);
+    runtimeMocks.installCorePlugins.mockRejectedValueOnce(startupError);
     runtimeMocks.dispose.mockRejectedValueOnce(cleanupError);
     const dataDirectory = await mkdtemp(join(tmpdir(), "yishan-dsh-host-startup-cleanup-"));
     try {

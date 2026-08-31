@@ -8,7 +8,7 @@ const request = {
   cancellationId: "cancel-1",
   sessionId: "session-1",
   workspaceId: "workspace-1",
-  workspaceGeneration: 2,
+  generation: 2,
   kind: "approval",
   prompt: "Allow command?",
   choices: ["allow-once", "deny"],

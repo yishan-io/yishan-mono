@@ -18,7 +18,7 @@ const capabilityRequestSchema = z
     cancellationId: nonEmptyStringSchema,
     sessionId: nonEmptyStringSchema,
     workspaceId: nonEmptyStringSchema,
-    workspaceGeneration: positiveSafeIntegerSchema,
+    generation: positiveSafeIntegerSchema,
     deadlineAtMs: positiveSafeIntegerSchema,
     operation: nonEmptyStringSchema,
     input: z.record(z.string(), z.unknown()),

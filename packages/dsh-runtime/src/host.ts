@@ -1,21 +1,23 @@
 import { mkdir } from "node:fs/promises";
 
 import { Context } from "@deepseek-ai/cordis";
+import { type BridgeHostConfig, apply as applyDaemonBridge } from "@yishan-io/dsh-daemon-bridge";
+import * as sessionPlugin from "@yishan-io/dsh-session";
+import * as workspacePlugin from "@yishan-io/dsh-workspace";
 
-import type { PluginLoadState } from "@yishan-io/dsh-yishan/plugin-loader";
-import * as rpcPlugin from "@yishan-io/dsh-yishan/rpc-server";
 import { resolveDataDirectory } from "./config";
-import { installCoreServices } from "./core";
+import { installCorePlugins } from "./corePlugins";
 import { loadPlugins } from "./plugins";
-import { installProviders } from "./providers";
+import type { PluginLoadState } from "./private/plugin-loader";
+import { installProviders, validateModelSelection } from "./providers";
 
-/** Configuration for the programmatic Yishan production DSH runtime. */
-export type RuntimeConfig = rpcPlugin.RuntimeServerConfig & {
-  /** Directory that owns durable JSONL session logs and the derived SQLite query index. */
+/** Configuration for the production DSH runtime composition. */
+export type RuntimeConfig = BridgeHostConfig & {
+  /** Directory that owns durable session and plugin state. */
   dataDirectory?: string;
 };
 
-/** Owns one fully composed Yishan DSH runtime and its resource lifecycle. */
+/** Owns one fully composed DSH runtime and its Cordis lifecycle. */
 export class RuntimeHost {
   private closeTask: Promise<void> | undefined;
 
@@ -26,17 +28,23 @@ export class RuntimeHost {
     public readonly pluginStates: readonly PluginLoadState[],
   ) {}
 
-  /** Creates the fixed production service graph without YAML or plugin resolution. */
+  /** Composes every first-party package before opening the daemon bridge. */
   static async create(config: RuntimeConfig = {}): Promise<RuntimeHost> {
     const dataDirectory = resolveDataDirectory(config);
     await mkdir(dataDirectory, { recursive: true });
 
     const context = new Context();
     try {
-      await installCoreServices(context, dataDirectory);
+      await context.plugin(applyDaemonBridge, config);
+      await installCorePlugins(context);
       await installProviders(context, dataDirectory);
+      await context.plugin(workspacePlugin);
+      await context.plugin(sessionPlugin, {
+        dataDirectory,
+        validateModelSelection: async (selection) => await validateModelSelection(context, selection),
+      });
       const plugins = await loadPlugins(context, dataDirectory);
-      await context.plugin(rpcPlugin, config);
+      context.daemonBridge.start();
       return new RuntimeHost(context, plugins.states);
     } catch (startupError) {
       await RuntimeHost.cleanupFailedStartup(context, startupError);
@@ -44,15 +52,15 @@ export class RuntimeHost {
     }
   }
 
-  /** Disposes every runtime service after draining durable session writes. */
+  /** Disposes the complete runtime graph exactly once. */
   close(): Promise<void> {
-    this.closeTask ??= this.context.fiber.dispose();
+    this.closeTask ??= this.context.root.fiber.dispose();
     return this.closeTask;
   }
 
   private static async cleanupFailedStartup(context: Context, startupError: unknown): Promise<void> {
     try {
-      await context.fiber.dispose();
+      await context.root.fiber.dispose();
     } catch (cleanupError) {
       throw new AggregateError([startupError, cleanupError], "failed to clean up DSH runtime startup");
     }

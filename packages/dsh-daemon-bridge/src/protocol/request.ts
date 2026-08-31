@@ -17,7 +17,7 @@ const requestSchema = z
     cancellationId: nonEmptyStringSchema,
     sessionId: nonEmptyStringSchema,
     workspaceId: nonEmptyStringSchema,
-    workspaceGeneration: positiveSafeIntegerSchema,
+    generation: positiveSafeIntegerSchema,
     kind: z.enum(["approval", "selection", "input"], { error: "unsupported interaction kind" }),
     prompt: nonEmptyStringSchema,
     choices: z.array(nonEmptyStringSchema),
