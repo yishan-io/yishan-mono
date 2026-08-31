@@ -10,7 +10,7 @@ export {
   YISHAN_PROTOCOL_VERSION,
   YISHAN_REVERSE_METHODS,
   yishanMethod,
-} from "./protocol/protocol";
+} from "@yishan-io/dsh-daemon-bridge";
 export {
   listProviders,
   validateProviderSelection,
@@ -20,11 +20,7 @@ export {
   type ProviderCatalogEntry,
   type ProviderCatalogModel,
 } from "./provider/providers";
-export {
-  MAX_REQUEST_LIFETIME_MS,
-  parseCapabilityRequest,
-  type CapabilityRequest,
-} from "./protocol/capability";
+export { MAX_REQUEST_LIFETIME_MS, parseCapabilityRequest } from "@yishan-io/dsh-daemon-bridge";
 export { parseDurableCursor, type DurableCursor } from "./shared/cursor";
 export {
   isSessionBoundEvent,
@@ -49,12 +45,7 @@ export {
   type TextPromptContentBlock,
   type TranscriptResetNotification,
 } from "./session/protocol";
-export {
-  parseInteractionRequest,
-  type InteractionKind,
-  type InteractionRequest,
-} from "./protocol/interactionRequest";
-export { parseInteractionResponse, type InteractionResponse } from "./protocol/interactionResponse";
+export { parseInteractionRequest, parseInteractionResponse } from "@yishan-io/dsh-daemon-bridge";
 export { SessionRuntime, type DurableSessionSnapshot } from "./session/runtime";
 export { SessionExecutionError, type SessionExecutionErrorCode } from "./session/errors";
 export {

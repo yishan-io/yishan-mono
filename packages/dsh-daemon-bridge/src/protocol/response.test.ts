@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseInteractionResponse } from "./interactionResponse";
+import { parseInteractionResponse } from "./response";
 
 describe("parseInteractionResponse", () => {
   it("accepts a correlated selection", () => {
@@ -17,9 +17,9 @@ describe("parseInteractionResponse", () => {
     );
   });
 
-  it("rejects unknown fields", () => {
-    expect(() =>
+  it("accepts and strips unknown fields for forward-compatible wire messages", () => {
+    expect(
       parseInteractionResponse({ id: "interaction-1", outcome: "accepted", value: null, durable: true }),
-    ).toThrow("unsupported fields");
+    ).not.toHaveProperty("durable");
   });
 });

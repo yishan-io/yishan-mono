@@ -33,7 +33,7 @@ describe("parseCapabilityRequest", () => {
     ).toThrow("allowed request lifetime");
   });
 
-  it("rejects unknown fields", () => {
-    expect(() => parseCapabilityRequest({ ...request, cwd: "/untrusted" }, NOW_MS)).toThrow("unsupported fields");
+  it("accepts and strips unknown fields for forward-compatible wire messages", () => {
+    expect(parseCapabilityRequest({ ...request, cwd: "/untrusted" }, NOW_MS)).not.toHaveProperty("cwd");
   });
 });

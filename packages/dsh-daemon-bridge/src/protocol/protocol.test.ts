@@ -40,6 +40,7 @@ describe("yishanMethod", () => {
   it("declares reverse requests and durable notifications", () => {
     expect(YISHAN_REVERSE_METHODS.capabilityRequest).toBe("yishan.v1.capability.request");
     expect(YISHAN_REVERSE_METHODS.interactionRequest).toBe("yishan.v1.interaction.request");
+    expect(YISHAN_REVERSE_METHODS.workspaceAdmit).toBe("yishan.v1.workspace.admit");
     expect(YISHAN_NOTIFICATIONS.durableCursor).toBe("yishan.v1.session.durable-cursor");
     expect(YISHAN_NOTIFICATIONS.transcriptReset).toBe("yishan.v1.session.transcript-reset");
   });

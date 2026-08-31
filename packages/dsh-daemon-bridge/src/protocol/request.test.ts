@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseInteractionRequest } from "./interactionRequest";
+import { parseInteractionRequest } from "./request";
 
 const NOW_MS = 1_000_000;
 const request = {
@@ -26,7 +26,7 @@ describe("parseInteractionRequest", () => {
     );
   });
 
-  it("rejects unknown fields", () => {
-    expect(() => parseInteractionRequest({ ...request, trusted: true }, NOW_MS)).toThrow("unsupported fields");
+  it("accepts and strips unknown fields for forward-compatible wire messages", () => {
+    expect(parseInteractionRequest({ ...request, trusted: true }, NOW_MS)).not.toHaveProperty("trusted");
   });
 });

@@ -1,0 +1,40 @@
+{
+  "name": "@yishan-io/dsh-daemon-bridge",
+  "version": "0.1.0",
+  "description": "Private daemon-to-DSH bridge contract library for DeepSeek Harness.",
+  "type": "module",
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check src"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yishan-io/yishan-mono",
+    "directory": "packages/dsh-daemon-bridge"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.4.0"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  }
+}
