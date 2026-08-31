@@ -41,6 +41,23 @@ const mocks = vi.hoisted(() => ({
   listSessionLineage: vi.fn(),
 }));
 
+function dshStartResult(sessionId: string, events: unknown[] = []) {
+  const headSeq = events.length - 1;
+  return {
+    runtime: "dsh" as const,
+    sessionId,
+    dshAttachSnapshot: {
+      runtime: "dsh" as const,
+      sessionId,
+      instanceId: "run-1",
+      events,
+      asOfSeq: headSeq,
+      durableThroughSeq: headSeq,
+      headSeq,
+    },
+  };
+}
+
 vi.mock("@shared/ids/generateId", () => ({
   generateId: vi.fn(() => "generated-session-id"),
 }));
@@ -125,7 +142,9 @@ describe("agentChatCommands.startAgentChatSession", () => {
     mocks.startAgent.mockImplementation(async () => {
       const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
       expect(tab?.kind === "agent-chat" ? tab.data.runtime : undefined).toBe(runtime);
-      return { runtime, sessionId: "selected-session" };
+      return runtime === "dsh"
+        ? dshStartResult("selected-session")
+        : { runtime: "pi" as const, sessionId: "selected-session" };
     });
 
     await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
@@ -150,7 +169,9 @@ describe("agentChatCommands.startAgentChatSession", () => {
       ],
     });
     mocks.getCapabilities.mockResolvedValueOnce({ dsh: { configured: true, ready: true } });
-    mocks.startAgent.mockRejectedValueOnce(new Error("DSH unavailable")).mockResolvedValueOnce({ runtime: "dsh" });
+    mocks.startAgent
+      .mockRejectedValueOnce(new Error("DSH unavailable"))
+      .mockResolvedValueOnce(dshStartResult("generated-session-id"));
 
     await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
 
@@ -191,7 +212,9 @@ describe("agentChatCommands.startAgentChatSession", () => {
   });
 
   it("starts restored DSH history through agent.start with resume without changing Pi", async () => {
-    mocks.startAgent.mockResolvedValue({ ok: true });
+    mocks.startAgent.mockImplementation(async ({ runtime, sessionId }: { runtime: "pi" | "dsh"; sessionId: string }) =>
+      runtime === "dsh" ? dshStartResult(sessionId) : { runtime: "pi", sessionId },
+    );
     await startAgentChatSession({
       tabId: "tab-pi",
       workspaceId: "workspace-1",
@@ -237,7 +260,7 @@ describe("agentChatCommands.startAgentChatSession", () => {
   });
 
   it("does not rehydrate an already loaded session when its UI remounts", async () => {
-    mocks.start.mockResolvedValue({ sessionId: "session-loaded" });
+    mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "session-loaded" });
     const options = {
       tabId: "tab-loaded",
       workspaceId: "workspace-1",
@@ -434,10 +457,17 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
         },
       ],
     });
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-empty" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("generated-session-id"));
 
-    await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
+    await startAgentChatSession({
+      tabId,
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      runtime: "dsh",
+      sessionView: "full",
+    });
 
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.error).toBeNull();
     expect(agentChatStore.getState().sessionsByTabId[tabId]).toMatchObject({
       state: "idle",
       messages: [],
@@ -462,13 +492,25 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
       ],
     });
     mocks.startAgent.mockImplementation(async () => {
-      agentChatStore
-        .getState()
-        .replaceMessages(tabId, [
-          { id: "projected", role: "assistant", content: [{ type: "text", text: "Restored" }], timestamp: 0 },
-        ]);
-      agentChatStore.getState().setSessionState(tabId, "running");
-      return { runtime: "dsh", sessionId: "dsh-restored" };
+      queueMicrotask(() => agentChatStore.getState().setSessionState(tabId, "running"));
+      return dshStartResult("dsh-restored", [
+        {
+          type: "assistant/message",
+          seq: 0,
+          time: 0,
+          data: {
+            turn: 0,
+            step: 0,
+            message: {
+              id: "projected",
+              role: "assistant",
+              content: [{ type: "text", text: "Restored" }],
+              source: { kind: "model", provider: "test", model: "test" },
+            },
+          },
+          surfaceOp: "append",
+        },
+      ]);
     });
 
     await startAgentChatSession({
@@ -515,7 +557,7 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
         },
       ],
     });
-    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true, transcriptProtocolVersion: 2 } });
+    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true, transcriptProtocolVersion: 3 } });
 
     await loadDSHSessionModels("dsh-tab");
 
@@ -564,7 +606,7 @@ describe("loadDSHSessionModels configured providers", () => {
         },
       ],
     });
-    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true, transcriptProtocolVersion: 2 } });
+    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true, transcriptProtocolVersion: 3 } });
 
     await loadDSHSessionModels("dsh-tab");
 

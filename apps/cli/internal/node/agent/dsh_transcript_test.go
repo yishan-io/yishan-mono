@@ -12,7 +12,7 @@ import (
 	"yishan/apps/cli/internal/rpc"
 )
 
-const transcriptProtocolVersion = 2
+const transcriptProtocolVersion = 3
 
 func TestDSHTranscript_ProjectsInternalEventsAcrossRendererBoundaries(t *testing.T) {
 	hidden := json.RawMessage(`{"type":"yishan/session-bound.v1","seq":0,"time":10,"data":{"workspaceId":"secret"}}`)
@@ -47,7 +47,7 @@ func TestDSHTranscript_ReadHistoryProjectsBoundEvents(t *testing.T) {
 	hidden := json.RawMessage(`{"type":"yishan/session-bound.v1","seq":2,"time":12,"data":{"workspaceId":"secret"}}`)
 	visible := json.RawMessage(`{"type":"turn/end","seq":3,"time":13,"data":{}}`)
 	runtime := &executionDSH{}
-	runtime.readResult = dsh.SessionReadResult{Session: dsh.SessionHeader{SessionID: "s"}, Events: []json.RawMessage{hidden, visible}}
+	runtime.readResult = dsh.SessionReadResult{Session: dsh.SessionHeader{SessionID: "s"}, Events: []json.RawMessage{hidden, visible}, FilePath: "/dsh/sessions/s.jsonl"}
 	service := newDSHExecutionService(runtime)
 	result, err := service.AgentReadHistory(context.Background(), rpc.AgentReadHistoryParams{
 		Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", TranscriptProtocolVersion: transcriptProtocolVersion,
@@ -56,6 +56,9 @@ func TestDSHTranscript_ReadHistoryProjectsBoundEvents(t *testing.T) {
 		t.Fatalf("read history: %v", err)
 	}
 	history := result.(rpc.AgentHistoryResult).DSH
+	if history.FilePath != "/dsh/sessions/s.jsonl" {
+		t.Fatalf("file path = %q", history.FilePath)
+	}
 	assertHiddenMarker(t, history.Events[0], 2, 12)
 	if string(history.Events[1]) != string(visible) {
 		t.Fatalf("visible history event = %s", history.Events[1])
@@ -123,8 +126,9 @@ func TestDSHTranscript_RejectsUnknownInternalEvent(t *testing.T) {
 		AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 0,
 	}}
 	service := newDSHExecutionService(runtime)
-	startDSHTranscript(t, service, nil)
-	_, err := service.AgentAttach(context.Background(), nil, dshAttachRequest(-1))
+	_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{
+		Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative", TranscriptProtocolVersion: transcriptProtocolVersion,
+	})
 	assertTranscriptProtocolUnavailable(t, err)
 }
 

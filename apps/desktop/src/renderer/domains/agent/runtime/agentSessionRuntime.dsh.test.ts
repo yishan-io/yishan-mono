@@ -34,6 +34,22 @@ const mocks = vi.hoisted(() => ({
   dshLifecycleHandler: null as ((payload: DSHFrontendPayload) => void) | null,
 }));
 
+function dshStartResult(sessionId: string) {
+  return {
+    runtime: "dsh" as const,
+    sessionId,
+    dshAttachSnapshot: {
+      runtime: "dsh" as const,
+      sessionId,
+      instanceId: "run-1",
+      events: [],
+      asOfSeq: -1,
+      durableThroughSeq: -1,
+      headSeq: -1,
+    },
+  };
+}
+
 vi.mock("@shared/ids/generateId", () => ({
   generateId: vi.fn(() => "generated-session-id"),
 }));
@@ -121,8 +137,105 @@ describe("agentSessionRuntime.DSH", () => {
     expect(findTabWithSession("same-id", "dsh")).toBe("dsh-tab");
   });
 
+  it("applies the one-shot DSH start snapshot before incremental events", async () => {
+    mocks.startAgent.mockResolvedValue({
+      runtime: "dsh",
+      sessionId: "dsh-session",
+      dshAttachSnapshot: {
+        runtime: "dsh",
+        sessionId: "dsh-session",
+        instanceId: "run-1",
+        events: [
+          {
+            type: "user/message",
+            seq: 0,
+            time: 0,
+            data: { id: "user-1", role: "user", content: [{ type: "text", text: "Hello" }], source: { kind: "user" } },
+            surfaceOp: "append",
+          },
+        ],
+        asOfSeq: 0,
+        durableThroughSeq: 0,
+        headSeq: 0,
+      },
+    });
+
+    await ensureAgentSession({
+      runtime: "dsh",
+      tabId: "tab-dsh-snapshot",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId: "dsh-session",
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-dsh-snapshot"]?.messages).toEqual([
+      expect.objectContaining({ id: "user-1" }),
+    ]);
+  });
+
+  it("buffers DSH notifications that race the one-shot start snapshot", async () => {
+    let resolveStart: ((result: Record<string, unknown>) => void) | undefined;
+    mocks.startAgent.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveStart = resolve;
+        }),
+    );
+    const ensured = ensureAgentSession({
+      runtime: "dsh",
+      tabId: "tab-dsh-race",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId: "dsh-race",
+    });
+    await vi.waitFor(() => expect(mocks.dshEventHandler).not.toBeNull());
+    mocks.dshEventHandler?.({
+      sessionId: "dsh-race",
+      tabId: "tab-dsh-race",
+      workspaceId: "workspace-1",
+      instanceId: "run-1",
+      update: {
+        event: {
+          type: "user/message",
+          seq: 1,
+          time: 1,
+          data: { id: "user-2", role: "user", content: [{ type: "text", text: "After" }], source: { kind: "user" } },
+          surfaceOp: "append",
+        },
+      },
+    });
+    resolveStart?.({
+      runtime: "dsh",
+      sessionId: "dsh-race",
+      dshAttachSnapshot: {
+        runtime: "dsh",
+        sessionId: "dsh-race",
+        instanceId: "run-1",
+        events: [
+          {
+            type: "user/message",
+            seq: 0,
+            time: 0,
+            data: { id: "user-1", role: "user", content: [{ type: "text", text: "Before" }], source: { kind: "user" } },
+            surfaceOp: "append",
+          },
+        ],
+        asOfSeq: 0,
+        durableThroughSeq: 0,
+        headSeq: 0,
+      },
+    });
+    await ensured;
+    await Promise.resolve();
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-dsh-race"]?.messages.map((message) => message.id)).toEqual([
+      "user-1",
+      "user-2",
+    ]);
+  });
+
   it("uses neutral DSH lifecycle procedures and never sends Pi controls", async () => {
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-session" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-session"));
     mocks.promptAgent.mockResolvedValue({ runtime: "dsh", ok: true });
     mocks.abortAgent.mockResolvedValue({ runtime: "dsh", ok: true });
     mocks.disposeAgent.mockResolvedValue({ runtime: "dsh", ok: true });
@@ -147,7 +260,7 @@ describe("agentSessionRuntime.DSH", () => {
   });
 
   it("disposes a workspace-create DSH Task Run with its exact session ownership", async () => {
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "task-run-session-1" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("task-run-session-1"));
     mocks.disposeAgent.mockResolvedValue({ runtime: "dsh", ok: true });
 
     await ensureAgentSession({
@@ -169,7 +282,7 @@ describe("agentSessionRuntime.DSH", () => {
   });
 
   it("omits Pi steering semantics from prompts while DSH is running", async () => {
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-running" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-running"));
     mocks.promptAgent.mockResolvedValue({ runtime: "dsh", ok: true });
     await ensureAgentSession({
       runtime: "dsh",
@@ -188,7 +301,7 @@ describe("agentSessionRuntime.DSH", () => {
   });
 
   it("resumes an explicit DSH session without changing Pi start payloads", async () => {
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-restored-session" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-restored-session"));
 
     await ensureAgentSession({
       runtime: "dsh",
@@ -210,7 +323,7 @@ describe("agentSessionRuntime.DSH", () => {
   });
 
   it("starts a new DSH session without resume", async () => {
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "generated-session-id" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("generated-session-id"));
 
     await ensureAgentSession({
       runtime: "dsh",
@@ -242,7 +355,7 @@ describe("agentSessionRuntime.DSH", () => {
         },
       ],
     });
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-lifecycle" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-lifecycle"));
     mocks.listSessionLineage.mockResolvedValue({
       runtime: "dsh",
       rootSessionId: "dsh-lifecycle",
@@ -288,7 +401,7 @@ describe("agentSessionRuntime.DSH", () => {
         },
       ],
     });
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-cancellation-parent" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-cancellation-parent"));
     await ensureAgentSession({
       runtime: "dsh",
       tabId: "dsh-cancellation-tab",
@@ -398,7 +511,7 @@ describe("agentSessionRuntime.DSH", () => {
         },
       ],
     });
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-resync" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-resync"));
     mocks.listSessionLineage.mockResolvedValue({
       runtime: "dsh",
       rootSessionId: "dsh-resync",
@@ -452,7 +565,7 @@ describe("agentSessionRuntime.DSH", () => {
         },
       ],
     });
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-child" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-child"));
     await ensureAgentSession({
       runtime: "dsh",
       tabId: "dsh-detail-tab",
@@ -494,6 +607,7 @@ describe("agentSessionRuntime.DSH", () => {
     const closePromise = stopAgentSession("pi-close-tab");
     await vi.waitFor(() => expect(mocks.disposeAgent).toHaveBeenCalledWith(expect.objectContaining({ runtime: "pi" })));
 
+    mocks.startAgent.mockResolvedValue(dshStartResult("same-id"));
     const dshOpenPromise = ensureAgentSession({
       runtime: "dsh",
       tabId: "dsh-open-tab",
@@ -501,7 +615,7 @@ describe("agentSessionRuntime.DSH", () => {
       cwd: "/workspace",
       sessionId: "same-id",
     });
-    await expect(dshOpenPromise).resolves.toMatchObject({ runtime: "dsh", sessionId: "same-id" });
+    await expect(dshOpenPromise).resolves.toMatchObject({ runtime: "dsh", sessionId: "same-id", attached: false });
     expect(mocks.startAgent).toHaveBeenLastCalledWith(expect.objectContaining({ runtime: "dsh" }));
 
     resolvePiDispose?.();

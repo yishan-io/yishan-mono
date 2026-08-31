@@ -220,7 +220,7 @@ func (s *Service) AgentReadHistory(ctx context.Context, req rpc.AgentReadHistory
 		return rpc.AgentHistoryResult{Runtime: req.Runtime, DSH: &rpc.AgentDSHHistory{
 			Session: rpc.AgentDSHSessionMetadata{SessionID: history.Session.SessionID, CreatedAt: history.Session.CreatedAt, ParentSession: history.Session.ParentSession, AgentPreset: history.Session.AgentPreset},
 			Events:  projectedEvents, InstanceID: history.InstanceID, AsOfSeq: history.AsOfSeq,
-			DurableThroughSeq: history.DurableThroughSeq,
+			DurableThroughSeq: history.DurableThroughSeq, FilePath: history.FilePath,
 		}}, nil
 	}
 	history, err := s.GetSessionFile(ctx, rpc.PiGetSessionFileParams{CWD: workspaceInstance.Path, SessionID: req.SessionID})
@@ -350,7 +350,7 @@ func mapPiSessions(summaries []process.SessionSummary, cwd string) []rpc.AgentSe
 func mapDSHSessions(summaries []dsh.SessionListEntry, cwd string) []rpc.AgentSessionSummary {
 	mapped := make([]rpc.AgentSessionSummary, 0, len(summaries))
 	for _, summary := range summaries {
-		mapped = append(mapped, rpc.AgentSessionSummary{SessionID: summary.SessionID, CWD: cwd, CreatedAt: summary.CreatedAt, ParentSession: summary.ParentSession, AgentPreset: summary.AgentPreset, Live: summary.Live, Persisted: summary.Persisted})
+		mapped = append(mapped, rpc.AgentSessionSummary{SessionID: summary.SessionID, CWD: cwd, CreatedAt: summary.CreatedAt, ParentSession: summary.ParentSession, AgentPreset: summary.AgentPreset, SessionName: summary.SessionName, Live: summary.Live, Persisted: summary.Persisted})
 	}
 	return mapped
 }

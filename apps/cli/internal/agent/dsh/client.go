@@ -76,6 +76,7 @@ type SessionListEntry struct {
 	CreatedAt     int64  `json:"createdAt"`
 	ParentSession string `json:"parentSession,omitempty"`
 	AgentPreset   string `json:"agentPreset,omitempty"`
+	SessionName   string `json:"sessionName,omitempty"`
 	Live          bool   `json:"live"`
 	Persisted     bool   `json:"persisted"`
 }
@@ -106,6 +107,7 @@ type SessionReadResult struct {
 	InstanceID        string            `json:"instanceId"`
 	AsOfSeq           int64             `json:"asOfSeq"`
 	DurableThroughSeq int64             `json:"durableThroughSeq"`
+	FilePath          string            `json:"filePath"`
 }
 
 // SessionResumeResult is the response to a session resume request.

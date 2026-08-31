@@ -11,6 +11,7 @@ export type SessionListEntry = {
   createdAt: number;
   parentSession?: string;
   agentPreset?: string;
+  sessionName?: string;
   live: boolean;
   persisted: boolean;
 };
@@ -69,6 +70,8 @@ export type SessionReadResult = {
   instanceId: string;
   asOfSeq: number;
   durableThroughSeq: number;
+  /** Absolute JSONL artifact path, or empty when no durable artifact exists. */
+  filePath: string;
 };
 
 /** Workspace-scoped request to resume one DSH session. */

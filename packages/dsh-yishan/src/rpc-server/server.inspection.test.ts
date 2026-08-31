@@ -2,6 +2,8 @@ import { PassThrough, Writable } from "node:stream";
 
 import { Context, Service } from "@deepseek-ai/cordis";
 import * as agentSpine from "@deepseek-ai/dsh-agent-spine-demo";
+import type { SessionId } from "@deepseek-ai/dsh-session";
+import type { SessionTitleObservationResult } from "@deepseek-ai/dsh-session-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { YISHAN_METHODS } from "../protocol/protocol";
@@ -25,11 +27,17 @@ type QueryRecord = {
 
 class FakeSessionQuery extends Service {
   static records: QueryRecord[] = [];
+  static titleResults: SessionTitleObservationResult[] = [];
+  static titleRequests: SessionId[][] = [];
   constructor(ctx: Context) {
     super(ctx, "sessionQuery");
   }
   async listSessions() {
     return FakeSessionQuery.records;
+  }
+  async readTitleSnapshots(sessionIds: readonly SessionId[]) {
+    FakeSessionQuery.titleRequests.push([...sessionIds]);
+    return FakeSessionQuery.titleResults;
   }
 }
 
@@ -39,6 +47,8 @@ async function mountRuntime(): Promise<Harness> {
   FakeSessionQuery.records = [
     { header: { version: 0, id: "session-1", createdAt: 1, cwd: "/workspace" }, live: false, persisted: true },
   ];
+  FakeSessionQuery.titleResults = [];
+  FakeSessionQuery.titleRequests = [];
   const ctx = new Context();
   await ctx.plugin(agentSpine, { workspaceContext: false });
   ctx.provide("sessionPersistence", { readFrom: async () => [] });
@@ -110,6 +120,50 @@ describe("RpcServer session inspection", () => {
     }
   });
 
+  it("includes a title while leaving missing and rejected title observations empty", async () => {
+    const harness = await mountRuntime();
+    FakeSessionQuery.records = [
+      { header: { version: 0, id: "titled", createdAt: 1, cwd: "/workspace" }, live: false, persisted: true },
+      { header: { version: 0, id: "untitled", createdAt: 2, cwd: "/workspace" }, live: false, persisted: true },
+      { header: { version: 0, id: "rejected", createdAt: 3, cwd: "/workspace" }, live: false, persisted: true },
+      { header: { version: 0, id: "other", createdAt: 4, cwd: "/other" }, live: false, persisted: true },
+    ];
+    FakeSessionQuery.titleResults = [
+      {
+        sessionId: "titled" as SessionId,
+        status: "fulfilled",
+        value: {
+          session: { version: 0, id: "titled" as SessionId, createdAt: 1, cwd: "/workspace" },
+          title: { title: "Session title", messageSeqs: [], source: { kind: "user" }, eventSeq: 1, updatedAt: 1 },
+        },
+      },
+      {
+        sessionId: "untitled" as SessionId,
+        status: "fulfilled",
+        value: { session: { version: 0, id: "untitled" as SessionId, createdAt: 2, cwd: "/workspace" } },
+      },
+      { sessionId: "rejected" as SessionId, status: "rejected", reason: new Error("unreadable") },
+    ];
+    try {
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 21, method: YISHAN_METHODS.list, params: { cwd: "/workspace" } })}\n`,
+      );
+      await expect(waitForFrame(harness, 21)).resolves.toMatchObject({
+        result: {
+          sessions: [
+            { sessionId: "titled", sessionName: "Session title" },
+            { sessionId: "untitled" },
+            { sessionId: "rejected" },
+          ],
+        },
+      });
+      expect(FakeSessionQuery.titleRequests).toEqual([["titled", "untitled", "rejected"]]);
+    } finally {
+      await harness.server.close();
+      await harness.ctx.fiber.dispose();
+    }
+  });
+
   it("maps durable reads and resume/dispose results through the RPC server", async () => {
     vi.stubEnv("DEEPSEEK_API_KEY", "test-key");
     const read = vi.spyOn(SessionRuntime.prototype, "readDurableSession").mockResolvedValue({
@@ -118,6 +172,7 @@ describe("RpcServer session inspection", () => {
       instanceId: "run-1",
       asOfSeq: 2,
       durableThroughSeq: 1,
+      filePath: "/sessions/session-1.jsonl",
     });
     const resume = vi.spyOn(SessionRuntime.prototype, "resume").mockResolvedValue();
     const dispose = vi.spyOn(SessionRuntime.prototype, "disposeSession").mockResolvedValue(true);
@@ -131,6 +186,7 @@ describe("RpcServer session inspection", () => {
           session: { sessionId: "session-1" },
           asOfSeq: 2,
           durableThroughSeq: 1,
+          filePath: "/sessions/session-1.jsonl",
         },
       });
       harness.input.write(

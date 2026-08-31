@@ -45,6 +45,7 @@ describe("SessionRuntime durable sessions", () => {
       instanceId: "test-run",
       asOfSeq: -1,
       durableThroughSeq: -1,
+      filePath: "/sessions/one.jsonl",
     });
     expect(harness.readFrom).toHaveBeenCalledWith("one", 0);
   });

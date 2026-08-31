@@ -139,6 +139,26 @@ describe("agentChatSessionHistory", () => {
     });
   });
 
+  it("resolves a DSH durable JSONL path through the neutral history procedure", async () => {
+    workspaceStore.getState().load("", [workspace]);
+    mocks.readAgentRuntimeHistory.mockResolvedValue({
+      runtime: "dsh",
+      dsh: {
+        session: { sessionId: "session-1", createdAt: 1 },
+        events: [],
+        instanceId: "run-1",
+        asOfSeq: -1,
+        durableThroughSeq: -1,
+        filePath: "/dsh/sessions/session-1.jsonl",
+      },
+    });
+
+    const { fetchAgentSessionFilePath } = await import("./agentChatSessionHistory");
+    await expect(fetchAgentSessionFilePath("session-1", "/workspace", "dsh")).resolves.toBe(
+      "/dsh/sessions/session-1.jsonl",
+    );
+  });
+
   it("rejects a cwd that does not exactly match an open workspace", async () => {
     await expect(listAgentSessionHistory("/missing")).rejects.toThrow("No open workspace matches cwd: /missing");
     expect(mocks.listAgentRuntimeSessions).not.toHaveBeenCalled();

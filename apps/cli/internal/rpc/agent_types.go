@@ -15,7 +15,7 @@ const (
 	AgentRuntimeDSH AgentRuntime = "dsh"
 
 	// DSHTranscriptProtocolVersion is the only transcript projection supported at the renderer boundary.
-	DSHTranscriptProtocolVersion = 2
+	DSHTranscriptProtocolVersion = 3
 )
 
 // AgentStartParams starts a runtime-neutral agent session.
@@ -229,8 +229,9 @@ type AgentSessionLineageResult struct {
 
 // AgentStartResult is the stable start response shared by agent runtimes.
 type AgentStartResult struct {
-	Runtime   AgentRuntime `json:"runtime"`
-	SessionID string       `json:"sessionId"`
+	Runtime           AgentRuntime          `json:"runtime"`
+	SessionID         string                `json:"sessionId"`
+	DSHAttachSnapshot *AgentDSHAttachResult `json:"dshAttachSnapshot,omitempty"`
 }
 
 // AgentAckResult is the stable acknowledgement for session mutations.
@@ -308,6 +309,7 @@ type AgentDSHHistory struct {
 	InstanceID        string                  `json:"instanceId"`
 	AsOfSeq           int64                   `json:"asOfSeq"`
 	DurableThroughSeq int64                   `json:"durableThroughSeq"`
+	FilePath          string                  `json:"filePath"`
 }
 
 // AgentHistoryResult is a runtime-tagged session-history response. Exactly one

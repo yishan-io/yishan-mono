@@ -368,12 +368,12 @@ func TestMapAgentSessions_UsesAuthoritativeWorkspacePath(t *testing.T) {
 	piSessions := mapPiSessions([]process.SessionSummary{{
 		SessionID: "pi-1", CWD: "/untrusted/session", Timestamp: time.UnixMilli(1_700_000_000_000),
 	}}, workspacePath)
-	dshSessions := mapDSHSessions([]dsh.SessionListEntry{{SessionID: "dsh-1", CreatedAt: 1_700_000_001_000}}, workspacePath)
+	dshSessions := mapDSHSessions([]dsh.SessionListEntry{{SessionID: "dsh-1", CreatedAt: 1_700_000_001_000, SessionName: "DSH title"}}, workspacePath)
 
 	if got := piSessions[0]; got.CWD != workspacePath || got.CreatedAt != 1_700_000_000_000 {
 		t.Fatalf("Pi session = %#v", got)
 	}
-	if got := dshSessions[0]; got.CWD != workspacePath || got.CreatedAt != 1_700_000_001_000 {
+	if got := dshSessions[0]; got.CWD != workspacePath || got.CreatedAt != 1_700_000_001_000 || got.SessionName != "DSH title" {
 		t.Fatalf("DSH session = %#v", got)
 	}
 }

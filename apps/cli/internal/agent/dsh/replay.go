@@ -141,9 +141,11 @@ func (c *replayCoordinator) subscribe(result SessionSubscribeResult, request Ses
 	}
 	entry.nextSubscriber++
 	id := entry.nextSubscriber
-	initialUpdates := append(updates, SessionUpdate{Cursor: &DurableCursor{
+	// History is delivered exclusively through Snapshot. Updates begin with
+	// control state and then carry events published after this subscription.
+	initialUpdates := []SessionUpdate{{Cursor: &DurableCursor{
 		SessionID: request.SessionID, InstanceID: result.InstanceID, DurableThroughSeq: result.DurableThroughSeq,
-	}})
+	}}}
 	status := SessionStatus{SessionID: request.SessionID, Status: "idle"}
 	if entry.status != nil {
 		status = *entry.status

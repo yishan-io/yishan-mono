@@ -12,11 +12,18 @@ describe("parseAgentHistoryResult", () => {
       instanceId: "run-1",
       asOfSeq: 0,
       durableThroughSeq: 0,
+      filePath: "/dsh/sessions/session-1.jsonl",
     },
   };
 
   it("parses exact DSH history for the requested session", () => {
     expect(parseAgentHistoryResult(dshHistory, request)).toEqual(dshHistory);
+  });
+
+  it("accepts an empty DSH file path when no durable artifact exists", () => {
+    const historyWithoutArtifact = { ...dshHistory, dsh: { ...dshHistory.dsh, filePath: "" } };
+
+    expect(parseAgentHistoryResult(historyWithoutArtifact, request)).toEqual(historyWithoutArtifact);
   });
 
   it("allows persisted user and assistant surface events for controller reload validation", () => {
@@ -80,6 +87,20 @@ describe("parseAgentHistoryResult", () => {
     ["wrong runtime", { ...dshHistory, runtime: "pi" }],
     ["wrong session", { ...dshHistory, dsh: { ...dshHistory.dsh, session: { sessionId: "other", createdAt: 1 } } }],
     ["empty instanceId", { ...dshHistory, dsh: { ...dshHistory.dsh, instanceId: "" } }],
+    [
+      "missing file path",
+      {
+        runtime: "dsh",
+        dsh: {
+          session: { sessionId: "session-1", createdAt: 1 },
+          events: [{ type: "turn/end", seq: 0, time: 1, data: {} }],
+          instanceId: "run-1",
+          asOfSeq: 0,
+          durableThroughSeq: 0,
+        },
+      },
+    ],
+    ["non-string file path", { ...dshHistory, dsh: { ...dshHistory.dsh, filePath: 1 } }],
     ["unequal cursors", { ...dshHistory, dsh: { ...dshHistory.dsh, durableThroughSeq: -1 } }],
     [
       "non-contiguous events",

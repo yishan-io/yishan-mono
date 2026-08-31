@@ -52,13 +52,14 @@ export async function fetchSessionHistory(cwd: string): Promise<RuntimeAgentSess
   }
 }
 
-/** Resolves the transcript file path for one Pi session. Empty when no transcript exists yet. */
-export async function fetchAgentSessionFilePath(sessionId: string, cwd: string): Promise<string> {
-  const history = await readAgentSessionHistory(sessionId, cwd);
-  if (history.runtime !== "pi") {
-    throw new Error("Pi session history returned a non-Pi runtime");
-  }
-  return history.pi.filePath;
+/** Resolves the durable transcript file path for one runtime session. Empty when no transcript exists yet. */
+export async function fetchAgentSessionFilePath(
+  sessionId: string,
+  cwd: string,
+  runtime: Rpc.AgentRuntime = "pi",
+): Promise<string> {
+  const history = await readAgentSessionHistory(sessionId, cwd, runtime);
+  return history.runtime === "pi" ? history.pi.filePath : history.dsh.filePath;
 }
 
 /** Fetches live Pi sessions currently held by the daemon. */

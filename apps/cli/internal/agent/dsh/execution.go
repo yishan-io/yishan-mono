@@ -143,11 +143,13 @@ type SessionUpdate struct {
 type SessionSubscription struct {
 	Updates     <-chan SessionUpdate
 	Unsubscribe func()
-	// InstanceID and Baseline identify the transcript snapshot that seeded Updates.
+	// InstanceID and Baseline identify the authoritative transcript snapshot.
 	InstanceID string
 	Baseline   int64
 	// Snapshot is the authoritative subscribe result after the replay coordinator
-	// merges durable and in-memory events. It is a transport snapshot, not persistence.
+	// merges durable and in-memory events. Updates contains only control state and
+	// events published after this snapshot; it never replays Snapshot.Events.
+	// Snapshot is a transport snapshot, not persistence.
 	Snapshot SessionSubscribeResult
 }
 

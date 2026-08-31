@@ -3,9 +3,9 @@ import { normalizeAgentChatRuntime, selectNewAgentChatRuntime } from "./agentRun
 
 describe("agent runtime selection", () => {
   it.each([
-    [{ configured: false, ready: true, transcriptProtocolVersion: 2 }, "pi"],
-    [{ configured: true, ready: false, transcriptProtocolVersion: 2 }, "pi"],
-    [{ configured: true, ready: true, transcriptProtocolVersion: 2 }, "dsh"],
+    [{ configured: false, ready: true, transcriptProtocolVersion: 3 }, "pi"],
+    [{ configured: true, ready: false, transcriptProtocolVersion: 3 }, "pi"],
+    [{ configured: true, ready: true, transcriptProtocolVersion: 3 }, "dsh"],
   ] as const)("selects %s capability as %s for a new top-level tab", (dsh, runtime) => {
     expect(selectNewAgentChatRuntime({ dsh })).toBe(runtime);
   });

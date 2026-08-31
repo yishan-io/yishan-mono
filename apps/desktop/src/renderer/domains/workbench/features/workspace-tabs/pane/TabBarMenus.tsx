@@ -183,7 +183,7 @@ type TabContextMenuProps = {
   /** Selected runtime for this agent session; missing legacy records are Pi. */
   sessionRuntime?: "pi" | "dsh";
   /** Resolves one agent transcript file path (supplied by the caller; agent-owned). */
-  fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
+  fetchAgentSessionFilePath?: (sessionId: string, cwd: string, runtime?: "pi" | "dsh") => Promise<string>;
 };
 
 export function TabContextMenu({
@@ -214,13 +214,13 @@ export function TabContextMenu({
   const [sessionFilePath, setSessionFilePath] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || sessionRuntime === "dsh" || !sessionId || !cwd || !fetchAgentSessionFilePathFromProps) {
+    if (!open || !sessionId || !cwd || !fetchAgentSessionFilePathFromProps) {
       setSessionFilePath(null);
       return;
     }
     let cancelled = false;
     setSessionFilePath(null);
-    fetchAgentSessionFilePathFromProps(sessionId, cwd)
+    fetchAgentSessionFilePathFromProps(sessionId, cwd, sessionRuntime)
       .then((filePath) => {
         if (!cancelled) {
           setSessionFilePath(filePath);
@@ -301,7 +301,7 @@ export function TabContextMenu({
       >
         {closeAllActionLabel}
       </MenuItem>
-      {sessionId && sessionRuntime !== "dsh" && fetchAgentSessionFilePathFromProps && (
+      {sessionId && fetchAgentSessionFilePathFromProps && (
         <>
           <Divider sx={{ my: 0.5 }} />
           <MenuItem

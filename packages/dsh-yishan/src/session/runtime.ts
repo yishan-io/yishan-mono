@@ -71,6 +71,7 @@ export class SessionRuntime {
         instanceId: this.instanceId,
         asOfSeq: -1,
         durableThroughSeq: -1,
+        filePath: "",
       };
     }
     const persisted = await this.ctx.sessionPersistence.readFrom(request.sessionId as SessionId, 0);
@@ -86,6 +87,7 @@ export class SessionRuntime {
       instanceId: this.instanceId,
       asOfSeq: durableThroughSeq,
       durableThroughSeq,
+      filePath: this.ctx.sessionPersistence.locate(persisted.meta)?.path ?? "",
     };
   }
 

@@ -182,6 +182,26 @@ func TestDSHExecution_NewSessionStartsWithoutResume(t *testing.T) {
 	}
 }
 
+func TestDSHExecution_StartReturnsOneShotAttachSnapshot(t *testing.T) {
+	runtime := &executionDSH{subscribeSnapshot: dsh.SessionSubscribeResult{
+		SessionID: "new", InstanceID: "inc-1", Events: []dsh.SessionEvent{
+			{SessionID: "new", Seq: 0, Event: json.RawMessage(`{"type":"turn/end","seq":0,"time":0,"data":{"turn":0,"reason":{"kind":"completed"}}}`)},
+		},
+		AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 0,
+	}}
+	service := newDSHExecutionService(runtime)
+	result, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "new", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative",
+	})
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	started, ok := result.(rpc.AgentStartResult)
+	if !ok || started.DSHAttachSnapshot == nil || started.DSHAttachSnapshot.HeadSeq != 0 || len(started.DSHAttachSnapshot.Events) != 1 {
+		t.Fatalf("start result = %#v", result)
+	}
+}
+
 func TestDSHExecution_ResumeSubscriptionFailureDisposesAndReleasesIdentity(t *testing.T) {
 	runtime := &executionDSH{subscribeErr: errors.New("subscribe failed")}
 	service := newDSHExecutionService(runtime)
@@ -364,14 +384,19 @@ func TestDSHExecution_RunningSessionAcceptsSecondSteerPrompt(t *testing.T) {
 	}
 }
 
-func startDSHExecutionOnConnection(t *testing.T, service *Service, connection *rpc.Connection) {
+func startDSHExecutionOnConnection(t *testing.T, service *Service, connection *rpc.Connection) rpc.AgentStartResult {
 	t.Helper()
-	_, err := service.AgentStart(context.Background(), connection, rpc.AgentStartParams{
+	result, err := service.AgentStart(context.Background(), connection, rpc.AgentStartParams{
 		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative",
 	})
 	if err != nil {
 		t.Fatalf("start DSH: %v", err)
 	}
+	started, ok := result.(rpc.AgentStartResult)
+	if !ok {
+		t.Fatalf("start DSH result = %#v", result)
+	}
+	return started
 }
 
 func TestDSHExecution_AttachReturnsMergedReplaySnapshot(t *testing.T) {

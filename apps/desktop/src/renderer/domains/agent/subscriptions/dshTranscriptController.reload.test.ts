@@ -12,6 +12,7 @@ describe("DSHTranscriptController durable reload", () => {
       | ((snapshot: {
           session: { sessionId: string; createdAt: number };
           events: unknown[];
+          filePath: string;
           instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
@@ -39,6 +40,7 @@ describe("DSHTranscriptController durable reload", () => {
     resolveSnapshot?.({
       session: { sessionId: "session", createdAt: 0 },
       events: replayEvents.map((replayEvent) => replayEvent.update.event),
+      filePath: "",
       instanceId: "inc",
       asOfSeq: 128,
       durableThroughSeq: 128,
@@ -51,6 +53,7 @@ describe("DSHTranscriptController durable reload", () => {
       | ((snapshot: {
           session: { sessionId: string; createdAt: number };
           events: unknown[];
+          filePath: string;
           instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
@@ -83,6 +86,7 @@ describe("DSHTranscriptController durable reload", () => {
     resolveSnapshot?.({
       session: { sessionId: "session", createdAt: 0 },
       events: [event(0).update.event],
+      filePath: "",
       instanceId: "inc",
       asOfSeq: 0,
       durableThroughSeq: 0,
@@ -104,6 +108,7 @@ describe("DSHTranscriptController durable reload", () => {
       (snapshot: {
         session: { sessionId: string; createdAt: number };
         events: unknown[];
+        filePath: string;
         instanceId: string;
         asOfSeq: number;
         durableThroughSeq: number;
@@ -114,6 +119,7 @@ describe("DSHTranscriptController durable reload", () => {
         new Promise<{
           session: { sessionId: string; createdAt: number };
           events: unknown[];
+          filePath: string;
           instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
@@ -138,6 +144,7 @@ describe("DSHTranscriptController durable reload", () => {
     resolvers[0]?.({
       session: { sessionId: "session", createdAt: 0 },
       events: [],
+      filePath: "",
       instanceId: "A",
       asOfSeq: -1,
       durableThroughSeq: -1,
@@ -146,6 +153,7 @@ describe("DSHTranscriptController durable reload", () => {
     resolvers[1]?.({
       session: { sessionId: "session", createdAt: 0 },
       events: [event(0).update.event],
+      filePath: "",
       instanceId: "B",
       asOfSeq: 0,
       durableThroughSeq: 0,
@@ -162,6 +170,7 @@ describe("DSHTranscriptController durable reload", () => {
       .mockResolvedValueOnce({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
+        filePath: "",
         instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
@@ -200,6 +209,7 @@ describe("DSHTranscriptController durable reload", () => {
       .mockResolvedValueOnce({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
+        filePath: "",
         instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
@@ -224,6 +234,7 @@ describe("DSHTranscriptController durable reload", () => {
       .mockResolvedValueOnce({
         session: { sessionId: "session", createdAt: 0 },
         events: [event(0).update.event],
+        filePath: "",
         instanceId: "inc",
         asOfSeq: 0,
         durableThroughSeq: 0,
@@ -264,6 +275,7 @@ describe("DSHTranscriptController durable reload", () => {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [event(0).update.event],
+        filePath: "",
         instanceId: "inc",
         asOfSeq: 0,
         durableThroughSeq: 0,
@@ -322,6 +334,7 @@ describe("DSHTranscriptController durable reload", () => {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
+        filePath: "",
         instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
@@ -349,6 +362,7 @@ describe("DSHTranscriptController durable reload", () => {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
+        filePath: "",
         instanceId: "other",
         asOfSeq: -1,
         durableThroughSeq: -1,

@@ -24,6 +24,7 @@ type sessionListWireEntry struct {
 	CreatedAt     *int64 `json:"createdAt"`
 	ParentSession string `json:"parentSession,omitempty"`
 	AgentPreset   string `json:"agentPreset,omitempty"`
+	SessionName   string `json:"sessionName,omitempty"`
 	Live          *bool  `json:"live"`
 	Persisted     *bool  `json:"persisted"`
 }
@@ -43,7 +44,7 @@ func (result sessionListWireResult) validate() (SessionListResult, error) {
 		}
 		sessions = append(sessions, SessionListEntry{
 			SessionID: entry.SessionID, CreatedAt: *entry.CreatedAt, ParentSession: entry.ParentSession,
-			AgentPreset: entry.AgentPreset, Live: *entry.Live, Persisted: *entry.Persisted,
+			AgentPreset: entry.AgentPreset, SessionName: entry.SessionName, Live: *entry.Live, Persisted: *entry.Persisted,
 		})
 	}
 	return SessionListResult{Sessions: sessions}, nil
@@ -67,10 +68,11 @@ type sessionReadWireResult struct {
 	InstanceID        string            `json:"instanceId"`
 	AsOfSeq           *int64            `json:"asOfSeq"`
 	DurableThroughSeq *int64            `json:"durableThroughSeq"`
+	FilePath          *string           `json:"filePath"`
 }
 
 func (response sessionReadWireResult) validate(request SessionReadRequest) (SessionReadResult, error) {
-	if response.Session.SessionID != request.SessionID || response.Session.CreatedAt == nil || *response.Session.CreatedAt < 0 || response.Events == nil || response.InstanceID == "" || response.AsOfSeq == nil || response.DurableThroughSeq == nil {
+	if response.Session.SessionID != request.SessionID || response.Session.CreatedAt == nil || *response.Session.CreatedAt < 0 || response.Events == nil || response.InstanceID == "" || response.AsOfSeq == nil || response.DurableThroughSeq == nil || response.FilePath == nil {
 		return SessionReadResult{}, errors.New("invalid DSH session read response")
 	}
 	if !isSafeSequence(*response.AsOfSeq, -1) || !isSafeSequence(*response.DurableThroughSeq, -1) || *response.AsOfSeq != *response.DurableThroughSeq || int64(len(response.Events))-1 != *response.AsOfSeq {
@@ -86,7 +88,7 @@ func (response sessionReadWireResult) validate(request SessionReadRequest) (Sess
 			SessionID: response.Session.SessionID, CreatedAt: *response.Session.CreatedAt,
 			ParentSession: response.Session.ParentSession, AgentPreset: response.Session.AgentPreset,
 		},
-		Events: response.Events, InstanceID: response.InstanceID, AsOfSeq: *response.AsOfSeq, DurableThroughSeq: *response.DurableThroughSeq,
+		Events: response.Events, InstanceID: response.InstanceID, AsOfSeq: *response.AsOfSeq, DurableThroughSeq: *response.DurableThroughSeq, FilePath: *response.FilePath,
 	}, nil
 }
 

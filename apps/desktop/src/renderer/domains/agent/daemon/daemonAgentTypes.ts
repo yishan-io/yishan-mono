@@ -327,10 +327,14 @@ export type AgentCancelSubagentResult = {
 };
 
 /** Returns the runtime and session identity after a successful start. */
-export type AgentStartResult = {
-  runtime: AgentRuntime;
-  sessionId: string;
-};
+export type AgentStartResult =
+  | { runtime: "pi"; sessionId: string }
+  | {
+      runtime: "dsh";
+      sessionId: string;
+      /** One-shot transcript seed required by DSH protocol v3. */
+      dshAttachSnapshot: AgentDSHAttachResult;
+    };
 
 /** Acknowledges a runtime-neutral session mutation. */
 export type AgentAckResult = {
@@ -395,6 +399,8 @@ export type AgentDSHHistory = {
   instanceId: string;
   asOfSeq: number;
   durableThroughSeq: number;
+  /** Absolute DSH JSONL artifact path, or empty when no durable artifact exists. */
+  filePath: string;
 };
 
 /** Returns Pi durable history for a Pi runtime request. */

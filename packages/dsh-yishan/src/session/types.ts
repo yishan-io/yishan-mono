@@ -24,6 +24,7 @@ export type DurableSessionSnapshot = {
   instanceId: string;
   asOfSeq: number;
   durableThroughSeq: number;
+  filePath: string;
 };
 
 /** Stock initialization routing options retained by the runtime. */

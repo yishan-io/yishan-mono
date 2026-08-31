@@ -48,7 +48,7 @@ export type SplitPaneGroupProps = {
   onHistoryClick?: (event: React.MouseEvent<HTMLElement>) => void;
   enabledAgentKinds?: string[];
   agentCreateOptions?: Array<import("./TabBar").AgentCreateOptionDef>;
-  fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
+  fetchAgentSessionFilePath?: (sessionId: string, cwd: string, runtime?: "pi" | "dsh") => Promise<string>;
   disabled?: boolean;
   onContentPlaceholderChange?: (paneId: string, placeholder: HTMLDivElement | null) => void;
   /** Renders tab content for the selected tab. */
