@@ -65,16 +65,7 @@ func extractBundle(stage string, bundle Bundle, archive []byte) (Plugin, error) 
 	if err := rejectLifecycleScripts(stage); err != nil {
 		return Plugin{}, err
 	}
-	return Plugin{Name: bundle.Name, Version: bundle.Version, Enabled: true, Files: state.files, TreeSHA256: hashTree(state.files)}, nil
-}
-
-func hasBundleFile(files []FileHash, path string) bool {
-	for _, file := range files {
-		if file.Path == path {
-			return true
-		}
-	}
-	return false
+	return Plugin{Name: bundle.Name, Version: bundle.Version, Enabled: true, TreeSHA256: hashTree(state.files)}, nil
 }
 
 func extractTar(stage string, reader *tar.Reader) (extractState, error) {
@@ -133,9 +124,6 @@ func archivePath(name string) (string, bool, error) {
 	relative, found := strings.CutPrefix(clean, "package/")
 	if !found || relative == "" || strings.Contains(relative, "\\") {
 		return "", false, fmt.Errorf("%w: npm archive entry outside package root", ErrInvalidArchive)
-	}
-	if relative == adaptationManifestName || strings.HasPrefix(relative, adaptationManifestName+"/") {
-		return "", false, fmt.Errorf("%w: reserved path %q", ErrInvalidArchive, relative)
 	}
 	return relative, false, nil
 }
@@ -205,20 +193,5 @@ func rejectLifecycleScripts(stage string) error {
 			return fmt.Errorf("%w: lifecycle script %q is forbidden", ErrInvalidArchive, name)
 		}
 	}
-	return nil
-}
-
-func addAuditedAdaptation(stage string, plugin *Plugin, adaptation AdaptationManifest) error {
-	if !adaptation.isValid() {
-		return ErrBundleNotLoadable
-	}
-	manifestPath := filepath.Join(stage, adaptationManifestName)
-	if err := os.WriteFile(manifestPath, adaptation.Content, 0o644); err != nil {
-		return fmt.Errorf("write audited adaptation manifest: %w", err)
-	}
-	plugin.Files = append(plugin.Files, FileHash{Path: adaptationManifestName, SHA256: adaptation.SHA256})
-	plugin.TreeSHA256 = hashTree(plugin.Files)
-	plugin.AdaptationVersion = adaptation.Version
-	plugin.AdaptationSHA256 = adaptation.SHA256
 	return nil
 }

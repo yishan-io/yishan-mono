@@ -2,14 +2,14 @@ import { mkdir } from "node:fs/promises";
 
 import { Context } from "@deepseek-ai/cordis";
 import { type BridgeHostConfig, apply as applyDaemonBridge } from "@yishan-io/dsh-daemon-bridge";
+import * as pluginLoader from "@yishan-io/dsh-plugin-loader";
+import type { PluginLoadState } from "@yishan-io/dsh-plugin-loader";
 import * as providerPlugin from "@yishan-io/dsh-provider";
 import * as sessionPlugin from "@yishan-io/dsh-session";
 import * as workspacePlugin from "@yishan-io/dsh-workspace";
 
-import { resolveDataDirectory } from "./config";
+import { isDeveloperMode, resolveDataDirectory } from "./config";
 import { installCorePlugins } from "./corePlugins";
-import { loadPlugins } from "./plugins";
-import type { PluginLoadState } from "./private/plugin-loader";
 
 /** Configuration for the production DSH runtime composition. */
 export type RuntimeConfig = BridgeHostConfig & {
@@ -40,9 +40,9 @@ export class RuntimeHost {
       await context.plugin(providerPlugin, { dataDirectory });
       await context.plugin(workspacePlugin);
       await context.plugin(sessionPlugin, { dataDirectory });
-      const plugins = await loadPlugins(context, dataDirectory);
+      await context.plugin(pluginLoader, { pluginRoot: dataDirectory, developerMode: isDeveloperMode() });
       context.daemonBridge.start();
-      return new RuntimeHost(context, plugins.states);
+      return new RuntimeHost(context, context.yishanPluginLoader.states);
     } catch (startupError) {
       await RuntimeHost.cleanupFailedStartup(context, startupError);
       throw startupError;

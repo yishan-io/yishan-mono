@@ -256,9 +256,11 @@ func replacePlugin(plugins []Plugin, installed Plugin) []Plugin {
 }
 func canonicalInventory(inventory Inventory) ([]byte, error) {
 	for index := range inventory.Plugins {
-		sort.Slice(inventory.Plugins[index].Files, func(a, b int) bool {
-			return inventory.Plugins[index].Files[a].Path < inventory.Plugins[index].Files[b].Path
-		})
+		entries, err := validatePluginEntries(inventory.Plugins[index].Entries)
+		if err != nil {
+			return nil, err
+		}
+		inventory.Plugins[index].Entries = entries
 	}
 	sort.Slice(inventory.Plugins, func(a, b int) bool { return inventory.Plugins[a].Name < inventory.Plugins[b].Name })
 	return json.Marshal(inventory)
@@ -377,19 +379,18 @@ func verifyScopedPackageParent(root string, expected map[string]bool) error {
 	return nil
 }
 func verifyPluginTree(root string, plugin Plugin) error {
-	files, directories, err := hashInstalledTree(root)
+	files, err := hashInstalledTree(root)
 	if err != nil {
 		return err
 	}
-	if hashTree(files) != plugin.TreeSHA256 || !sameFileHashes(files, plugin.Files) || !sameDirectories(directories, plugin.Files) {
+	if hashTree(files) != plugin.TreeSHA256 || validatePluginEntrypoints(root, plugin.Entries) != nil {
 		return ErrInventoryTampered
 	}
 	return nil
 }
 
-func hashInstalledTree(root string) ([]FileHash, map[string]bool, error) {
+func hashInstalledTree(root string) ([]FileHash, error) {
 	files := make([]FileHash, 0)
-	directories := make(map[string]bool)
 	err := filepath.WalkDir(root, func(fullPath string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -402,9 +403,6 @@ func hashInstalledTree(root string) ([]FileHash, map[string]bool, error) {
 			return err
 		}
 		if entry.IsDir() {
-			if relative != "." {
-				directories[filepath.ToSlash(relative)] = true
-			}
 			return nil
 		}
 		content, err := os.ReadFile(fullPath)
@@ -416,40 +414,7 @@ func hashInstalledTree(root string) ([]FileHash, map[string]bool, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("hash installed plugin tree: %w", err)
+		return nil, fmt.Errorf("hash installed plugin tree: %w", err)
 	}
-	return files, directories, nil
-}
-
-func sameDirectories(actual map[string]bool, files []FileHash) bool {
-	expected := make(map[string]bool)
-	for _, file := range files {
-		directory := filepath.ToSlash(filepath.Dir(file.Path))
-		for directory != "." {
-			expected[directory] = true
-			directory = filepath.ToSlash(filepath.Dir(directory))
-		}
-	}
-	if len(actual) != len(expected) {
-		return false
-	}
-	for directory := range expected {
-		if !actual[directory] {
-			return false
-		}
-	}
-	return true
-}
-func sameFileHashes(left, right []FileHash) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	sort.Slice(left, func(a, b int) bool { return left[a].Path < left[b].Path })
-	sort.Slice(right, func(a, b int) bool { return right[a].Path < right[b].Path })
-	for index := range left {
-		if left[index] != right[index] {
-			return false
-		}
-	}
-	return true
+	return files, nil
 }

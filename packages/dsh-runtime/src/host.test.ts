@@ -8,7 +8,7 @@ const runtimeMocks = vi.hoisted(() => ({
   dispose: vi.fn<() => Promise<void>>(),
   installCorePlugins: vi.fn<() => Promise<void>>(),
   installProviderPlugin: vi.fn<() => Promise<void>>(),
-  loadPlugins: vi.fn<() => Promise<{ states: readonly [] }>>(),
+  installPluginLoader: vi.fn<() => Promise<void>>(),
   bridgeStart: vi.fn(),
 }));
 
@@ -34,11 +34,16 @@ vi.mock("@yishan-io/dsh-daemon-bridge", () => ({
     context.daemonBridge = { start: runtimeMocks.bridgeStart };
   },
 }));
+vi.mock("@yishan-io/dsh-plugin-loader", () => ({
+  apply: async (context: { yishanPluginLoader?: { states: readonly [] } }) => {
+    await runtimeMocks.installPluginLoader();
+    context.yishanPluginLoader = { states: [] };
+  },
+}));
 vi.mock("@yishan-io/dsh-provider", () => ({ apply: runtimeMocks.installProviderPlugin }));
 vi.mock("@yishan-io/dsh-workspace", () => ({ apply: vi.fn() }));
 vi.mock("@yishan-io/dsh-session", () => ({ apply: vi.fn() }));
 vi.mock("./corePlugins", () => ({ installCorePlugins: runtimeMocks.installCorePlugins }));
-vi.mock("./plugins", () => ({ loadPlugins: runtimeMocks.loadPlugins }));
 
 import { RuntimeHost } from "./host";
 
@@ -46,7 +51,7 @@ beforeEach(() => {
   runtimeMocks.dispose.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installCorePlugins.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installProviderPlugin.mockReset().mockResolvedValue(undefined);
-  runtimeMocks.loadPlugins.mockReset().mockResolvedValue({ states: [] });
+  runtimeMocks.installPluginLoader.mockReset().mockResolvedValue(undefined);
   runtimeMocks.bridgeStart.mockReset();
 });
 
@@ -58,7 +63,7 @@ describe("RuntimeHost", () => {
     try {
       await RuntimeHost.create({ dataDirectory });
       expect(runtimeMocks.bridgeStart).toHaveBeenCalledOnce();
-      const pluginsOrder = runtimeMocks.loadPlugins.mock.invocationCallOrder[0];
+      const pluginsOrder = runtimeMocks.installPluginLoader.mock.invocationCallOrder[0];
       const bridgeOrder = runtimeMocks.bridgeStart.mock.invocationCallOrder[0];
       if (pluginsOrder === undefined || bridgeOrder === undefined) throw new Error("startup calls were not recorded");
       expect(pluginsOrder).toBeLessThan(bridgeOrder);

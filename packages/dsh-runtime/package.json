@@ -17,11 +17,10 @@
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.1",
     "@yishan-io/dsh-daemon-bridge": "workspace:*",
+    "@yishan-io/dsh-plugin-loader": "workspace:*",
     "@yishan-io/dsh-provider": "workspace:*",
     "@yishan-io/dsh-workspace": "workspace:*",
-    "@deepseek-ai/cordis-plugin-loader": "1.0.2",
     "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
-    "yaml": "2.9.0",
     "@yishan-io/dsh-session": "workspace:*",
     "@deepseek-ai/dsh-agent-spine-demo": "0.1.1-rc.2",
     "@deepseek-ai/dsh-bash-local": "0.1.1-rc.2",

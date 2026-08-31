@@ -148,6 +148,18 @@
         "@types/node": "^24.12.4",
       },
     },
+    "packages/dsh-plugin-loader": {
+      "name": "@yishan-io/dsh-plugin-loader",
+      "version": "0.1.0",
+      "dependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/cordis-plugin-loader": "1.0.2",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/node": "^24.12.4",
+      },
+    },
     "packages/dsh-provider": {
       "name": "@yishan-io/dsh-provider",
       "version": "0.1.0",
@@ -168,7 +180,6 @@
       "version": "0.1.0",
       "dependencies": {
         "@deepseek-ai/cordis": "4.0.1",
-        "@deepseek-ai/cordis-plugin-loader": "1.0.2",
         "@deepseek-ai/dsh-agent-spine-demo": "0.1.1-rc.2",
         "@deepseek-ai/dsh-bash-local": "0.1.1-rc.2",
         "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
@@ -177,10 +188,10 @@
         "@deepseek-ai/dsh-subprocess-local": "0.1.1-rc.2",
         "@deepseek-ai/dsh-tool-subagent": "0.1.1-rc.2",
         "@yishan-io/dsh-daemon-bridge": "workspace:*",
+        "@yishan-io/dsh-plugin-loader": "workspace:*",
         "@yishan-io/dsh-provider": "workspace:*",
         "@yishan-io/dsh-session": "workspace:*",
         "@yishan-io/dsh-workspace": "workspace:*",
-        "yaml": "2.9.0",
       },
       "devDependencies": {
         "@types/node": "^24.12.4",
@@ -1494,6 +1505,8 @@
     "@yishan-io/desktop": ["@yishan-io/desktop@workspace:apps/desktop"],
 
     "@yishan-io/dsh-daemon-bridge": ["@yishan-io/dsh-daemon-bridge@workspace:packages/dsh-daemon-bridge"],
+
+    "@yishan-io/dsh-plugin-loader": ["@yishan-io/dsh-plugin-loader@workspace:packages/dsh-plugin-loader"],
 
     "@yishan-io/dsh-provider": ["@yishan-io/dsh-provider@workspace:packages/dsh-provider"],
 
@@ -3271,6 +3284,8 @@
 
     "@yishan-io/dsh-daemon-bridge/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
 
+    "@yishan-io/dsh-plugin-loader/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+
     "@yishan-io/dsh-provider/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
 
     "@yishan-io/dsh-runtime/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
@@ -3528,6 +3543,8 @@
     "@shikijs/stream/@shikijs/core/@types/hast": ["@types/hast@3.0.5", "", { "dependencies": { "@types/unist": "*" } }, "sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g=="],
 
     "@yishan-io/dsh-daemon-bridge/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@yishan-io/dsh-plugin-loader/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@yishan-io/dsh-provider/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 

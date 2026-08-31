@@ -87,10 +87,12 @@ func (i *Installer) stageBundle(bundle Bundle, approved ApprovedBundle, archive 
 		_ = os.RemoveAll(stage)
 		return Plugin{}, "", err
 	}
-	if err := addAuditedAdaptation(stage, &plugin, approved.Adaptation); err != nil {
+	if err := validatePluginEntrypoints(stage, approved.Entries); err != nil {
 		_ = os.RemoveAll(stage)
 		return Plugin{}, "", err
 	}
+	plugin.Entries = make([]PluginEntry, len(approved.Entries))
+	copy(plugin.Entries, approved.Entries)
 	return plugin, stage, nil
 }
 
