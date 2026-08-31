@@ -7,7 +7,6 @@ import { SessionProjectionRegistry } from "@deepseek-ai/dsh-session-projection";
 import SqliteSessionQueryEngine from "@deepseek-ai/dsh-session-query-sqlite";
 
 import * as routesPlugin from "./routesPlugin";
-import type { ValidateModelSelection } from "./session/runtime";
 
 const SESSION_LOG_DIRECTORY_NAME = "sessions";
 const SESSION_QUERY_DATABASE_NAME = "session-query.sqlite";
@@ -16,10 +15,7 @@ const SESSION_QUERY_DATABASE_NAME = "session-query.sqlite";
 export const name = "dsh-session";
 
 /** Configuration supplied by the runtime composition root. */
-export type SessionPluginConfig = {
-  dataDirectory: string;
-  validateModelSelection: ValidateModelSelection;
-};
+export type SessionPluginConfig = { dataDirectory: string };
 
 /** Installs session-owned services, then mounts their bridge routes. */
 export async function apply(context: Context, config: SessionPluginConfig): Promise<void> {
@@ -31,5 +27,5 @@ export async function apply(context: Context, config: SessionPluginConfig): Prom
   await context.plugin(SqliteSessionQueryEngine, {
     path: join(config.dataDirectory, SESSION_QUERY_DATABASE_NAME),
   });
-  await context.plugin(routesPlugin, { validateModelSelection: config.validateModelSelection });
+  await context.plugin(routesPlugin);
 }

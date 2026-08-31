@@ -77,7 +77,7 @@ async function mountRuntime(records: QueryRecord[] = []): Promise<Harness> {
     },
   });
   const bridgeHost = new BridgeHost(ctx, { input, output });
-  const server = new SessionRequestHandler(ctx, bridgeHost, async () => undefined);
+  const server = new SessionRequestHandler(ctx, bridgeHost, { validateSelection: async () => undefined });
   registerSessionRoutes(ctx, server);
   bridgeHost.start();
   return { ctx, input, frames, server, subagents };

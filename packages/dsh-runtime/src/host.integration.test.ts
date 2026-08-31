@@ -5,7 +5,6 @@ import { PassThrough, Writable } from "node:stream";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { RuntimeHost } from "./host";
 import {
   DIRECT_DEEPSEEK_PROVIDER,
   PI_AI_DEEPSEEK_PROVIDER,
@@ -14,7 +13,9 @@ import {
   YISHAN_PI_AI_ACTIVE_PROVIDER_COUNT,
   YISHAN_PI_AI_PROVIDER_ALLOWLIST,
   YISHAN_UNSUPPORTED_PI_AI_PROVIDERS,
-} from "./private/provider";
+} from "@yishan-io/dsh-provider";
+
+import { RuntimeHost } from "./host";
 
 async function waitForFrame(frames: Record<string, unknown>[], id: number): Promise<Record<string, unknown>> {
   const deadline = Date.now() + 5_000;

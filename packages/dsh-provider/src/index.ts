@@ -1,23 +1,28 @@
-/** Stable provider composition APIs required by the Yishan DSH runtime. */
-export { installCredentialsPlugin } from "./credentials";
+export { apply, inject, name, ProviderCatalogService } from "./plugin";
+export type { ModelSelection, ProviderPluginConfig } from "./plugin";
 export {
   assertPiAiProviderManifest,
   DIRECT_DEEPSEEK_PROVIDER,
   PI_AI_DEEPSEEK_PROVIDER,
   YISHAN_DSH_ACTIVE_PROVIDER_COUNT,
+  YISHAN_DSH_ACTIVE_PROVIDER_IDS,
   YISHAN_DSH_ACTIVE_PROVIDER_SET,
   YISHAN_PI_AI_ACTIVE_PROVIDER_COUNT,
+  YISHAN_PI_AI_ACTIVE_PROVIDER_MANIFEST,
+  YISHAN_PI_AI_CATALOG,
+  YISHAN_PI_AI_CONFIG,
   YISHAN_PI_AI_PROVIDER_ALLOWLIST,
   YISHAN_UNSUPPORTED_PI_AI_PROVIDERS,
   listProviders,
   validateProviderSelection,
   ProviderSelectionError,
-  YISHAN_PI_AI_CONFIG,
-  type ProviderAuthentication,
-  type ProviderCatalog,
-  type ProviderCatalogEntry,
-  type ProviderCatalogModel,
-} from "./providers";
+} from "./catalog";
+export type {
+  ProviderAuthentication,
+  ProviderCatalog,
+  ProviderCatalogEntry,
+  ProviderCatalogModel,
+} from "./catalog";
 export {
   installDshTestReplayAdapter,
   isDshTestReplayEnabled,

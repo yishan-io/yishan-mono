@@ -17,7 +17,7 @@ import {
   assertPiAiProviderManifest,
   listProviders,
   validateProviderSelection,
-} from "./providers";
+} from "./catalog";
 
 describe("Yishan pi-ai provider manifest", () => {
   it("defines exactly 36 pi-ai routes plus the separate direct DeepSeek route for 37 active DSH routes", () => {

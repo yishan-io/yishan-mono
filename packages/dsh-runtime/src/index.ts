@@ -1,8 +1,6 @@
 import { RuntimeHost } from "./host";
-import { installDshTestReplayAdapter, isDshTestReplayEnabled } from "./private/provider";
 
 const runtime = await RuntimeHost.create();
-if (isDshTestReplayEnabled()) installDshTestReplayAdapter(runtime.context);
 
 let closeTask: Promise<void> | undefined;
 const closeAndExit = (exitCode: number): void => {

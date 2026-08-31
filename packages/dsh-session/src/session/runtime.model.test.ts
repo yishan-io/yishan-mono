@@ -110,9 +110,11 @@ describe("Yishan provider switching through the DSH agent loop", () => {
     vi.spyOn(context.sessions, "flush").mockResolvedValue(true);
     const adapter = new DeterministicAdapter();
     context.llm.registerAdapter([INITIAL_ROUTE.provider], adapter);
-    const runtime = new SessionRuntime(context, createTransport(), async ({ provider, model }) => {
-      if (provider !== "deepseek-official" || !["model", "first-model", "next-model"].includes(model))
-        throw Object.assign(new Error("invalid provider"), { code: "YISHAN_PROVIDER_SELECTION_INVALID" });
+    const runtime = new SessionRuntime(context, createTransport(), {
+      validateSelection: async ({ provider, model }) => {
+        if (provider !== "deepseek-official" || !["model", "first-model", "next-model"].includes(model))
+          throw Object.assign(new Error("invalid provider"), { code: "YISHAN_PROVIDER_SELECTION_INVALID" });
+      },
     });
     adapter.onFirstRequest = async () => await runtime.setModel({ cwd: CWD, sessionId: SESSION_ID, ...NEXT_ROUTE });
     context.on("session/event", (session, event) => runtime.handleSessionEvent(session, event));

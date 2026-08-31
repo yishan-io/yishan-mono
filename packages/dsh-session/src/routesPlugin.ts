@@ -1,8 +1,8 @@
 import type { Context } from "@deepseek-ai/cordis";
 import { type BridgeRequestHandler, YISHAN_METHODS } from "@yishan-io/dsh-daemon-bridge";
+import type {} from "@yishan-io/dsh-provider";
 
 import { SessionRequestHandler } from "./requestHandler";
-import type { ValidateModelSelection } from "./session/runtime";
 
 /** Cordis plugin name for session bridge routes. */
 export const name = "dsh-session-routes";
@@ -15,11 +15,9 @@ export const inject = [
   "sessionPersistence",
   "sessionQuery",
   "subagents",
+  "yishanProviderCatalog",
   "yishanWorkspaceBindingHost",
 ];
-
-/** Route plugin configuration supplied by the session package. */
-export type SessionRoutesConfig = { validateModelSelection: ValidateModelSelection };
 
 const SESSION_METHODS = [
   YISHAN_METHODS.start,
@@ -39,8 +37,8 @@ const SESSION_METHODS = [
 ] as const;
 
 /** Installs session request routes after all required services are visible. */
-export function apply(context: Context, config: SessionRoutesConfig): void {
-  const handler = new SessionRequestHandler(context, context.daemonBridge, config.validateModelSelection);
+export function apply(context: Context): void {
+  const handler = new SessionRequestHandler(context, context.daemonBridge, context.yishanProviderCatalog);
   const unregisterRoutes = registerSessionRoutes(context, handler);
   context.effect(
     () => async () => {

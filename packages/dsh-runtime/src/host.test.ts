@@ -7,8 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const runtimeMocks = vi.hoisted(() => ({
   dispose: vi.fn<() => Promise<void>>(),
   installCorePlugins: vi.fn<() => Promise<void>>(),
-  validateModelSelection: vi.fn(async () => undefined),
-  installProviders: vi.fn<() => Promise<void>>(),
+  installProviderPlugin: vi.fn<() => Promise<void>>(),
   loadPlugins: vi.fn<() => Promise<{ states: readonly [] }>>(),
   bridgeStart: vi.fn(),
 }));
@@ -35,13 +34,10 @@ vi.mock("@yishan-io/dsh-daemon-bridge", () => ({
     context.daemonBridge = { start: runtimeMocks.bridgeStart };
   },
 }));
+vi.mock("@yishan-io/dsh-provider", () => ({ apply: runtimeMocks.installProviderPlugin }));
 vi.mock("@yishan-io/dsh-workspace", () => ({ apply: vi.fn() }));
 vi.mock("@yishan-io/dsh-session", () => ({ apply: vi.fn() }));
 vi.mock("./corePlugins", () => ({ installCorePlugins: runtimeMocks.installCorePlugins }));
-vi.mock("./providers", () => ({
-  installProviders: runtimeMocks.installProviders,
-  validateModelSelection: runtimeMocks.validateModelSelection,
-}));
 vi.mock("./plugins", () => ({ loadPlugins: runtimeMocks.loadPlugins }));
 
 import { RuntimeHost } from "./host";
@@ -49,8 +45,7 @@ import { RuntimeHost } from "./host";
 beforeEach(() => {
   runtimeMocks.dispose.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installCorePlugins.mockReset().mockResolvedValue(undefined);
-  runtimeMocks.installProviders.mockReset().mockResolvedValue(undefined);
-  runtimeMocks.validateModelSelection.mockReset().mockResolvedValue(undefined);
+  runtimeMocks.installProviderPlugin.mockReset().mockResolvedValue(undefined);
   runtimeMocks.loadPlugins.mockReset().mockResolvedValue({ states: [] });
   runtimeMocks.bridgeStart.mockReset();
 });

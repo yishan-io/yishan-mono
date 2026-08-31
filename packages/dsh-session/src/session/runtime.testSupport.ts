@@ -146,9 +146,11 @@ export function createHarness() {
   const runtime = new SessionRuntime(
     context,
     transport,
-    async ({ provider, model }) => {
-      if (provider !== "deepseek-official" || !["model", "first-model", "next-model"].includes(model))
-        throw Object.assign(new Error("invalid provider"), { code: "YISHAN_PROVIDER_SELECTION_INVALID" });
+    {
+      validateSelection: async ({ provider, model }) => {
+        if (provider !== "deepseek-official" || !["model", "first-model", "next-model"].includes(model))
+          throw Object.assign(new Error("invalid provider"), { code: "YISHAN_PROVIDER_SELECTION_INVALID" });
+      },
     },
     "test-run",
   );

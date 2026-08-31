@@ -6,6 +6,7 @@ import { type SessionId, foldRequestHeader } from "@deepseek-ai/dsh-session";
 import type {} from "@deepseek-ai/dsh-session-persistence";
 
 import { type BridgeNotificationSink, YISHAN_NOTIFICATIONS } from "@yishan-io/dsh-daemon-bridge";
+import type { ProviderCatalogService } from "@yishan-io/dsh-provider";
 import type {} from "@yishan-io/dsh-workspace";
 import type { DurableCursor } from "../shared/cursor";
 
@@ -43,9 +44,6 @@ import {
 import type { AgentHandle, CwdTask, DurableSessionSnapshot, InitializeOptions, LiveSession } from "./types";
 export type { DurableSessionSnapshot } from "./types";
 
-/** Validates one exact provider and model before session execution. */
-export type ValidateModelSelection = (selection: { provider: string; model: string }) => Promise<void>;
-
 /** Owns all Yishan-created or resumed DSH agent handles for one runtime instance ID. */
 export class SessionRuntime {
   private readonly handles = new Map<string, AgentHandle>();
@@ -62,7 +60,7 @@ export class SessionRuntime {
   constructor(
     private readonly ctx: Context,
     private readonly transport: BridgeNotificationSink,
-    private readonly validateModelSelection: ValidateModelSelection,
+    private readonly providerCatalog: Pick<ProviderCatalogService, "validateSelection">,
     instanceId?: string,
   ) {
     registerSessionEventTypes();
@@ -152,7 +150,7 @@ export class SessionRuntime {
         "YISHAN_PROVIDER_SELECTION_INVALID",
       );
     const selection = { provider, model: request.model };
-    await this.validateModelSelection(selection);
+    await this.providerCatalog.validateSelection(selection);
     if (selectionRef === undefined)
       throw new SessionExecutionError("session is owned by stock DSH", "YISHAN_SESSION_COLLISION");
     selectionRef.current = selection;
@@ -339,7 +337,7 @@ export class SessionRuntime {
             : { provider: options.provider, model: options.model },
         assembled: undefined,
       };
-      if (selection.current !== undefined) await this.validateModelSelection(selection.current);
+      if (selection.current !== undefined) await this.providerCatalog.validateSelection(selection.current);
       const handle = await (operation === "start"
         ? this.ctx.agents.create({
             sessionId: sessionId as SessionId,

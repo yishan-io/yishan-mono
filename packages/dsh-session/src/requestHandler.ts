@@ -3,6 +3,7 @@ import type { SessionId } from "@deepseek-ai/dsh-session";
 import type { SessionRecord } from "@deepseek-ai/dsh-session-query";
 import type { SubagentDescendantListEntry, SubagentListEntry } from "@deepseek-ai/dsh-subagent";
 import { type BridgeNotificationSink, YISHAN_METHODS } from "@yishan-io/dsh-daemon-bridge";
+import type { ProviderCatalogService } from "@yishan-io/dsh-provider";
 import { parseStockSessionPromptRequest } from "./session/protocol";
 import type {
   SessionDisposeRequest,
@@ -37,7 +38,7 @@ import {
   parseSessionSubscribeRequest,
   parseSetModelRequest,
 } from "./session/requestValidation";
-import { SessionRuntime, type ValidateModelSelection } from "./session/runtime";
+import { SessionRuntime } from "./session/runtime";
 import { requireExactRecord, requireNonEmptyString } from "./shared/validation";
 import { SubagentLifecycleNotifier } from "./subagentNotifications";
 
@@ -88,9 +89,9 @@ export class SessionRequestHandler {
   constructor(
     private readonly ctx: Context,
     notifications: BridgeNotificationSink,
-    validateModelSelection: ValidateModelSelection,
+    providerCatalog: Pick<ProviderCatalogService, "validateSelection">,
   ) {
-    this.runtime = new SessionRuntime(ctx, notifications, validateModelSelection);
+    this.runtime = new SessionRuntime(ctx, notifications, providerCatalog);
     this.subscribeToRuntimeEvents();
     new SubagentLifecycleNotifier(this.ctx, this.runtime, notifications).subscribe();
   }

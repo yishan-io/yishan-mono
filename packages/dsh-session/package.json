@@ -32,6 +32,7 @@
     "@deepseek-ai/dsh-session-query-sqlite": "0.1.1-rc.2",
     "@deepseek-ai/dsh-subagent": "0.1.1-rc.2",
     "@yishan-io/dsh-daemon-bridge": "workspace:*",
+    "@yishan-io/dsh-provider": "workspace:*",
     "@yishan-io/dsh-workspace": "workspace:*",
     "zod": "^4.3.6"
   },

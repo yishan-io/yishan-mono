@@ -5,16 +5,17 @@ import { PassThrough, Writable } from "node:stream";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { RuntimeHost } from "./host";
-import { listProviders, validateProviderSelection } from "./private/provider";
 import {
   YISHAN_DSH_TEST_REPLAY_ENVIRONMENT_VALUE,
   YISHAN_DSH_TEST_REPLAY_ENVIRONMENT_VARIABLE,
   YISHAN_DSH_TEST_REPLAY_MODEL,
   YISHAN_DSH_TEST_REPLAY_PROVIDER,
-  installDshTestReplayAdapter,
   isDshTestReplayEnabled,
-} from "./private/provider";
+  listProviders,
+  validateProviderSelection,
+} from "@yishan-io/dsh-provider";
+
+import { RuntimeHost } from "./host";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -42,7 +43,6 @@ describe("Yishan production runtime without an LLM adapter", () => {
     });
 
     try {
-      installDshTestReplayAdapter(runtime.context);
       const catalog = await listProviders(runtime.context.llm);
       expect(catalog.providers).toContainEqual({
         id: YISHAN_DSH_TEST_REPLAY_PROVIDER,
