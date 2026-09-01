@@ -19,7 +19,15 @@ func testRunnerJob(status Status) Job {
 type testWorkspaceResolver struct{}
 
 func (testWorkspaceResolver) GetWorkspace(string) (workspace.Workspace, error) {
-	return workspace.Workspace{ID: "workspace", Path: "/workspace", ProjectID: "project", OrgID: "org"}, nil
+	return workspace.Workspace{ID: "workspace", Path: "/workspace", ProjectID: "project", OrgID: "org", State: workspace.StateActive, Health: workspace.HealthOK}, nil
+}
+
+type staticWorkspaceResolver struct {
+	workspace workspace.Workspace
+}
+
+func (r staticWorkspaceResolver) GetWorkspace(string) (workspace.Workspace, error) {
+	return r.workspace, nil
 }
 
 type memoryRepository struct {
@@ -146,12 +154,14 @@ type fakeExecution struct {
 	initialIdle                                     chan struct{}
 	runningRelease                                  <-chan struct{}
 	updates                                         chan dsh.SessionUpdate
+	startRequest                                    dsh.SessionStartRequest
 }
 
-func (f *fakeExecution) StartSession(context.Context, dsh.SessionStartRequest) (dsh.SessionStartResult, error) {
+func (f *fakeExecution) StartSession(_ context.Context, request dsh.SessionStartRequest) (dsh.SessionStartResult, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.started++
+	f.startRequest = request
 	return dsh.SessionStartResult{}, nil
 }
 func (f *fakeExecution) PromptSession(ctx context.Context, _ dsh.SessionPromptRequest) (dsh.SessionPromptResult, error) {

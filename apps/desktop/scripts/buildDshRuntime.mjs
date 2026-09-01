@@ -9,8 +9,8 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const desktopDirectory = resolve(scriptDirectory, "..");
 const resourcesDirectory = resolve(desktopDirectory, "dist", "resources");
 const outputPath = resolve(resourcesDirectory, "dsh-runtime.mjs");
-const dshVersionLookup = 'var { version } = createRequire(import.meta.url)("../package.json");';
-const bundledDshVersion = 'var version = "0.1.1-rc.2";';
+const dshVersionPattern = /var \{ version(?:: (\w+))? \} = createRequire\(import\.meta\.url\)\("\.\.\/package\.json"\);/;
+const dshVersion = "0.1.1-rc.2";
 const dshRuntimePackageRequire = createRequire(resolve(desktopDirectory, "..", "..", "packages", "dsh-runtime", "package.json"));
 const subprocessPackagePath = dshRuntimePackageRequire.resolve("@deepseek-ai/dsh-subprocess-local/package.json");
 const subprocessPackageDirectory = dirname(subprocessPackagePath);
@@ -46,10 +46,12 @@ await build({
 });
 
 const bundledRuntime = await readFile(outputPath, "utf8");
-if (!bundledRuntime.includes(dshVersionLookup)) {
+const dshVersionMatch = bundledRuntime.match(dshVersionPattern);
+if (dshVersionMatch === null) {
   throw new Error("Unable to inline the DeepSeek Harness package version in the DSH runtime bundle.");
 }
-await writeFile(outputPath, bundledRuntime.replace(dshVersionLookup, bundledDshVersion));
+const bundledDshVersion = `var ${dshVersionMatch[1] ?? "version"} = "${dshVersion}";`;
+await writeFile(outputPath, bundledRuntime.replace(dshVersionPattern, bundledDshVersion));
 await copyNativeRuntimePackage("koffi");
 await copyNativeRuntimePackage(koffiNativePackageName);
 await copyNativeRuntimePackage("node-pty");

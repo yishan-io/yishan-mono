@@ -13,24 +13,8 @@ export { parseInteractionResponse } from "./protocol/response";
 export { workspaceBindingSchema } from "./workspaceBinding";
 export type { WorkspaceBinding, WorkspaceBindingRequest, WorkspaceBindingResolver } from "./workspaceBinding";
 
-export { WorkspaceCapabilityClient, createWorkspaceClientResolver } from "./workspace";
-export type {
-  WorkspaceCapabilityExecution,
-  WorkspaceCapabilityIdentity,
-  WorkspaceCapabilityIdentityResolver,
-  WorkspaceCapabilityRequest,
-  WorkspaceCapabilityTransport,
-  WorkspaceCapabilityClientResolver,
-  WorkspaceCloseInput,
-  WorkspaceCloseResult,
-  WorkspaceCreateInput,
-  WorkspaceCreateResult,
-  WorkspaceFindInput,
-  WorkspaceFindResult,
-  WorkspaceListInput,
-  WorkspaceListResult,
-  WorkspaceRecord,
-} from "./workspace";
+export { CapabilityClient } from "./capabilityClient";
+export type { CapabilityIdentity, CapabilityRequest, CapabilityTransport } from "./capabilityClient";
 
 export { apply, BridgeHost, name } from "./host";
 export type {

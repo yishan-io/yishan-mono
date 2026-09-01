@@ -24,15 +24,21 @@ type SessionExecutionRequest struct {
 	SessionID string `json:"sessionId"`
 }
 
-// SessionBinding is the authoritative workspace ownership record persisted as
+// WorkspaceBindingPolicy defines the daemon-authorized workspace context authorized for one DSH session.
+type WorkspaceBindingPolicy struct {
+	Authorization string `json:"authorization"`
+}
+
+// SessionBinding is the daemon-authoritative workspace context persisted as
 // sequence zero for newly created Yishan sessions.
 type SessionBinding struct {
-	Version        int    `json:"version"`
-	WorkspaceID    string `json:"workspaceId"`
-	ProjectID      string `json:"projectId"`
-	OrganizationID string `json:"organizationId"`
-	OwnerNodeID    string `json:"ownerNodeId"`
-	CWD            string `json:"cwd"`
+	Version        int                    `json:"version"`
+	WorkspaceID    string                 `json:"workspaceId"`
+	ProjectID      string                 `json:"projectId"`
+	OrganizationID string                 `json:"organizationId"`
+	OwnerNodeID    string                 `json:"ownerNodeId"`
+	CWD            string                 `json:"cwd"`
+	Policy         WorkspaceBindingPolicy `json:"policy"`
 }
 
 // SessionStartRequest creates a session with its authoritative ownership binding.
@@ -158,13 +164,19 @@ func (s *Supervisor) StartSession(ctx context.Context, request SessionStartReque
 	if err := validateStartRequest(request); err != nil {
 		return SessionStartResult{}, err
 	}
+	lease, err := s.registerWorkspaceBinding(request.SessionID, request.Binding.WorkspaceID, request.CWD)
+	if err != nil {
+		return SessionStartResult{}, err
+	}
 	var response sessionStartWireResult
 	process, err := s.callWithProcess(ctx, yishanSessionStartMethod, request, &response)
 	if err != nil {
+		s.releaseWorkspaceBinding(lease)
 		return SessionStartResult{}, err
 	}
 	result, err := response.validate(request.SessionID)
 	if err != nil {
+		s.releaseWorkspaceBinding(lease)
 		return SessionStartResult{}, err
 	}
 	process.replay.setInstanceID(request.SessionID, result.InstanceID)

@@ -86,10 +86,17 @@ type SessionListResult struct {
 	Sessions []SessionListEntry `json:"sessions"`
 }
 
-// SessionReadRequest reads or resumes a persisted workspace session.
+// SessionReadRequest reads a persisted workspace session.
 type SessionReadRequest struct {
 	CWD       string `json:"cwd"`
 	SessionID string `json:"sessionId"`
+}
+
+// SessionResumeRequest identifies a persisted session and its daemon-authorized workspace context.
+type SessionResumeRequest struct {
+	CWD         string `json:"cwd"`
+	SessionID   string `json:"sessionId"`
+	WorkspaceID string `json:"workspaceId"`
 }
 
 // SessionHeader is the durable header returned with a session transcript.
@@ -156,7 +163,14 @@ func (s *Supervisor) DisposeSession(ctx context.Context, request SessionReadRequ
 	if err := s.call(ctx, yishanSessionDisposeMethod, request, &response); err != nil {
 		return SessionDisposeResult{}, err
 	}
-	return response.validate(request)
+	result, err := response.validate(request)
+	if err != nil {
+		return SessionDisposeResult{}, err
+	}
+	if result.Disposed {
+		s.removeWorkspaceBindings(request.SessionID)
+	}
+	return result, nil
 }
 
 // ListSessions requests persisted top-level sessions for one workspace.
@@ -186,15 +200,21 @@ func (s *Supervisor) ReadSession(ctx context.Context, request SessionReadRequest
 // ResumeSession asks DSH to resume a persisted session for its workspace.
 // A local deadline abandons only the response; retrying the same session is safe
 // because the runtime coalesces in-flight resumes and returns an existing live session.
-func (s *Supervisor) ResumeSession(ctx context.Context, request SessionReadRequest) (SessionResumeResult, error) {
-	if err := validateSessionReadRequest(request); err != nil {
+func (s *Supervisor) ResumeSession(ctx context.Context, request SessionResumeRequest) (SessionResumeResult, error) {
+	if err := validateSessionResumeRequest(request); err != nil {
+		return SessionResumeResult{}, err
+	}
+	lease, err := s.registerWorkspaceBinding(request.SessionID, request.WorkspaceID, request.CWD)
+	if err != nil {
 		return SessionResumeResult{}, err
 	}
 	var response SessionResumeResult
 	if err := s.call(ctx, yishanSessionResumeMethod, request, &response); err != nil {
+		s.releaseWorkspaceBinding(lease)
 		return SessionResumeResult{}, err
 	}
 	if response.SessionID == "" || response.SessionID != request.SessionID {
+		s.releaseWorkspaceBinding(lease)
 		return SessionResumeResult{}, errors.New("invalid DSH session resume response")
 	}
 	return response, nil
@@ -223,15 +243,16 @@ func (s *Supervisor) callWithProcess(ctx context.Context, method string, params 
 	return process, nil
 }
 
-func (s *Supervisor) prepareRequest() (*runtimeProcess, uint64, <-chan rpcResponse, func(), error) {
+func (s *Supervisor) prepareRequest() (*runtimeProcess, string, <-chan rpcResponse, func(), error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.isClosing || s.process == nil || !s.health.IsReady {
-		return nil, 0, nil, nil, ErrRuntimeUnavailable
+		return nil, "", nil, nil, ErrRuntimeUnavailable
 	}
 	s.nextID++
-	response, remove := s.process.registerPending(s.nextID)
-	return s.process, s.nextID, response, remove, nil
+	id := fmt.Sprintf("dsh-%d", s.nextID)
+	response, remove := s.process.registerPending(id)
+	return s.process, id, response, remove, nil
 }
 
 func waitForResponse(ctx context.Context, response <-chan rpcResponse, method string, target any) error {

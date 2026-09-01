@@ -25,7 +25,7 @@ describe("workspace binding", () => {
     const host = context.yishanWorkspaceBindingHost;
 
     await expect(host.resolveSessionBinding(identity)).resolves.toMatchObject({ cwd: "/workspace" });
-    expect(host.resolveWorkspaceCapabilityIdentity(identity.sessionId)).toEqual({
+    expect(host.resolveCapabilityIdentity(identity.sessionId)).toEqual({
       sessionId: "session-1",
       workspaceId: "workspace-1",
       generation: 1,

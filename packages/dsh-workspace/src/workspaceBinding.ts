@@ -1,9 +1,9 @@
 import { type Context, Service } from "@deepseek-ai/cordis";
 import type { AgentSetup } from "@deepseek-ai/dsh-agent";
 import type {
+  CapabilityIdentity,
   WorkspaceBinding as DaemonWorkspaceBinding,
   WorkspaceBindingRequest,
-  WorkspaceCapabilityIdentity,
 } from "@yishan-io/dsh-daemon-bridge";
 
 /** The workspace binding policy currently accepted from the daemon host bridge. */
@@ -85,7 +85,7 @@ export class WorkspaceBindingHost extends Service {
     return workspaceBinding;
   }
   /** Resolves the daemon-authorized workspace identity for an admitted session. */
-  resolveWorkspaceCapabilityIdentity(sessionId: string): WorkspaceCapabilityIdentity {
+  resolveCapabilityIdentity(sessionId: string): CapabilityIdentity {
     const identity = this.sessionIdentities.get(sessionId);
     const workspaceBinding = this.sessionBindings.get(sessionId);
     if (identity === undefined || workspaceBinding === undefined)

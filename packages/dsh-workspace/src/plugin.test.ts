@@ -1,12 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ToolRunContext } from "@deepseek-ai/dsh-tools";
-import {
-  type WorkspaceCapabilityRequest,
-  type WorkspaceCapabilityTransport,
-  createWorkspaceClientResolver,
-} from "@yishan-io/dsh-daemon-bridge";
+import type { CapabilityTransport } from "@yishan-io/dsh-daemon-bridge";
 
+import type { WorkspaceCapabilityRequest } from "./client";
 import { registerWorkspaceTools } from "./plugin";
 
 type RegisteredTool = {
@@ -22,7 +19,7 @@ describe("workspace tool plugin", () => {
   it("registers the four workspace lifecycle tools", () => {
     const registeredTools: RegisteredTool[] = [];
 
-    registerWorkspaceTools(createContext(registeredTools) as never, createResolver(createTransport()));
+    registerWorkspaceTools(createContext(registeredTools) as never, createTransport(), () => identity);
 
     expect(registeredTools.map((tool) => tool.name)).toEqual([
       "workspace_list",
@@ -43,6 +40,13 @@ describe("workspace tool plugin", () => {
     expect(getOnlyRequest(transport)).toMatchObject({ operation: "workspace.create", input: arguments_, ...identity });
     expect(result).toEqual(response);
     expect(tool.output.render(arguments_, result)).toEqual([{ type: "text", text: JSON.stringify(result, null, 2) }]);
+  });
+
+  it("rejects tool execution without an agent-scoped identity", async () => {
+    const transport = createTransport();
+    const { tool } = registerTool("workspace_list", transport);
+
+    await expect(tool.execute({}, { signal: new AbortController().signal })).rejects.toThrow("agent-scoped");
   });
 
   it.each([
@@ -73,25 +77,21 @@ function createContext(registeredTools: RegisteredTool[]) {
   return { tools: { register: (tool: RegisteredTool) => registeredTools.push(tool) } };
 }
 
-function createTransport(response: unknown = { workspaces: [] }): WorkspaceCapabilityTransport {
-  return { requestWorkspaceCapability: vi.fn(async () => response) };
+function createTransport(response: unknown = { workspaces: [] }): CapabilityTransport<WorkspaceCapabilityRequest> {
+  return { requestCapability: vi.fn(async () => response) };
 }
 
-function createResolver(transport: WorkspaceCapabilityTransport) {
-  return createWorkspaceClientResolver(transport, () => identity);
-}
-
-function registerTool(toolName: string, transport: WorkspaceCapabilityTransport) {
+function registerTool(toolName: string, transport: CapabilityTransport<WorkspaceCapabilityRequest>) {
   const registeredTools: RegisteredTool[] = [];
-  registerWorkspaceTools(createContext(registeredTools) as never, createResolver(transport));
+  registerWorkspaceTools(createContext(registeredTools) as never, transport, () => identity);
   const tool = registeredTools.find((registeredTool) => registeredTool.name === toolName);
   if (tool === undefined) throw new Error(`${toolName} was not registered`);
   const execution = { signal: new AbortController().signal, agent: { id: "session-1" } } as ToolRunContext;
   return { tool, execution };
 }
 
-function getOnlyRequest(transport: WorkspaceCapabilityTransport): WorkspaceCapabilityRequest {
-  const requests = vi.mocked(transport.requestWorkspaceCapability).mock.calls;
+function getOnlyRequest(transport: CapabilityTransport<WorkspaceCapabilityRequest>): WorkspaceCapabilityRequest {
+  const requests = vi.mocked(transport.requestCapability).mock.calls;
   const request = requests[0]?.[0];
   if (request === undefined) throw new Error("expected one workspace capability request");
   expect(requests).toHaveLength(1);

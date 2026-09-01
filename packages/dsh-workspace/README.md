@@ -4,8 +4,7 @@ This package provides workspace lifecycle tools for DeepSeek Harness.
 
 ## Public contract
 
-The package exports workspace list, find, create, and close DTOs.
-The concrete workspace capability client and resolver are provided by `@yishan-io/dsh-daemon-bridge`.
+The package owns and exports workspace list, find, create, and close DTOs and its workspace capability client. `@yishan-io/dsh-daemon-bridge` provides only the base capability transport.
 
 The Cordis plugin registers these model-facing tools:
 
@@ -14,7 +13,7 @@ The Cordis plugin registers these model-facing tools:
 - `workspace_create`
 - `workspace_close`
 
-Each tool resolves the concrete bridge capability client for its current execution.
+Each tool binds the workspace client to its current execution and authorized workspace identity.
 The tool returns the client result as canonical JSON.
 The DSH renderer shows formatted JSON text.
 

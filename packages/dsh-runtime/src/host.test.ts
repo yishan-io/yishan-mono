@@ -8,6 +8,7 @@ const runtimeMocks = vi.hoisted(() => ({
   dispose: vi.fn<() => Promise<void>>(),
   installCorePlugins: vi.fn<() => Promise<void>>(),
   installProviderPlugin: vi.fn<() => Promise<void>>(),
+  installMemoryPlugin: vi.fn<() => Promise<void>>(),
   installPluginLoader: vi.fn<() => Promise<void>>(),
   bridgeStart: vi.fn(),
 }));
@@ -34,6 +35,7 @@ vi.mock("@yishan-io/dsh-daemon-bridge", () => ({
     context.daemonBridge = { start: runtimeMocks.bridgeStart };
   },
 }));
+vi.mock("@yishan-io/dsh-memory", () => ({ apply: runtimeMocks.installMemoryPlugin }));
 vi.mock("@yishan-io/dsh-plugin-loader", () => ({
   apply: async (context: { yishanPluginLoader?: { states: readonly [] } }) => {
     await runtimeMocks.installPluginLoader();
@@ -51,6 +53,7 @@ beforeEach(() => {
   runtimeMocks.dispose.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installCorePlugins.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installProviderPlugin.mockReset().mockResolvedValue(undefined);
+  runtimeMocks.installMemoryPlugin.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installPluginLoader.mockReset().mockResolvedValue(undefined);
   runtimeMocks.bridgeStart.mockReset();
 });
@@ -62,10 +65,15 @@ describe("RuntimeHost", () => {
     const dataDirectory = await mkdtemp(join(tmpdir(), "yishan-dsh-host-order-"));
     try {
       await RuntimeHost.create({ dataDirectory });
+      expect(runtimeMocks.installMemoryPlugin).toHaveBeenCalledOnce();
       expect(runtimeMocks.bridgeStart).toHaveBeenCalledOnce();
+      const memoryOrder = runtimeMocks.installMemoryPlugin.mock.invocationCallOrder[0];
       const pluginsOrder = runtimeMocks.installPluginLoader.mock.invocationCallOrder[0];
       const bridgeOrder = runtimeMocks.bridgeStart.mock.invocationCallOrder[0];
-      if (pluginsOrder === undefined || bridgeOrder === undefined) throw new Error("startup calls were not recorded");
+      if (memoryOrder === undefined || pluginsOrder === undefined || bridgeOrder === undefined) {
+        throw new Error("startup calls were not recorded");
+      }
+      expect(memoryOrder).toBeLessThan(pluginsOrder);
       expect(pluginsOrder).toBeLessThan(bridgeOrder);
     } finally {
       await rm(dataDirectory, { recursive: true, force: true });

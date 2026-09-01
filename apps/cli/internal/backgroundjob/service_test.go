@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/agent/dsh"
+	"yishan/apps/cli/internal/workspace"
 )
 
 func TestService_Run_SucceedsWithoutFrontendProducts(t *testing.T) {
@@ -23,6 +24,30 @@ func TestService_Run_SucceedsWithoutFrontendProducts(t *testing.T) {
 	}
 	if execution.started != 1 || execution.prompted != 1 || execution.disposed != 1 {
 		t.Fatalf("execution = %#v", execution)
+	}
+	if execution.startRequest.Binding.Policy.Authorization != "daemon-authorized" {
+		t.Fatalf("start binding policy = %#v", execution.startRequest.Binding.Policy)
+	}
+}
+
+func TestService_Run_RejectsNonActiveOrUnhealthyWorkspace(t *testing.T) {
+	tests := []struct {
+		name      string
+		workspace workspace.Workspace
+	}{
+		{name: "closing", workspace: workspace.Workspace{ID: "workspace", Path: "/workspace", ProjectID: "project", OrgID: "org", State: workspace.StateClosing}},
+		{name: "unhealthy", workspace: workspace.Workspace{ID: "workspace", Path: "/workspace", ProjectID: "project", OrgID: "org", State: workspace.StateActive, Health: workspace.HealthPathMissing}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repository := newMemoryRepository(testRunnerJob(StatusQueued))
+			execution := &fakeExecution{}
+			NewService(repository, staticWorkspaceResolver{workspace: test.workspace}, execution, "node", nil).Run(context.Background(), "id")
+			job, _ := repository.Get(context.Background(), "id")
+			if job.Status != StatusFailed || execution.started != 0 {
+				t.Fatalf("job = %#v, starts = %d", job, execution.started)
+			}
+		})
 	}
 }
 

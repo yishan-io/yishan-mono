@@ -2,4 +2,4 @@
 
 Private daemon-to-DSH bridge contract library for DeepSeek Harness.
 
-This package owns the private daemon↔DSH bridge wire protocol and narrow typed capabilities. It does not expose a raw generic RPC client or implement a Cordis/DSH plugin.
+This package owns the private daemon↔DSH wire protocol, Cordis bridge service, and base capability client. It does not contain workspace lifecycle, memory, or other domain operation DTOs and clients. Domain packages use the capability transport without access to raw JSON-RPC.

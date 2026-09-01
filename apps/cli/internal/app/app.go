@@ -8,11 +8,9 @@ package app
 
 import (
 	"context"
-	"io"
-	"net/http"
-
 	"database/sql"
 	"fmt"
+	"io"
 	"path/filepath"
 
 	"yishan/apps/cli/internal/adapter/cloud/session"
@@ -272,6 +270,23 @@ func Bootstrap(cfg Config) (*App, error) {
 			refreshTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc)
 		},
 	})
+	if dshSupervisor != nil {
+		dshSupervisor.SetWorkspaceBindingResolver(func(_ context.Context, request dsh.WorkspaceBindingRequest) (dsh.WorkspaceBindingResult, error) {
+			workspaceInstance, err := workspaceSvc.GetWorkspace(request.WorkspaceID)
+			if err != nil {
+				return dsh.WorkspaceBindingResult{}, err
+			}
+			if workspaceInstance.Path == "" || workspaceInstance.State != workspace.StateActive || workspaceInstance.Health != workspace.HealthOK {
+				return dsh.WorkspaceBindingResult{}, fmt.Errorf("workspace is not active")
+			}
+			return dsh.WorkspaceBindingResult{
+				WorkspaceID: workspaceInstance.ID,
+				CWD:         workspaceInstance.Path,
+				Policy:      dsh.WorkspaceBindingPolicy{Authorization: "daemon-authorized"},
+			}, nil
+		})
+		dshSupervisor.SetCapabilityResolver(resolveDSHCapability(workspaceSvc, memorySvc))
+	}
 	var localPluginStore nodeagent.DSHLocalPluginStore
 	if cfg.DSHDeveloperMode {
 		localPluginStore, err = nodeagent.NewDSHLocalPluginStore(cfg.DSHDataDir, true)
@@ -467,27 +482,4 @@ func (a *App) stopCloseSubscriptions() {
 	if a.prTracker != nil {
 		a.prTracker.Stop()
 	}
-}
-
-// RPCServer exposes the JSON-RPC/WebSocket transport server to the daemon
-// process layer. The app owns composition and lifecycle; the daemon only
-// serves.
-func (a *App) RPCServer() *rpc.Server {
-	return a.rpcServer
-}
-
-// Relay exposes the relay client (connection state owned by internal/relay).
-func (a *App) Relay() *relay.Client {
-	return a.relay
-}
-
-// ServeAgentHook handles the agent hook HTTP ingress (pi notify bridge).
-func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
-	a.hookIngress.ServeHTTP(w, r)
-}
-
-// NewRouter builds the namespace routing table for the node services (test
-// and composition helper; Bootstrap wires it into the app).
-func NewRouter(agentSvc *nodeagent.Service, backgroundJobSvc *nodebackgroundjob.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service) *rpc.Router {
-	return buildNamespaceRouter(agentSvc, backgroundJobSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
 }

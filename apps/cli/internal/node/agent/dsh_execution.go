@@ -51,6 +51,9 @@ func (s *Service) startDSH(ctx context.Context, connection *rpc.Connection, req 
 	if err != nil {
 		return nil, err
 	}
+	if err := authorizeDSHWorkspace(workspaceInstance); err != nil {
+		return nil, err
+	}
 	return s.startDSHSession(ctx, connection, req, workspaceInstance)
 }
 
@@ -70,12 +73,12 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 		return nil, mapDSHExecutionError(dsh.ErrRuntimeUnavailable)
 	}
 	if req.Resume {
-		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionReadRequest{SessionID: req.SessionID, CWD: cwd}); err != nil {
+		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionResumeRequest{SessionID: req.SessionID, CWD: cwd, WorkspaceID: workspaceInstance.ID}); err != nil {
 			return nil, mapDSHExecutionError(err)
 		}
 	} else if _, err := s.dshRuntime().StartSession(ctx, dsh.SessionStartRequest{
 		SessionID: req.SessionID, CWD: cwd,
-		Binding:      dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd},
+		Binding:      dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd, Policy: dsh.WorkspaceBindingPolicy{Authorization: "daemon-authorized"}},
 		AgentOptions: dshAgentOptionsPointer(req.ModelID, req.Provider, s.deps.DSHProvider, s.deps.DSHModel),
 	}); err != nil {
 		return nil, mapDSHExecutionError(err)
@@ -137,7 +140,7 @@ func (s *Service) attachDSHSession(ctx context.Context, connection *rpc.Connecti
 		return nil, mapDSHExecutionError(dsh.ErrRuntimeUnavailable)
 	}
 	if s.dshSessions.requiresResume(entry) {
-		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionReadRequest{SessionID: req.SessionID, CWD: entry.cwd}); err != nil {
+		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionResumeRequest{SessionID: req.SessionID, CWD: entry.cwd, WorkspaceID: entry.workspaceID}); err != nil {
 			return nil, mapDSHExecutionError(err)
 		}
 	}
@@ -338,6 +341,27 @@ func (s *Service) notifyDSHUpdate(route dshRoute, update dsh.SessionUpdate) erro
 	}
 	payload := dshFrontendEvent{SessionID: route.sessionID, TabID: route.tabID, WorkspaceID: route.workspaceID, InstanceID: route.instanceID, Update: update}
 	return route.connection.Notify(rpc.MethodFrontendEventsStream, map[string]any{"topic": dshEventTopic, "payload": payload})
+}
+
+func (s *Service) resolveAuthorizedDSHWorkspace(workspaceID string) (workspace.Workspace, error) {
+	if s.deps.Workspace == nil {
+		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeServerError, "workspace resolver is unavailable")
+	}
+	workspaceInstance, err := s.deps.Workspace.GetWorkspace(workspaceID)
+	if err != nil {
+		return workspace.Workspace{}, err
+	}
+	if err := authorizeDSHWorkspace(workspaceInstance); err != nil {
+		return workspace.Workspace{}, err
+	}
+	return workspaceInstance, nil
+}
+
+func authorizeDSHWorkspace(workspaceInstance workspace.Workspace) error {
+	if workspaceInstance.Path == "" || workspaceInstance.State != workspace.StateActive || workspaceInstance.Health != workspace.HealthOK {
+		return rpc.NewRPCError(rpc.CodeNotFound, "workspace is not active")
+	}
+	return nil
 }
 
 func dshSessionNotFound(sessionID string) error {

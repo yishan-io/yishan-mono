@@ -69,7 +69,7 @@ type DSHLocalPluginStore interface {
 type DSHSessions interface {
 	ListSessions(context.Context, dsh.SessionListRequest) (dsh.SessionListResult, error)
 	ReadSession(context.Context, dsh.SessionReadRequest) (dsh.SessionReadResult, error)
-	ResumeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionResumeResult, error)
+	ResumeSession(context.Context, dsh.SessionResumeRequest) (dsh.SessionResumeResult, error)
 	DisposeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionDisposeResult, error)
 	StartSession(context.Context, dsh.SessionStartRequest) (dsh.SessionStartResult, error)
 	SetModelSession(context.Context, dsh.SetModelRequest) error

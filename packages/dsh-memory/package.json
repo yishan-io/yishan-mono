@@ -1,0 +1,44 @@
+{
+  "name": "@yishan-io/dsh-memory",
+  "version": "0.1.0",
+  "description": "Daemon-authoritative durable memory tools for the Yishan DSH runtime.",
+  "type": "module",
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check src"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+    "@yishan-io/dsh-daemon-bridge": "workspace:*",
+    "@yishan-io/dsh-workspace": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yishan-io/yishan-mono",
+    "directory": "packages/dsh-memory"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.4.0"
+  }
+}

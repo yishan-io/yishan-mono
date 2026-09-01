@@ -4,8 +4,8 @@ import { type Context, Service } from "@deepseek-ai/cordis";
 import { HarnessSdkJsonRpcServer } from "@deepseek-ai/dsh-sdk-jsonrpc-server";
 import { JsonRpcLineTransport } from "@deepseek-ai/dsh-sdk-protocol";
 
+import type { CapabilityRequest } from "./capabilityClient";
 import { type YISHAN_NOTIFICATIONS, YISHAN_REVERSE_METHODS } from "./protocol/protocol";
-import { type WorkspaceCapabilityClientResolver, createWorkspaceClientResolver } from "./workspace";
 import {
   type WorkspaceBinding,
   type WorkspaceBindingRequest,
@@ -44,7 +44,7 @@ declare module "@deepseek-ai/cordis" {
   }
 }
 
-/** Owns stdio JSON-RPC, route registration, lifecycle hooks, and typed daemon clients. */
+/** Owns stdio JSON-RPC, route registration, lifecycle hooks, and the base daemon capability transport. */
 export class BridgeHost extends Service implements WorkspaceBindingResolver {
   private readonly transport: JsonRpcLineTransport;
   private readonly sdkServer: HarnessSdkJsonRpcServer;
@@ -119,26 +119,20 @@ export class BridgeHost extends Service implements WorkspaceBindingResolver {
     await this.transport.flush();
   }
 
-  /** Creates typed workspace clients bound to one admitted session identity. */
-  createWorkspaceClientResolver(
-    resolveIdentity: Parameters<typeof createWorkspaceClientResolver>[1],
-  ): WorkspaceCapabilityClientResolver {
-    return createWorkspaceClientResolver(
-      {
-        requestWorkspaceCapability: async (request) =>
-          await this.transport.request(YISHAN_REVERSE_METHODS.capabilityRequest, {
-            id: request.id,
-            cancellationId: request.cancellationId,
-            sessionId: request.sessionId,
-            workspaceId: request.workspaceId,
-            generation: request.generation,
-            deadlineAtMs: request.deadlineAtMs,
-            operation: request.operation,
-            input: request.input,
-          }),
-      },
-      resolveIdentity,
-    );
+  /** Sends one domain-owned operation through the authorized daemon capability channel. */
+  async requestCapability<TOperation extends string, TInput>(
+    request: CapabilityRequest<TOperation, TInput>,
+  ): Promise<unknown> {
+    return await this.transport.request(YISHAN_REVERSE_METHODS.capabilityRequest, {
+      id: request.id,
+      cancellationId: request.cancellationId,
+      sessionId: request.sessionId,
+      workspaceId: request.workspaceId,
+      generation: request.generation,
+      deadlineAtMs: request.deadlineAtMs,
+      operation: request.operation,
+      input: request.input,
+    });
   }
 
   /** Resolves the daemon-authoritative binding for one session workspace. */

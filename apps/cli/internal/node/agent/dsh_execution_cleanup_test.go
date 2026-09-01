@@ -120,6 +120,27 @@ func TestDSHExecution_QuarantinedRetrySerializesOnlyDSHStart(t *testing.T) {
 	}
 }
 
+func TestDSHExecution_WorkspaceCleanupDisposesClosingWorkspaceSessions(t *testing.T) {
+	runtime := &executionDSH{}
+	service := newDSHExecutionService(runtime)
+	isClosing := false
+	service.deps.Workspace = testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
+		state := workspace.StateActive
+		if isClosing {
+			state = workspace.StateClosing
+		}
+		return workspace.Workspace{ID: workspaceID, Path: "/authoritative", State: state}, nil
+	})
+	startDSHExecution(t, service)
+	isClosing = true
+	if err := service.stopDSHWorkspaceSessions(context.Background(), "w"); err != nil {
+		t.Fatalf("cleanup closing workspace: %v", err)
+	}
+	if service.dshSessions.has("s") {
+		t.Fatal("cleanup retained the disposed DSH session")
+	}
+}
+
 func TestDSHExecution_WorkspaceCleanupRetainsRegisteredUndisposedSession(t *testing.T) {
 	runtime := &executionDSH{isUndisposable: true}
 	service := newDSHExecutionService(runtime)
@@ -249,7 +270,7 @@ func TestDSHExecution_ConcurrentSameIDPiAndDSHExecutionDisposeIndependently(t *t
 	workspacePath := t.TempDir()
 	installRecordingPiBinary(t, "")
 	service.deps.Workspace = testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: workspaceID, Path: workspacePath}, nil
+		return workspace.Workspace{ID: workspaceID, Path: workspacePath, State: workspace.StateActive}, nil
 	})
 	t.Cleanup(func() { service.deps.AgentMgr.StopAll() })
 

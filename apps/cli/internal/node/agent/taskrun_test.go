@@ -34,7 +34,7 @@ func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t 
 				},
 			},
 		},
-		workspace.Workspace{ID: "ws-1", Path: root},
+		workspace.Workspace{ID: "ws-1", Path: root, State: workspace.StateActive},
 		nil,
 	)
 	defer stopAllTerminalSessions(handler)
@@ -327,14 +327,14 @@ func TestPublishWorkspaceCreateCompleted_DSHStartsBoundSessionAndPublishesTabMet
 	s.deps.OwnerNodeID = "node-1"
 	workspacePath := t.TempDir()
 	s.deps.Workspace = testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: id, ProjectID: "project-1", OrgID: "org-1", Path: workspacePath}, nil
+		return workspace.Workspace{ID: id, ProjectID: "project-1", OrgID: "org-1", Path: workspacePath, State: workspace.StateActive}, nil
 	})
 
 	subscriptionID, events := s.deps.Events.Subscribe()
 	defer s.deps.Events.Unsubscribe(subscriptionID)
 	s.PublishWorkspaceCreateCompleted(application.CreatePlan{LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{
 		Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "investigate bug",
-	}}}, workspace.Workspace{ID: "ws-1", ProjectID: "project-1", OrgID: "org-1", Path: workspacePath}, nil)
+	}}}, workspace.Workspace{ID: "ws-1", ProjectID: "project-1", OrgID: "org-1", Path: workspacePath, State: workspace.StateActive}, nil)
 
 	completion := waitForTaskRunCompletion(t, events)
 	if runtime.startRequest.SessionID != "task-ws-1" || runtime.startRequest.CWD != workspacePath {
@@ -363,7 +363,7 @@ func TestPublishWorkspaceCreateCompleted_RelayedDSHTaskRunUsesTerminalFallback(t
 	s.deps.DSH = runtime
 	workspacePath := t.TempDir()
 	s.deps.Workspace = testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: id, Path: workspacePath}, nil
+		return workspace.Workspace{ID: id, Path: workspacePath, State: workspace.StateActive}, nil
 	})
 	registerTestDesktopConn(s)
 
@@ -372,7 +372,7 @@ func TestPublishWorkspaceCreateCompleted_RelayedDSHTaskRunUsesTerminalFallback(t
 		LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{
 			Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "investigate bug",
 		}},
-	}, workspace.Workspace{ID: "ws-relayed", Path: workspacePath}, nil)
+	}, workspace.Workspace{ID: "ws-relayed", Path: workspacePath, State: workspace.StateActive}, nil)
 	defer stopAllTerminalSessions(s)
 
 	if runtime.startRequest.SessionID != "" || runtime.promptRequest.SessionID != "" {
@@ -392,9 +392,9 @@ func TestPublishWorkspaceCreateCompleted_DSHPromptFailureDisposesSession(t *test
 	s.deps.DSH = runtime
 	workspacePath := t.TempDir()
 	s.deps.Workspace = testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: id, Path: workspacePath}, nil
+		return workspace.Workspace{ID: id, Path: workspacePath, State: workspace.StateActive}, nil
 	})
-	s.PublishWorkspaceCreateCompleted(application.CreatePlan{LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "run"}}}, workspace.Workspace{ID: "ws-1", Path: workspacePath}, nil)
+	s.PublishWorkspaceCreateCompleted(application.CreatePlan{LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "run"}}}, workspace.Workspace{ID: "ws-1", Path: workspacePath, State: workspace.StateActive}, nil)
 	if runtime.disposeCount != 1 || runtime.disposeCWD != workspacePath {
 		t.Fatalf("dispose count/cwd = %d/%q, want 1/%q", runtime.disposeCount, runtime.disposeCWD, workspacePath)
 	}
@@ -406,9 +406,9 @@ func TestPublishWorkspaceCreateCompleted_DSHStartFailureDisposesSession(t *testi
 	s.deps.DSH = runtime
 	workspacePath := t.TempDir()
 	s.deps.Workspace = testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: id, Path: workspacePath}, nil
+		return workspace.Workspace{ID: id, Path: workspacePath, State: workspace.StateActive}, nil
 	})
-	s.PublishWorkspaceCreateCompleted(application.CreatePlan{LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "run"}}}, workspace.Workspace{ID: "ws-1", Path: workspacePath}, nil)
+	s.PublishWorkspaceCreateCompleted(application.CreatePlan{LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{Runtime: workspace.TaskRunRuntimeDSH, AgentKind: "pi", Prompt: "run"}}}, workspace.Workspace{ID: "ws-1", Path: workspacePath, State: workspace.StateActive}, nil)
 	if runtime.disposeCount != 1 || runtime.promptRequest.SessionID != "" {
 		t.Fatalf("dispose count = %d, prompt = %#v", runtime.disposeCount, runtime.promptRequest)
 	}

@@ -1,8 +1,9 @@
 import type { Context } from "@deepseek-ai/cordis";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 
-import type { WorkspaceCapabilityClientResolver } from "@yishan-io/dsh-daemon-bridge";
+import type { CapabilityIdentity, CapabilityTransport } from "@yishan-io/dsh-daemon-bridge";
 
+import { type WorkspaceCapabilityRequest, WorkspaceClient } from "./client";
 import {
   projectAndOrganizationParameters,
   workspaceCloseOutputSchema,
@@ -22,14 +23,17 @@ export const inject = ["daemonBridge", "agents", "tools"];
 /** Installs workspace binding and model-facing lifecycle tools. */
 export function apply(context: Context): void {
   new WorkspaceBindingHost(context, context.daemonBridge);
-  const resolveClient = context.daemonBridge.createWorkspaceClientResolver((sessionId) =>
-    context.yishanWorkspaceBindingHost.resolveWorkspaceCapabilityIdentity(sessionId),
+  registerWorkspaceTools(context, context.daemonBridge, (sessionId) =>
+    context.yishanWorkspaceBindingHost.resolveCapabilityIdentity(sessionId),
   );
-  registerWorkspaceTools(context, resolveClient);
 }
 
-/** Registers workspace lifecycle tools with a typed bridge client resolver. */
-export function registerWorkspaceTools(context: Context, resolveClient: WorkspaceCapabilityClientResolver): void {
+/** Registers workspace lifecycle tools through the base daemon capability transport. */
+export function registerWorkspaceTools(
+  context: Context,
+  transport: CapabilityTransport<WorkspaceCapabilityRequest>,
+  resolveIdentity: (sessionId: string) => CapabilityIdentity,
+): void {
   context.tools.register(
     defineTool({
       name: "workspace_list",
@@ -37,7 +41,7 @@ export function registerWorkspaceTools(context: Context, resolveClient: Workspac
       parameters: projectAndOrganizationParameters,
       output: jsonOutput(workspaceListOutputSchema),
       async execute(arguments_, execution) {
-        return resolveClient(execution).list(arguments_);
+        return clientForExecution(transport, resolveIdentity, execution).list(arguments_);
       },
     }),
   );
@@ -48,7 +52,7 @@ export function registerWorkspaceTools(context: Context, resolveClient: Workspac
       parameters: workspaceLookupParameters,
       output: jsonOutput(workspaceFindOutputSchema),
       async execute(arguments_, execution) {
-        return resolveClient(execution).find(arguments_);
+        return clientForExecution(transport, resolveIdentity, execution).find(arguments_);
       },
     }),
   );
@@ -59,7 +63,7 @@ export function registerWorkspaceTools(context: Context, resolveClient: Workspac
       parameters: workspaceCreateParameters,
       output: jsonOutput(workspaceCreateOutputSchema),
       async execute(arguments_, execution) {
-        return resolveClient(execution).create(arguments_);
+        return clientForExecution(transport, resolveIdentity, execution).create(arguments_);
       },
     }),
   );
@@ -70,10 +74,20 @@ export function registerWorkspaceTools(context: Context, resolveClient: Workspac
       parameters: workspaceLookupParameters,
       output: jsonOutput(workspaceCloseOutputSchema),
       async execute(arguments_, execution) {
-        return resolveClient(execution).close(arguments_);
+        return clientForExecution(transport, resolveIdentity, execution).close(arguments_);
       },
     }),
   );
+}
+
+function clientForExecution(
+  transport: CapabilityTransport<WorkspaceCapabilityRequest>,
+  resolveIdentity: (sessionId: string) => CapabilityIdentity,
+  execution: { agent?: { id: string }; signal: AbortSignal },
+): WorkspaceClient {
+  const sessionId = execution.agent?.id;
+  if (sessionId === undefined) throw new Error("workspace tools require an agent-scoped execution");
+  return new WorkspaceClient(transport, resolveIdentity(sessionId), execution.signal);
 }
 
 function jsonOutput<const T>(schema: T) {

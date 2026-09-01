@@ -360,7 +360,7 @@ func TestAgentDSHIntegrationHelper(t *testing.T) {
 	if mode == "startup-fail" {
 		return
 	}
-	writeAgentIntegrationResponse(1, `{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}`)
+	_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}}` + "\n")
 	runAgentIntegrationScenario(input, mode, os.Getenv("DSH_INTEGRATION_OPERATIONS"))
 }
 
@@ -413,8 +413,8 @@ func methodName(method string) string {
 }
 
 type agentIntegrationRequest struct {
-	ID     uint64 `json:"id"`
-	Method string `json:"method"`
+	ID     json.RawMessage `json:"id"`
+	Method string          `json:"method"`
 }
 
 func isAgentIntegrationInitialize(raw []byte) bool {
@@ -466,6 +466,6 @@ func agentSubscribeResult(mode string) string {
 	}
 	return `{"sessionId":"s","instanceId":"runtime-1","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}`
 }
-func writeAgentIntegrationResponse(id uint64, result string) {
-	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":%s}`+"\n", id, result)
+func writeAgentIntegrationResponse(id json.RawMessage, result string) {
+	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%s,"result":%s}`+"\n", id, result)
 }

@@ -262,7 +262,7 @@ func runHelperMode(mode string, input *bufio.Reader) {
 	case "stderr":
 		_, _ = os.Stderr.WriteString("runtime diagnostic\n")
 		writeShutdownResponse(input)
-	case "rpc", "rpc-notify", "rpc-exit", "rpc-invalid-notify", "rpc-provider", "rpc-subscribe-exit", "rpc-subscribe-lifecycle-gap":
+	case "rpc", "rpc-reverse-workspace", "rpc-reverse-resume-workspace", "rpc-notify", "rpc-exit", "rpc-invalid-notify", "rpc-provider", "rpc-subscribe-exit", "rpc-subscribe-lifecycle-gap", "rpc-invalid-start":
 		handleRPCRequests(mode, input)
 	case "exit":
 		return
@@ -298,7 +298,7 @@ func handleRPCRequests(mode string, input *bufio.Reader) {
 			return
 		}
 		var request struct {
-			ID     uint64 `json:"id"`
+			ID     string `json:"id"`
 			Method string `json:"method"`
 			Params struct {
 				CWD           string `json:"cwd"`
@@ -314,11 +314,22 @@ func handleRPCRequests(mode string, input *bufio.Reader) {
 			return
 		}
 		if request.Method == "shutdown" {
-			_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{}}`+"\n", request.ID)
+			_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{}}`+"\n", request.ID)
 			return
+		}
+		if shouldRequestWorkspaceBinding(mode, request.Method) {
+			_, _ = os.Stdout.WriteString(workspaceBindingFrame(request.Method) + "\n")
+			response, responseErr := input.ReadBytes('\n')
+			if responseErr != nil || !strings.Contains(string(response), `"cwd":"/workspace"`) {
+				return
+			}
 		}
 		if mode == "rpc-exit" {
 			return
+		}
+		if mode == "rpc-invalid-start" && request.Method == yishanSessionStartMethod {
+			_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"sessionId":"other","instanceId":"run"}}`+"\n", request.ID)
+			continue
 		}
 		if mode == "rpc-invalid-notify" && request.Params.SessionID == "wait" {
 			_, _ = os.Stdout.WriteString(`{"jsonrpc":"2.0","method":"session.event","params":{"sessionId":"wait","event":{"seq":-1}}}` + "\n")
@@ -333,6 +344,21 @@ func handleRPCRequests(mode string, input *bufio.Reader) {
 		}
 		writeRPCResponse(request)
 	}
+}
+
+func shouldRequestWorkspaceBinding(mode, method string) bool {
+	return (mode == "rpc-reverse-workspace" && method == yishanSessionStartMethod) ||
+		(mode == "rpc-reverse-resume-workspace" && method == yishanSessionResumeMethod)
+}
+
+func workspaceBindingFrame(method string) string {
+	sessionID := "session-1"
+	workspaceID := "workspace-1"
+	if method == yishanSessionResumeMethod {
+		sessionID = "persisted-session"
+		workspaceID = "persisted-workspace"
+	}
+	return fmt.Sprintf(`{"jsonrpc":"2.0","id":"reverse-99","method":"yishan.v1.workspace.binding.resolve","params":{"sessionId":%q,"workspaceId":%q}}`, sessionID, workspaceID)
 }
 
 func hasDefaultProvider(method string, line []byte) bool {
@@ -354,7 +380,7 @@ func hasDefaultProvider(method string, line []byte) bool {
 }
 
 func writeLifecycleGapResponse(request struct {
-	ID     uint64 `json:"id"`
+	ID     string `json:"id"`
 	Method string `json:"method"`
 	Params struct {
 		CWD           string `json:"cwd"`
@@ -373,7 +399,7 @@ func writeLifecycleGapResponse(request struct {
 }
 
 func writeRPCResponse(request struct {
-	ID     uint64 `json:"id"`
+	ID     string `json:"id"`
 	Method string `json:"method"`
 	Params struct {
 		CWD           string `json:"cwd"`
@@ -389,7 +415,7 @@ func writeRPCResponse(request struct {
 }
 
 func writeExceptionalRPCResponse(request struct {
-	ID     uint64 `json:"id"`
+	ID     string `json:"id"`
 	Method string `json:"method"`
 	Params struct {
 		CWD           string `json:"cwd"`
@@ -403,22 +429,22 @@ func writeExceptionalRPCResponse(request struct {
 		return true
 	}
 	if request.Params.SessionID == "server-error" {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"error":{"code":9,"message":"denied"}}`+"\n", request.ID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"error":{"code":9,"message":"denied"}}`+"\n", request.ID)
 		return true
 	}
 	if request.Method == yishanSessionLineageMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"rootSessionId":"%s","mode":"%s","children":[{"sessionId":"child","parentSessionId":"%s","origin":"subagent","delegationDepth":1,"relativeDepth":1,"live":false,"persisted":true,"activity":"inactive","mode":"one-shot"}]}}`+"\n", request.ID, request.Params.RootSessionID, request.Params.Mode, request.Params.RootSessionID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"rootSessionId":"%s","mode":"%s","children":[{"sessionId":"child","parentSessionId":"%s","origin":"subagent","delegationDepth":1,"relativeDepth":1,"live":false,"persisted":true,"activity":"inactive","mode":"one-shot"}]}}`+"\n", request.ID, request.Params.RootSessionID, request.Params.Mode, request.Params.RootSessionID)
 		return true
 	}
 	if request.Method != yishanSessionListMethod {
 		return false
 	}
-	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessions":[{"sessionId":"%s","createdAt":1,"live":false,"persisted":true}]}}`+"\n", request.ID, request.Params.CWD)
+	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"sessions":[{"sessionId":"%s","createdAt":1,"live":false,"persisted":true}]}}`+"\n", request.ID, request.Params.CWD)
 	return true
 }
 
 func writeSessionRPCResponse(request struct {
-	ID     uint64 `json:"id"`
+	ID     string `json:"id"`
 	Method string `json:"method"`
 	Params struct {
 		CWD           string `json:"cwd"`
@@ -428,18 +454,18 @@ func writeSessionRPCResponse(request struct {
 	} `json:"params"`
 }) {
 	if request.Method == yishanSessionStartMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","instanceId":"run"}}`+"\n", request.ID, request.Params.SessionID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"sessionId":"%s","instanceId":"run"}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
 	if request.Method == yishanSessionPromptMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"messageId":"message"}}`+"\n", request.ID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"messageId":"message"}}`+"\n", request.ID)
 		return
 	}
 	writeSessionControlResponse(request)
 }
 
 func writeSessionControlResponse(request struct {
-	ID     uint64 `json:"id"`
+	ID     string `json:"id"`
 	Method string `json:"method"`
 	Params struct {
 		CWD           string `json:"cwd"`
@@ -449,20 +475,20 @@ func writeSessionControlResponse(request struct {
 	} `json:"params"`
 }) {
 	if request.Method == yishanSessionCancelMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","cancelled":true}}`+"\n", request.ID, request.Params.SessionID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"sessionId":"%s","cancelled":true}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
 	if request.Method == yishanSessionFlushMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","durableThroughSeq":-1,"instanceId":"run"}}`+"\n", request.ID, request.Params.SessionID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"sessionId":"%s","durableThroughSeq":-1,"instanceId":"run"}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
 	if request.Method == yishanSessionSubscribeMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","instanceId":"run","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}}`+"\n", request.ID, request.Params.SessionID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"sessionId":"%s","instanceId":"run","events":[],"asOfSeq":-1,"durableThroughSeq":-1,"headSeq":-1}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
 	if request.Method == yishanSessionDisposeMethod {
-		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s","disposed":true}}`+"\n", request.ID, request.Params.SessionID)
+		_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"sessionId":"%s","disposed":true}}`+"\n", request.ID, request.Params.SessionID)
 		return
 	}
-	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":{"sessionId":"%s"}}`+"\n", request.ID, request.Params.SessionID)
+	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%q,"result":{"sessionId":"%s"}}`+"\n", request.ID, request.Params.SessionID)
 }

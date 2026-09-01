@@ -17,6 +17,7 @@
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.1",
     "@yishan-io/dsh-daemon-bridge": "workspace:*",
+    "@yishan-io/dsh-memory": "workspace:*",
     "@yishan-io/dsh-plugin-loader": "workspace:*",
     "@yishan-io/dsh-provider": "workspace:*",
     "@yishan-io/dsh-workspace": "workspace:*",

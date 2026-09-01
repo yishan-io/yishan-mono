@@ -10,6 +10,7 @@ export {
 } from "./workspaceBinding";
 /** DSH workspace lifecycle tool composition. */
 export { apply, inject, name } from "./plugin";
+export { WorkspaceClient } from "./client";
 export type {
   WorkspaceCloseInput,
   WorkspaceCloseResult,
@@ -20,4 +21,4 @@ export type {
   WorkspaceListInput,
   WorkspaceListResult,
   WorkspaceRecord,
-} from "@yishan-io/dsh-daemon-bridge";
+} from "./client";
