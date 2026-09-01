@@ -10,16 +10,21 @@ import (
 
 	"yishan/apps/cli/internal/agent/dsh"
 	"yishan/apps/cli/internal/memory"
+	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 )
 
-func resolveDSHCapability(workspaces *nodeworkspace.Service, memories *memory.Service) dsh.CapabilityResolver {
+func resolveDSHCapability(workspaces *nodeworkspace.Service, memories *memory.Service, tasks *nodelocaltask.Service) dsh.CapabilityResolver {
 	workspaceResolver := resolveDSHWorkspaceCapability(workspaces)
 	return func(ctx context.Context, request dsh.CapabilityRequest) (any, error) {
-		if strings.HasPrefix(request.Operation, "memory.") {
+		switch {
+		case strings.HasPrefix(request.Operation, "memory."):
 			return executeDSHMemoryCapability(ctx, workspaces, memories, request)
+		case strings.HasPrefix(request.Operation, "task."):
+			return executeDSHTaskCapability(ctx, workspaces, tasks, request)
+		default:
+			return workspaceResolver(ctx, request)
 		}
-		return workspaceResolver(ctx, request)
 	}
 }
 

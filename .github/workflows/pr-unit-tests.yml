@@ -55,6 +55,8 @@ jobs:
               - 'packages/design-tokens/**'
             dsh_memory:
               - 'packages/dsh-memory/**'
+            dsh_task:
+              - 'packages/dsh-task/**'
             dsh_plugin_loader:
               - 'packages/dsh-plugin-loader/**'
             dsh_provider:
@@ -95,6 +97,7 @@ jobs:
           DESKTOP_DSH_RUNTIME_CHANGED: ${{ steps.changes.outputs.desktop_dsh_runtime }}
           DESIGN_TOKENS_CHANGED: ${{ steps.changes.outputs.design_tokens }}
           DSH_MEMORY_CHANGED: ${{ steps.changes.outputs.dsh_memory }}
+          DSH_TASK_CHANGED: ${{ steps.changes.outputs.dsh_task }}
           DSH_PLUGIN_LOADER_CHANGED: ${{ steps.changes.outputs.dsh_plugin_loader }}
           DSH_PROVIDER_CHANGED: ${{ steps.changes.outputs.dsh_provider }}
           DSH_SESSION_CHANGED: ${{ steps.changes.outputs.dsh_session }}
@@ -139,6 +142,7 @@ jobs:
             has('DESIGN_TOKENS_CHANGED') ||
             has('PI_SUBAGENTS_CHANGED') ||
             has('DSH_MEMORY_CHANGED') ||
+            has('DSH_TASK_CHANGED') ||
             has('DSH_PLUGIN_LOADER_CHANGED') ||
             has('DSH_PROVIDER_CHANGED') ||
             has('DSH_SESSION_CHANGED')
@@ -152,6 +156,10 @@ jobs:
 
           if (has('DSH_MEMORY_CHANGED')) {
             addTarget('dsh-memory', 'packages/dsh-memory', 'bun run test && bun run typecheck && bun run lint');
+          }
+
+          if (has('DSH_TASK_CHANGED')) {
+            addTarget('dsh-task', 'packages/dsh-task', 'bun run test && bun run typecheck && bun run lint');
           }
 
           if (has('DSH_PLUGIN_LOADER_CHANGED')) {
@@ -205,9 +213,9 @@ jobs:
           const outputs = [
             `bun_matrix=${JSON.stringify({ include: bunTargets })}`,
             `run_bun=${bunTargets.length > 0}`,
-            `run_cli=${has('CLI_CHANGED') || has('DSH_MEMORY_CHANGED') || has('DSH_PLUGIN_LOADER_CHANGED') || has('DSH_PROVIDER_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
-            `run_dsh_smoke=${has('DSH_MEMORY_CHANGED') || has('DSH_PLUGIN_LOADER_CHANGED') || has('DSH_PROVIDER_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
-            `run_dsh_daemon_smoke=${has('CLI_CHANGED') || has('DSH_MEMORY_CHANGED') || has('DSH_PLUGIN_LOADER_CHANGED') || has('DSH_PROVIDER_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_cli=${has('CLI_CHANGED') || has('DSH_MEMORY_CHANGED') || has('DSH_TASK_CHANGED') || has('DSH_PLUGIN_LOADER_CHANGED') || has('DSH_PROVIDER_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_dsh_smoke=${has('DSH_MEMORY_CHANGED') || has('DSH_TASK_CHANGED') || has('DSH_PLUGIN_LOADER_CHANGED') || has('DSH_PROVIDER_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_dsh_daemon_smoke=${has('CLI_CHANGED') || has('DSH_MEMORY_CHANGED') || has('DSH_TASK_CHANGED') || has('DSH_PLUGIN_LOADER_CHANGED') || has('DSH_PROVIDER_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
             `run_relay=${has('RELAY_CHANGED')}`,
           ];
 

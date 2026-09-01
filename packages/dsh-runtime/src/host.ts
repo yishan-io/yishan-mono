@@ -7,6 +7,7 @@ import * as pluginLoader from "@yishan-io/dsh-plugin-loader";
 import type { PluginLoadState } from "@yishan-io/dsh-plugin-loader";
 import * as providerPlugin from "@yishan-io/dsh-provider";
 import * as sessionPlugin from "@yishan-io/dsh-session";
+import * as taskPlugin from "@yishan-io/dsh-task";
 import * as workspacePlugin from "@yishan-io/dsh-workspace";
 
 import { isDeveloperMode, resolveDataDirectory } from "./config";
@@ -40,6 +41,7 @@ export class RuntimeHost {
       await installCorePlugins(context);
       await context.plugin(providerPlugin, { dataDirectory });
       await context.plugin(workspacePlugin);
+      await context.plugin(taskPlugin);
       await context.plugin(memoryPlugin);
       await context.plugin(sessionPlugin, { dataDirectory });
       await context.plugin(pluginLoader, { pluginRoot: dataDirectory, developerMode: isDeveloperMode() });

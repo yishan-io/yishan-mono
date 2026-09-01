@@ -29,12 +29,14 @@ type Deps struct {
 	Events              *eventbus.Hub
 	TaskContextsChanged func()
 	TaskTitleChanged    func(context.Context, string, string)
+	TaskDocumentChanged func(context.Context, string, string, domain.Task) error
 	TemplateStore       *TemplateStore
 }
 
 // Service validates and orchestrates Local Task lifecycle operations.
 type Service struct {
-	deps Deps
+	deps      Deps
+	documents documentLockSet
 }
 
 // NewService builds the Local Task application service.

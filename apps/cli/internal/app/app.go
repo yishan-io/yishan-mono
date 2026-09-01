@@ -24,6 +24,7 @@ import (
 	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
+	localtask "yishan/apps/cli/internal/localtask"
 	"yishan/apps/cli/internal/memory"
 	nodeagent "yishan/apps/cli/internal/node/agent"
 	nodebackgroundjob "yishan/apps/cli/internal/node/backgroundjob"
@@ -243,6 +244,13 @@ func Bootstrap(cfg Config) (*App, error) {
 		TaskTitleChanged: func(ctx context.Context, taskID string, taskTitle string) {
 			refreshTaskContextTitle(ctx, memorySvc, localTaskSvc, taskID, taskTitle)
 		},
+		TaskDocumentChanged: func(_ context.Context, path string, workspaceRoot string, task localtask.Task) error {
+			projectID := ""
+			if task.ProjectID != nil {
+				projectID = *task.ProjectID
+			}
+			return memorySvc.OnFileChanged(path, workspaceRoot, projectID)
+		},
 	})
 	var agentSvc *nodeagent.Service
 	workspaceSvc := nodeworkspace.NewService(nodeworkspace.Deps{
@@ -285,7 +293,7 @@ func Bootstrap(cfg Config) (*App, error) {
 				Policy:      dsh.WorkspaceBindingPolicy{Authorization: "daemon-authorized"},
 			}, nil
 		})
-		dshSupervisor.SetCapabilityResolver(resolveDSHCapability(workspaceSvc, memorySvc))
+		dshSupervisor.SetCapabilityResolver(resolveDSHCapability(workspaceSvc, memorySvc, localTaskSvc))
 	}
 	var localPluginStore nodeagent.DSHLocalPluginStore
 	if cfg.DSHDeveloperMode {

@@ -9,6 +9,7 @@ const runtimeMocks = vi.hoisted(() => ({
   installCorePlugins: vi.fn<() => Promise<void>>(),
   installProviderPlugin: vi.fn<() => Promise<void>>(),
   installMemoryPlugin: vi.fn<() => Promise<void>>(),
+  installTaskPlugin: vi.fn<() => Promise<void>>(),
   installPluginLoader: vi.fn<() => Promise<void>>(),
   bridgeStart: vi.fn(),
 }));
@@ -36,6 +37,7 @@ vi.mock("@yishan-io/dsh-daemon-bridge", () => ({
   },
 }));
 vi.mock("@yishan-io/dsh-memory", () => ({ apply: runtimeMocks.installMemoryPlugin }));
+vi.mock("@yishan-io/dsh-task", () => ({ apply: runtimeMocks.installTaskPlugin }));
 vi.mock("@yishan-io/dsh-plugin-loader", () => ({
   apply: async (context: { yishanPluginLoader?: { states: readonly [] } }) => {
     await runtimeMocks.installPluginLoader();
@@ -54,6 +56,7 @@ beforeEach(() => {
   runtimeMocks.installCorePlugins.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installProviderPlugin.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installMemoryPlugin.mockReset().mockResolvedValue(undefined);
+  runtimeMocks.installTaskPlugin.mockReset().mockResolvedValue(undefined);
   runtimeMocks.installPluginLoader.mockReset().mockResolvedValue(undefined);
   runtimeMocks.bridgeStart.mockReset();
 });
@@ -65,14 +68,22 @@ describe("RuntimeHost", () => {
     const dataDirectory = await mkdtemp(join(tmpdir(), "yishan-dsh-host-order-"));
     try {
       await RuntimeHost.create({ dataDirectory });
+      expect(runtimeMocks.installTaskPlugin).toHaveBeenCalledOnce();
       expect(runtimeMocks.installMemoryPlugin).toHaveBeenCalledOnce();
       expect(runtimeMocks.bridgeStart).toHaveBeenCalledOnce();
+      const taskOrder = runtimeMocks.installTaskPlugin.mock.invocationCallOrder[0];
       const memoryOrder = runtimeMocks.installMemoryPlugin.mock.invocationCallOrder[0];
       const pluginsOrder = runtimeMocks.installPluginLoader.mock.invocationCallOrder[0];
       const bridgeOrder = runtimeMocks.bridgeStart.mock.invocationCallOrder[0];
-      if (memoryOrder === undefined || pluginsOrder === undefined || bridgeOrder === undefined) {
+      if (
+        taskOrder === undefined ||
+        memoryOrder === undefined ||
+        pluginsOrder === undefined ||
+        bridgeOrder === undefined
+      ) {
         throw new Error("startup calls were not recorded");
       }
+      expect(taskOrder).toBeLessThan(memoryOrder);
       expect(memoryOrder).toBeLessThan(pluginsOrder);
       expect(pluginsOrder).toBeLessThan(bridgeOrder);
     } finally {
