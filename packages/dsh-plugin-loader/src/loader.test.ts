@@ -57,6 +57,26 @@ describe("mountVerifiedPluginLoader", () => {
     }
   });
 
+  it("loads entries from a Cordis plugin context without undeclared loader injection", async () => {
+    const fixture = await createFixture();
+    mocks.loadVerifiedPluginLock.mockResolvedValue({
+      root: fixture.root,
+      snapshotRoot: fixture.root,
+      packages: [mockPackage(fixture.packageRoot, "safe-plugin", [entry("official")])],
+    });
+    const context = new Context();
+    let states: readonly { state: string }[] = [];
+    try {
+      await context.plugin(async (pluginContext) => {
+        const mounted = await mountVerifiedPluginLoader(pluginContext, fixture.root);
+        states = mounted.states;
+      });
+      expect(states).toEqual([expect.objectContaining({ state: "loaded" })]);
+    } finally {
+      await context.fiber.dispose();
+    }
+  });
+
   it("isolates an entry apply failure and reports it rejected", async () => {
     const fixture = await createFixture("export default () => { throw new Error('broken') }\n");
     mocks.loadVerifiedPluginLock.mockResolvedValue({

@@ -190,6 +190,7 @@ func buildRunConfig(logFilePath string, hasCustomLogFile bool) daemon.RunConfig 
 		DSHDeveloperMode:      appConfig.Daemon.DSHDeveloperMode,
 		DSHNodePath:           appConfig.Daemon.DSHNodePath,
 		DSHRuntimePath:        appConfig.Daemon.DSHRuntimePath,
+		DSHPluginSeedPath:     appConfig.Daemon.DSHPluginSeedPath,
 		DSHProvider:           appConfig.Daemon.DSHProvider,
 		DSHModel:              appConfig.Daemon.DSHModel,
 		LogFilePath:           logFilePath,
@@ -289,6 +290,7 @@ func init() {
 	daemonCmd.PersistentFlags().Bool("dsh-developer-mode", false, "enable DSH developer mode")
 	daemonCmd.PersistentFlags().String("dsh-node-path", "", "bundled Electron executable path for DSH")
 	daemonCmd.PersistentFlags().String("dsh-runtime-path", "", "bundled DSH JavaScript runtime path")
+	daemonCmd.PersistentFlags().String("dsh-plugin-seed-path", "", "offline DSH plugin seed archive path")
 	daemonCmd.PersistentFlags().String("dsh-provider", config.DefaultDSHProvider, "DSH provider default")
 	daemonCmd.PersistentFlags().String("dsh-model", config.DefaultDSHModel, "DSH model default")
 
@@ -302,6 +304,7 @@ func init() {
 	cobra.CheckErr(viper.BindPFlag("daemon_dsh_developer_mode", daemonCmd.PersistentFlags().Lookup("dsh-developer-mode")))
 	cobra.CheckErr(viper.BindPFlag("daemon_dsh_node_path", daemonCmd.PersistentFlags().Lookup("dsh-node-path")))
 	cobra.CheckErr(viper.BindPFlag("daemon_dsh_runtime_path", daemonCmd.PersistentFlags().Lookup("dsh-runtime-path")))
+	cobra.CheckErr(viper.BindPFlag("daemon_dsh_plugin_seed_path", daemonCmd.PersistentFlags().Lookup("dsh-plugin-seed-path")))
 	cobra.CheckErr(viper.BindPFlag("daemon_dsh_provider", daemonCmd.PersistentFlags().Lookup("dsh-provider")))
 	cobra.CheckErr(viper.BindPFlag("daemon_dsh_model", daemonCmd.PersistentFlags().Lookup("dsh-model")))
 }

@@ -13,6 +13,7 @@ const terminateGraceMs = 1_000;
 const forceKillWaitMs = 1_000;
 const dshTestReplayEnvironmentVariable = "YISHAN_DSH_TEST_REPLAY";
 const dshDeveloperModeEnvironmentVariable = "YISHAN_DSH_DEVELOPER_MODE";
+const dshPluginSeedEnvironmentVariable = "YISHAN_DAEMON_DSH_PLUGIN_SEED_PATH";
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
@@ -70,6 +71,16 @@ export function resolveCliInvocation(): Invocation {
     ? { executablePath: bundledPath, prefixArgs: [] }
     : { executablePath: "go", prefixArgs: ["run", "."], cwd: resolveDevCliDir() };
 }
+function resolveDshPluginSeedPath(): string {
+  if (!isDevMode()) return resolve(process.resourcesPath, "dsh-plugins", "dsh-dev-flow.tgz");
+  return (
+    firstExistingPath([
+      process.env[dshPluginSeedEnvironmentVariable],
+      resolve(process.cwd(), "dist", "resources", "dsh-plugins", "dsh-dev-flow.tgz"),
+      resolve(process.cwd(), "apps", "desktop", "dist", "resources", "dsh-plugins", "dsh-dev-flow.tgz"),
+    ]) ?? resolve(process.cwd(), "dist", "resources", "dsh-plugins", "dsh-dev-flow.tgz")
+  );
+}
 function resolveDshRuntimePath(): string {
   if (!isDevMode()) return resolve(process.resourcesPath, "dsh-runtime.mjs");
   return (
@@ -87,7 +98,8 @@ export function resolveDaemonCliEnvironment(): DaemonCliEnvironment {
     Object.entries(process.env).filter(
       ([environmentVariable]) =>
         environmentVariable.toLowerCase() !== dshTestReplayEnvironmentVariable.toLowerCase() &&
-        environmentVariable.toLowerCase() !== dshDeveloperModeEnvironmentVariable.toLowerCase(),
+        environmentVariable.toLowerCase() !== dshDeveloperModeEnvironmentVariable.toLowerCase() &&
+        environmentVariable.toLowerCase() !== dshPluginSeedEnvironmentVariable.toLowerCase(),
     ),
   );
   return {
@@ -96,6 +108,7 @@ export function resolveDaemonCliEnvironment(): DaemonCliEnvironment {
     YISHAN_DAEMON_DSH_DEVELOPER_MODE: process.env.YISHAN_DSH_DEVELOPER_MODE === "true" ? "true" : "false",
     YISHAN_DAEMON_DSH_NODE_PATH: process.execPath,
     YISHAN_DAEMON_DSH_RUNTIME_PATH: resolveDshRuntimePath(),
+    [dshPluginSeedEnvironmentVariable]: resolveDshPluginSeedPath(),
   };
 }
 export function buildDaemonStartArgs(): string[] {

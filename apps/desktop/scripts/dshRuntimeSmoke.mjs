@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -10,6 +11,7 @@ import { spawn } from "node:child_process";
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const desktopDirectory = resolve(scriptDirectory, "..");
 const runtimePath = resolve(desktopDirectory, "dist", "resources", "dsh-runtime.mjs");
+const dshPluginsPath = resolve(desktopDirectory, "dist", "resources", "dsh-plugins");
 const cwd = "/dsh-runtime-smoke";
 const rpcDeadlineMilliseconds = 10_000;
 const terminationGraceMilliseconds = 2_000;
@@ -186,6 +188,10 @@ async function assertProductionRuntimeInitializesActiveCatalogSelection(dataDire
     await client.terminate();
   }
 }
+
+const devFlowArchive = await readFile(resolve(dshPluginsPath, "dsh-dev-flow.tgz"));
+const devFlowIntegrity = (await readFile(resolve(dshPluginsPath, "dsh-dev-flow.integrity"), "utf8")).trim();
+assert.equal(devFlowIntegrity, `sha512-${createHash("sha512").update(devFlowArchive).digest("base64")}`);
 
 const dataDirectory = await mkdtemp(resolve(tmpdir(), "yishan-dsh-smoke-"));
 try {

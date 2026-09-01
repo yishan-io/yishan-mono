@@ -96,9 +96,6 @@ func NewInstaller(root string, key ed25519.PrivateKey, approved []ApprovedBundle
 	if strings.TrimSpace(root) == "" || !filepath.IsAbs(root) {
 		return nil, errors.New("DSH plugin root must be absolute")
 	}
-	if registry == nil || downloader == nil {
-		return nil, errors.New("DSH plugin registry and downloader are required")
-	}
 	allowlist, err := buildAllowlist(approved)
 	if err != nil {
 		return nil, err

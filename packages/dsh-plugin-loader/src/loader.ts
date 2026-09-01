@@ -55,7 +55,7 @@ export async function mountVerifiedPluginLoader(context: Context, pluginRoot: st
   const lock = await loadVerifiedPluginLock(pluginRoot);
   const loaderFiber = await context.plugin(Loader, { baseUrl: getControlledBaseUrl(lock) });
   try {
-    const states = await loadEntries(context.loader, lock.packages, "official");
+    const states = await loadEntries(getLoader(context), lock.packages, "official");
     return { states, dispose: async () => await loaderFiber.dispose() };
   } catch (error) {
     return await disposeAfterStartupFailure(loaderFiber, error);
@@ -78,7 +78,7 @@ export async function mountLocalPluginLoader(context: Context, pluginRoot: strin
       : undefined;
   try {
     const states = await loadEntries(
-      context.loader,
+      getLoader(context),
       lock.bundles.map((bundle) => ({ name: bundle.id, root: bundle.root, entries: bundle.entries })),
       "local",
     );
@@ -87,6 +87,12 @@ export async function mountLocalPluginLoader(context: Context, pluginRoot: strin
     if (loaderFiber === undefined) throw error;
     return await disposeAfterStartupFailure(loaderFiber, error);
   }
+}
+
+function getLoader(context: Context): Loader {
+  const loader = context.get("loader");
+  if (loader === undefined) throw new Error("plugin loader service is unavailable");
+  return loader as Loader;
 }
 
 async function loadEntries(

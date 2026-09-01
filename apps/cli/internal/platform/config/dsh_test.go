@@ -52,3 +52,12 @@ func TestLoad_UsesDSHDeveloperMode(t *testing.T) {
 		t.Fatal("DSH developer mode is disabled, want enabled")
 	}
 }
+
+func TestLoad_PropagatesDSHPluginSeedPath(t *testing.T) {
+	v := viper.New()
+	v.Set("daemon_dsh_plugin_seed_path", "/bundle/dev-flow.tgz")
+	loaded, err := Load(v, filepath.Join(t.TempDir(), "credential.yaml"))
+	if err != nil || loaded.Daemon.DSHPluginSeedPath != "/bundle/dev-flow.tgz" {
+		t.Fatalf("seed path = %q, %v", loaded.Daemon.DSHPluginSeedPath, err)
+	}
+}

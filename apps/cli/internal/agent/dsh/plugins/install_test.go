@@ -297,7 +297,7 @@ func TestInstallerVerifyInstalledInventory_RejectsExtraFileAndSymlink(t *testing
 	}
 }
 
-func TestExtractBundle_RequiresPackageRootDirectory(t *testing.T) {
+func TestExtractBundle_AcceptsImplicitStandardNpmPackageRoot(t *testing.T) {
 	var compressed bytes.Buffer
 	gzipWriter := gzip.NewWriter(&compressed)
 	tarWriter := tar.NewWriter(gzipWriter)
@@ -313,9 +313,8 @@ func TestExtractBundle_RequiresPackageRootDirectory(t *testing.T) {
 	if err := gzipWriter.Close(); err != nil {
 		t.Fatal(err)
 	}
-	_, err := extractBundle(t.TempDir(), Bundle{Name: "safe-plugin", Version: "1.0.0"}, compressed.Bytes())
-	if !errors.Is(err, ErrInvalidArchive) {
-		t.Fatalf("error = %v, want package-root rejection", err)
+	if _, err := extractBundle(t.TempDir(), Bundle{Name: "safe-plugin", Version: "1.0.0"}, compressed.Bytes()); err != nil {
+		t.Fatalf("extract standard npm archive: %v", err)
 	}
 }
 
@@ -409,5 +408,24 @@ func TestInstallerRestoreSnapshot_RemovesInitialFailedMutation(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, currentSnapshotName)); !os.IsNotExist(err) {
 		t.Fatalf("active snapshot stat error = %v, want not exist", err)
+	}
+}
+
+func TestInstallerInstallArchive_UsesAllowlistIntegrityWithoutNetwork(t *testing.T) {
+	archive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "ok"}})
+	bundle := approvedBundle(archive)
+	_, key, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	installer, err := NewInstaller(t.TempDir(), key, []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity}}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := installer.InstallArchive(context.Background(), Request{Name: "safe-plugin", Version: "1.0.0"}, archive); err != nil {
+		t.Fatalf("InstallArchive: %v", err)
+	}
+	if _, err := installer.InstallArchive(context.Background(), Request{Name: "safe-plugin", Version: "1.0.0"}, append(archive, 'x')); !errors.Is(err, ErrInvalidArchive) {
+		t.Fatalf("InstallArchive tampered error = %v", err)
 	}
 }

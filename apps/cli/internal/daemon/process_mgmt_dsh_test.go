@@ -18,12 +18,12 @@ func TestBuildDetachedArgs_ForwardsDSHDeveloperMode(t *testing.T) {
 			args := buildDetachedArgs(StartConfig{Run: RunConfig{
 				Host: "127.0.0.1", Port: 9000, DSHEnabled: true, DSHDeveloperMode: testCase.isDeveloperMode,
 				DSHNodePath: "/app/Yishan", DSHRuntimePath: "/app/dsh-runtime.mjs",
-				DSHProvider: "provider", DSHModel: "model",
+				DSHPluginSeedPath: "/bundle/dev-flow.tgz", DSHProvider: "provider", DSHModel: "model",
 			}})
 			for _, expected := range []string{
 				"--dsh-enabled=true", "--dsh-developer-mode=" + strconv.FormatBool(testCase.isDeveloperMode),
 				"--dsh-node-path", "/app/Yishan", "--dsh-runtime-path", "/app/dsh-runtime.mjs",
-				"--dsh-provider", "provider", "--dsh-model", "model",
+				"--dsh-plugin-seed-path", "/bundle/dev-flow.tgz", "--dsh-provider", "provider", "--dsh-model", "model",
 			} {
 				if !slices.Contains(args, expected) {
 					t.Fatalf("detached args %v do not contain %q", args, expected)

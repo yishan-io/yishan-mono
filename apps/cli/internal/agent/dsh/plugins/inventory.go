@@ -141,6 +141,7 @@ func (i *Installer) createSnapshot(inventory Inventory, current string, plugin P
 		return Inventory{}, err
 	}
 	inventory.Version = 1
+	plugin.Enabled = existingPluginEnabled(inventory, plugin)
 	inventory.Plugins = replacePlugin(inventory.Plugins, plugin)
 	if err := i.writeSnapshotLock(snapshot, inventory); err != nil {
 		return Inventory{}, err
@@ -243,6 +244,15 @@ func (i *Installer) promoteSnapshot(snapshot string, inventory Inventory) (Inven
 	return inventory, nil
 }
 
+func existingPluginEnabled(inventory Inventory, plugin Plugin) bool {
+	for _, installed := range inventory.Plugins {
+		if installed.Name == plugin.Name {
+			return installed.Enabled
+		}
+	}
+	return plugin.Enabled
+}
+
 func replacePlugin(plugins []Plugin, installed Plugin) []Plugin {
 	updated := make([]Plugin, 0, len(plugins)+1)
 	for _, plugin := range plugins {
@@ -307,6 +317,9 @@ func (i *Installer) VerifyInstalledInventory() (Inventory, error) {
 	inventory, snapshot, err := i.readCurrentSnapshot()
 	if err != nil {
 		return Inventory{}, err
+	}
+	if snapshot == "" {
+		return inventory, nil
 	}
 	if err := verifyInventoryTree(snapshot, inventory); err != nil {
 		return Inventory{}, err

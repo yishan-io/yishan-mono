@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -9,6 +10,8 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const desktopDirectory = resolve(scriptDirectory, "..");
 const resourcesDirectory = resolve(desktopDirectory, "dist", "resources");
 const outputPath = resolve(resourcesDirectory, "dsh-runtime.mjs");
+const devFlowSeedBuilder = resolve(desktopDirectory, "..", "..", "packages", "dsh-dev-flow", "scripts", "buildSeed.mjs");
+const dshPluginsDirectory = resolve(resourcesDirectory, "dsh-plugins");
 const dshVersionPattern = /var \{ version(?:: (\w+))? \} = createRequire\(import\.meta\.url\)\("\.\.\/package\.json"\);/;
 const dshVersion = "0.1.1-rc.2";
 const dshRuntimePackageRequire = createRequire(resolve(desktopDirectory, "..", "..", "packages", "dsh-runtime", "package.json"));
@@ -32,7 +35,10 @@ async function copyNativeRuntimePackage(packageName) {
 }
 
 await rm(resolve(resourcesDirectory, "node_modules"), { recursive: true, force: true });
+await rm(resolve(resourcesDirectory, "dsh-skills"), { recursive: true, force: true });
+await rm(dshPluginsDirectory, { recursive: true, force: true });
 await mkdir(resourcesDirectory, { recursive: true });
+execFileSync(process.execPath, [devFlowSeedBuilder, dshPluginsDirectory], { stdio: "inherit" });
 
 await build({
   entryPoints: [resolve(desktopDirectory, "..", "..", "packages", "dsh-runtime", "src", "index.ts")],

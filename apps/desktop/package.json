@@ -115,7 +115,8 @@
         "to": ".",
         "filter": [
           "yishan",
-          "dsh-runtime.mjs"
+          "dsh-runtime.mjs",
+          "dsh-plugins/**/*"
         ]
       },
       {

@@ -239,6 +239,7 @@ func buildDetachedArgs(cfg StartConfig) []string {
 	args = append(args, "--dsh-developer-mode="+strconv.FormatBool(cfg.Run.DSHDeveloperMode))
 	args = appendOptionalArg(args, "--dsh-node-path", cfg.Run.DSHNodePath)
 	args = appendOptionalArg(args, "--dsh-runtime-path", cfg.Run.DSHRuntimePath)
+	args = appendOptionalArg(args, "--dsh-plugin-seed-path", cfg.Run.DSHPluginSeedPath)
 	args = appendOptionalArg(args, "--dsh-provider", cfg.Run.DSHProvider)
 	return appendOptionalArg(args, "--dsh-model", cfg.Run.DSHModel)
 }

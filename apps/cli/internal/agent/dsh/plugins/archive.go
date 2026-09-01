@@ -92,6 +92,7 @@ func extractTar(stage string, reader *tar.Reader) (extractState, error) {
 			state.hasPackageRoot = true
 			continue
 		}
+		state.hasPackageRoot = true
 		if state.seen[relative] {
 			return extractState{}, fmt.Errorf("%w: duplicate path %q", ErrInvalidArchive, relative)
 		}

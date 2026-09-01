@@ -3,22 +3,88 @@ package setup
 import (
 	"context"
 	"fmt"
+	"maps"
+	"os"
+
+	"golang.org/x/mod/semver"
 
 	"yishan/apps/cli/internal/agent/dsh/plugins"
 )
 
 const officialDSHPluginRegistryURL = "https://registry.npmjs.org"
 
-// officialDSHPluginCatalog is intentionally empty until a reviewed, data-only
-// Yishan adaptation manifest is bound to an exact upstream release. Do not add
-// an upstream package directly: every entry must include its audited manifest.
-var officialDSHPluginCatalog = []plugins.ApprovedBundle{}
+const (
+	officialDSHDevFlowName      = "@yishan-io/dsh-dev-flow"
+	officialDSHDevFlowVersion   = "0.1.0"
+	officialDSHDevFlowIntegrity = "sha512-hCzrPT4M/gOHT37F8zDnthRM0jCnPB9GLT5HDaO5Ol+WEdjq8It8dWr5hmbjCsT3Gg7N242TR/v3FUnbOWWhOw=="
+)
+
+var officialDSHPluginCatalog = []plugins.ApprovedBundle{{
+	Name: officialDSHDevFlowName, Version: officialDSHDevFlowVersion, Integrity: officialDSHDevFlowIntegrity,
+	Entries: []plugins.PluginEntry{{ID: "dev-flow", Entrypoint: "entry.mjs", Config: map[string]any{}, Inject: []string{"skills"}}},
+}}
+
+// EnsureOfficialDSHPluginSeed installs the current official bundle from an explicit offline archive.
+func EnsureOfficialDSHPluginSeed(ctx context.Context, dshDataDir, seedPath string) (plugins.Inventory, error) {
+	installer, err := newDSHPluginInstaller(ctx, dshDataDir)
+	if err != nil {
+		return plugins.Inventory{}, err
+	}
+	inventory, err := installer.VerifyInstalledInventory()
+	if err != nil {
+		return plugins.Inventory{}, fmt.Errorf("verify DSH plugin inventory: %w", err)
+	}
+	bundle := officialDSHPluginCatalog[0]
+	installed := installedDSHPlugin(inventory, bundle.Name)
+	if installed != nil && installed.Version == bundle.Version {
+		return inventory, nil
+	}
+	if installed != nil && !semver.IsValid("v"+installed.Version) {
+		return plugins.Inventory{}, fmt.Errorf("%w: invalid installed official bundle version", plugins.ErrInventoryTampered)
+	}
+	if installed != nil && semver.Compare("v"+installed.Version, "v"+bundle.Version) > 0 {
+		return inventory, nil
+	}
+	archive, err := os.ReadFile(seedPath)
+	if err != nil {
+		return plugins.Inventory{}, fmt.Errorf("read DSH plugin seed: %w", err)
+	}
+	return installer.InstallArchive(ctx, plugins.Request{Name: bundle.Name, Version: bundle.Version}, archive)
+}
+
+func installedDSHPlugin(inventory plugins.Inventory, name string) *plugins.Plugin {
+	for index := range inventory.Plugins {
+		if inventory.Plugins[index].Name == name {
+			return &inventory.Plugins[index]
+		}
+	}
+	return nil
+}
 
 // ListOfficialDSHPluginBundles returns daemon-owned install candidates. It
 // copies the catalog so callers cannot alter future install authorization.
 func ListOfficialDSHPluginBundles() []plugins.ApprovedBundle {
-	return append([]plugins.ApprovedBundle(nil), officialDSHPluginCatalog...)
+	catalog := make([]plugins.ApprovedBundle, len(officialDSHPluginCatalog))
+	for index, bundle := range officialDSHPluginCatalog {
+		catalog[index] = cloneApprovedDSHBundle(bundle)
+	}
+	return catalog
 }
+
+func cloneApprovedDSHBundle(bundle plugins.ApprovedBundle) plugins.ApprovedBundle {
+	bundle.Entries = append([]plugins.PluginEntry(nil), bundle.Entries...)
+	for index := range bundle.Entries {
+		if config, ok := bundle.Entries[index].Config.(map[string]any); ok {
+			bundle.Entries[index].Config = cloneDSHPluginConfig(config)
+		}
+		if inject, ok := bundle.Entries[index].Inject.([]string); ok {
+			bundle.Entries[index].Inject = append([]string(nil), inject...)
+		}
+	}
+	return bundle
+}
+
+func cloneDSHPluginConfig(config map[string]any) map[string]any { return maps.Clone(config) }
 
 // InstallDSHPluginBundle installs a catalog-selected bundle by name. Version
 // and package source remain daemon-owned; callers never provide an npm specifier.
