@@ -7,7 +7,7 @@ import { retryDSHTranscript } from "../commands/agentChatCommands";
 import { agentChatStore } from "../state/agentChatStore";
 import type { DSHFrontendPayload } from "../subscriptions/dshTranscript";
 import { ensureAgentSession, recoverAgentSessionAfterReconnect } from "./agentSessionRuntime";
-import { dshAttachResult, resetDshTestState } from "./agentSessionRuntime.dsh.testSupport";
+import { dshAttachResult, dshStartResult, resetDshTestState } from "./agentSessionRuntime.dsh.testSupport";
 
 const mocks = vi.hoisted(() => ({
   startAgent: vi.fn(),
@@ -77,10 +77,9 @@ afterEach(() => {
 
 describe("agentSessionRuntime.DSH recovery", () => {
   it("restarts an initially unavailable restored DSH session on reconnect without changing its identity", async () => {
-    mocks.startAgent.mockRejectedValueOnce(new Error("dsh runtime unavailable")).mockResolvedValueOnce({
-      runtime: "dsh",
-      sessionId: "restored-dsh-session",
-    });
+    mocks.startAgent
+      .mockRejectedValueOnce(new Error("dsh runtime unavailable"))
+      .mockResolvedValueOnce(dshStartResult("restored-dsh-session"));
 
     await expect(
       ensureAgentSession({
@@ -108,7 +107,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
   });
 
   it("applies the recovery attach snapshot when no replay notifications arrive", async () => {
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-recovery-attach" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-recovery-attach"));
     mocks.readHistory.mockResolvedValue({
       runtime: "dsh",
       dsh: {
@@ -166,7 +165,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
   });
 
   it("attaches after the confirmed durable cursor on reconnect", async () => {
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-cursor-session" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-cursor-session"));
     mocks.attachAgent.mockImplementation(({ sessionId }: { sessionId: string }) =>
       Promise.resolve(dshAttachResult(sessionId)),
     );
@@ -205,7 +204,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
   });
 
   it("recovers a restarted DSH instance ID after an unavailable durable read without Pi calls", async () => {
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-restarted" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-restarted"));
     mocks.readHistory
       .mockRejectedValueOnce(
         Object.assign(new Error("runtime request failed"), { data: { code: "DSH_RUNTIME_UNAVAILABLE" } }),
@@ -258,7 +257,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
   it("keeps polling an unavailable DSH runtime beyond its one-second restart backoff", async () => {
     vi.useFakeTimers();
     try {
-      mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-supervisor-restart" });
+      mocks.startAgent.mockResolvedValue(dshStartResult("dsh-supervisor-restart"));
       let historyAttempts = 0;
       mocks.readHistory.mockImplementation(async () => {
         historyAttempts++;
@@ -305,7 +304,7 @@ describe("agentSessionRuntime.DSH recovery", () => {
   });
 
   it("retries DSH transcript recovery without restarting or changing runtimes", async () => {
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-retry-session" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-retry-session"));
     mocks.readHistory.mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce({
       runtime: "dsh",
       dsh: {
@@ -331,18 +330,10 @@ describe("agentSessionRuntime.DSH recovery", () => {
       update: { reset: { sessionId: "dsh-retry-session", instanceId: "run-1", headSeq: -1 } },
     });
     await vi.waitFor(() => expect(agentChatStore.getState().sessionsByTabId["tab-dsh-retry"]?.state).toBe("error"));
-    await recoverAgentSessionAfterReconnect({
-      runtime: "dsh",
-      tabId: "tab-dsh-retry",
-      workspaceId: "workspace-1",
-      cwd: "/workspace",
-      sessionId: "dsh-retry-session",
-    });
-
     expect(mocks.readHistory).toHaveBeenCalledTimes(1);
     await retryDSHTranscript("tab-dsh-retry");
 
-    expect(mocks.readHistory).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(mocks.readHistory).toHaveBeenCalledTimes(2));
     expect(mocks.startAgent).toHaveBeenCalledTimes(1);
   });
 

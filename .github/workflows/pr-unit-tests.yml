@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - dev-dsh
 
 permissions:
   contents: read

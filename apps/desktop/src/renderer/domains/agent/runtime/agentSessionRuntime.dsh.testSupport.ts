@@ -4,6 +4,10 @@ import { agentChatStore } from "../state/agentChatStore";
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
 
+export function dshStartResult(sessionId: string) {
+  return { runtime: "dsh" as const, sessionId, dshAttachSnapshot: dshAttachResult(sessionId) };
+}
+
 export function dshAttachResult(sessionId: string) {
   return {
     runtime: "dsh" as const,
