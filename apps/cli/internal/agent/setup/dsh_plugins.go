@@ -17,7 +17,7 @@ const (
 	officialDSHDevFlowName          = "@yishan-io/dsh-dev-flow"
 	officialDSHDevFlowVersion       = "0.1.0"
 	officialDSHDevFlowIntegrity     = "sha512-hCzrPT4M/gOHT37F8zDnthRM0jCnPB9GLT5HDaO5Ol+WEdjq8It8dWr5hmbjCsT3Gg7N242TR/v3FUnbOWWhOw=="
-	officialDSHDevFlowSeedIntegrity = "sha512-UaWblyAhamKlq1d3QBu33EnET+4ZIlPetottvVwD5InV26HWx8DmAsXVpkpXzwpFDdhSj73fsQVrnW1xvmhfNA=="
+	officialDSHDevFlowSeedIntegrity = "sha512-+lyYQW0dLeN01k7Aiivzv+gNA7WUf1DPV9yotzniWFnzRmr8qFciffgmnLvA66bo6Iq4iePgy91B9l1FO7H4xw=="
 )
 
 var officialDSHPluginCatalog = []plugins.ApprovedBundle{{
