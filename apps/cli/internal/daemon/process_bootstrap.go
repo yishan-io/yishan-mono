@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/adapter/sqlite"
+	"yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/app"
 	hook "yishan/apps/cli/internal/node/hook"
 	nodeid "yishan/apps/cli/internal/node/id"
@@ -116,6 +118,13 @@ func buildHandler(cfg RunConfig, statePath string, runtime *session.Session, dae
 	database, err := initLocalDatabase(envDir, dataDir)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if cfg.DSHEnabled && cfg.DSHPluginSeedPath != "" {
+		if _, err := setup.EnsureOfficialDSHPluginSeed(context.Background(), config.DSHDataDir(dataDir), cfg.DSHPluginSeedPath); err != nil {
+			_ = database.Close() // cleanup after failed DSH plugin seed
+			return nil, nil, fmt.Errorf("ensure DSH plugin seed: %w", err)
+		}
 	}
 
 	app, err := app.Bootstrap(app.Config{

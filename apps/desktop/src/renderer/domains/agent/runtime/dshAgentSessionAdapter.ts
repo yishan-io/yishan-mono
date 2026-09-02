@@ -1,7 +1,7 @@
 import { delay } from "@shared/async/delay";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { attachAgentSession, getAgentCapabilities, readAgentRuntimeHistory } from "../daemon/daemonAgentProcedures";
-import type { AgentDSHAttachResult } from "../daemon/daemonAgentTypes";
+import type { AgentDSHAttachResult, AgentStartResult } from "../daemon/daemonAgentTypes";
 import { agentChatStore } from "../state/agentChatStore";
 import { registerAgentChatDSHEventRouter } from "../subscriptions/agentChatDSHEventRouter";
 import type { DSHFrontendPayload } from "../subscriptions/dshTranscript";
@@ -24,7 +24,11 @@ type DSHLifecycleState = {
 const dshStateByRecord = new WeakMap<AgentRuntimeSessionRecord, DSHLifecycleState>();
 
 /** Creates the DSH durable transcript controller for a DSH runtime record. */
-export function createDSHTranscriptController(record: AgentRuntimeSessionRecord, tabId: string): void {
+export function createDSHTranscriptController(
+  record: AgentRuntimeSessionRecord,
+  tabId: string,
+  isAwaitingStartAttachSnapshot = false,
+): void {
   const controller = new DSHTranscriptController(
     tabId,
     record.sessionId,
@@ -44,6 +48,7 @@ export function createDSHTranscriptController(record: AgentRuntimeSessionRecord,
       if (!("events" in snapshot)) throw new TypeError("invalid DSH recovery attach response");
       return snapshot;
     },
+    isAwaitingStartAttachSnapshot,
   );
   dshStateByRecord.set(record, {
     controller,
@@ -83,6 +88,12 @@ export async function attachDSHAgentSession(record: AgentRuntimeSessionRecord, t
   });
   if (result.runtime !== "dsh" || !("events" in result)) throw new TypeError("invalid DSH attach response");
   requireDSHState(record).controller.applyAttachSnapshot(result);
+}
+
+/** Applies the one-shot DSH transcript seed returned by a successful session start. */
+export function applyDSHStartSnapshot(record: AgentRuntimeSessionRecord, result: AgentStartResult): void {
+  if (result.runtime !== "dsh") throw new TypeError("DSH start returned another runtime");
+  requireDSHState(record).controller.applyAttachSnapshot(result.dshAttachSnapshot);
 }
 
 /** Retries a failed DSH durable transcript reload. */

@@ -69,7 +69,7 @@ type DSHLocalPluginStore interface {
 type DSHSessions interface {
 	ListSessions(context.Context, dsh.SessionListRequest) (dsh.SessionListResult, error)
 	ReadSession(context.Context, dsh.SessionReadRequest) (dsh.SessionReadResult, error)
-	ResumeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionResumeResult, error)
+	ResumeSession(context.Context, dsh.SessionResumeRequest) (dsh.SessionResumeResult, error)
 	DisposeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionDisposeResult, error)
 	StartSession(context.Context, dsh.SessionStartRequest) (dsh.SessionStartResult, error)
 	SetModelSession(context.Context, dsh.SetModelRequest) error
@@ -144,6 +144,8 @@ type Service struct {
 	piSessions *session.Registry
 	// dshSessions owns ephemeral DSH live-session routing state.
 	dshSessions *dshLiveRegistry
+	// dshNotificationMu serializes DSH route validation, lifecycle state, and publication.
+	dshNotificationMu sync.Mutex
 	// runtimeIdentities owns atomic runtime-scoped session-id reservations.
 	runtimeIdentities *runtimeIdentityRegistry
 	// stopProcess is overridden by focused tests to exercise cleanup failures.

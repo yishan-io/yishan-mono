@@ -7,6 +7,7 @@ import { abortAgent, sendAgentPrompt } from "../commands/agentChatCommands";
 import { agentChatStore } from "../state/agentChatStore";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
 import { ensureAgentSession, ensurePiSession, stopAgentSession, stopPiSession } from "./agentSessionRuntime";
+import { dshStartResult } from "./agentSessionRuntime.dsh.testSupport";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -73,7 +74,7 @@ afterEach(() => {
 describe.each(["pi", "dsh"] as const)("agentSessionRuntime pre-start close (%s)", (runtime) => {
   it("defers close through prior teardown and disposes the eventual backend start exactly once", async () => {
     const sessionId = `${runtime}-pre-start`;
-    mocks.startAgent.mockResolvedValue({ runtime, sessionId });
+    mocks.startAgent.mockResolvedValue(runtime === "dsh" ? dshStartResult(sessionId) : { runtime, sessionId });
     await ensureAgentSession({
       runtime,
       tabId: `${runtime}-old`,

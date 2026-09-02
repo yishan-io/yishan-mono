@@ -13,6 +13,7 @@ import type { AgentRuntime } from "../daemon/daemonAgentTypes";
 import { agentChatStore } from "../state/agentChatStore";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 import {
+  applyDSHStartSnapshot,
   attachDSHAgentSession,
   createDSHTranscriptController,
   registerDSHAgentSessionRouter,
@@ -109,7 +110,7 @@ export async function ensureAgentSession(opts: EnsureAgentSessionOptions): Promi
     closeRequested: false,
     startPromise: null,
   };
-  if (runtime === "dsh") createDSHTranscriptController(record, opts.tabId);
+  if (runtime === "dsh") createDSHTranscriptController(record, opts.tabId, true);
   record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record);
   const deferredStart = createAgentSessionDeferred<void>();
   record.startPromise = deferredStart.promise;
@@ -292,7 +293,7 @@ async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: Ensu
   // Use the model passed through opts (read before initSession cleared the store).
   const dshModelId = record.runtime === "dsh" && !shouldResumeDSH ? opts.dshModelId : undefined;
   const dshProviderId = record.runtime === "dsh" && !shouldResumeDSH ? opts.dshProviderId : undefined;
-  await startAgentSessionProcedure({
+  const result = await startAgentSessionProcedure({
     runtime: record.runtime,
     sessionId: record.sessionId,
     tabId: opts.tabId,
@@ -303,6 +304,7 @@ async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: Ensu
     ...(dshModelId ? { modelId: dshModelId } : {}),
     ...(dshProviderId ? { provider: dshProviderId } : {}),
   });
+  if (record.runtime === "dsh") applyDSHStartSnapshot(record, result);
 }
 async function attachRuntimeSession(record: AgentRuntimeSessionRecord, tabId: string): Promise<void> {
   if (record.runtime === "dsh") {

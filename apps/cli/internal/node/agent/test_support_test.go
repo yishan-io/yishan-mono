@@ -32,6 +32,7 @@ func defaultTestWorkspaceResolver(workspaceID string) (workspace.Workspace, erro
 		ID:        workspaceID,
 		ProjectID: "project-" + workspaceID,
 		OrgID:     "org-" + workspaceID,
+		State:     workspace.StateActive,
 	}, nil
 }
 

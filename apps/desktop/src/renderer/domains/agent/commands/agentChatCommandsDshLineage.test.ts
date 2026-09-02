@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
+import { dshStartResult } from "../runtime/agentSessionRuntime.dsh.testSupport";
 import { agentChatStore } from "../state/agentChatStore";
 import {
   recoverAgentSessionAfterReconnect,
@@ -308,7 +309,7 @@ describe("agentChatCommands DSH lineage", () => {
       children: [],
     };
     setDshParentTab("tab-dsh-parent", "dsh-parent");
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-parent" });
+    mocks.startAgent.mockResolvedValue(dshStartResult("dsh-parent"));
     mocks.listSessionLineage.mockResolvedValue(lineage);
 
     await startAgentChatSession({
@@ -316,10 +317,10 @@ describe("agentChatCommands DSH lineage", () => {
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
       runtime: "dsh",
+      sessionId: "dsh-parent",
       sessionView: "full",
     });
-    await Promise.resolve();
-    expect(mocks.listSessionLineage).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(mocks.listSessionLineage).toHaveBeenCalledTimes(1));
 
     vi.clearAllMocks();
     mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId: "pi-parent" });

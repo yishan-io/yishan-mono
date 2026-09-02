@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - dev-dsh
 
 permissions:
   contents: read
@@ -53,8 +54,20 @@ jobs:
               - 'apps/desktop/src/main/daemon/**'
             design_tokens:
               - 'packages/design-tokens/**'
-            dsh_yishan:
-              - 'packages/dsh-yishan/**'
+            dsh_runtime:
+              - 'packages/dsh-runtime/**'
+            dsh_dev_flow:
+              - 'packages/dsh-dev-flow/**'
+            dsh_memory:
+              - 'packages/dsh-memory/**'
+            dsh_task:
+              - 'packages/dsh-task/**'
+            dsh_plugin_loader:
+              - 'packages/dsh-plugin-loader/**'
+            dsh_provider:
+              - 'packages/dsh-provider/**'
+            dsh_session:
+              - 'packages/dsh-session/**'
             pi_memory:
               - 'packages/pi-memory/**'
             pi_task:
@@ -88,7 +101,13 @@ jobs:
           DESKTOP_CHANGED: ${{ steps.changes.outputs.desktop }}
           DESKTOP_DSH_RUNTIME_CHANGED: ${{ steps.changes.outputs.desktop_dsh_runtime }}
           DESIGN_TOKENS_CHANGED: ${{ steps.changes.outputs.design_tokens }}
-          DSH_YISHAN_CHANGED: ${{ steps.changes.outputs.dsh_yishan }}
+          DSH_RUNTIME_CHANGED: ${{ steps.changes.outputs.dsh_runtime }}
+          DSH_DEV_FLOW_CHANGED: ${{ steps.changes.outputs.dsh_dev_flow }}
+          DSH_MEMORY_CHANGED: ${{ steps.changes.outputs.dsh_memory }}
+          DSH_TASK_CHANGED: ${{ steps.changes.outputs.dsh_task }}
+          DSH_PLUGIN_LOADER_CHANGED: ${{ steps.changes.outputs.dsh_plugin_loader }}
+          DSH_PROVIDER_CHANGED: ${{ steps.changes.outputs.dsh_provider }}
+          DSH_SESSION_CHANGED: ${{ steps.changes.outputs.dsh_session }}
           PI_MEMORY_CHANGED: ${{ steps.changes.outputs.pi_memory }}
           PI_TASK_CHANGED: ${{ steps.changes.outputs.pi_task }}
           PI_DEV_FLOW_CHANGED: ${{ steps.changes.outputs.pi_dev_flow }}
@@ -129,7 +148,13 @@ jobs:
             has('CORE_CHANGED') ||
             has('DESIGN_TOKENS_CHANGED') ||
             has('PI_SUBAGENTS_CHANGED') ||
-            has('DSH_YISHAN_CHANGED')
+            has('DSH_RUNTIME_CHANGED') ||
+            has('DSH_DEV_FLOW_CHANGED') ||
+            has('DSH_MEMORY_CHANGED') ||
+            has('DSH_TASK_CHANGED') ||
+            has('DSH_PLUGIN_LOADER_CHANGED') ||
+            has('DSH_PROVIDER_CHANGED') ||
+            has('DSH_SESSION_CHANGED')
           ) {
             addTarget('desktop', 'apps/desktop', 'bunx vitest run');
           }
@@ -138,8 +163,32 @@ jobs:
             addTarget('design-tokens', 'packages/design-tokens', 'bun run test');
           }
 
-          if (has('DSH_YISHAN_CHANGED')) {
-            addTarget('dsh-yishan', 'packages/dsh-yishan', 'bun run test && bun run typecheck && bun run lint');
+          if (has('DESKTOP_DSH_RUNTIME_CHANGED') || has('DSH_RUNTIME_CHANGED') || has('DSH_DEV_FLOW_CHANGED')) {
+            addTarget('dsh-runtime', 'packages/dsh-runtime', 'bun run test && bun run typecheck && bun run lint');
+          }
+
+          if (has('DSH_DEV_FLOW_CHANGED')) {
+            addTarget('dsh-dev-flow', 'packages/dsh-dev-flow', 'bun run test && bun run typecheck && bun run lint');
+          }
+
+          if (has('DSH_MEMORY_CHANGED')) {
+            addTarget('dsh-memory', 'packages/dsh-memory', 'bun run test && bun run typecheck && bun run lint');
+          }
+
+          if (has('DSH_TASK_CHANGED')) {
+            addTarget('dsh-task', 'packages/dsh-task', 'bun run test && bun run typecheck && bun run lint');
+          }
+
+          if (has('DSH_PLUGIN_LOADER_CHANGED')) {
+            addTarget('dsh-plugin-loader', 'packages/dsh-plugin-loader', 'bun run test && bun run typecheck && bun run lint');
+          }
+
+          if (has('DSH_PROVIDER_CHANGED')) {
+            addTarget('dsh-provider', 'packages/dsh-provider', 'bun run test && bun run typecheck && bun run lint');
+          }
+
+          if (has('DSH_SESSION_CHANGED')) {
+            addTarget('dsh-session', 'packages/dsh-session', 'bun run test && bun run typecheck && bun run lint');
           }
 
           if (has('PI_MEMORY_CHANGED')) {
@@ -181,9 +230,9 @@ jobs:
           const outputs = [
             `bun_matrix=${JSON.stringify({ include: bunTargets })}`,
             `run_bun=${bunTargets.length > 0}`,
-            `run_cli=${has('CLI_CHANGED') || has('DSH_YISHAN_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
-            `run_dsh_smoke=${has('DSH_YISHAN_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
-            `run_dsh_daemon_smoke=${has('CLI_CHANGED') || has('DSH_YISHAN_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_cli=${has('CLI_CHANGED') || has('DSH_RUNTIME_CHANGED') || has('DSH_DEV_FLOW_CHANGED') || has('DSH_MEMORY_CHANGED') || has('DSH_TASK_CHANGED') || has('DSH_PLUGIN_LOADER_CHANGED') || has('DSH_PROVIDER_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_dsh_smoke=${has('DSH_RUNTIME_CHANGED') || has('DSH_DEV_FLOW_CHANGED') || has('DSH_MEMORY_CHANGED') || has('DSH_TASK_CHANGED') || has('DSH_PLUGIN_LOADER_CHANGED') || has('DSH_PROVIDER_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
+            `run_dsh_daemon_smoke=${has('CLI_CHANGED') || has('DSH_RUNTIME_CHANGED') || has('DSH_DEV_FLOW_CHANGED') || has('DSH_MEMORY_CHANGED') || has('DSH_TASK_CHANGED') || has('DSH_PLUGIN_LOADER_CHANGED') || has('DSH_PROVIDER_CHANGED') || has('DSH_SESSION_CHANGED') || has('DESKTOP_DSH_RUNTIME_CHANGED')}`,
             `run_relay=${has('RELAY_CHANGED')}`,
           ];
 
@@ -232,6 +281,14 @@ jobs:
       - name: Install dependencies for CLI DSH runtime tests
         if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
         run: bun install --frozen-lockfile --linker hoisted
+
+      - name: Install Electron runtime for CLI DSH tests
+        if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
+        run: |
+          node node_modules/electron/install.js
+          mkdir -p apps/desktop/node_modules
+          ln -sfn ../../../node_modules/electron apps/desktop/node_modules/electron
+          test -f apps/desktop/node_modules/electron/path.txt
 
       - name: Setup Go for CLI tests
         if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
@@ -306,6 +363,13 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile --linker hoisted
+
+      - name: Install Electron runtime
+        run: |
+          node node_modules/electron/install.js
+          mkdir -p apps/desktop/node_modules
+          ln -sfn ../../../node_modules/electron apps/desktop/node_modules/electron
+          test -f apps/desktop/node_modules/electron/path.txt
 
       - name: Smoke test local DSH daemon with desktop artifacts and Electron dev runtime
         working-directory: apps/desktop

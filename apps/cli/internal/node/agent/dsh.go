@@ -7,6 +7,7 @@ import (
 
 	"yishan/apps/cli/internal/agent/dsh"
 	"yishan/apps/cli/internal/rpc"
+	"yishan/apps/cli/internal/workspace"
 )
 
 // ListDSHSessions lists durable DSH sessions for an open workspace.
@@ -70,14 +71,14 @@ func (s *Service) ResumeDSHSession(ctx context.Context, workspaceID string, sess
 	if s.deps.DSH == nil {
 		return dsh.SessionResumeResult{}, dsh.ErrRuntimeUnavailable
 	}
-	return s.deps.DSH.ResumeSession(ctx, dsh.SessionReadRequest{CWD: workspacePath, SessionID: sessionID})
+	return s.deps.DSH.ResumeSession(ctx, dsh.SessionResumeRequest{CWD: workspacePath, SessionID: sessionID, WorkspaceID: workspaceID})
 }
 
 func (s *Service) stopDSHWorkspaceSessions(ctx context.Context, workspaceID string) error {
 	if s.deps.DSH == nil {
 		return nil
 	}
-	workspacePath, err := s.resolveDSHWorkspacePath(workspaceID)
+	workspacePath, err := s.resolveDSHTeardownWorkspacePath(workspaceID)
 	if err != nil {
 		return err
 	}
@@ -99,7 +100,7 @@ func (s *Service) disposeRegisteredDSHSessions(ctx context.Context, workspaceID 
 		if err == nil && !disposed.Disposed {
 			err = fmt.Errorf("DSH registered session %q was not disposed", entry.sessionID)
 		}
-		if err == nil && s.dshSessions.remove(entry) {
+		if err == nil && s.removeDSHNotificationSession(entry) {
 			s.runtimeIdentities.release(entry.sessionID, rpc.AgentRuntimeDSH)
 		}
 		result = errors.Join(result, err)
@@ -125,7 +126,7 @@ func (s *Service) disposeListedDSHSessions(ctx context.Context, cwd string, sess
 	return result
 }
 func (s *Service) resolveDSHWorkspacePath(workspaceID string) (string, error) {
-	workspaceInstance, err := s.deps.Workspace.GetWorkspace(workspaceID)
+	workspaceInstance, err := s.resolveAuthorizedDSHWorkspace(workspaceID)
 	if err != nil {
 		return "", err
 	}
@@ -134,3 +135,20 @@ func (s *Service) resolveDSHWorkspacePath(workspaceID string) (string, error) {
 
 var _ DSHSessions = (*dsh.Supervisor)(nil)
 var _ DSHSessionLineage = (*dsh.Supervisor)(nil)
+
+// resolveDSHTeardownWorkspacePath admits a closing workspace only while its
+// DSH sessions are being drained. It must not be used by live agent operations.
+func (s *Service) resolveDSHTeardownWorkspacePath(workspaceID string) (string, error) {
+	if s.deps.Workspace == nil {
+		return "", rpc.NewRPCError(rpc.CodeServerError, "workspace resolver is unavailable")
+	}
+	workspaceInstance, err := s.deps.Workspace.GetWorkspace(workspaceID)
+	if err != nil {
+		return "", err
+	}
+	if workspaceInstance.Path == "" || workspaceInstance.Health != workspace.HealthOK ||
+		(workspaceInstance.State != workspace.StateActive && workspaceInstance.State != workspace.StateClosing) {
+		return "", rpc.NewRPCError(rpc.CodeNotFound, "workspace is unavailable for teardown")
+	}
+	return workspaceInstance.Path, nil
+}

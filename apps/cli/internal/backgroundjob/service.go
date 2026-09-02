@@ -248,10 +248,28 @@ func (s *Service) isLocalJob(job Job) bool {
 }
 func (s *Service) isActiveWorkspace(job Job) bool {
 	ws, err := s.workspaces.GetWorkspace(job.WorkspaceID)
-	return err == nil && ws.ID == job.WorkspaceID && ws.Path == job.CWD && ws.ProjectID == job.ProjectID && ws.OrgID == job.OrganizationID
+	return err == nil &&
+		ws.ID == job.WorkspaceID &&
+		ws.Path == job.CWD &&
+		ws.ProjectID == job.ProjectID &&
+		ws.OrgID == job.OrganizationID &&
+		ws.State == workspace.StateActive &&
+		ws.Health == workspace.HealthOK
 }
 func startRequest(job Job) dsh.SessionStartRequest {
-	return dsh.SessionStartRequest{SessionID: job.SessionID, CWD: job.CWD, Binding: dsh.SessionBinding{Version: 1, WorkspaceID: job.WorkspaceID, ProjectID: job.ProjectID, OrganizationID: job.OrganizationID, OwnerNodeID: job.OwnerNodeID, CWD: job.CWD}}
+	return dsh.SessionStartRequest{
+		SessionID: job.SessionID,
+		CWD:       job.CWD,
+		Binding: dsh.SessionBinding{
+			Version:        1,
+			WorkspaceID:    job.WorkspaceID,
+			ProjectID:      job.ProjectID,
+			OrganizationID: job.OrganizationID,
+			OwnerNodeID:    job.OwnerNodeID,
+			CWD:            job.CWD,
+			Policy:         dsh.WorkspaceBindingPolicy{Authorization: "daemon-authorized"},
+		},
+	}
 }
 func subscribeRequest(job Job) dsh.SessionSubscribeRequest {
 	return dsh.SessionSubscribeRequest{SessionID: job.SessionID, CWD: job.CWD, AfterSeq: -1}

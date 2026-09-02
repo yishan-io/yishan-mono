@@ -229,8 +229,9 @@ type AgentSessionLineageResult struct {
 
 // AgentStartResult is the stable start response shared by agent runtimes.
 type AgentStartResult struct {
-	Runtime   AgentRuntime `json:"runtime"`
-	SessionID string       `json:"sessionId"`
+	Runtime           AgentRuntime          `json:"runtime"`
+	SessionID         string                `json:"sessionId"`
+	DSHAttachSnapshot *AgentDSHAttachResult `json:"dshAttachSnapshot,omitempty"`
 }
 
 // AgentAckResult is the stable acknowledgement for session mutations.

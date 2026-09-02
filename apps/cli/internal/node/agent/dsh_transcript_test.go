@@ -123,8 +123,9 @@ func TestDSHTranscript_RejectsUnknownInternalEvent(t *testing.T) {
 		AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 0,
 	}}
 	service := newDSHExecutionService(runtime)
-	startDSHTranscript(t, service, nil)
-	_, err := service.AgentAttach(context.Background(), nil, dshAttachRequest(-1))
+	_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{
+		Runtime: rpc.AgentRuntimeDSH, SessionID: "s", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative", TranscriptProtocolVersion: transcriptProtocolVersion,
+	})
 	assertTranscriptProtocolUnavailable(t, err)
 }
 

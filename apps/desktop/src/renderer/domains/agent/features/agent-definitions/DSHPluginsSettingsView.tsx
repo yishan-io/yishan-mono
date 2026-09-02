@@ -111,6 +111,7 @@ export function DSHPluginsSettingsView() {
               ) : null}
               {bundles.map((bundle) => {
                 const isOperating = operatingName === bundle.name;
+                const canUpdate = officialBundles.some((official) => official.name === bundle.name);
                 return (
                   <TableRow key={bundle.name} data-testid={`dsh-plugin-row-${bundle.name}`}>
                     <TableCell>{bundle.name}</TableCell>
@@ -128,13 +129,15 @@ export function DSHPluginsSettingsView() {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      <Button
-                        size="small"
-                        disabled={isOperating}
-                        onClick={() => void runOperation(bundle.name, "update", () => refreshDSHPlugin(bundle.name))}
-                      >
-                        {operation === "update" && isOperating ? <CircularProgress size={14} /> : "Update"}
-                      </Button>
+                      {canUpdate ? (
+                        <Button
+                          size="small"
+                          disabled={isOperating}
+                          onClick={() => void runOperation(bundle.name, "update", () => refreshDSHPlugin(bundle.name))}
+                        >
+                          {operation === "update" && isOperating ? <CircularProgress size={14} /> : "Update"}
+                        </Button>
+                      ) : null}
                       <Button
                         size="small"
                         color="error"

@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestRuntimeProcess_RegisterAfterExitFailsImmediately(t *testing.T) {
-	process := &runtimeProcess{pending: make(map[uint64]chan rpcResponse)}
+	process := &runtimeProcess{pending: make(map[string]chan rpcResponse)}
 	process.failPending(errors.New("exited"))
-	response, remove := process.registerPending(7)
+	response, remove := process.registerPending("7")
 	defer remove()
 	select {
 	case frame := <-response:
@@ -99,15 +100,108 @@ func TestSupervisor_DisposeSession_SendsDisposeRequest(t *testing.T) {
 	}
 }
 
+func TestSupervisor_StartSession_RemovesWorkspaceBindingAfterInvalidResponse(t *testing.T) {
+	bindingCalled := false
+	supervisor := newTestSupervisor(Config{
+		Command: helperCommand("rpc-invalid-start"),
+		WorkspaceBindingResolver: func(context.Context, WorkspaceBindingRequest) (WorkspaceBindingResult, error) {
+			bindingCalled = true
+			return WorkspaceBindingResult{}, nil
+		},
+	})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	request := SessionStartRequest{CWD: "/workspace", SessionID: "session-1", Binding: SessionBinding{Version: 1, WorkspaceID: "workspace-1", OwnerNodeID: "node", CWD: "/workspace", Policy: WorkspaceBindingPolicy{Authorization: "daemon-authorized"}}}
+	if _, err := supervisor.StartSession(context.Background(), request); err == nil {
+		t.Fatal("StartSession accepted an invalid runtime response")
+	}
+
+	writer := &recordingWriteCloser{}
+	id := "reverse-1"
+	supervisor.handleRuntimeRequest(&runtimeProcess{stdin: writer}, rpcEnvelope{ID: &id, Method: yishanWorkspaceBindingResolveMethod, Params: []byte(`{"sessionId":"session-1","workspaceId":"workspace-1"}`)})
+	if bindingCalled || !strings.Contains(writer.String(), `"code":-32000`) {
+		t.Fatalf("workspace binding callback called=%v response=%s", bindingCalled, writer.String())
+	}
+}
+
+func TestSupervisor_ReverseWorkspaceBinding_UsesDaemonResolver(t *testing.T) {
+	admitted := make(chan WorkspaceBindingRequest, 1)
+	supervisor := newTestSupervisor(Config{
+		Command:     helperCommand("rpc-reverse-workspace"),
+		Diagnostics: func(message string) { t.Log(message) },
+		WorkspaceBindingResolver: func(_ context.Context, request WorkspaceBindingRequest) (WorkspaceBindingResult, error) {
+			admitted <- request
+			return WorkspaceBindingResult{WorkspaceID: request.WorkspaceID, CWD: "/workspace", Policy: WorkspaceBindingPolicy{Authorization: "daemon-authorized"}}, nil
+		},
+	})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if _, err := supervisor.StartSession(context.Background(), SessionStartRequest{CWD: "/workspace", SessionID: "session-1", Binding: SessionBinding{Version: 1, WorkspaceID: "workspace-1", OwnerNodeID: "node", CWD: "/workspace", Policy: WorkspaceBindingPolicy{Authorization: "daemon-authorized"}}}); err != nil {
+		t.Fatalf("StartSession: %v", err)
+	}
+	select {
+	case request := <-admitted:
+		if request != (WorkspaceBindingRequest{SessionID: "session-1", WorkspaceID: "workspace-1"}) {
+			t.Fatalf("workspace binding = %#v", request)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("workspace binding did not reach daemon resolver")
+	}
+}
+
+func TestSupervisor_ResumeSession_PostDaemonRestartAdmitsPersistedWorkspace(t *testing.T) {
+	admitted := make(chan WorkspaceBindingRequest, 1)
+	supervisor := newTestSupervisor(Config{
+		Command: helperCommand("rpc-reverse-resume-workspace"),
+		WorkspaceBindingResolver: func(_ context.Context, request WorkspaceBindingRequest) (WorkspaceBindingResult, error) {
+			admitted <- request
+			return WorkspaceBindingResult{WorkspaceID: request.WorkspaceID, CWD: "/workspace", Policy: WorkspaceBindingPolicy{Authorization: "daemon-authorized"}}, nil
+		},
+	})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start replacement daemon runtime: %v", err)
+	}
+	request := SessionResumeRequest{CWD: "/workspace", SessionID: "persisted-session", WorkspaceID: "persisted-workspace"}
+	response, err := supervisor.ResumeSession(context.Background(), request)
+	if err != nil || response.SessionID != request.SessionID {
+		t.Fatalf("ResumeSession = %#v, %v", response, err)
+	}
+	select {
+	case got := <-admitted:
+		if got != (WorkspaceBindingRequest{SessionID: request.SessionID, WorkspaceID: request.WorkspaceID}) {
+			t.Fatalf("workspace binding = %#v", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("persisted resume did not admit its workspace through the replacement daemon")
+	}
+}
+
 func TestSupervisor_ResumeSession_SendsResumeRequest(t *testing.T) {
 	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc")})
 	defer supervisor.Close()
 	if err := supervisor.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	response, err := supervisor.ResumeSession(context.Background(), SessionReadRequest{CWD: "/workspace", SessionID: "session"})
+	response, err := supervisor.ResumeSession(context.Background(), SessionResumeRequest{CWD: "/workspace", SessionID: "session", WorkspaceID: "workspace"})
 	if err != nil || response.SessionID != "session" {
 		t.Fatalf("ResumeSession = %#v, %v", response, err)
+	}
+}
+
+func TestSupervisor_ResumeSession_RejectsMissingAuthorizedWorkspace(t *testing.T) {
+	supervisor := newTestSupervisor(Config{Command: helperCommand("rpc")})
+	defer supervisor.Close()
+	if err := supervisor.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	_, err := supervisor.ResumeSession(context.Background(), SessionResumeRequest{CWD: "/workspace", SessionID: "session"})
+	if err == nil {
+		t.Fatal("accepted resume without daemon-authorized workspace context")
 	}
 }
 
@@ -241,8 +335,8 @@ func TestSupervisor_ExecutionCallsValidateExactResults(t *testing.T) {
 }
 
 func TestSupervisor_KnownMalformedNotificationInterruptsGeneration(t *testing.T) {
-	process := &runtimeProcess{pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(1)}
-	response, remove := process.registerPending(1)
+	process := &runtimeProcess{pending: make(map[string]chan rpcResponse), replay: newReplayCoordinator(1)}
+	response, remove := process.registerPending("1")
 	defer remove()
 	supervisor := NewSupervisor(Config{})
 	supervisor.routeNotification(process, rpcEnvelope{Method: sessionEventMethod, Params: []byte(`{"sessionId":"session","event":{"seq":-1}}`)})
@@ -269,8 +363,8 @@ func TestSupervisor_MalformedKnownNotificationKillsOnlyItsGeneration(t *testing.
 
 func TestSupervisor_MalformedKnownNotificationPreservesNewerGenerationHealth(t *testing.T) {
 	supervisor := NewSupervisor(Config{})
-	stale := &runtimeProcess{pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(1)}
-	current := &runtimeProcess{pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(1)}
+	stale := &runtimeProcess{pending: make(map[string]chan rpcResponse), replay: newReplayCoordinator(1)}
+	current := &runtimeProcess{pending: make(map[string]chan rpcResponse), replay: newReplayCoordinator(1)}
 	supervisor.process = current
 	supervisor.health = Health{IsReady: true, InstanceID: "dsh-2"}
 
@@ -310,7 +404,7 @@ func TestSupervisor_StartSession_RejectsMissingAuthoritativeBinding(t *testing.T
 }
 
 func testSessionBinding(cwd string) SessionBinding {
-	return SessionBinding{Version: 1, WorkspaceID: "workspace", OwnerNodeID: "node", CWD: cwd}
+	return SessionBinding{Version: 1, WorkspaceID: "workspace", OwnerNodeID: "node", CWD: cwd, Policy: WorkspaceBindingPolicy{Authorization: "daemon-authorized"}}
 }
 
 func TestProviderCatalogWire_RejectsSecretFields(t *testing.T) {

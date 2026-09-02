@@ -41,3 +41,12 @@ func TestBuildRunConfig_PropagatesDSHDeveloperMode(t *testing.T) {
 		t.Fatal("DSH developer mode is disabled, want enabled")
 	}
 }
+
+func TestBuildRunConfig_PropagatesDSHPluginSeedPath(t *testing.T) {
+	previousConfig := appConfig
+	defer func() { appConfig = previousConfig }()
+	appConfig.Daemon.DSHPluginSeedPath = "/bundle/dev-flow.tgz"
+	if got := buildRunConfig("", false).DSHPluginSeedPath; got != "/bundle/dev-flow.tgz" {
+		t.Fatalf("seed path = %q", got)
+	}
+}

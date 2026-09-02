@@ -263,7 +263,7 @@ func TestTaskRunDSHIntegrationHelper(t *testing.T) {
 	if !input.Scan() || !isTaskRunDSHInitialize(input.Bytes()) {
 		os.Exit(2)
 	}
-	writeTaskRunDSHResponse(1, `{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}`)
+	writeTaskRunDSHResponse(json.RawMessage("1"), `{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}`)
 	serveTaskRunDSHRequests(input, os.Getenv("TASKRUN_DSH_OPERATIONS"))
 }
 
@@ -297,9 +297,9 @@ func recordTaskRunDSHOperation(path string, operation []byte) {
 	}
 }
 
-func taskRunDSHRequestID(raw []byte) uint64 {
+func taskRunDSHRequestID(raw []byte) json.RawMessage {
 	var request struct {
-		ID uint64 `json:"id"`
+		ID json.RawMessage `json:"id"`
 	}
 	if json.Unmarshal(raw, &request) != nil {
 		os.Exit(3)
@@ -328,6 +328,6 @@ func taskRunDSHResult(request taskRunDSHOperation) string {
 	return `{}`
 }
 
-func writeTaskRunDSHResponse(id uint64, result string) {
-	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":%s}`+"\n", id, result)
+func writeTaskRunDSHResponse(id json.RawMessage, result string) {
+	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%s,"result":%s}`+"\n", id, result)
 }

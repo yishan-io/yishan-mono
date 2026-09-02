@@ -49,6 +49,13 @@ func (result sessionListWireResult) validate() (SessionListResult, error) {
 	return SessionListResult{Sessions: sessions}, nil
 }
 
+func validateSessionResumeRequest(request SessionResumeRequest) error {
+	if request.CWD == "" || request.SessionID == "" || request.WorkspaceID == "" {
+		return errors.New("DSH session resume requires cwd, sessionId, and workspaceId")
+	}
+	return nil
+}
+
 func validateSessionReadRequest(request SessionReadRequest) error {
 	if request.CWD == "" || request.SessionID == "" {
 		return errors.New("DSH session request requires cwd and sessionId")

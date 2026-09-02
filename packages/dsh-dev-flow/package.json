@@ -1,0 +1,31 @@
+{
+  "name": "@yishan-io/dsh-dev-flow",
+  "version": "0.1.0",
+  "description": "Yishan development workflow skills for DeepSeek Harness.",
+  "type": "module",
+  "files": ["entry.mjs", "skills", "LICENSE", "README.md"],
+  "exports": { ".": "./entry.mjs" },
+  "scripts": {
+    "build": "node scripts/buildEntry.mjs",
+    "build:seed": "node scripts/buildSeed.mjs",
+    "prepack": "node scripts/buildEntry.mjs",
+    "test": "bun run build && vitest run && node scripts/verifyCleanPack.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check src scripts"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-skill": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-skill-filesystem": "0.1.1-rc.2",
+    "@types/node": "^24.12.4",
+    "esbuild": "^0.27.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yishan-io/yishan-mono",
+    "directory": "packages/dsh-dev-flow"
+  },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "license": "MIT",
+  "engines": { "node": ">=22.4.0" }
+}

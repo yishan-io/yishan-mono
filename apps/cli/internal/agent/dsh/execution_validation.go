@@ -42,7 +42,7 @@ func validateStartRequest(request SessionStartRequest) error {
 		return err
 	}
 	binding := request.Binding
-	if binding.Version != 1 || binding.WorkspaceID == "" || binding.OwnerNodeID == "" || binding.CWD != request.CWD {
+	if binding.Version != 1 || binding.WorkspaceID == "" || binding.OwnerNodeID == "" || binding.CWD != request.CWD || binding.Policy.Authorization != "daemon-authorized" {
 		return errors.New("DSH session start requires an authoritative binding")
 	}
 	return nil

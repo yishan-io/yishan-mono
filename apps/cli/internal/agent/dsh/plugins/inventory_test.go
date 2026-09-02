@@ -47,7 +47,7 @@ func installInventoryFixture(t *testing.T, name string) (*Installer, string, Inv
 	if err != nil {
 		t.Fatal(err)
 	}
-	installer, err := NewInstaller(root, key, []ApprovedBundle{{Name: name, Version: bundle.Version, Integrity: bundle.Integrity, Adaptation: testAdaptation()}}, stubRegistry{bundle}, stubDownloader{archive})
+	installer, err := NewInstaller(root, key, []ApprovedBundle{{Name: name, Version: bundle.Version, Integrity: bundle.Integrity, Entries: testEntries()}}, stubRegistry{bundle}, stubDownloader{archive})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,8 +120,8 @@ func TestInstallerRemove_PrunesEmptyScopedParentAndPreservesScopedSibling(t *tes
 	}
 	root := t.TempDir()
 	installer, err := NewInstaller(root, key, []ApprovedBundle{
-		{Name: first.Name, Version: first.Version, Integrity: first.Integrity, Adaptation: testAdaptation()},
-		{Name: second.Name, Version: second.Version, Integrity: second.Integrity, Adaptation: testAdaptation()},
+		{Name: first.Name, Version: first.Version, Integrity: first.Integrity, Entries: testEntries()},
+		{Name: second.Name, Version: second.Version, Integrity: second.Integrity, Entries: testEntries()},
 	}, bundleRegistry{bundles: map[string]Bundle{first.Name: first, second.Name: second}}, stubDownloader{archive})
 	if err != nil {
 		t.Fatal(err)

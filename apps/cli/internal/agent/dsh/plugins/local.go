@@ -12,14 +12,18 @@ import (
 	"strings"
 )
 
-const localLockName = "local-bundles.lock.json"
+const (
+	localLockName           = "local-bundles.lock.json"
+	localPluginManifestName = "yishan.plugin.json"
+)
 
 var ErrDeveloperModeRequired = errors.New("DSH Developer Mode is required for local bundles")
 
 type LocalBundle struct {
-	ID    string     `json:"id"`
-	Root  string     `json:"root"`
-	Files []FileHash `json:"files"`
+	ID         string        `json:"id"`
+	Root       string        `json:"root"`
+	TreeSHA256 string        `json:"treeSha256"`
+	Entries    []PluginEntry `json:"entries"`
 }
 
 // LocalSnapshot preserves the complete local lock state for a failed runtime reload.
@@ -176,19 +180,38 @@ func buildLocalBundle(id, root string) (LocalBundle, error) {
 	if err != nil || !info.IsDir() {
 		return LocalBundle{}, errors.New("local bundle must be a directory")
 	}
+	entries, err := readLocalPluginEntries(canonical)
+	if err != nil {
+		return LocalBundle{}, err
+	}
 	files, err := hashLocalTree(canonical)
 	if err != nil {
 		return LocalBundle{}, err
 	}
-	hasPatch := false
-	for _, file := range files {
-		hasPatch = hasPatch || file.Path == cordisPatchName
-	}
-	if !hasPatch {
-		return LocalBundle{}, ErrBundleNotLoadable
-	}
-	return LocalBundle{ID: id, Root: canonical, Files: files}, nil
+	return LocalBundle{ID: id, Root: canonical, TreeSHA256: hashTree(files), Entries: entries}, nil
 }
+func readLocalPluginEntries(root string) ([]PluginEntry, error) {
+	file, err := os.Open(filepath.Join(root, localPluginManifestName))
+	if err != nil {
+		return nil, ErrBundleNotLoadable
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	decoder.DisallowUnknownFields()
+	var manifest struct {
+		Version int           `json:"version"`
+		Entries []PluginEntry `json:"entries"`
+	}
+	if err := decoder.Decode(&manifest); err != nil || manifest.Version != 1 {
+		return nil, ErrBundleNotLoadable
+	}
+	entries, err := validatePluginEntries(manifest.Entries)
+	if err != nil || validatePluginEntrypoints(root, entries) != nil {
+		return nil, ErrBundleNotLoadable
+	}
+	return entries, nil
+}
+
 func hashLocalTree(root string) ([]FileHash, error) {
 	files := []FileHash{}
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {

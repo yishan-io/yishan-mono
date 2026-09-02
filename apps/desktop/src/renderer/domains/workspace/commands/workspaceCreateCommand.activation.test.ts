@@ -11,7 +11,6 @@ import { createWorkspace } from "./workspaceCreateCommand";
 const daemonMocks = vi.hoisted(() => ({
   createWorkspace: vi.fn(),
 }));
-
 const agentMocks = vi.hoisted(() => ({
   getAgentCapabilities: vi.fn(),
 }));

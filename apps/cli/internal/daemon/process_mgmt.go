@@ -232,11 +232,15 @@ func buildDetachedArgs(cfg StartConfig) []string {
 	args = appendOptionalArg(args, "--relay-url", cfg.Run.RelayURL)
 	args = appendOptionalArg(args, "--config", cfg.ConfigPath)
 	args = appendOptionalArg(args, "--log-level", cfg.LogLevel)
-	args = appendOptionalArg(args, "--log-file", cfg.LogFile)
+	// Let detached daemons resolve the profile-default log file after bootstrap.
+	if cfg.HasCustomLogFile {
+		args = appendOptionalArg(args, "--log-file", cfg.LogFile)
+	}
 	args = append(args, "--dsh-enabled="+strconv.FormatBool(cfg.Run.DSHEnabled))
 	args = append(args, "--dsh-developer-mode="+strconv.FormatBool(cfg.Run.DSHDeveloperMode))
 	args = appendOptionalArg(args, "--dsh-node-path", cfg.Run.DSHNodePath)
 	args = appendOptionalArg(args, "--dsh-runtime-path", cfg.Run.DSHRuntimePath)
+	args = appendOptionalArg(args, "--dsh-plugin-seed-path", cfg.Run.DSHPluginSeedPath)
 	args = appendOptionalArg(args, "--dsh-provider", cfg.Run.DSHProvider)
 	return appendOptionalArg(args, "--dsh-model", cfg.Run.DSHModel)
 }
@@ -254,31 +258,7 @@ func StartDetached(cfg StartConfig) (int, error) {
 		return 0, fmt.Errorf("resolve current executable: %w", err)
 	}
 
-	args := []string{"daemon", "run"}
-	args = append(args, "--host", cfg.Run.Host)
-	args = append(args, "--port", strconv.Itoa(cfg.Run.Port))
-	args = append(args, "--relay-enabled="+strconv.FormatBool(cfg.Run.RelayEnabled))
-	if cfg.Run.RelayURL != "" {
-		args = append(args, "--relay-url", cfg.Run.RelayURL)
-	}
-	if cfg.ConfigPath != "" {
-		args = append(args, "--config", cfg.ConfigPath)
-	}
-	if cfg.LogLevel != "" {
-		args = append(args, "--log-level", cfg.LogLevel)
-	}
-	// Pass --log-file only when the caller explicitly configured it. The
-	// detached process still receives LogFile as its initial stderr destination,
-	// but resolving the default itself lets it switch structured logs to the
-	// active account after bootstrap.
-	if cfg.HasCustomLogFile && cfg.LogFile != "" {
-		args = append(args, "--log-file", cfg.LogFile)
-	}
-	args = append(args, "--dsh-enabled="+strconv.FormatBool(cfg.Run.DSHEnabled))
-	args = appendOptionalArg(args, "--dsh-node-path", cfg.Run.DSHNodePath)
-	args = appendOptionalArg(args, "--dsh-runtime-path", cfg.Run.DSHRuntimePath)
-	args = appendOptionalArg(args, "--dsh-provider", cfg.Run.DSHProvider)
-	args = appendOptionalArg(args, "--dsh-model", cfg.Run.DSHModel)
+	args := buildDetachedArgs(cfg)
 
 	command := exec.Command(executable, args...)
 	command.Env = append(os.Environ(), detachedEnvKey+"=1")

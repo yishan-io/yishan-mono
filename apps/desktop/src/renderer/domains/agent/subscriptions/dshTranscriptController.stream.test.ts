@@ -136,7 +136,7 @@ describe("DSHTranscriptController stream handling", () => {
     expect(actions.setSessionState).toHaveBeenLastCalledWith("tab", "error");
   });
 
-  it("accepts the contiguous rc.2 fixture sequence", () => {
+  it("accepts the contiguous rc.2 fixture sequence", async () => {
     const events: unknown[] = JSON.parse(
       readFileSync(new URL("./fixtures/dshRc2Events.json", import.meta.url), "utf8"),
     );
@@ -152,10 +152,11 @@ describe("DSHTranscriptController stream handling", () => {
       expect(payload).not.toBeNull();
       if (payload) controller.handle(payload);
     }
+    await Promise.resolve();
     expect(actions.setSessionState).not.toHaveBeenCalledWith("tab", "error");
     expect(actions.replaceMessages).toHaveBeenLastCalledWith("tab", expect.any(Array));
   });
-  it("replaces an rc.2 synthetic chunk stream with its canonical assistant message", () => {
+  it("replaces an rc.2 synthetic chunk stream with its canonical assistant message", async () => {
     agentChatStore.getState().initSession("tab", "session");
     const controller = new DSHTranscriptController(
       "tab",
@@ -164,6 +165,7 @@ describe("DSHTranscriptController stream handling", () => {
       async () => ({
         session: { sessionId: "session", createdAt: 0 },
         events: [],
+        filePath: "",
         instanceId: "inc",
         asOfSeq: -1,
         durableThroughSeq: -1,
@@ -179,6 +181,7 @@ describe("DSHTranscriptController stream handling", () => {
     });
 
     handleFixtureEvents(controller);
+    await Promise.resolve();
 
     const session = agentChatStore.getState().sessionsByTabId.tab;
     expect(session?.streamingMessage).toBeNull();
@@ -240,6 +243,7 @@ describe("DSHTranscriptController stream handling", () => {
     const loader = vi.fn().mockResolvedValue({
       session: { sessionId: "session", createdAt: 0 },
       events: [],
+      filePath: "",
       instanceId: "inc",
       asOfSeq: -1,
       durableThroughSeq: -1,
@@ -316,6 +320,7 @@ describe("DSHTranscriptController stream handling", () => {
       | ((snapshot: {
           session: { sessionId: string; createdAt: number };
           events: unknown[];
+          filePath: string;
           instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
@@ -326,6 +331,7 @@ describe("DSHTranscriptController stream handling", () => {
         new Promise<{
           session: { sessionId: string; createdAt: number };
           events: unknown[];
+          filePath: string;
           instanceId: string;
           asOfSeq: number;
           durableThroughSeq: number;
@@ -352,6 +358,7 @@ describe("DSHTranscriptController stream handling", () => {
     resolveSnapshot?.({
       session: { sessionId: "session", createdAt: 0 },
       events: [event(0).update.event],
+      filePath: "",
       instanceId: "inc",
       asOfSeq: 0,
       durableThroughSeq: 0,
@@ -403,6 +410,7 @@ describe("DSHTranscriptController stream handling", () => {
             surfaceOp: "append",
           },
         ],
+        filePath: "",
         instanceId: "inc",
         asOfSeq: 1,
         durableThroughSeq: 1,

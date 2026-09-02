@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
 import { registerAgentSession } from "../subscriptions/agentChatPiEventShared";
+import { dshStartResult } from "./agentSessionRuntime.dsh.testSupport";
 import {
   clearPiSessionHandle,
   ensureAgentSession,
@@ -255,7 +256,7 @@ describe("agentSessionRuntime.stopPiSession", () => {
     const piStopPromise = stopPiSession("pi-close");
     await vi.waitFor(() => expect(mocks.disposeAgent).toHaveBeenCalledTimes(1));
 
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId });
+    mocks.startAgent.mockResolvedValue(dshStartResult(sessionId));
     const dshEnsurePromise = ensureAgentSession({
       runtime: "dsh",
       tabId: "dsh-open",

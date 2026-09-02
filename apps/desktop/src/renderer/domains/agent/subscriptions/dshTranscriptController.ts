@@ -9,6 +9,11 @@ import {
   parseDSHFrontendPayload,
   projectDSHTranscript,
 } from "./dshTranscript";
+import {
+  applyDSHTranscriptReplayEvent,
+  createDSHTranscriptReplayState,
+  rebuildDSHTranscriptReplayState,
+} from "./dshTranscriptReplayState";
 
 /** Bounds recovery memory while allowing normal DSH initial transcript replays. */
 const MAX_BUFFERED_UPDATES = 4_096;
@@ -35,7 +40,7 @@ export class DSHTranscriptController {
   private nextSeq = 0;
   private durableThroughSeq = -1;
   private events: DSHEvent[] = [];
-  private activeTextStream: { key: string; text: string } | null = null;
+  private replayState = createDSHTranscriptReplayState();
   private isBlocked = false;
   private controllerState: "normal" | "recovering" | "failed" = "normal";
   private recoveryInstanceId = "";
@@ -43,6 +48,9 @@ export class DSHTranscriptController {
   private recoveryGeneration = 0;
   private recoveryPromise: Promise<void> | null = null;
   private isReplayingBufferedUpdates = false;
+  private isProjectionScheduled = false;
+  private projectionGeneration = 0;
+  private isAwaitingAttachSnapshot: boolean;
   private bufferedUpdates: Array<{ instanceId: string; update: DSHUpdate }> = [];
 
   public constructor(
@@ -54,14 +62,15 @@ export class DSHTranscriptController {
     private readonly attachSnapshotInstanceId: (
       cursor: DSHDurableCursor,
     ) => Promise<AgentDSHAttachResult | undefined> = async () => undefined,
-  ) {}
+    isAwaitingAttachSnapshot = false,
+  ) {
+    this.isAwaitingAttachSnapshot = isAwaitingAttachSnapshot;
+  }
 
-  /** Returns the sequence that may safely be used as an attach replay cursor. */
   public getDurableThroughSeq(): number {
     return this.durableThroughSeq;
   }
 
-  /** Strictly validates and applies the authoritative DSH attach snapshot. */
   public applyAttachSnapshot(snapshot: AgentDSHAttachResult): void {
     try {
       const events = this.parseAttachEvents(snapshot);
@@ -69,6 +78,12 @@ export class DSHTranscriptController {
       if (hasNewInstanceId) this.replaceAttachState(snapshot.instanceId);
       if (this.instanceId !== snapshot.instanceId) throw new TypeError("DSH attach instance ID mismatch");
       this.reconcileAttachEvents(events);
+      this.projectEvents();
+      if (this.controllerState === "failed" || this.isBlocked) {
+        throw new TypeError("DSH attach event could not be applied");
+      }
+      this.publishReplayState();
+      this.replayBufferedUpdates();
       if (snapshot.durableThroughSeq > this.nextSeq - 1) {
         throw new TypeError("DSH attach durable cursor exceeds transcript");
       }
@@ -88,6 +103,20 @@ export class DSHTranscriptController {
     }
   }
 
+  private replayBufferedUpdates(): void {
+    const bufferedUpdates = this.bufferedUpdates;
+    this.bufferedUpdates = [];
+    this.isAwaitingAttachSnapshot = false;
+    for (const bufferedUpdate of bufferedUpdates)
+      this.handle({
+        sessionId: this.sessionId,
+        tabId: this.tabId,
+        workspaceId: "start-replay",
+        instanceId: bufferedUpdate.instanceId,
+        update: bufferedUpdate.update,
+      });
+  }
+
   /** Retries a failed DSH durable reload without changing runtimes. */
   public async retry(): Promise<void> {
     if (this.isBlocked || this.controllerState !== "failed" || !this.recoveryInstanceId) return;
@@ -103,6 +132,10 @@ export class DSHTranscriptController {
   /** Applies a validated notification. */
   public handle(payload: DSHFrontendPayload): void {
     if (payload.tabId !== this.tabId || payload.sessionId !== this.sessionId || this.isBlocked) return;
+    if (this.isAwaitingAttachSnapshot) {
+      this.bufferUpdate(payload.instanceId, payload.update);
+      return;
+    }
     if (payload.update.reset) {
       this.startRecovery(payload.update.reset.instanceId, false, payload.update.reset.headSeq);
       return;
@@ -174,6 +207,7 @@ export class DSHTranscriptController {
   }
 
   private reconcileAttachEvents(events: DSHEvent[]): void {
+    this.rebuildReplayState();
     for (const event of events) {
       if (event.seq < this.nextSeq) {
         const prior = this.events[event.seq];
@@ -183,7 +217,7 @@ export class DSHTranscriptController {
         continue;
       }
       if (event.seq > this.nextSeq) throw new TypeError("DSH attach snapshot has a transcript gap");
-      this.applyEvent(event);
+      this.applyEvent(event, false);
       if (this.controllerState === "failed" || this.isBlocked) {
         throw new TypeError("DSH attach event could not be applied");
       }
@@ -238,7 +272,7 @@ export class DSHTranscriptController {
     this.onDurableCursor(cursor);
   }
 
-  private applyEvent(event: DSHEvent): void {
+  private applyEvent(event: DSHEvent, shouldProject = true): void {
     if (isUnknownRequiredDSHEvent(event)) {
       this.startRecovery(this.instanceId);
       return;
@@ -257,22 +291,8 @@ export class DSHTranscriptController {
     }
     this.events.push(event);
     this.nextSeq++;
-    if (event.type === "turn/start") {
-      this.clearActiveTextStream();
-      this.actions.clearTurnError(this.tabId);
-    }
-    if (event.type === "turn/end") {
-      this.clearActiveTextStream();
-      const reason = typeof event.data.reason === "object" && event.data.reason !== null ? event.data.reason as Record<string, unknown> : null;
-      if (reason?.kind === "error") {
-        const error = typeof reason.error === "object" && reason.error !== null ? reason.error as Record<string, unknown> : null;
-        const message = typeof error?.message === "string" ? error.message : "Agent turn failed";
-        this.actions.setTurnError(this.tabId, message);
-      }
-    }
-    if (event.type === "assistant/message") this.clearActiveTextStreamFor(event);
-    this.projectEvents();
-    if (event.type === "assistant/chunk") this.applyChunk(event);
+    this.applyEventState(event, shouldProject);
+    if (shouldProject) this.scheduleProjection();
   }
 
   private startRecovery(
@@ -330,8 +350,10 @@ export class DSHTranscriptController {
       this.events = events;
       this.nextSeq = events.length;
       this.durableThroughSeq = snapshot.durableThroughSeq;
-      this.clearActiveTextStream();
+      this.rebuildReplayState();
       this.projectEvents();
+      if (this.isBlocked) throw new TypeError("DSH durable history could not be projected");
+      this.publishReplayState();
       const cursor = {
         sessionId: this.sessionId,
         instanceId: this.instanceId,
@@ -384,7 +406,18 @@ export class DSHTranscriptController {
     });
   }
 
+  private scheduleProjection(): void {
+    if (this.isProjectionScheduled) return;
+    this.isProjectionScheduled = true;
+    const generation = this.projectionGeneration;
+    queueMicrotask(() => {
+      this.isProjectionScheduled = false;
+      if (!this.isBlocked && generation === this.projectionGeneration) this.projectEvents();
+    });
+  }
+
   private projectEvents(): void {
+    this.projectionGeneration++;
     try {
       this.actions.replaceMessages(this.tabId, projectDSHTranscript(this.events));
     } catch (error) {
@@ -392,43 +425,50 @@ export class DSHTranscriptController {
     }
   }
 
-  private applyChunk(event: DSHEvent): void {
-    const chunk = event.data.chunk;
-    const streamKey = this.getStreamKey(event);
-    if (!chunk || typeof chunk !== "object" || Array.isArray(chunk) || !streamKey) return;
-    const record = chunk as Record<string, unknown>;
-    if (record.type !== "text-delta" || typeof record.text !== "string") return;
-    this.activeTextStream =
-      this.activeTextStream?.key === streamKey
-        ? { key: streamKey, text: `${this.activeTextStream.text}${record.text}` }
-        : { key: streamKey, text: record.text };
+  private applyEventState(event: DSHEvent, shouldPublish: boolean): void {
+    const previousStream = this.replayState.activeTextStream;
+    this.replayState = applyDSHTranscriptReplayEvent(this.replayState, event);
+    if (!shouldPublish) return;
+    if (event.type === "turn/start") this.actions.clearTurnError(this.tabId);
+    if (event.type === "turn/end" && this.replayState.turnError) {
+      this.actions.setTurnError(this.tabId, this.replayState.turnError);
+    }
+    if (
+      event.type === "turn/start" ||
+      event.type === "turn/end" ||
+      previousStream !== this.replayState.activeTextStream
+    ) {
+      this.publishActiveTextStream();
+    }
+  }
+
+  private rebuildReplayState(): void {
+    this.replayState = rebuildDSHTranscriptReplayState(this.events);
+  }
+
+  private publishReplayState(): void {
+    this.publishActiveTextStream();
+    if (this.replayState.turnError) this.actions.setTurnError(this.tabId, this.replayState.turnError);
+    else this.actions.clearTurnError(this.tabId);
+  }
+
+  private publishActiveTextStream(): void {
+    const stream = this.replayState.activeTextStream;
+    if (!stream) {
+      this.actions.clearStreamingMessage(this.tabId);
+      return;
+    }
     this.actions.updateStreamingMessage(this.tabId, {
-      id: `dsh-stream-${streamKey}`,
+      id: `dsh-stream-${stream.key}`,
       role: "assistant",
-      content: [{ type: "text", text: this.activeTextStream.text }],
-      timestamp: event.time,
+      content: [{ type: "text", text: stream.text }],
+      timestamp: stream.timestamp,
     });
   }
 
-  private clearActiveTextStreamFor(event: DSHEvent): void {
-    if (this.activeTextStream?.key === this.getStreamKey(event)) this.clearActiveTextStream();
-  }
-
-  private clearActiveTextStream(): void {
-    this.activeTextStream = null;
-    this.actions.clearStreamingMessage(this.tabId);
-  }
-
-  private getStreamKey(event: DSHEvent): string | null {
-    const { step, turn } = event.data;
-    return typeof turn === "number" &&
-      Number.isSafeInteger(turn) &&
-      turn >= 0 &&
-      typeof step === "number" &&
-      Number.isSafeInteger(step) &&
-      step >= 0
-      ? `${turn}:${step}`
-      : null;
+  private clearActiveTextStream(shouldPublish = true): void {
+    this.replayState = { ...this.replayState, activeTextStream: null };
+    if (shouldPublish) this.actions.clearStreamingMessage(this.tabId);
   }
 
   private applyStatus(status: string): void {

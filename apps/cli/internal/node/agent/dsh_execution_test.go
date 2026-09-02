@@ -123,7 +123,7 @@ func (f *executionDSH) SubscribeSession(_ context.Context, req dsh.SessionSubscr
 	f.mu.Unlock()
 	return subscription, nil
 }
-func (f *executionDSH) ResumeSession(_ context.Context, req dsh.SessionReadRequest) (dsh.SessionResumeResult, error) {
+func (f *executionDSH) ResumeSession(_ context.Context, req dsh.SessionResumeRequest) (dsh.SessionResumeResult, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.resumed++
@@ -168,6 +168,38 @@ func TestDSHExecution_RestoredSessionResumesAndRegistersSubscription(t *testing.
 	}
 }
 
+func TestDSHExecution_StartRejectsUnauthorizedWorkspaceContext(t *testing.T) {
+	tests := []struct {
+		name          string
+		workspace     workspace.Workspace
+		resolverError error
+		cwd           string
+	}{
+		{name: "closing", workspace: workspace.Workspace{ID: "w", Path: "/authoritative", State: workspace.StateClosing}, cwd: "/authoritative"},
+		{name: "stale health", workspace: workspace.Workspace{ID: "w", Path: "/authoritative", State: workspace.StateActive, Health: workspace.HealthPathMissing}, cwd: "/authoritative"},
+		{name: "closed", resolverError: rpc.NewRPCError(rpc.CodeNotFound, "workspace not found"), cwd: "/authoritative"},
+		{name: "forged cwd", workspace: workspace.Workspace{ID: "w", Path: "/authoritative", State: workspace.StateActive}, cwd: "/forged"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			runtime := &executionDSH{}
+			service := NewService(Deps{DSH: runtime, Workspace: testWorkspaceResolver(func(string) (workspace.Workspace, error) {
+				return test.workspace, test.resolverError
+			})})
+			_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{
+				Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion,
+				SessionID: "unauthorized", TabID: "tab", WorkspaceID: "w", CWD: test.cwd,
+			})
+			if err == nil {
+				t.Fatal("expected DSH start to reject an unauthorized workspace context")
+			}
+			if runtime.started != 0 {
+				t.Fatalf("DSH starts = %d, want 0", runtime.started)
+			}
+		})
+	}
+}
+
 func TestDSHExecution_NewSessionStartsWithoutResume(t *testing.T) {
 	runtime := &executionDSH{}
 	service := newDSHExecutionService(runtime)
@@ -179,6 +211,26 @@ func TestDSHExecution_NewSessionStartsWithoutResume(t *testing.T) {
 	runtime.mu.Unlock()
 	if started != 1 || resumed != 0 {
 		t.Fatalf("Start/Resume = %d/%d", started, resumed)
+	}
+}
+
+func TestDSHExecution_StartReturnsOneShotAttachSnapshot(t *testing.T) {
+	runtime := &executionDSH{subscribeSnapshot: dsh.SessionSubscribeResult{
+		SessionID: "new", InstanceID: "inc-1", Events: []dsh.SessionEvent{
+			{SessionID: "new", Seq: 0, Event: json.RawMessage(`{"type":"turn/end","seq":0,"time":0,"data":{"turn":0,"reason":{"kind":"completed"}}}`)},
+		},
+		AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 0,
+	}}
+	service := newDSHExecutionService(runtime)
+	result, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{
+		Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "new", TabID: "tab", WorkspaceID: "w", CWD: "/authoritative",
+	})
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	started, ok := result.(rpc.AgentStartResult)
+	if !ok || started.DSHAttachSnapshot == nil || started.DSHAttachSnapshot.HeadSeq != 0 || len(started.DSHAttachSnapshot.Events) != 1 {
+		t.Fatalf("start result = %#v", result)
 	}
 }
 
@@ -304,7 +356,7 @@ func TestMapDSHExecutionError_UsesStableUnavailableContract(t *testing.T) {
 
 func newDSHExecutionService(runtime DSHSessions) *Service {
 	return NewService(Deps{DSH: runtime, OwnerNodeID: "node", Workspace: testWorkspaceResolver(func(string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: "w", ProjectID: "project", OrgID: "organization", Path: "/authoritative"}, nil
+		return workspace.Workspace{ID: "w", ProjectID: "project", OrgID: "organization", Path: "/authoritative", State: workspace.StateActive}, nil
 	})})
 }
 func startDSHExecution(t *testing.T, service *Service) {

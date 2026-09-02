@@ -17,6 +17,7 @@ const (
 	defaultRestartBackoff  = time.Second
 	defaultStartupTimeout  = 10 * time.Second
 	defaultShutdownTimeout = 5 * time.Second
+	maxReverseRequests     = 16
 )
 
 // CommandFactory builds an unstarted DSH runtime command.
@@ -34,14 +35,16 @@ type InitializeConfig struct {
 // Config controls one DSH process. Command is injected because production DSH
 // binary composition is deliberately outside this foundation phase.
 type Config struct {
-	Command         CommandFactory
-	Initialize      InitializeConfig
-	RestartLimit    int
-	RestartBackoff  time.Duration
-	RestartWait     func(context.Context, time.Duration)
-	StartupTimeout  time.Duration
-	ShutdownTimeout time.Duration
-	Diagnostics     func(string)
+	Command                  CommandFactory
+	Initialize               InitializeConfig
+	RestartLimit             int
+	RestartBackoff           time.Duration
+	RestartWait              func(context.Context, time.Duration)
+	StartupTimeout           time.Duration
+	ShutdownTimeout          time.Duration
+	Diagnostics              func(string)
+	WorkspaceBindingResolver WorkspaceBindingResolver
+	CapabilityResolver       CapabilityResolver
 }
 
 // Health is a snapshot of the runtime lifecycle state.
@@ -59,40 +62,45 @@ type Supervisor struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mu                 sync.RWMutex
-	process            *runtimeProcess
-	startingProcess    *runtimeProcess
-	startDone          chan struct{}
-	isStarting         bool
-	isClosing          bool
-	isRestartScheduled bool
-	restartProcess     *runtimeProcess
-	restartDone        chan error
-	health             Health
-	readyListeners     []func()
-	nextID             uint64
-	runtimeInstanceID  uint64
+	mu                                  sync.RWMutex
+	process                             *runtimeProcess
+	startingProcess                     *runtimeProcess
+	startDone                           chan struct{}
+	isStarting                          bool
+	isClosing                           bool
+	isRestartScheduled                  bool
+	restartProcess                      *runtimeProcess
+	restartDone                         chan error
+	health                              Health
+	readyListeners                      []func()
+	nextID                              uint64
+	nextBindingID                       uint64
+	runtimeInstanceID                   uint64
+	workspaceBindings                   map[string]workspaceBinding
+	beforeWorkspaceBindingCommit        func()
+	beforeWorkspaceBindingResponseWrite func()
 }
 
 type runtimeProcess struct {
-	command       *exec.Cmd
-	stdin         io.WriteCloser
-	output        *bufio.Scanner
-	done          chan struct{}
-	exitErr       error
-	writeMu       sync.Mutex
-	pendingMu     sync.Mutex
-	pending       map[uint64]chan rpcResponse
-	terminalErr   error
-	replay        *replayCoordinator
-	isInvalidated bool
+	command         *exec.Cmd
+	stdin           io.WriteCloser
+	output          *bufio.Scanner
+	done            chan struct{}
+	exitErr         error
+	writeMu         sync.Mutex
+	pendingMu       sync.Mutex
+	pending         map[string]chan rpcResponse
+	terminalErr     error
+	reverseRequests chan struct{}
+	replay          *replayCoordinator
+	isInvalidated   bool
 }
 
 // NewSupervisor constructs a stopped supervisor with safe lifecycle defaults.
 func NewSupervisor(config Config) *Supervisor {
 	config = normalizeConfig(config)
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Supervisor{config: config, ctx: ctx, cancel: cancel, nextID: 1}
+	return &Supervisor{config: config, ctx: ctx, cancel: cancel, nextID: 1, workspaceBindings: make(map[string]workspaceBinding)}
 }
 
 func normalizeConfig(config Config) Config {
@@ -240,7 +248,7 @@ func (s *Supervisor) createProcess(ctx context.Context) (*runtimeProcess, error)
 	}
 	process := &runtimeProcess{
 		command: command, stdin: stdin, output: newScanner(stdout),
-		done: make(chan struct{}), pending: make(map[uint64]chan rpcResponse), replay: newReplayCoordinator(defaultReplayCapacity),
+		done: make(chan struct{}), pending: make(map[string]chan rpcResponse), replay: newReplayCoordinator(defaultReplayCapacity), reverseRequests: make(chan struct{}, maxReverseRequests),
 	}
 	go s.scanDiagnostics(stderr)
 	go s.waitForProcess(command, process)
@@ -436,7 +444,7 @@ func (s *Supervisor) stopProcess(process *runtimeProcess) error {
 func (s *Supervisor) sendShutdown(process *runtimeProcess) (<-chan rpcResponse, func()) {
 	s.mu.Lock()
 	s.nextID++
-	id := s.nextID
+	id := fmt.Sprintf("dsh-%d", s.nextID)
 	s.mu.Unlock()
 	response, remove := process.registerPending(id)
 	if err := writeRequest(process, id, "shutdown", nil); err != nil {

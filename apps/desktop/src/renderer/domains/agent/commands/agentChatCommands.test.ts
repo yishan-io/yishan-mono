@@ -5,6 +5,7 @@ import { renamePiCompatibilitySession } from "../../../domains/agent/daemon/daem
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
+import { dshStartResult } from "../runtime/agentSessionRuntime.dsh.testSupport";
 import {
   loadDSHSessionModels,
   openChatFileTab,
@@ -122,10 +123,10 @@ describe("agentChatCommands.startAgentChatSession", () => {
         },
       ],
     });
-    mocks.startAgent.mockImplementation(async () => {
+    mocks.startAgent.mockImplementation(async (request) => {
       const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
       expect(tab?.kind === "agent-chat" ? tab.data.runtime : undefined).toBe(runtime);
-      return { runtime, sessionId: "selected-session" };
+      return runtime === "dsh" ? dshStartResult(request.sessionId) : { runtime, sessionId: "selected-session" };
     });
 
     await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
@@ -150,7 +151,7 @@ describe("agentChatCommands.startAgentChatSession", () => {
       ],
     });
     mocks.getCapabilities.mockResolvedValueOnce({ dsh: { configured: true, ready: true } });
-    mocks.startAgent.mockRejectedValueOnce(new Error("DSH unavailable")).mockResolvedValueOnce({ runtime: "dsh" });
+    mocks.startAgent.mockRejectedValueOnce(new Error("DSH unavailable")).mockResolvedValueOnce(dshStartResult("generated-session-id"));
 
     await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
 
@@ -191,7 +192,9 @@ describe("agentChatCommands.startAgentChatSession", () => {
   });
 
   it("starts restored DSH history through agent.start with resume without changing Pi", async () => {
-    mocks.startAgent.mockResolvedValue({ ok: true });
+    mocks.startAgent
+      .mockResolvedValueOnce({ runtime: "pi", sessionId: "same-id" })
+      .mockResolvedValueOnce(dshStartResult("same-id"));
     await startAgentChatSession({
       tabId: "tab-pi",
       workspaceId: "workspace-1",
@@ -437,7 +440,7 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
         },
       ],
     });
-    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-empty" });
+    mocks.startAgent.mockImplementation((request) => dshStartResult(request.sessionId));
 
     await startAgentChatSession({
       tabId,
@@ -470,13 +473,33 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
       ],
     });
     mocks.startAgent.mockImplementation(async () => {
-      agentChatStore
-        .getState()
-        .replaceMessages(tabId, [
-          { id: "projected", role: "assistant", content: [{ type: "text", text: "Restored" }], timestamp: 0 },
-        ]);
       agentChatStore.getState().setSessionState(tabId, "running");
-      return { runtime: "dsh", sessionId: "dsh-restored" };
+      return {
+        runtime: "dsh",
+        sessionId: "dsh-restored",
+        dshAttachSnapshot: {
+          runtime: "dsh",
+          sessionId: "dsh-restored",
+          instanceId: "run-1",
+          events: [
+            {
+              type: "user/message",
+              seq: 0,
+              time: 0,
+              data: {
+                id: "projected",
+                role: "user",
+                content: [{ type: "text", text: "Restored" }],
+                source: { kind: "user" },
+              },
+              surfaceOp: "append",
+            },
+          ],
+          asOfSeq: 0,
+          durableThroughSeq: 0,
+          headSeq: 0,
+        },
+      };
     });
 
     await startAgentChatSession({
