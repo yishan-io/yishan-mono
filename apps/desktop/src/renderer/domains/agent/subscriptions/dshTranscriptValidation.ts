@@ -160,11 +160,11 @@ function validUserSource(input: unknown): boolean {
   if (!source) return false;
   if (source.kind === "user") return hasExactKeys(source, ["kind"]);
   if (source.kind === "skill-catalog") {
-    return (
-      hasExactKeys(source, ["kind", "form", "entries"]) &&
-      typeof source.form === "string" &&
-      isJsonValue(source.entries)
-    );
+    const hasValidKeys =
+      source.update === undefined
+        ? hasExactKeys(source, ["kind", "form", "entries"])
+        : hasExactKeys(source, ["kind", "form", "update", "entries"]) && source.update === true;
+    return hasValidKeys && typeof source.form === "string" && isJsonValue(source.entries);
   }
   if (source.kind !== "plugin" || typeof source.plugin !== "string") return false;
   if (source.form === undefined) return hasExactKeys(source, ["kind", "plugin"]);
