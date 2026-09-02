@@ -282,6 +282,12 @@ jobs:
         if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
         run: bun install --frozen-lockfile --linker hoisted
 
+      - name: Install Electron runtime for CLI DSH tests
+        if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
+        run: |
+          node apps/desktop/node_modules/electron/install.js
+          test -f apps/desktop/node_modules/electron/path.txt
+
       - name: Setup Go for CLI tests
         if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
         uses: actions/setup-go@v5
@@ -355,6 +361,11 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile --linker hoisted
+
+      - name: Install Electron runtime
+        run: |
+          node apps/desktop/node_modules/electron/install.js
+          test -f apps/desktop/node_modules/electron/path.txt
 
       - name: Smoke test local DSH daemon with desktop artifacts and Electron dev runtime
         working-directory: apps/desktop
