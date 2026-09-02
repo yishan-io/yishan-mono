@@ -142,6 +142,16 @@ describe("WorkspaceTasksView", () => {
     localTaskStore.setState(initialState, true);
   });
 
+  it("allows the workspace task list to use the available pane height", () => {
+    render(<WorkspaceTasksView workspaceId="workspace-1" />);
+
+    const scrollContainer = screen.getByRole("list").parentElement;
+    if (!scrollContainer) throw new Error("Task list scroll container is missing");
+
+    expect(window.getComputedStyle(scrollContainer).maxHeight).toBe("none");
+    expect(window.getComputedStyle(scrollContainer).flexGrow).toBe("1");
+  });
+
   it("opens linked task details in a dedicated pane and returns to the list", () => {
     render(<WorkspaceTasksView workspaceId="workspace-1" />);
 
