@@ -15,8 +15,8 @@ import (
 	"yishan/apps/cli/internal/agent/dsh/plugins"
 )
 
-func TestListOfficialDSHPluginBundles_ReturnsReviewedDevFlowBundle(t *testing.T) {
-	catalog := ListOfficialDSHPluginBundles()
+func TestOfficialDSHPluginCatalog_ApprovesReviewedOfflineDevFlowSeed(t *testing.T) {
+	catalog := approvedOfficialDSHPluginBundles()
 	if len(catalog) != 1 || catalog[0].Name != officialDSHDevFlowName || catalog[0].Version != officialDSHDevFlowVersion {
 		t.Fatalf("catalog = %#v", catalog)
 	}
@@ -25,6 +25,12 @@ func TestListOfficialDSHPluginBundles_ReturnsReviewedDevFlowBundle(t *testing.T)
 	inject, hasInject := entry.Inject.([]string)
 	if entry.ID != "dev-flow" || entry.Entrypoint != "entry.mjs" || !hasConfig || len(config) != 0 || !hasInject || len(inject) != 1 || inject[0] != "skills" {
 		t.Fatalf("entry = %#v", entry)
+	}
+}
+
+func TestListOfficialDSHPluginBundles_ExcludesUnpublishedOfflineSeed(t *testing.T) {
+	if catalog := ListOfficialDSHPluginBundles(); len(catalog) != 0 {
+		t.Fatalf("online catalog = %#v", catalog)
 	}
 }
 
@@ -112,7 +118,10 @@ func setSeedCatalog(t *testing.T, version, seed string) {
 		t.Fatal(err)
 	}
 	sum := sha512.Sum512(content)
-	officialDSHPluginCatalog = []plugins.ApprovedBundle{{Name: "safe-plugin", Version: version, Integrity: "sha512-" + base64.StdEncoding.EncodeToString(sum[:]), Entries: []plugins.PluginEntry{{ID: "main", Entrypoint: "entry.mjs"}}}}
+	officialDSHPluginCatalog = []officialDSHPluginBundle{{ApprovedBundle: plugins.ApprovedBundle{
+		Name: "safe-plugin", Version: version, Integrity: "sha512-" + base64.StdEncoding.EncodeToString(sum[:]),
+		Entries: []plugins.PluginEntry{{ID: "main", Entrypoint: "entry.mjs"}},
+	}}}
 }
 func writeSeed(t *testing.T, root string, content []byte) string {
 	t.Helper()

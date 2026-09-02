@@ -33,6 +33,39 @@ describe("dsh dev-flow skills", () => {
     expect(catalog.every(({ provider }) => provider === "yishan-dev-flow")).toBe(true);
   });
 
+  it("preserves native precedence for higher-priority skill providers", async () => {
+    context = new Context();
+    await context.plugin(SkillRegistry);
+    context.skills.registerProvider(() => ({
+      name: "project-skills",
+      list: async () => [
+        {
+          name: "brainstorm",
+          description: "Project override",
+          invocation: { modelInvocable: true, userInvocable: true },
+          source: "project-dsh",
+          provider: "project-skills",
+          rank: 100,
+          locator: "brainstorm",
+        },
+      ],
+      get: async () => ({
+        name: "brainstorm",
+        description: "Project override",
+        content: "# Project Brainstorm",
+        invocation: { modelInvocable: true, userInvocable: true },
+        source: "project-dsh",
+        provider: "project-skills",
+      }),
+    }));
+    await context.plugin(apply, { skillDirectory });
+
+    await expect(context.skills.get("brainstorm", { cwd: packageDirectory })).resolves.toMatchObject({
+      provider: "project-skills",
+      content: "# Project Brainstorm",
+    });
+  });
+
   it("loads skill bodies and preserves companion-resource bases", async () => {
     context = new Context();
     await context.plugin(SkillRegistry);

@@ -16,14 +16,22 @@ const officialDSHPluginRegistryURL = "https://registry.npmjs.org"
 const (
 	officialDSHDevFlowName          = "@yishan-io/dsh-dev-flow"
 	officialDSHDevFlowVersion       = "0.1.0"
-	officialDSHDevFlowIntegrity     = "sha512-hCzrPT4M/gOHT37F8zDnthRM0jCnPB9GLT5HDaO5Ol+WEdjq8It8dWr5hmbjCsT3Gg7N242TR/v3FUnbOWWhOw=="
-	officialDSHDevFlowSeedIntegrity = "sha512-+lyYQW0dLeN01k7Aiivzv+gNA7WUf1DPV9yotzniWFnzRmr8qFciffgmnLvA66bo6Iq4iePgy91B9l1FO7H4xw=="
+	officialDSHDevFlowIntegrity     = "sha512-rjdognncvnHAjPrA2pt8Dmj3HAsNNrKlksIUxG7ofU/y7O2fwtPgD8FqFWZ4Pr6SB3cZeouWXAlixZ8MelKfHg=="
+	officialDSHDevFlowSeedIntegrity = "sha512-I0BqtuoIm2oGe14RSb8TFNrzbu5Nob3tA6qiIZj7YgcvKlGFBqYpcrRk8kS3qyVqwNqHYMz/+mBDghlqo4rAdA=="
 )
 
-var officialDSHPluginCatalog = []plugins.ApprovedBundle{{
-	Name: officialDSHDevFlowName, Version: officialDSHDevFlowVersion,
-	Integrity: officialDSHDevFlowIntegrity, SeedIntegrity: officialDSHDevFlowSeedIntegrity,
-	Entries: []plugins.PluginEntry{{ID: "dev-flow", Entrypoint: "entry.mjs", Config: map[string]any{}, Inject: []string{"skills"}}},
+type officialDSHPluginBundle struct {
+	plugins.ApprovedBundle
+	OfflineOnly bool
+}
+
+var officialDSHPluginCatalog = []officialDSHPluginBundle{{
+	ApprovedBundle: plugins.ApprovedBundle{
+		Name: officialDSHDevFlowName, Version: officialDSHDevFlowVersion,
+		Integrity: officialDSHDevFlowIntegrity, SeedIntegrity: officialDSHDevFlowSeedIntegrity,
+		Entries: []plugins.PluginEntry{{ID: "dev-flow", Entrypoint: "entry.mjs", Config: map[string]any{}, Inject: []string{"skills"}}},
+	},
+	OfflineOnly: true,
 }}
 
 // EnsureOfficialDSHPluginSeed installs the current official bundle from an explicit offline archive.
@@ -36,7 +44,7 @@ func EnsureOfficialDSHPluginSeed(ctx context.Context, dshDataDir, seedPath strin
 	if err != nil {
 		return plugins.Inventory{}, fmt.Errorf("verify DSH plugin inventory: %w", err)
 	}
-	bundle := officialDSHPluginCatalog[0]
+	bundle := officialDSHPluginCatalog[0].ApprovedBundle
 	installed := installedDSHPlugin(inventory, bundle.Name)
 	if installed != nil && installed.Version == bundle.Version {
 		return inventory, nil
@@ -66,9 +74,19 @@ func installedDSHPlugin(inventory plugins.Inventory, name string) *plugins.Plugi
 // ListOfficialDSHPluginBundles returns daemon-owned install candidates. It
 // copies the catalog so callers cannot alter future install authorization.
 func ListOfficialDSHPluginBundles() []plugins.ApprovedBundle {
+	catalog := make([]plugins.ApprovedBundle, 0, len(officialDSHPluginCatalog))
+	for _, bundle := range officialDSHPluginCatalog {
+		if !bundle.OfflineOnly {
+			catalog = append(catalog, cloneApprovedDSHBundle(bundle.ApprovedBundle))
+		}
+	}
+	return catalog
+}
+
+func approvedOfficialDSHPluginBundles() []plugins.ApprovedBundle {
 	catalog := make([]plugins.ApprovedBundle, len(officialDSHPluginCatalog))
 	for index, bundle := range officialDSHPluginCatalog {
-		catalog[index] = cloneApprovedDSHBundle(bundle)
+		catalog[index] = cloneApprovedDSHBundle(bundle.ApprovedBundle)
 	}
 	return catalog
 }
@@ -183,7 +201,7 @@ func newDSHPluginInstaller(ctx context.Context, dshDataDir string) (*plugins.Ins
 	if err != nil {
 		return nil, fmt.Errorf("load DSH plugin signing key: %w", err)
 	}
-	installer, err := plugins.NewInstaller(dshDataDir, key, ListOfficialDSHPluginBundles(), plugins.HTTPRegistry{BaseURL: officialDSHPluginRegistryURL}, plugins.HTTPDownloader{})
+	installer, err := plugins.NewInstaller(dshDataDir, key, approvedOfficialDSHPluginBundles(), plugins.HTTPRegistry{BaseURL: officialDSHPluginRegistryURL}, plugins.HTTPDownloader{})
 	if err != nil {
 		return nil, fmt.Errorf("create DSH plugin installer: %w", err)
 	}
