@@ -74,6 +74,7 @@ vi.mock("./LocalTaskDescriptionEditor", () => ({
 
 const createdTask = {
   id: "task-created",
+  key: "TASK-1",
   projectId: "project-1",
   title: "Created task",
   description: "Description",
@@ -226,6 +227,7 @@ describe("CreateLocalTaskDialog", () => {
 
     await waitFor(() =>
       expect(commands.createLocalTask).toHaveBeenCalledWith({
+        id: expect.any(String),
         projectId: "project-1",
         organizationId: "organization-1",
         title: "New task",
@@ -282,6 +284,39 @@ describe("CreateLocalTaskDialog", () => {
     submitDialog();
 
     expect((await screen.findByRole("alert")).textContent).toContain("create failed");
+  });
+
+  it("reuses the create attempt ID after a failed create", async () => {
+    commands.createLocalTask.mockRejectedValueOnce(new Error("temporary failure")).mockResolvedValueOnce(createdTask);
+    renderDialog();
+    fireEvent.change(getTitleInput(), { target: { value: "Retry task" } });
+
+    submitDialog();
+    await screen.findByRole("alert");
+    submitDialog();
+
+    await waitFor(() => expect(commands.createLocalTask).toHaveBeenCalledTimes(2));
+    const [firstInput, secondInput] = commands.createLocalTask.mock.calls.map(([input]) => input);
+    expect(firstInput.id).toEqual(expect.any(String));
+    expect(secondInput.id).toBe(firstInput.id);
+  });
+
+  it("creates a new attempt ID after an externally controlled close and reopen", async () => {
+    commands.createLocalTask.mockRejectedValueOnce(new Error("temporary failure")).mockResolvedValueOnce(createdTask);
+    const onClose = vi.fn();
+    const { rerender } = render(<CreateLocalTaskDialog open onClose={onClose} />);
+    fireEvent.change(getTitleInput(), { target: { value: "Retry after reopen" } });
+
+    submitDialog();
+    await screen.findByRole("alert");
+
+    rerender(<CreateLocalTaskDialog open={false} onClose={onClose} />);
+    rerender(<CreateLocalTaskDialog open onClose={onClose} />);
+    submitDialog();
+
+    await waitFor(() => expect(commands.createLocalTask).toHaveBeenCalledTimes(2));
+    const [firstInput, secondInput] = commands.createLocalTask.mock.calls.map(([input]) => input);
+    expect(secondInput.id).not.toBe(firstInput.id);
   });
 
   it("retains a created task and retries only its failed workspace link", async () => {

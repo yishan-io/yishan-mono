@@ -40,6 +40,7 @@ vi.mock("../daemon/localTaskDaemonClient", () => ({
 const initialState = localTaskStore.getState();
 const task: LocalTask = {
   id: "task-1",
+  key: "TASK-1",
   projectId: null,
   title: "Task",
   description: "",

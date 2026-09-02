@@ -12,17 +12,32 @@ import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { setDisplayRepoIds } from "../../../domains/workspace/commands/workspaceCommands";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { projectStore } from "../state/projectStore";
-import { createProject, deleteProject, updateProjectConfig } from "./projectCommands";
+import {
+  copyProjectTaskPrefix,
+  createProject,
+  deleteProject,
+  ensureProjectTaskPrefix,
+  updateProjectConfig,
+} from "./projectCommands";
+
+const clipboardMocks = vi.hoisted(() => ({
+  writeClipboardText: vi.fn(),
+}));
 
 const apiMocks = vi.hoisted(() => ({
   listOrganizations: vi.fn(),
   createProject: vi.fn(),
   deleteProject: vi.fn(),
+  ensureProjectTaskPrefix: vi.fn(),
   updateProject: vi.fn(),
 }));
 
 vi.mock("../../../domains/organization/api/orgApi", () => ({
   listOrganizations: apiMocks.listOrganizations,
+}));
+
+vi.mock("@renderer/platform/clipboard", () => ({
+  writeClipboardText: clipboardMocks.writeClipboardText,
 }));
 
 vi.mock("@renderer/rpc", () => ({
@@ -42,6 +57,7 @@ vi.mock("../../../events/desktopRpcEventBus", () => ({
 vi.mock("../../../domains/project/api/projectApi", () => ({
   createProject: apiMocks.createProject,
   deleteProject: apiMocks.deleteProject,
+  ensureProjectTaskPrefix: apiMocks.ensureProjectTaskPrefix,
   updateProject: apiMocks.updateProject,
 }));
 
@@ -390,6 +406,7 @@ describe("projectCommands", () => {
 
     await createProject({
       name: "Plain Folder",
+      taskPrefix: "TEST",
       path: "/tmp/plain-folder",
     });
 
@@ -434,6 +451,7 @@ describe("projectCommands", () => {
 
     await createProject({
       name: "New Folder",
+      taskPrefix: "TEST",
       path: "/tmp/new-folder",
     });
 
@@ -722,11 +740,13 @@ describe("projectCommands", () => {
 
     await createProject({
       name: "Repo 1",
+      taskPrefix: "TEST",
       path: "/tmp/repo-1",
     });
 
     expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
       name: "Repo 1",
+      taskPrefix: "TEST",
       sourceTypeHint: "git",
       repoUrl: "https://github.com/test/repo-1.git",
       nodeId: undefined,
@@ -809,11 +829,13 @@ describe("projectCommands", () => {
 
     await createProject({
       name: "Plain Git Repo",
+      taskPrefix: "TEST",
       path: "/tmp/plain-folder",
     });
 
     expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
       name: "Plain Git Repo",
+      taskPrefix: "TEST",
       sourceTypeHint: "git-local",
       repoUrl: undefined,
       nodeId: undefined,
@@ -892,6 +914,7 @@ describe("projectCommands", () => {
 
     await createProject({
       name: "Plain Git Repo",
+      taskPrefix: "TEST",
       path: "/tmp/plain-folder",
     });
 
@@ -974,11 +997,13 @@ describe("projectCommands", () => {
 
     await createProject({
       name: "Repo 1",
+      taskPrefix: "TEST",
       path: "/tmp/repo-1",
     });
 
     expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
       name: "Repo 1",
+      taskPrefix: "TEST",
       sourceTypeHint: "git",
       repoUrl: "https://github.com/test/repo-1.git",
       nodeId: undefined,
@@ -1013,6 +1038,7 @@ describe("projectCommands", () => {
 
     await createProject({
       name: "Remote Repo",
+      taskPrefix: "TEST",
       sourceTypeHint: "git",
       gitUrl: "https://github.com/test/remote-repo.git",
     });
@@ -1062,6 +1088,7 @@ describe("projectCommands", () => {
 
     await createProject({
       name: "Remote Repo",
+      taskPrefix: "TEST",
       sourceTypeHint: "git",
       gitUrl: "https://github.com/test/remote-repo.git",
     });
@@ -1317,5 +1344,64 @@ describe("projectCommands", () => {
       name: "Repo 1 Renamed",
       contextEnabled: true,
     });
+  });
+
+  it("copies an existing task prefix through the clipboard boundary", async () => {
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          taskPrefix: "REPO",
+        },
+      ],
+    });
+
+    await copyProjectTaskPrefix("repo-1");
+
+    expect(clipboardMocks.writeClipboardText).toHaveBeenCalledWith("REPO");
+  });
+
+  it("surfaces clipboard failures from copying a task prefix", async () => {
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          taskPrefix: "REPO",
+        },
+      ],
+    });
+    clipboardMocks.writeClipboardText.mockRejectedValueOnce(new Error("Clipboard unavailable"));
+
+    await expect(copyProjectTaskPrefix("repo-1")).rejects.toThrow("Clipboard unavailable");
+  });
+
+  it("ensures a missing task prefix and applies it to the project store", async () => {
+    projectStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          taskPrefix: null,
+        },
+      ],
+    });
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    apiMocks.ensureProjectTaskPrefix.mockResolvedValueOnce({
+      id: "repo-1",
+      taskPrefix: "REPO",
+    });
+
+    await ensureProjectTaskPrefix("repo-1");
+
+    expect(apiMocks.ensureProjectTaskPrefix).toHaveBeenCalledWith("org-1", "repo-1");
+    expect(projectStore.getState().projects[0]?.taskPrefix).toBe("REPO");
   });
 });

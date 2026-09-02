@@ -18,8 +18,9 @@ import {
 import { type WorkspaceProjectRecord, projectStore, renderProjectIcon } from "@renderer/domains/project";
 import { VirtualizedListbox } from "@renderer/ui/components/VirtualizedListbox";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { generateId } from "@shared/ids/generateId";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   createAndLinkLocalTask,
@@ -30,8 +31,8 @@ import {
   loadLocalTaskTemplates,
 } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskPriority } from "../../localTaskTypes";
-import { localTaskTemplateStore } from "../../state/localTaskTemplateStore";
 import { localTaskStore } from "../../state/localTaskStore";
+import { localTaskTemplateStore } from "../../state/localTaskTemplateStore";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskTagsInput } from "../tags/LocalTaskTagsInput";
 import { LocalTaskDescriptionEditor } from "./LocalTaskDescriptionEditor";
@@ -75,6 +76,10 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdTask, setCreatedTask] = useState<LocalTask | null>(null);
   const [partialLinkError, setPartialLinkError] = useState<string | null>(null);
+  const createAttemptIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) createAttemptIdRef.current = null;
+  }, [open]);
   useEffect(() => {
     if (open) void loadLocalTaskTagSuggestions();
   }, [open]);
@@ -141,6 +146,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
     [],
   );
   const resetAndClose = useCallback(() => {
+    createAttemptIdRef.current = null;
     setProject(null);
     setTitle("");
     setDescription("");
@@ -164,7 +170,10 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
           resetAndClose();
           return;
         }
+        const createAttemptId = createAttemptIdRef.current ?? generateId();
+        createAttemptIdRef.current = createAttemptId;
         const input = {
+          id: createAttemptId,
           projectId: project?.id,
           organizationId: project?.organizationId,
           title: trimmedTitle,
@@ -174,10 +183,12 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
         };
         if (!workspaceId) {
           await createLocalTask(input);
+          createAttemptIdRef.current = null;
           resetAndClose();
           return;
         }
         const result = await createAndLinkLocalTask(input, workspaceId);
+        createAttemptIdRef.current = null;
         if (result.status === "created") {
           setCreatedTask(result.task);
           setPartialLinkError(result.linkError);
@@ -217,7 +228,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
             <Alert severity="warning">
               {t("localTask.create.linkFailed", {
                 title: createdTask.title,
-                taskId: createdTask.id,
+                taskId: createdTask.key ?? t("localTask.states.uuidKeyPending", { taskId: createdTask.id }),
                 error: partialLinkError,
               })}
             </Alert>

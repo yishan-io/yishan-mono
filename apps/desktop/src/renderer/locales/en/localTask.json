@@ -21,6 +21,7 @@
       "title": "Title",
       "description": "Description",
       "priority": "Priority",
+      "key": "Key",
       "status": "Status",
       "project": "Project",
       "workspace": "Workspace",
@@ -80,7 +81,8 @@
       "noDescription": "No description.",
       "globalTask": "Global task",
       "noValue": "—",
-      "unknownDate": "Unknown date"
+      "unknownDate": "Unknown date",
+      "uuidKeyPending": "UUID: {{taskId}} · Key pending backfill"
     },
     "workspace": {
       "title": "Workspace tasks",

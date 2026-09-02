@@ -5,6 +5,7 @@ import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { writeClipboardText } from "@renderer/platform/clipboard";
 import type { ProjectWithWorkspacesRecord } from "../api/types";
 
 import { sessionStore } from "@renderer/domains/session";
@@ -22,6 +23,7 @@ import type { ExternalAppId } from "@shared/contracts/externalApps";
 import {
   createProject as createProjectFromApi,
   deleteProject as deleteProjectFromApi,
+  ensureProjectTaskPrefix as ensureProjectTaskPrefixFromApi,
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
@@ -34,16 +36,18 @@ export function recordLastUsedExternalApp(organizationId: string, appId: Externa
 /** Creates one project in backend, then applies it into the local legacy store shape. */
 export async function createProject(input: {
   name: string;
+  taskPrefix: string;
   sourceTypeHint?: "unknown" | "git-local" | "git";
   path?: string;
   gitUrl?: string;
 }): Promise<void> {
   const normalizedName = input.name.trim();
+  const taskPrefix = input.taskPrefix.trim();
   const normalizedPath = input.path?.trim() || "";
   const normalizedGitUrl = input.gitUrl?.trim() || "";
   const isLocalSource = Boolean(normalizedPath);
   const resolvedPath = normalizedPath || normalizedGitUrl;
-  if (!normalizedName || !resolvedPath) {
+  if (!normalizedName || !taskPrefix || !resolvedPath) {
     return;
   }
 
@@ -77,6 +81,7 @@ export async function createProject(input: {
   try {
     project = await createProjectFromApi(selectedOrganizationId, {
       name: normalizedName,
+      taskPrefix,
       sourceTypeHint: inferredSourceTypeHint,
       repoUrl: inferredRemoteUrl,
       nodeId: inferredNodeId,
@@ -120,6 +125,7 @@ export async function createProject(input: {
       gitUrl: project.repoUrl ?? inferredRemoteUrl,
       repoUrl: project.repoUrl ?? inferredRemoteUrl,
       contextEnabled: project.contextEnabled,
+      taskPrefix: project.taskPrefix,
       icon: randomIcon,
       color: randomColor,
       setupScript: project.setupScript,
@@ -181,6 +187,42 @@ export async function createProject(input: {
       repoKey: project.repoKey ?? null,
       enabled: true,
     });
+  }
+}
+
+/** Ensures one project's immutable task prefix and applies it to local state. */
+export async function ensureProjectTaskPrefix(projectId: string): Promise<void> {
+  const project = projectStore.getState().projects.find((candidate) => candidate.id === projectId);
+  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
+  if (!project || !selectedOrganizationId) {
+    return;
+  }
+
+  try {
+    const updatedProject = await ensureProjectTaskPrefixFromApi(selectedOrganizationId, projectId);
+    if (!updatedProject.taskPrefix) {
+      throw new Error("Backend project response is missing task prefix");
+    }
+    projectStore.getState().setProjectTaskPrefix(projectId, updatedProject.taskPrefix);
+  } catch (error) {
+    console.error("Failed to ensure project task prefix", error);
+    throw new Error(getErrorMessage(error));
+  }
+}
+
+/** Copies one project's task prefix to the system clipboard. */
+export async function copyProjectTaskPrefix(projectId: string): Promise<void> {
+  const project = projectStore.getState().projects.find((candidate) => candidate.id === projectId);
+  const taskPrefix = project?.taskPrefix?.trim();
+  if (!taskPrefix) {
+    return;
+  }
+
+  try {
+    await writeClipboardText(taskPrefix);
+  } catch (error) {
+    console.error("Failed to copy project task prefix", error);
+    throw new Error(getErrorMessage(error));
   }
 }
 

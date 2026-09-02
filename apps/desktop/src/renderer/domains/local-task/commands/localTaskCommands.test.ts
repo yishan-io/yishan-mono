@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as daemon from "../daemon/localTaskDaemonClient";
 import type { LocalTask, LocalTaskWorkspaceLink } from "../localTaskTypes";
+
+vi.mock("@shared/ids/generateId", () => ({ generateId: () => "generated-task-id" }));
 import { localTaskStore } from "../state/localTaskStore";
 import {
   createLocalTask,
@@ -58,6 +60,7 @@ function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void
 }
 const task: LocalTask = {
   id: "task-1",
+  key: "TASK-1",
   projectId: null,
   title: "Task",
   description: "",

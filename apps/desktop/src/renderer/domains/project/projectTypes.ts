@@ -21,6 +21,7 @@ export type WorkspaceProjectRecord = {
   localPath?: string | null;
   worktreePath?: string | null;
   contextEnabled?: boolean;
+  taskPrefix?: string | null;
   defaultBranch?: string | null;
   icon?: string | null;
   color?: string | null;

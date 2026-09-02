@@ -50,6 +50,7 @@ vi.mock("@tanstack/react-virtual", () => ({
 
 const primaryTask = {
   id: "task-primary",
+  key: "TASK-1",
   projectId: null,
   title: "Primary task",
   description: "Primary details",

@@ -55,7 +55,7 @@ export function TaskDescriptionMarkdown({ content }: TaskDescriptionMarkdownProp
       }}
       sx={{
         color: "text.secondary",
-        fontSize: "0.875rem",
+        fontSize: "1rem",
         overflowWrap: "anywhere",
         "& > :first-of-type": { mt: 0 },
         "& > :last-child": { mb: 0 },

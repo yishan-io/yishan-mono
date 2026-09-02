@@ -15,6 +15,7 @@ export type {
 export {
   createProject,
   deleteProject,
+  ensureProjectTaskPrefix,
   recordLastUsedExternalApp,
   updateProjectConfig,
 } from "./commands/projectCommands";

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { LuEllipsis } from "react-icons/lu";
 import { unlinkLocalTaskWorkspace } from "../../commands/localTaskCommands";
 import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskWorkspaceLink } from "../../localTaskTypes";
+import { LocalTaskKeyDisplay } from "../../ui/LocalTaskKeyDisplay";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
@@ -32,9 +33,7 @@ export function WorkspaceTaskLinkRow({
   const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null);
   const isUnlinked = link.unlinkedAt !== null;
   const displayedStatus = isUnlinked ? "unlinked" : (task?.status ?? link.status);
-  const displayedStatusLabel = isUnlinked
-    ? t("localTask.link.unlinked")
-    : t(`localTask.status.${displayedStatus}`);
+  const displayedStatusLabel = isUnlinked ? t("localTask.link.unlinked") : t(`localTask.status.${displayedStatus}`);
   const runLinkMutation = useCallback((operation: () => Promise<unknown>, message: string) => {
     void operation().catch((error) => console.error(message, error));
   }, []);
@@ -89,6 +88,7 @@ export function WorkspaceTaskLinkRow({
             </Tooltip>
           ) : null}
           <LocalTaskStatusIcon status={displayedStatus} label={displayedStatusLabel} />
+          {task ? <LocalTaskKeyDisplay task={task} /> : null}
           <Typography variant="body2" sx={{ fontSize: "0.875rem" }} noWrap>
             {task?.title ?? link.localTaskId}
           </Typography>

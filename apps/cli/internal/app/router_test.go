@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -30,7 +31,7 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 	localTaskService := nodelocaltask.NewService(nodelocaltask.Deps{
-		Repository: sqlite.NewLocalTaskStore(database), WorkspaceStore: sqlite.NewStore(workspaceStore),
+		Repository: sqlite.NewLocalTaskStore(database), WorkspaceStore: sqlite.NewStore(workspaceStore), KeyAllocator: routerTestKeyAllocator{},
 	})
 	router := buildNamespaceRouter(nil, nil, nil, nil, nil, localTaskService)
 
@@ -180,4 +181,10 @@ func TestBuildNamespaceRouter_RoutesLocalTaskMethods(t *testing.T) {
 	if err != nil || len(history) != 1 || history[0].Status != domain.StatusCancelled || history[0].UnlinkedAt == nil {
 		t.Fatalf("unlinked repository history = %#v, %v", history, err)
 	}
+}
+
+type routerTestKeyAllocator struct{}
+
+func (routerTestKeyAllocator) AllocateTaskKey(_ context.Context, request nodelocaltask.KeyAllocationRequest) (string, error) {
+	return fmt.Sprintf("TASK-%s", request.TaskID), nil
 }

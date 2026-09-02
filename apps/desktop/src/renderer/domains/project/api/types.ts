@@ -23,6 +23,7 @@ export type ProjectRecord = {
   postScript: string;
   commands?: ProjectCommandRecord[];
   contextEnabled: boolean;
+  taskPrefix: string | null;
   organizationId: string;
   createdByUserId: string;
   createdAt: string;

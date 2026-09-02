@@ -15,8 +15,22 @@ export const organizationProjectListQuerySchema = z.object({
     .transform((value) => value === "true"),
 });
 
+const taskPrefixSchema = z
+  .string()
+  .regex(/^[A-Z]{3,5}$/, "Task prefix must be 3-5 uppercase ASCII letters")
+  .refine((value) => value !== "PERS", "Task prefix PERS is reserved");
+
+export const ensureProjectTaskPrefixBodySchema = z.object({}).strict();
+
+export const allocateLocalTaskKeyBodySchema = z
+  .object({
+    localTaskId: nonEmptyStringSchema,
+  })
+  .strict();
+
 export const createProjectBodySchema = z.object({
   name: nonEmptyStringSchema,
+  taskPrefix: taskPrefixSchema,
   sourceTypeHint: z.enum(["unknown", "git-local", "git"]).optional(),
   repoUrl: nonEmptyStringSchema.optional(),
   nodeId: nonEmptyStringSchema.optional(),
@@ -41,6 +55,7 @@ export const updateProjectBodySchema = z
       .optional(),
     contextEnabled: z.boolean().optional(),
   })
+  .strict()
   .refine((value) => Object.values(value).some((item) => item !== undefined), {
     message: "At least one field must be provided",
   });
@@ -95,6 +110,8 @@ export const upsertWorkspacePullRequestBodySchema = z.object({
 
 export type OrganizationProjectListQueryInput = z.infer<typeof organizationProjectListQuerySchema>;
 export type ProjectWorkspaceParamsInput = z.infer<typeof projectWorkspaceParamsSchema>;
+export type EnsureProjectTaskPrefixBodyInput = z.infer<typeof ensureProjectTaskPrefixBodySchema>;
+export type AllocateLocalTaskKeyBodyInput = z.infer<typeof allocateLocalTaskKeyBodySchema>;
 export type CreateProjectBodyInput = z.infer<typeof createProjectBodySchema>;
 export type UpdateProjectBodyInput = z.infer<typeof updateProjectBodySchema>;
 export type CreateWorkspaceBodyInput = z.infer<typeof createWorkspaceBodySchema>;

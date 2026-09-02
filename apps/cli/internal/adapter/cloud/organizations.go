@@ -1,5 +1,7 @@
 package cloud
 
+import "context"
+
 // Organization endpoints and their DTOs.
 
 type OrganizationMember struct {
@@ -36,8 +38,13 @@ type CreateOrganizationInput struct {
 }
 
 func (c *Client) ListOrganizations() (ListOrganizationsResponse, error) {
+	return c.ListOrganizationsContext(context.Background())
+}
+
+// ListOrganizationsContext lists organizations using the supplied request context.
+func (c *Client) ListOrganizationsContext(ctx context.Context) (ListOrganizationsResponse, error) {
 	var response ListOrganizationsResponse
-	err := c.DoDecode("GET", "/orgs", nil, &response)
+	err := c.DoDecodeContext(ctx, "GET", "/orgs", nil, &response)
 	return response, err
 }
 

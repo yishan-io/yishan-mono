@@ -24,10 +24,13 @@ type RepoDraft = {
   path: string;
   gitUrl: string;
   nameEdited: boolean;
+  taskPrefix: string;
+  taskPrefixEdited: boolean;
 };
 
 type CreateProjectInput = {
   name: string;
+  taskPrefix: string;
   path?: string;
   gitUrl?: string;
 };
@@ -40,7 +43,27 @@ type CreateProjectFormViewProps = {
   onBusyChange?: (isBusy: boolean) => void;
 };
 
-const defaultDraft: RepoDraft = { name: "", source: "local", path: "", gitUrl: "", nameEdited: false };
+const defaultDraft: RepoDraft = {
+  name: "",
+  source: "local",
+  path: "",
+  gitUrl: "",
+  nameEdited: false,
+  taskPrefix: "",
+  taskPrefixEdited: false,
+};
+
+function deriveTaskPrefix(name: string): string {
+  const letters = name
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "")
+    .slice(0, 5);
+  return letters.padEnd(3, "X");
+}
+
+function isValidTaskPrefix(taskPrefix: string): boolean {
+  return /^[A-Z]{3,5}$/.test(taskPrefix) && taskPrefix !== "PERS";
+}
 
 /** Shared project creation form used by the dialog and first-project onboarding. */
 export function CreateProjectFormView({
@@ -67,6 +90,7 @@ export function CreateProjectFormView({
   const isCreating = createProjectMutation.isPending;
   const isCreateDisabled =
     repoDraft.name.trim().length === 0 ||
+    !isValidTaskPrefix(repoDraft.taskPrefix) ||
     (repoDraft.source === "local"
       ? repoDraft.path.trim().length === 0 || pathError !== null
       : repoDraft.gitUrl.trim().length === 0);
@@ -85,6 +109,7 @@ export function CreateProjectFormView({
           ...previous,
           path: selectedPath,
           name: nextName,
+          taskPrefix: previous.taskPrefixEdited ? previous.taskPrefix : deriveTaskPrefix(nextName),
         };
       });
     }
@@ -105,6 +130,7 @@ export function CreateProjectFormView({
     createProjectMutation.mutate(
       {
         name,
+        taskPrefix: repoDraft.taskPrefix,
         path: repoDraft.source === "local" ? location : "",
         gitUrl: repoDraft.source === "remote" ? location : "",
       },
@@ -148,6 +174,7 @@ export function CreateProjectFormView({
                   ...previous,
                   source: "local",
                   name: nextName,
+                  taskPrefix: previous.taskPrefixEdited ? previous.taskPrefix : deriveTaskPrefix(nextName),
                 };
               });
             }}
@@ -166,6 +193,7 @@ export function CreateProjectFormView({
                   ...previous,
                   source: "remote",
                   name: nextName,
+                  taskPrefix: previous.taskPrefixEdited ? previous.taskPrefix : deriveTaskPrefix(nextName),
                 };
               });
             }}
@@ -199,6 +227,7 @@ export function CreateProjectFormView({
                 ...previous,
                 [repoDraft.source === "local" ? "path" : "gitUrl"]: nextLocation,
                 name: nextName,
+                taskPrefix: previous.taskPrefixEdited ? previous.taskPrefix : deriveTaskPrefix(nextName),
                 gitUrl: repoDraft.source === "local" ? "" : nextLocation,
               };
             });
@@ -248,9 +277,40 @@ export function CreateProjectFormView({
               ...previous,
               name: event.target.value,
               nameEdited: true,
+              taskPrefix: previous.taskPrefixEdited ? previous.taskPrefix : deriveTaskPrefix(event.target.value),
             }))
           }
           fullWidth
+        />
+      </Box>
+      <Box>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
+          {t("project.form.taskPrefix", { defaultValue: "Task prefix" })}
+        </Typography>
+        <TextField
+          disabled={isCreating}
+          slotProps={{
+            htmlInput: {
+              "aria-label": t("project.form.taskPrefix", { defaultValue: "Task prefix" }),
+              maxLength: 5,
+            },
+          }}
+          value={repoDraft.taskPrefix}
+          onChange={(event) =>
+            setRepoDraft((previous) => ({
+              ...previous,
+              taskPrefix: event.target.value.toUpperCase(),
+              taskPrefixEdited: true,
+            }))
+          }
+          fullWidth
+          helperText={t("project.form.taskPrefixHelp", { defaultValue: "3–5 uppercase letters. PERS is reserved." })}
         />
       </Box>
       <Stack

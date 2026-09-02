@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as daemon from "../daemon/localTaskDaemonClient";
 import type { LocalTask, LocalTaskWorkspaceLink } from "../localTaskTypes";
+
+vi.mock("@shared/ids/generateId", () => ({ generateId: () => "generated-task-id" }));
 import { localTaskStore } from "../state/localTaskStore";
 import { createAndLinkLocalTask, openLocalTaskContextInFileTree } from "./localTaskCommands";
 
@@ -31,6 +33,7 @@ vi.mock("../daemon/localTaskDaemonClient", () => ({
 
 const task: LocalTask = {
   id: "task-1",
+  key: "TASK-1",
   projectId: null,
   title: "Task",
   description: "",
@@ -73,7 +76,7 @@ describe("Local Task workspace creation and document commands", () => {
 
     expect(result).toEqual({ status: "linked", task });
 
-    expect(daemon.localTaskClient.create).toHaveBeenCalledWith({ title: "Task" });
+    expect(daemon.localTaskClient.create).toHaveBeenCalledWith({ id: "generated-task-id", title: "Task" });
     expect(daemon.localTaskClient.linkWorkspace).toHaveBeenCalledWith("task-1", "workspace-1");
     expect(daemon.localTaskClient.listTagCatalog).toHaveBeenCalledOnce();
     expect(localTaskStore.getState().tagSuggestions).toEqual(["Desktop"]);

@@ -1,6 +1,7 @@
 import { activateWorkspace, openTab } from "@renderer/domains/workbench";
 import { resolveLocalWorkspaceIdForProject, selectFolderInFileTree, workspaceStore } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
+import { generateId } from "@shared/ids/generateId";
 import { localTaskClient } from "../daemon/localTaskDaemonClient";
 import type {
   CreateLocalTaskInput,
@@ -19,6 +20,10 @@ import { localTaskStore } from "../state/localTaskStore";
 import { localTaskTemplateStore } from "../state/localTaskTemplateStore";
 
 const taskLoadsInFlight = new Map<string, Promise<LocalTask>>();
+
+function buildCreateRequest(input: CreateLocalTaskInput): CreateLocalTaskInput {
+  return { ...input, id: input.id ?? generateId() };
+}
 const detailLoadsInFlight = new Map<string, Promise<LocalTaskDetails>>();
 let templatesLoadInFlight: Promise<void> | null = null;
 
@@ -287,7 +292,7 @@ export async function loadLocalTaskLinkCandidates(workspaceId: string): Promise<
 /** Creates a Local Task and refreshes authoritative list projections. */
 export async function createLocalTask(input: CreateLocalTaskInput): Promise<LocalTask> {
   return runMutation(async () => {
-    const task = await localTaskClient.create(input);
+    const task = await localTaskClient.create(buildCreateRequest(input));
     localTaskStore.getState().upsertTaskEntity(task);
     await refreshAfterTaskMutation();
     return task;
@@ -427,7 +432,7 @@ export async function createAndLinkLocalTask(
   localTaskStore.getState().beginMutation();
   let task: LocalTask;
   try {
-    task = await localTaskClient.create(input);
+    task = await localTaskClient.create(buildCreateRequest(input));
     localTaskStore.getState().upsertTaskEntity(task);
   } catch (error) {
     localTaskStore.getState().finishMutation(getErrorMessage(error));

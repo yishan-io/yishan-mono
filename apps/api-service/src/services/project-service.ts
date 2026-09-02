@@ -1,11 +1,20 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
-import { projects, workspaces } from "@/db/schema";
+import { projectLocalTaskKeyAllocations, projectLocalTaskKeyCounters, projects, workspaces } from "@/db/schema";
 import type { ProjectSourceType, WorkspaceStatus } from "@/db/schema";
-import { ProjectAlreadyExistsError, ProjectCreateFailedError, ProjectNotFoundError } from "@/errors";
+import {
+  LocalTaskKeyAllocationFailedError,
+  ProjectAlreadyExistsError,
+  ProjectCreateFailedError,
+  ProjectNotFoundError,
+  ProjectTaskPrefixAllocationExhaustedError,
+  ProjectTaskPrefixAlreadyExistsError,
+  ProjectTaskPrefixEnsureFailedError,
+} from "@/errors";
 import { newId } from "@/lib/id";
 import { inferRepoSource } from "@/lib/repo";
+import { buildLegacyTaskPrefixCandidates } from "@/services/local-task-key-prefix";
 import type { OrganizationService } from "@/services/organization-service";
 import { assertNodeOwnedByActor } from "@/services/shared/assertNodeOwnedByActor";
 import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
@@ -25,6 +34,7 @@ export type ProjectView = {
   postScript: string;
   commands: Array<{ name: string; command: string }>;
   contextEnabled: boolean;
+  taskPrefix: string | null;
   organizationId: string;
   createdByUserId: string;
   createdAt: Date;
@@ -53,6 +63,7 @@ type CreateProjectInput = {
   organizationId: string;
   actorUserId: string;
   name: string;
+  taskPrefix: string;
   sourceTypeHint?: "unknown" | "git-local" | "git";
   repoUrl?: string;
   nodeId?: string;
@@ -79,6 +90,10 @@ type PostgresErrorDetails = {
   cause?: unknown;
 };
 
+type AppDbTransaction = Parameters<AppDb["transaction"]>[0] extends (tx: infer Transaction) => Promise<unknown>
+  ? Transaction
+  : never;
+
 function hasProjectGitIdentityUniqueViolation(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false;
@@ -86,6 +101,27 @@ function hasProjectGitIdentityUniqueViolation(error: unknown): boolean {
 
   const postgresError = error as PostgresErrorDetails;
   return postgresError.code === "23505" && postgresError.constraint === "projects_org_repo_provider_key_uq";
+}
+
+function hasProjectTaskPrefixUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const postgresError = error as PostgresErrorDetails;
+  return postgresError.code === "23505" && postgresError.constraint === "projects_org_task_prefix_uq";
+}
+
+function isProjectTaskPrefixUniqueViolation(error: unknown): boolean {
+  if (hasProjectTaskPrefixUniqueViolation(error)) {
+    return true;
+  }
+
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  return hasProjectTaskPrefixUniqueViolation((error as PostgresErrorDetails).cause);
 }
 
 function isProjectGitIdentityUniqueViolation(error: unknown): boolean {
@@ -110,6 +146,7 @@ export class ProjectService {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
     const name = input.name.trim();
+    const taskPrefix = input.taskPrefix.trim();
     const repoUrl = input.repoUrl?.trim() ?? null;
     const sourceType: ProjectSourceType = repoUrl ? "git" : (input.sourceTypeHint ?? "unknown");
 
@@ -130,6 +167,8 @@ export class ProjectService {
 
     try {
       return await this.db.transaction(async (tx) => {
+        await this.lockOrganizationProjectPrefixes(tx, input.organizationId);
+
         let insertedRows: (typeof projects.$inferSelect)[];
         try {
           insertedRows = await tx
@@ -142,11 +181,15 @@ export class ProjectService {
               repoUrl,
               repoKey,
               contextEnabled: input.contextEnabled ?? true,
+              taskPrefix,
               organizationId: input.organizationId,
               createdByUserId: input.actorUserId,
             })
             .returning();
         } catch (error) {
+          if (isProjectTaskPrefixUniqueViolation(error)) {
+            throw new ProjectTaskPrefixAlreadyExistsError(input.organizationId, taskPrefix);
+          }
           if (isProjectGitIdentityUniqueViolation(error)) {
             throw new ProjectAlreadyExistsError({
               organizationId: input.organizationId,
@@ -188,7 +231,11 @@ export class ProjectService {
         return { ...project, workspaces: createdWorkspaces };
       });
     } catch (error) {
-      if (error instanceof ProjectAlreadyExistsError || error instanceof ProjectCreateFailedError) {
+      if (
+        error instanceof ProjectAlreadyExistsError ||
+        error instanceof ProjectTaskPrefixAlreadyExistsError ||
+        error instanceof ProjectCreateFailedError
+      ) {
         throw error;
       }
       throw new ProjectCreateFailedError(error);
@@ -260,6 +307,148 @@ export class ProjectService {
       ...row,
       workspaces: workspacesByProjectId.get(row.id) ?? [],
     }));
+  }
+
+  /** Ensures a legacy project has its immutable, organization-unique task prefix. */
+  async ensureProjectTaskPrefix(input: {
+    organizationId: string;
+    projectId: string;
+    actorUserId: string;
+  }): Promise<ProjectView> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
+
+    try {
+      return await this.db.transaction(async (tx) => {
+        await this.lockOrganizationProjectPrefixes(tx, input.organizationId);
+        const organizationProjects = await tx
+          .select()
+          .from(projects)
+          .where(eq(projects.organizationId, input.organizationId))
+          .for("update");
+        const project = organizationProjects.find((candidate) => candidate.id === input.projectId);
+        if (!project) {
+          throw new ProjectNotFoundError(input.projectId);
+        }
+
+        const taskPrefixResult = await this.backfillTaskPrefix(tx, input.organizationId, project, organizationProjects);
+        return taskPrefixResult.project ?? { ...project, taskPrefix: taskPrefixResult.taskPrefix };
+      });
+    } catch (error) {
+      if (error instanceof ProjectNotFoundError || error instanceof ProjectTaskPrefixAllocationExhaustedError) {
+        throw error;
+      }
+      throw new ProjectTaskPrefixEnsureFailedError(error);
+    }
+  }
+
+  /** Allocates an idempotent API-owned Local Task key within a project. */
+  async allocateLocalTaskKey(input: {
+    organizationId: string;
+    projectId: string;
+    actorUserId: string;
+    localTaskId: string;
+  }): Promise<{ key: string }> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
+
+    try {
+      return await this.db.transaction(async (tx) => {
+        await this.lockOrganizationProjectPrefixes(tx, input.organizationId);
+
+        const organizationProjects = await tx
+          .select({ id: projects.id, name: projects.name, taskPrefix: projects.taskPrefix })
+          .from(projects)
+          .where(eq(projects.organizationId, input.organizationId))
+          .for("update");
+        const project = organizationProjects.find((candidate) => candidate.id === input.projectId);
+        if (!project) {
+          throw new ProjectNotFoundError(input.projectId);
+        }
+
+        const existingAllocations = await tx
+          .select({ key: projectLocalTaskKeyAllocations.key })
+          .from(projectLocalTaskKeyAllocations)
+          .where(
+            and(
+              eq(projectLocalTaskKeyAllocations.projectId, input.projectId),
+              eq(projectLocalTaskKeyAllocations.localTaskId, input.localTaskId),
+            ),
+          )
+          .limit(1);
+        const existingAllocation = existingAllocations[0];
+        if (existingAllocation) {
+          return existingAllocation;
+        }
+
+        const { taskPrefix } = await this.backfillTaskPrefix(tx, input.organizationId, project, organizationProjects);
+        const counterRows = await tx
+          .insert(projectLocalTaskKeyCounters)
+          .values({ projectId: input.projectId, lastAllocatedNumber: 1 })
+          .onConflictDoUpdate({
+            target: projectLocalTaskKeyCounters.projectId,
+            set: { lastAllocatedNumber: sql`${projectLocalTaskKeyCounters.lastAllocatedNumber} + 1` },
+          })
+          .returning({ lastAllocatedNumber: projectLocalTaskKeyCounters.lastAllocatedNumber });
+        const sequenceNumber = counterRows[0]?.lastAllocatedNumber;
+        if (sequenceNumber === undefined) {
+          throw new LocalTaskKeyAllocationFailedError("project");
+        }
+
+        const key = `${taskPrefix}-${sequenceNumber}`;
+        await tx.insert(projectLocalTaskKeyAllocations).values({
+          projectId: input.projectId,
+          localTaskId: input.localTaskId,
+          key,
+          sequenceNumber,
+        });
+        return { key };
+      });
+    } catch (error) {
+      if (error instanceof ProjectNotFoundError || error instanceof ProjectTaskPrefixAllocationExhaustedError) {
+        throw error;
+      }
+      if (error instanceof LocalTaskKeyAllocationFailedError) {
+        throw error;
+      }
+      throw new LocalTaskKeyAllocationFailedError("project", error);
+    }
+  }
+
+  private async lockOrganizationProjectPrefixes(tx: AppDbTransaction, organizationId: string): Promise<void> {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${organizationId}, 0))`);
+  }
+
+  private async backfillTaskPrefix(
+    tx: AppDbTransaction,
+    organizationId: string,
+    project: { id: string; name: string; taskPrefix: string | null },
+    organizationProjects: Array<{ id: string; name: string; taskPrefix: string | null }>,
+  ): Promise<{ taskPrefix: string; project?: ProjectView }> {
+    if (project.taskPrefix) {
+      return { taskPrefix: project.taskPrefix };
+    }
+
+    const assignedPrefixes = new Set(
+      organizationProjects.flatMap((organizationProject) =>
+        organizationProject.taskPrefix ? [organizationProject.taskPrefix] : [],
+      ),
+    );
+    const taskPrefix = buildLegacyTaskPrefixCandidates(project.name, project.id).find(
+      (candidate) => !assignedPrefixes.has(candidate),
+    );
+    if (!taskPrefix) {
+      throw new ProjectTaskPrefixAllocationExhaustedError(project.id);
+    }
+
+    const updatedProjects = await tx
+      .update(projects)
+      .set({ taskPrefix, updatedAt: new Date() })
+      .where(and(eq(projects.id, project.id), eq(projects.organizationId, organizationId)))
+      .returning();
+    const updatedProject = updatedProjects[0];
+    if (!updatedProject) {
+      throw new ProjectNotFoundError(project.id);
+    }
+    return { taskPrefix, project: updatedProject };
   }
 
   async deleteProject(input: {

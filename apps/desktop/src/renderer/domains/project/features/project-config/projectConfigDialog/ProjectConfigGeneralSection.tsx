@@ -1,5 +1,7 @@
 import {
+  Alert,
   Box,
+  Button,
   FormControlLabel,
   IconButton,
   InputAdornment,
@@ -21,11 +23,16 @@ type ProjectConfigGeneralSectionProps = {
   repoGitUrl: string;
   repoKey: string;
   repoLocalPath: string;
+  taskPrefix: string | null;
+  taskPrefixError: string | null;
+  isEnsuringTaskPrefix: boolean;
   setDraft: Dispatch<SetStateAction<ProjectConfigDraft>>;
   setIconAnchorEl: Dispatch<SetStateAction<HTMLElement | null>>;
   trimmedRepoLocalPath: string;
   onOpenRepoLocalPath: () => Promise<void>;
   onPickWorktreeFolder: () => Promise<void>;
+  onEnsureTaskPrefix: () => Promise<void>;
+  onCopyTaskPrefix: () => Promise<void>;
 };
 
 export function ProjectConfigGeneralSection({
@@ -34,11 +41,16 @@ export function ProjectConfigGeneralSection({
   repoGitUrl,
   repoKey,
   repoLocalPath,
+  taskPrefix,
+  taskPrefixError,
+  isEnsuringTaskPrefix,
   setDraft,
   setIconAnchorEl,
   trimmedRepoLocalPath,
   onOpenRepoLocalPath,
   onPickWorktreeFolder,
+  onEnsureTaskPrefix,
+  onCopyTaskPrefix,
 }: ProjectConfigGeneralSectionProps) {
   return (
     <Stack spacing={2}>
@@ -120,6 +132,46 @@ export function ProjectConfigGeneralSection({
             {repoKey || "-"}
           </Typography>
         </Stack>
+      </Box>
+      <Box>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
+          Task prefix
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          <Typography variant="body2" sx={{ color: taskPrefix ? "text.primary" : "text.disabled", flex: 1 }}>
+            {taskPrefix ?? "Not generated"}
+          </Typography>
+          {taskPrefix ? (
+            <Button
+              aria-label="Copy task prefix"
+              disabled={isSaving}
+              onClick={() => void onCopyTaskPrefix()}
+              size="small"
+            >
+              Copy
+            </Button>
+          ) : (
+            <Button
+              disabled={isSaving || isEnsuringTaskPrefix}
+              onClick={() => void onEnsureTaskPrefix()}
+              size="small"
+              variant="outlined"
+            >
+              {isEnsuringTaskPrefix ? "Generating..." : "Generate Task Prefix"}
+            </Button>
+          )}
+        </Stack>
+        {taskPrefixError ? (
+          <Alert role="alert" severity="error" sx={{ mt: 1 }}>
+            {taskPrefixError}
+          </Alert>
+        ) : null}
       </Box>
       <Box>
         <Typography

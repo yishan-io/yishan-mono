@@ -21,7 +21,7 @@ func TestListWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsStale(t *testin
 			http.NotFound(w, r)
 			return
 		}
-		_, _ = w.Write([]byte(`{"projects":[{"id":"project-1","organizationId":"org-1","name":"repo-1","sourceType":"git","repoProvider":"github","repoUrl":"https://example.com/repo-1.git","repoKey":"owner/repo-1","icon":"folder","color":"#1E66F5","contextEnabled":true,"createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z","workspaces":[{"id":"workspace-1","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-1","kind":"worktree","status":"provisioning","branch":"feature-a","sourceBranch":"main","localPath":"","createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z"}]}]}`))
+		_, _ = w.Write([]byte(`{"projects":[{"id":"project-1","organizationId":"org-1","name":"repo-1","taskPrefix":"REPO","sourceType":"git","repoProvider":"github","repoUrl":"https://example.com/repo-1.git","repoKey":"owner/repo-1","icon":"folder","color":"#1E66F5","contextEnabled":true,"createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z","workspaces":[{"id":"workspace-1","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-1","kind":"worktree","status":"provisioning","branch":"feature-a","sourceBranch":"main","localPath":"","createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z"}]}]}`))
 	}))
 	defer server.Close()
 
@@ -68,6 +68,9 @@ func TestListWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsStale(t *testin
 		t.Fatalf("expected 1 workspace, got %d", len(workspaces))
 	}
 	record := workspaces[0]
+	if results[0].TaskPrefix == nil || *results[0].TaskPrefix != "REPO" {
+		t.Fatalf("expected task prefix REPO, got %#v", results[0].TaskPrefix)
+	}
 	if record.Status != "active" {
 		t.Errorf("expected overlaid status %q, got %q", "active", record.Status)
 	}
@@ -78,7 +81,7 @@ func TestListWithWorkspaces_OverlaysLocalStatusWhenRemoteRecordIsStale(t *testin
 
 func TestListWithWorkspaces_KeepsRemoteStatusForUnknownLocalRows(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"projects":[{"id":"project-1","organizationId":"org-1","name":"repo-1","sourceType":"git","repoProvider":"github","repoUrl":"https://example.com/repo-1.git","repoKey":"owner/repo-1","icon":"folder","color":"#1E66F5","contextEnabled":true,"createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z","workspaces":[{"id":"workspace-remote","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-2","kind":"worktree","status":"provisioning","branch":"feature-b","sourceBranch":"main","localPath":"","createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z"}]}]}`))
+		_, _ = w.Write([]byte(`{"projects":[{"id":"project-1","organizationId":"org-1","name":"repo-1","taskPrefix":"REPO","sourceType":"git","repoProvider":"github","repoUrl":"https://example.com/repo-1.git","repoKey":"owner/repo-1","icon":"folder","color":"#1E66F5","contextEnabled":true,"createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z","workspaces":[{"id":"workspace-remote","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-2","kind":"worktree","status":"provisioning","branch":"feature-b","sourceBranch":"main","localPath":"","createdAt":"2026-08-01T00:00:00.000Z","updatedAt":"2026-08-01T00:00:00.000Z"}]}]}`))
 	}))
 	defer server.Close()
 

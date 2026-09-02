@@ -30,6 +30,8 @@ const (
 var (
 	// ErrTaskNotFound indicates the requested Local Task does not exist.
 	ErrTaskNotFound = errors.New("local task not found")
+	// ErrTaskAlreadyExists indicates a Local Task ID is already persisted.
+	ErrTaskAlreadyExists = errors.New("local task already exists")
 	// ErrLinkNotFound indicates the requested Local Task workspace link does not exist.
 	ErrLinkNotFound = errors.New("local task workspace link not found")
 	// ErrInvalidTask indicates a task violates the Local Task lifecycle contract.
@@ -46,6 +48,8 @@ var (
 	ErrTagNotFound = errors.New("local task tag not found")
 	// ErrInvalidTag indicates a tag entity or reference is invalid.
 	ErrInvalidTag = errors.New("invalid local task tag")
+	// ErrKeyAllocationUnavailable indicates this node cannot reserve a required task key.
+	ErrKeyAllocationUnavailable = errors.New("local task key allocation unavailable")
 )
 
 // Status is a Local Task lifecycle state.
@@ -70,6 +74,7 @@ type Priority string
 // Task is Local Task metadata authoritative in the local SQLite database.
 type Task struct {
 	ID                 string   `json:"id"`
+	TaskKey            *string  `json:"key,omitempty"`
 	ProjectID          *string  `json:"projectId"`
 	OrganizationID     *string  `json:"-"`
 	Title              string   `json:"title"`
@@ -172,6 +177,8 @@ type Repository interface {
 	List(context.Context, TaskFilter) ([]Task, error)
 	Update(context.Context, string, TaskUpdate) (Task, error)
 	Search(context.Context, string, TaskFilter) ([]SearchResult, error)
+	ListWithoutTaskKey(context.Context) ([]Task, error)
+	SetTaskKeyIfEmpty(context.Context, string, string) (bool, error)
 	ListTags(context.Context) ([]Tag, error)
 	CreateTag(context.Context, TagCreate) (Tag, error)
 	RenameTag(context.Context, string, string) (Tag, error)

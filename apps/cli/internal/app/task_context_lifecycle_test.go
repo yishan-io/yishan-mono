@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/localtask"
 	"yishan/apps/cli/internal/memory"
+	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
@@ -251,7 +253,7 @@ func bootstrapTaskContextApp(t *testing.T, database *sql.DB) *App {
 	t.Helper()
 	app, err := Bootstrap(Config{
 		NodeID: "node-1", Database: database, EnvDir: t.TempDir(), DataDir: t.TempDir(),
-		TokenUsage: newRecordingTokenUsage(database),
+		TokenUsage: newRecordingTokenUsage(database), LocalTaskKeyAllocator: appTestKeyAllocator{},
 	})
 	if err != nil {
 		t.Fatalf("Bootstrap: %v", err)
@@ -321,4 +323,10 @@ func assertIncrementalTaskContextAttribution(t *testing.T, service *memory.Servi
 	if len(results) != 1 || results[0].Source != memory.SourceTaskContext || results[0].TaskID != taskID {
 		t.Fatalf("incremental result = %#v, want attributed task %q", results, taskID)
 	}
+}
+
+type appTestKeyAllocator struct{}
+
+func (appTestKeyAllocator) AllocateTaskKey(_ context.Context, request nodelocaltask.KeyAllocationRequest) (string, error) {
+	return fmt.Sprintf("TASK-%s", request.TaskID), nil
 }

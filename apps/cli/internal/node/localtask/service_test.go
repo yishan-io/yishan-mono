@@ -3,6 +3,7 @@ package localtask
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -135,7 +136,7 @@ func newTestService(t *testing.T) (*Service, *sqlite.WorkspaceStore, *sqlite.Loc
 	}
 	workspaceStore := sqlite.NewWorkspaceStore(database)
 	repository := sqlite.NewLocalTaskStore(database)
-	service := NewService(Deps{Repository: repository, WorkspaceStore: sqlite.NewStore(workspaceStore)})
+	service := NewService(Deps{Repository: repository, WorkspaceStore: sqlite.NewStore(workspaceStore), KeyAllocator: testKeyAllocator{}})
 	return service, workspaceStore, repository
 }
 
@@ -453,4 +454,10 @@ func TestService_UpdateTagColorRejectsMixedSelectors(t *testing.T) {
 	if !errors.Is(err, domain.ErrInvalidTag) {
 		t.Fatalf("UpdateTagColor error = %v, want invalid tag", err)
 	}
+}
+
+type testKeyAllocator struct{}
+
+func (testKeyAllocator) AllocateTaskKey(_ context.Context, request KeyAllocationRequest) (string, error) {
+	return fmt.Sprintf("TASK-%s", request.TaskID), nil
 }

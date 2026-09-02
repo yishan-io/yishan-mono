@@ -21,6 +21,7 @@
       "title": "标题",
       "description": "描述",
       "priority": "优先级",
+      "key": "编号",
       "status": "状态",
       "project": "项目",
       "workspace": "工作区",
@@ -80,7 +81,8 @@
       "noDescription": "没有描述。",
       "globalTask": "全局任务",
       "noValue": "—",
-      "unknownDate": "未知日期"
+      "unknownDate": "未知日期",
+      "uuidKeyPending": "UUID：{{taskId}} · 任务键等待回填"
     },
     "workspace": {
       "title": "工作区任务",

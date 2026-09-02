@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CreateProjectFormView } from "./CreateProjectFormView";
 
@@ -46,6 +46,29 @@ afterEach(() => {
 });
 
 describe("CreateProjectFormView", () => {
+  it("prefills a task prefix from the project name and sends it when creating", async () => {
+    mocked.openLocalFolderDialog.mockResolvedValueOnce("/tmp/plain-folder");
+    mocked.createProject.mockResolvedValueOnce(undefined);
+
+    renderForm();
+
+    fireEvent.click(screen.getByRole("button", { name: "project.form.chooseFolder" }));
+    await screen.findByDisplayValue("/tmp/plain-folder");
+
+    expect((screen.getByRole("textbox", { name: "project.form.taskPrefix" }) as HTMLInputElement).value).toBe("PLAIN");
+
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => {
+      expect(mocked.createProject).toHaveBeenCalledWith({
+        name: "plain-folder",
+        taskPrefix: "PLAIN",
+        path: "/tmp/plain-folder",
+        gitUrl: "",
+      });
+    });
+  });
+
   it("accepts a non-git folder without a path error and enables Create", async () => {
     mocked.openLocalFolderDialog.mockResolvedValueOnce("/tmp/plain-folder");
 

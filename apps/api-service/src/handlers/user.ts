@@ -2,7 +2,18 @@ import { StatusCodes } from "http-status-codes";
 
 import type { AppContext } from "@/hono";
 import { normalizeUserPreferences } from "@/lib/user-preferences";
+import type { AllocateLocalTaskKeyBodyInput } from "@/validation/project";
 import type { UpdateLanguagePreferenceBodyInput, UpdateNotificationPreferencesBodyInput } from "@/validation/user";
+
+export async function allocatePersonalLocalTaskKeyHandler(c: AppContext, body: AllocateLocalTaskKeyBodyInput) {
+  const actorUser = c.get("sessionUser");
+  const { key } = await c.get("services").user.allocatePersonalLocalTaskKey({
+    actorUserId: actorUser.id,
+    localTaskId: body.localTaskId,
+  });
+
+  return c.json({ key }, StatusCodes.OK);
+}
 
 export async function meHandler(c: AppContext) {
   const sessionUser = c.get("sessionUser");

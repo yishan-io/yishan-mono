@@ -140,6 +140,7 @@ export class DaemonProjectClient {
       repoUrl: readOptionalString(record?.repoUrl) ?? null,
       repoKey: readOptionalString(record?.repoKey) ?? null,
       contextEnabled: readOptionalBoolean(record?.contextEnabled) ?? true,
+      taskPrefix: readOptionalString(record?.taskPrefix) ?? null,
       icon: readOptionalString(record?.icon) ?? "folder",
       color: readOptionalString(record?.color) ?? "#1E66F5",
       setupScript: readOptionalString(record?.setupScript) ?? "",

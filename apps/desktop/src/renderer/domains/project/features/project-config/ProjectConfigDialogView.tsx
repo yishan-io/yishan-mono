@@ -1,8 +1,10 @@
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from "@mui/material";
 import { useDialogRegistration } from "@renderer/domains/workbench";
 import { isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { copyProjectTaskPrefix, ensureProjectTaskPrefix } from "../../commands/projectCommands";
 import { getDefaultWorktreeLocation } from "../../daemon/projectDaemonClient";
 import { projectStore } from "../../state/projectStore";
 import { ProjectConfigCommandsSection } from "./projectConfigDialog/ProjectConfigCommandsSection";
@@ -46,6 +48,37 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
     onClose,
   });
   const [activeSection, setActiveSection] = useState<ProjectConfigSectionId>("general");
+  const [isEnsuringTaskPrefix, setIsEnsuringTaskPrefix] = useState(false);
+  const [taskPrefixError, setTaskPrefixError] = useState<string | null>(null);
+
+  const handleEnsureTaskPrefix = async () => {
+    if (!repo) {
+      return;
+    }
+
+    setIsEnsuringTaskPrefix(true);
+    setTaskPrefixError(null);
+    try {
+      await ensureProjectTaskPrefix(repo.id);
+    } catch (error) {
+      setTaskPrefixError(getErrorMessage(error));
+    } finally {
+      setIsEnsuringTaskPrefix(false);
+    }
+  };
+
+  const handleCopyTaskPrefix = async () => {
+    if (!repo?.taskPrefix) {
+      return;
+    }
+
+    setTaskPrefixError(null);
+    try {
+      await copyProjectTaskPrefix(repo.id);
+    } catch (error) {
+      setTaskPrefixError(getErrorMessage(error));
+    }
+  };
   const isFolderWorkspaceConfig = workspaces.some(
     (workspace) => (workspace.repoId === repoId || workspace.projectId === repoId) && isFolderWorkspace(workspace),
   );
@@ -82,11 +115,16 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                 repoGitUrl={repoGitUrl}
                 repoKey={repoKey}
                 repoLocalPath={repoLocalPath}
+                taskPrefix={repo?.taskPrefix ?? null}
+                taskPrefixError={taskPrefixError}
+                isEnsuringTaskPrefix={isEnsuringTaskPrefix}
                 setDraft={setDraft}
                 setIconAnchorEl={setIconAnchorEl}
                 trimmedRepoLocalPath={trimmedRepoLocalPath}
                 onOpenRepoLocalPath={handleOpenRepoLocalPath}
                 onPickWorktreeFolder={handlePickWorktreeFolder}
+                onEnsureTaskPrefix={handleEnsureTaskPrefix}
+                onCopyTaskPrefix={handleCopyTaskPrefix}
               />
             )}
             {displayedSection === "scripts" && !isFolderWorkspaceConfig && (

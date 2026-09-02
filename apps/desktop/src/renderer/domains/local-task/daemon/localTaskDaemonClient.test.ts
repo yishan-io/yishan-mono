@@ -3,6 +3,7 @@ import { DaemonLocalTaskClient } from "./localTaskDaemonClient";
 
 const taskPayload = {
   id: "task-1",
+  key: "TASK-1",
   projectId: "project-1",
   title: "Ship desktop",
   description: "Add the Local Task client",
@@ -101,6 +102,7 @@ describe("DaemonLocalTaskClient", () => {
     const client = new DaemonLocalTaskClient(invoke);
 
     await client.create({
+      id: "d1f47ed0-8035-452e-9419-6bff5ea1c635",
       projectId: "project-1",
       organizationId: "org-1",
       title: "Ship desktop",
@@ -136,6 +138,7 @@ describe("DaemonLocalTaskClient", () => {
       [
         "localTask.create",
         {
+          id: "d1f47ed0-8035-452e-9419-6bff5ea1c635",
           projectId: "project-1",
           organizationId: "org-1",
           title: "Ship desktop",
@@ -249,6 +252,23 @@ describe("DaemonLocalTaskClient", () => {
 
     await expect(client.get("task-1")).resolves.toMatchObject({ projectId: null, completedAt: null });
     await expect(client.listTaskLinks("task-1")).resolves.toEqual([encodedLinkPayload]);
+  });
+
+  it("parses a nonempty key and preserves null or missing keys for daemon compatibility", async () => {
+    const keyedClient = new DaemonLocalTaskClient(vi.fn(async () => ({ ...taskPayload, key: "DESK-42" })));
+    const nullKeyClient = new DaemonLocalTaskClient(vi.fn(async () => ({ ...taskPayload, key: null })));
+    const { key: _key, ...legacyPayload } = taskPayload;
+    const legacyClient = new DaemonLocalTaskClient(vi.fn(async () => legacyPayload));
+
+    await expect(keyedClient.get("task-1")).resolves.toMatchObject({ key: "DESK-42" });
+    await expect(nullKeyClient.get("task-1")).resolves.toMatchObject({ key: null });
+    await expect(legacyClient.get("task-1")).resolves.toMatchObject({ key: null });
+  });
+
+  it.each(["", "   ", 1])("rejects an invalid task key: %s", async (key) => {
+    const client = new DaemonLocalTaskClient(vi.fn(async () => ({ ...taskPayload, key })));
+
+    await expect(client.get("task-1")).rejects.toThrow("invalid Local Task payload");
   });
 
   it("treats a missing active workspace flag from an older daemon as false", async () => {

@@ -3,6 +3,7 @@ package localtask
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -26,6 +27,7 @@ type Deps struct {
 	Registry            WorkspaceRegistry
 	WorkspaceStore      workspace.WorkspaceStore
 	ProjectResolver     domain.ProjectResolver
+	KeyAllocator        KeyAllocator
 	Events              *eventbus.Hub
 	TaskContextsChanged func()
 	TaskTitleChanged    func(context.Context, string, string)
@@ -78,27 +80,54 @@ func (s *Service) SetTaskTemplates(ctx context.Context, req rpc.LocalTaskSetTemp
 	return s.GetTaskTemplates(ctx, struct{}{})
 }
 
-// Create validates and persists a new Local Task.
+// Create validates, reserves a cloud key, and persists a new Local Task.
 func (s *Service) Create(ctx context.Context, req rpc.LocalTaskCreateParams) (any, error) {
+	task, err := buildNewTask(req)
+	if err != nil {
+		return nil, err
+	}
+	existing, err := s.deps.Repository.Get(ctx, task.ID)
+	if err == nil {
+		return existing, nil
+	}
+	if !errors.Is(err, domain.ErrTaskNotFound) {
+		return nil, err
+	}
+	task.TaskKey, err = s.allocateTaskKey(ctx, task)
+	if err != nil {
+		return nil, err
+	}
+	created, err := s.deps.Repository.Create(ctx, task)
+	if errors.Is(err, domain.ErrTaskAlreadyExists) {
+		return s.deps.Repository.Get(ctx, task.ID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	s.notifyTaskCreated()
+	return created, nil
+}
+
+func buildNewTask(req rpc.LocalTaskCreateParams) (domain.Task, error) {
+	taskID := uuid.NewString()
+	if _, err := uuid.Parse(req.ID); err == nil {
+		taskID = req.ID
+	}
 	task := domain.Task{
-		ID: uuid.NewString(), ProjectID: req.ProjectID, OrganizationID: req.OrganizationID, Title: req.Title, Description: req.Description,
-		Status: domain.StatusNew, Priority: req.Priority, Tags: req.Tags, TagRefs: req.TagRefs,
+		ID: taskID, ProjectID: req.ProjectID, OrganizationID: req.OrganizationID, Title: req.Title,
+		Description: req.Description, Status: domain.StatusNew, Priority: req.Priority, Tags: req.Tags, TagRefs: req.TagRefs,
 	}
 	if task.Priority == "" {
 		task.Priority = domain.PriorityMedium
 	}
-	if err := domain.ValidateTask(task); err != nil {
-		return nil, err
-	}
-	created, err := s.deps.Repository.Create(ctx, task)
-	if err != nil {
-		return nil, err
-	}
+	return task, domain.ValidateTask(task)
+}
+
+func (s *Service) notifyTaskCreated() {
 	if s.deps.TaskContextsChanged != nil {
 		s.deps.TaskContextsChanged()
 	}
 	s.publishTaskChanged()
-	return created, nil
 }
 
 // Get loads one Local Task.

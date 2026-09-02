@@ -1,6 +1,17 @@
 import type { AgentKind } from "@yishan-io/core";
 import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
-import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export type NodeScope = "private" | "shared";
 export type NodeKind = "managed" | "external";
@@ -179,6 +190,7 @@ export const projects = pgTable(
     postScript: text("post_script").notNull().default(""),
     commands: jsonb("commands").$type<Array<{ name: string; command: string }>>().notNull().default([]),
     contextEnabled: boolean("context_enabled").notNull().default(true),
+    taskPrefix: text("task_prefix"),
     organizationId: text("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
@@ -193,6 +205,57 @@ export const projects = pgTable(
     index("projects_source_type_idx").on(table.sourceType),
     index("projects_created_by_user_id_idx").on(table.createdByUserId),
     uniqueIndex("projects_org_repo_provider_key_uq").on(table.organizationId, table.repoProvider, table.repoKey),
+    uniqueIndex("projects_org_task_prefix_uq")
+      .on(table.organizationId, table.taskPrefix)
+      .where(sql`${table.taskPrefix} is not null`),
+  ],
+);
+
+export const projectLocalTaskKeyCounters = pgTable("project_local_task_key_counters", {
+  projectId: text("project_id")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  lastAllocatedNumber: integer("last_allocated_number").notNull().default(0),
+});
+
+export const personalLocalTaskKeyCounters = pgTable("personal_local_task_key_counters", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  lastAllocatedNumber: integer("last_allocated_number").notNull().default(0),
+});
+
+export const projectLocalTaskKeyAllocations = pgTable(
+  "project_local_task_key_allocations",
+  {
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    localTaskId: text("local_task_id").notNull(),
+    key: text("key").notNull(),
+    sequenceNumber: integer("sequence_number").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.projectId, table.localTaskId] }),
+    uniqueIndex("project_local_task_key_allocations_project_key_uq").on(table.projectId, table.key),
+  ],
+);
+
+export const personalLocalTaskKeyAllocations = pgTable(
+  "personal_local_task_key_allocations",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    localTaskId: text("local_task_id").notNull(),
+    key: text("key").notNull(),
+    sequenceNumber: integer("sequence_number").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.localTaskId] }),
+    uniqueIndex("personal_local_task_key_allocations_user_key_uq").on(table.userId, table.key),
   ],
 );
 
@@ -420,6 +483,15 @@ export type NewNode = InferInsertModel<typeof nodes>;
 
 export type Project = InferSelectModel<typeof projects>;
 export type NewProject = InferInsertModel<typeof projects>;
+
+export type ProjectLocalTaskKeyCounter = InferSelectModel<typeof projectLocalTaskKeyCounters>;
+export type NewProjectLocalTaskKeyCounter = InferInsertModel<typeof projectLocalTaskKeyCounters>;
+export type PersonalLocalTaskKeyCounter = InferSelectModel<typeof personalLocalTaskKeyCounters>;
+export type NewPersonalLocalTaskKeyCounter = InferInsertModel<typeof personalLocalTaskKeyCounters>;
+export type ProjectLocalTaskKeyAllocation = InferSelectModel<typeof projectLocalTaskKeyAllocations>;
+export type NewProjectLocalTaskKeyAllocation = InferInsertModel<typeof projectLocalTaskKeyAllocations>;
+export type PersonalLocalTaskKeyAllocation = InferSelectModel<typeof personalLocalTaskKeyAllocations>;
+export type NewPersonalLocalTaskKeyAllocation = InferInsertModel<typeof personalLocalTaskKeyAllocations>;
 
 export type Workspace = InferSelectModel<typeof workspaces>;
 export type NewWorkspace = InferInsertModel<typeof workspaces>;

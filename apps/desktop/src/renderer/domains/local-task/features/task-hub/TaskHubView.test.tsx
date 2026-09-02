@@ -37,14 +37,16 @@ const workspaceCommands = vi.hoisted(() => ({
 vi.mock("../../commands/localTaskWorkspaceCommands", () => workspaceCommands);
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { field?: string; page?: number; title?: string }) =>
+    t: (key: string, options?: { field?: string; page?: number; title?: string; taskId?: string }) =>
       options?.page
         ? `${key} ${options.page}`
         : options?.field
           ? `${key} ${options.field}`
           : options?.title
             ? `${key}: ${options.title}`
-            : key,
+            : options?.taskId
+              ? `${key}: ${options.taskId}`
+              : key,
     i18n: { language: "en-US" },
   }),
 }));
@@ -83,6 +85,7 @@ vi.mock("@tanstack/react-virtual", () => ({
 }));
 const task = {
   id: "task-1",
+  key: "TASK-1",
   projectId: "project-1",
   title: "Ship Task Hub",
   description: "Desktop UX",
@@ -162,6 +165,21 @@ describe("TaskHubView", () => {
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.retry" }));
     expect(commands.loadLocalTaskDetails).toHaveBeenCalledWith(task.id);
   });
+  it("displays the daemon key and an explicit UUID backfill state", () => {
+    render(<TaskHubView />);
+    expect(screen.getByText("TASK-1")).toBeTruthy();
+
+    cleanup();
+    localTaskStore.setState({ hubTasks: [{ ...task, key: null }] });
+    render(<TaskHubView />);
+    expect(screen.getByText("localTask.states.uuidKeyPending: task-1")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" })
+        .getAttribute("disabled"),
+    ).not.toBeNull();
+  });
+
   it("keeps Start disabled after create acceptance until the Hub projection reports an active workspace", async () => {
     render(<TaskHubView />);
     const startButton = screen.getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" });

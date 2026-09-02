@@ -1,5 +1,7 @@
 package cloud
 
+import "context"
+
 // Project endpoints and their DTOs.
 
 // ProjectCommand is a named shell command configured for a project.
@@ -13,6 +15,7 @@ type Project struct {
 	OrganizationID  string           `json:"organizationId"`
 	NodeID          string           `json:"nodeId"`
 	Name            string           `json:"name"`
+	TaskPrefix      *string          `json:"taskPrefix"`
 	SourceType      string           `json:"sourceType"`
 	RepoProvider    string           `json:"repoProvider"`
 	RepoURL         string           `json:"repoUrl"`
@@ -47,6 +50,7 @@ type CreateProjectResponse struct {
 
 type CreateProjectInput struct {
 	Name           string
+	TaskPrefix     string
 	SourceTypeHint string
 	RepoURL        string
 	NodeID         string
@@ -60,8 +64,13 @@ func (c *Client) DeleteProject(orgID string, projectID string) (OKResponse, erro
 }
 
 func (c *Client) ListProjects(orgID string) (ListProjectsResponse, error) {
+	return c.ListProjectsContext(context.Background(), orgID)
+}
+
+// ListProjectsContext lists an organization's projects using the supplied request context.
+func (c *Client) ListProjectsContext(ctx context.Context, orgID string) (ListProjectsResponse, error) {
 	var response ListProjectsResponse
-	err := c.DoDecode("GET", "/orgs/"+orgID+"/projects", nil, &response)
+	err := c.DoDecodeContext(ctx, "GET", "/orgs/"+orgID+"/projects", nil, &response)
 	return response, err
 }
 
@@ -75,7 +84,8 @@ func (c *Client) ListProjectsWithWorkspaces(orgID string) (ListProjectsWithWorks
 
 func (c *Client) CreateProject(orgID string, input CreateProjectInput) (CreateProjectResponse, error) {
 	payload := map[string]string{
-		"name": input.Name,
+		"name":       input.Name,
+		"taskPrefix": input.TaskPrefix,
 	}
 	if input.SourceTypeHint != "" {
 		payload["sourceTypeHint"] = input.SourceTypeHint
@@ -92,5 +102,34 @@ func (c *Client) CreateProject(orgID string, input CreateProjectInput) (CreatePr
 
 	var response CreateProjectResponse
 	err := c.DoDecode("POST", "/orgs/"+orgID+"/projects", payload, &response)
+	return response, err
+}
+
+// AllocateLocalTaskKeyResponse contains an idempotently reserved task key.
+type AllocateLocalTaskKeyResponse struct {
+	Key string `json:"key"`
+}
+
+// AllocateProjectLocalTaskKey reserves a project-scoped key for one local task ID.
+func (c *Client) AllocateProjectLocalTaskKey(orgID string, projectID string, localTaskID string) (AllocateLocalTaskKeyResponse, error) {
+	return c.AllocateProjectLocalTaskKeyContext(context.Background(), orgID, projectID, localTaskID)
+}
+
+// AllocateProjectLocalTaskKeyContext reserves a project-scoped key bound to ctx.
+func (c *Client) AllocateProjectLocalTaskKeyContext(ctx context.Context, orgID string, projectID string, localTaskID string) (AllocateLocalTaskKeyResponse, error) {
+	var response AllocateLocalTaskKeyResponse
+	err := c.DoDecodeContext(ctx, "POST", "/orgs/"+orgID+"/projects/"+projectID+"/local-tasks/key", map[string]string{"localTaskId": localTaskID}, &response)
+	return response, err
+}
+
+// AllocatePersonalLocalTaskKey reserves a personal key for one local task ID.
+func (c *Client) AllocatePersonalLocalTaskKey(localTaskID string) (AllocateLocalTaskKeyResponse, error) {
+	return c.AllocatePersonalLocalTaskKeyContext(context.Background(), localTaskID)
+}
+
+// AllocatePersonalLocalTaskKeyContext reserves a personal key bound to ctx.
+func (c *Client) AllocatePersonalLocalTaskKeyContext(ctx context.Context, localTaskID string) (AllocateLocalTaskKeyResponse, error) {
+	var response AllocateLocalTaskKeyResponse
+	err := c.DoDecodeContext(ctx, "POST", "/me/local-tasks/key", map[string]string{"localTaskId": localTaskID}, &response)
 	return response, err
 }

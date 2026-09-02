@@ -13,19 +13,22 @@ function toLocalTaskWorkspaceSlug(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function deriveLocalTaskWorkspaceNames(taskTitle: string): { name: string; branch: string } {
-  const name = toLocalTaskWorkspaceSlug(taskTitle) || "local-task";
+function deriveLocalTaskWorkspaceNames(taskKey: string, taskTitle: string): { name: string; branch: string } {
+  const titleSlug = toLocalTaskWorkspaceSlug(taskTitle);
+  const name = titleSlug ? `${taskKey}-${titleSlug}` : taskKey;
   return { name, branch: `task/${name}` };
 }
 
 async function launchWorkspaceForLocalTask(task: LocalTask): Promise<string | undefined> {
+  if (task.key === null) return undefined;
+
   const projectId = task.projectId?.trim();
   const project = projectId
     ? projectStore.getState().projects.find((candidate) => candidate.id === projectId)
     : undefined;
   if (!projectId || !project || !supportsGitFeatures(project.sourceType)) return undefined;
 
-  const { name, branch } = deriveLocalTaskWorkspaceNames(task.title);
+  const { name, branch } = deriveLocalTaskWorkspaceNames(task.key, task.title);
   const sourceBranch = project.defaultBranch?.trim() || "main";
   const prompt = `Implement this Local Task.\n\nTitle: ${task.title}\n\nDescription:\n${task.description}`;
   return createWorkspace({
