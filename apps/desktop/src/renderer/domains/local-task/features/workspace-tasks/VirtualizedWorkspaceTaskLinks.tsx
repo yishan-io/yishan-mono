@@ -5,8 +5,6 @@ import type { LocalTask, LocalTaskTagCatalogEntry, LocalTaskWorkspaceLink } from
 import { WorkspaceTaskLinkRow } from "./WorkspaceTaskLinkRow";
 
 const LINK_ROW_ESTIMATED_HEIGHT = 44;
-const MAX_LIST_HEIGHT = 480;
-
 type VirtualizedWorkspaceTaskLinksProps = {
   links: LocalTaskWorkspaceLink[];
   taskById: Record<string, LocalTask>;
@@ -34,7 +32,7 @@ export function VirtualizedWorkspaceTaskLinks({
   });
 
   return (
-    <Box ref={scrollRef} sx={{ mt: 1, overflow: "auto", maxHeight: MAX_LIST_HEIGHT }}>
+    <Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, mt: 1, overflow: "auto" }}>
       <Box
         component="ul"
         sx={{ height: virtualizer.getTotalSize(), position: "relative", p: 0, m: 0, listStyle: "none" }}

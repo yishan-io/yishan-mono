@@ -185,14 +185,14 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
   }
 
   return (
-    <Box sx={{ height: "100%", overflow: "auto", p: 1.5 }}>
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", p: 1.5 }}>
       {mutationError ? (
         <Alert severity="error" sx={{ mb: 1 }}>
           {mutationError}
         </Alert>
       ) : null}
       {detailTaskId ? (
-        <>
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
           <WorkspaceTaskDetailHeader
             task={selectedTask}
             isMutationLoading={isMutationLoading}
@@ -233,7 +233,7 @@ export function WorkspaceTasksView({ workspaceId }: WorkspaceTasksViewProps) {
               <CircularProgress size={24} aria-label={t("localTask.states.loading")} />
             </Box>
           )}
-        </>
+        </Box>
       ) : (
         <>
           <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
