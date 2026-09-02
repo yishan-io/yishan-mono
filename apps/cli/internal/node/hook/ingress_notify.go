@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"strings"
 	"time"
+
+	"yishan/apps/cli/internal/node/notification"
 )
 
 func buildHookNotificationPayload(event normalizedHookEvent) map[string]any {
@@ -16,38 +18,30 @@ func buildHookNotificationPayload(event normalizedHookEvent) map[string]any {
 
 	switch event.eventType {
 	case "start":
-		return hookNotificationPayload(event, "Run Started", "Workspace "+event.workspaceID+" is running.", "success", true, "")
+		return hookNotificationPayload(event, true, "")
 	case "wait_input":
-		return hookNotificationPayload(event, "Input Required", "Workspace "+event.workspaceID+" is waiting for your approval or input.", "error", false, "pending-question")
+		return hookNotificationPayload(event, false, "pending-question")
 	case "stop":
 		if isFailedHookEvent(event.rawEventType) {
-			return hookNotificationPayload(event, "Run Failed", "Workspace "+event.workspaceID+" has stopped with an error.", "error", false, "run-failed")
+			return hookNotificationPayload(event, false, "run-failed")
 		}
-		return hookNotificationPayload(event, "Run Completed", "Workspace "+event.workspaceID+" has completed successfully.", "success", false, "run-finished")
+		return hookNotificationPayload(event, false, "run-finished")
 	default:
 		return nil
 	}
 }
 
-func hookNotificationPayload(event normalizedHookEvent, title string, body string, tone string, silent bool, notificationEventType string) map[string]any {
-	payload := map[string]any{
-		"id":          newHookEventID(),
-		"title":       title,
-		"body":        body,
-		"tone":        tone,
-		"createdAt":   time.Now().UTC().Format(time.RFC3339Nano),
-		"agent":       event.agent,
-		"workspaceId": event.workspaceID,
-		"silent":      silent,
-		"observerStatus": map[string]string{
-			"normalizedEventType": event.eventType,
-			"sessionKey":          event.sessionKey,
-		},
-	}
-	if notificationEventType != "" {
-		payload["notificationEventType"] = notificationEventType
-	}
-	return payload
+func hookNotificationPayload(event normalizedHookEvent, silent bool, notificationEventType string) map[string]any {
+	return notification.BuildLifecyclePayload(notification.LifecycleInput{
+		ID:                    newHookEventID(),
+		CreatedAt:             time.Now().UTC().Format(time.RFC3339Nano),
+		Agent:                 event.agent,
+		WorkspaceID:           event.workspaceID,
+		ObserverEventType:     event.eventType,
+		SessionKey:            event.sessionKey,
+		Silent:                silent,
+		NotificationEventType: notificationEventType,
+	})
 }
 
 func newHookEventID() string {

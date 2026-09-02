@@ -104,3 +104,60 @@ func assertNoDSHForwardedUpdate(t *testing.T, client interface {
 		t.Fatalf("unexpected lifecycle notification: %#v", notification)
 	}
 }
+
+func TestDSHExecution_PumpKeepsInitialRegisterBindingAfterRebind(t *testing.T) {
+	service := newDSHExecutionService(&executionDSH{})
+	initialUpdates := make(chan dsh.SessionUpdate)
+	entry := &dshLiveSession{sessionID: "s", workspaceID: "w", cwd: "/authoritative", subscription: dsh.SessionSubscription{Updates: initialUpdates}}
+	initialBinding, registered := service.dshSessions.register(entry)
+	if !registered {
+		t.Fatal("register")
+	}
+	_, _, _, rebound := service.dshSessions.rebind(entry, nil, dsh.SessionSubscription{Updates: make(chan dsh.SessionUpdate)})
+	if !rebound {
+		t.Fatal("rebind")
+	}
+
+	service.pumpDSHSubscription(entry, initialBinding)
+	assertDSHUpdateConsumed(t, initialUpdates)
+	close(initialUpdates)
+}
+
+func TestDSHExecution_PumpsEachConcurrentRebindBinding(t *testing.T) {
+	service := newDSHExecutionService(&executionDSH{})
+	entry := &dshLiveSession{sessionID: "s", workspaceID: "w", cwd: "/authoritative", subscription: dsh.SessionSubscription{Updates: make(chan dsh.SessionUpdate)}}
+	if _, registered := service.dshSessions.register(entry); !registered {
+		t.Fatal("register")
+	}
+	firstUpdates := make(chan dsh.SessionUpdate)
+	firstBinding, _, _, rebound := service.dshSessions.rebind(entry, nil, dsh.SessionSubscription{Updates: firstUpdates})
+	if !rebound {
+		t.Fatal("first rebind")
+	}
+	secondUpdates := make(chan dsh.SessionUpdate)
+	secondBinding, _, _, rebound := service.dshSessions.rebind(entry, nil, dsh.SessionSubscription{Updates: secondUpdates})
+	if !rebound {
+		t.Fatal("second rebind")
+	}
+
+	service.pumpDSHSubscription(entry, firstBinding)
+	service.pumpDSHSubscription(entry, secondBinding)
+	assertDSHUpdateConsumed(t, firstUpdates)
+	assertDSHUpdateConsumed(t, secondUpdates)
+	close(firstUpdates)
+	close(secondUpdates)
+}
+
+func assertDSHUpdateConsumed(t *testing.T, updates chan<- dsh.SessionUpdate) {
+	t.Helper()
+	consumed := make(chan struct{})
+	go func() {
+		updates <- dsh.SessionUpdate{}
+		close(consumed)
+	}()
+	select {
+	case <-consumed:
+	case <-time.After(time.Second):
+		t.Fatal("subscription update was not consumed by its pump")
+	}
+}

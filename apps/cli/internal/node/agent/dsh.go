@@ -100,7 +100,7 @@ func (s *Service) disposeRegisteredDSHSessions(ctx context.Context, workspaceID 
 		if err == nil && !disposed.Disposed {
 			err = fmt.Errorf("DSH registered session %q was not disposed", entry.sessionID)
 		}
-		if err == nil && s.dshSessions.remove(entry) {
+		if err == nil && s.removeDSHNotificationSession(entry) {
 			s.runtimeIdentities.release(entry.sessionID, rpc.AgentRuntimeDSH)
 		}
 		result = errors.Join(result, err)

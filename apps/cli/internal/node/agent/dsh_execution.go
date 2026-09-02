@@ -105,16 +105,22 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 
 func (s *Service) registerStartedDSHSession(connection *rpc.Connection, req rpc.AgentStartParams, cwd string, claim runtimeIdentityClaim, subscription dsh.SessionSubscription, attachSnapshot rpc.AgentDSHAttachResult) (any, error) {
 	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHProvider, s.deps.DSHModel)
-	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, workspaceID: req.WorkspaceID, cwd: cwd, instanceID: subscription.InstanceID, provider: selection.Provider, model: selection.Model, connection: connection, available: true, subscription: subscription}
-	if !s.dshSessions.register(entry) {
+	paneID := req.PaneID
+	if paneID == "" {
+		paneID = req.SessionID
+	}
+	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, paneID: paneID, workspaceID: req.WorkspaceID, cwd: cwd, instanceID: subscription.InstanceID, provider: selection.Provider, model: selection.Model, connection: connection, available: true, subscription: subscription}
+	binding, registered := s.dshSessions.register(entry)
+	if !registered {
 		subscription.Unsubscribe()
 		// The registry winner owns this external session. Never compensate-dispose it.
 		s.runtimeIdentities.completeStart(req.SessionID, rpc.AgentRuntimeDSH, claim, false, true)
 		return nil, dshSessionConflict(req.SessionID)
 	}
 	s.runtimeIdentities.completeStart(req.SessionID, rpc.AgentRuntimeDSH, claim, true, false)
-	s.bindDSHConnection(entry, connection)
-	s.pumpDSHSubscription(entry)
+	s.bindDSHConnectionGeneration(entry, connection, binding.generation)
+	s.projectDSHSnapshot(entry, binding, subscription.Snapshot.Events)
+	s.pumpDSHSubscription(entry, binding)
 	return rpc.AgentStartResult{Runtime: rpc.AgentRuntimeDSH, SessionID: req.SessionID, DSHAttachSnapshot: &attachSnapshot}, nil
 }
 
@@ -156,21 +162,20 @@ func (s *Service) attachDSHSession(ctx context.Context, connection *rpc.Connecti
 }
 
 func (s *Service) rebindDSHSession(connection *rpc.Connection, sessionID string, entry *dshLiveSession, subscription dsh.SessionSubscription) (any, error) {
-	generation, instanceIDChanged, rebound := s.dshSessions.rebind(entry, connection, subscription)
+	binding, instanceIDChanged, rebound := s.rebindDSHNotificationSession(entry, connection, subscription)
+	generation := binding.generation
 	if !rebound {
 		subscription.Unsubscribe()
 		return nil, dshSessionNotFound(sessionID)
 	}
 	s.bindDSHConnectionGeneration(entry, connection, generation)
 	if instanceIDChanged {
-		if route, found := s.dshSessions.route(entry, generation); found {
-			if err := s.publishDSHUpdate(route, dsh.SessionUpdate{Reset: &dsh.TranscriptReset{SessionID: route.sessionID, InstanceID: subscription.InstanceID, HeadSeq: subscription.Baseline}}); err != nil {
-				s.dshSessions.detach(entry, route.generation, route.connection)
-				return nil, rpc.NewRPCError(rpc.CodeServerError, "dsh frontend notification failed")
-			}
+		reset := dsh.SessionUpdate{Reset: &dsh.TranscriptReset{SessionID: sessionID, InstanceID: subscription.InstanceID, HeadSeq: subscription.Baseline}}
+		if _, err := s.deliverDSHFrontendUpdate(entry, generation, reset); err != nil {
+			return nil, rpc.NewRPCError(rpc.CodeServerError, "dsh frontend notification failed")
 		}
 	}
-	s.pumpDSHSubscription(entry)
+	s.pumpDSHSubscription(entry, binding)
 	result, err := mapDSHAttachResult(subscription)
 	if err != nil {
 		subscription.Unsubscribe()
@@ -240,7 +245,10 @@ func (s *Service) disposeDSH(ctx context.Context, req rpc.AgentDisposeParams) (a
 	if err != nil {
 		return nil, mapDSHExecutionError(err)
 	}
-	if !disposed.Disposed || !s.dshSessions.remove(entry) {
+	if !disposed.Disposed {
+		return nil, dshSessionNotFound(req.SessionID)
+	}
+	if !s.removeDSHNotificationSession(entry) {
 		return nil, dshSessionNotFound(req.SessionID)
 	}
 	s.runtimeIdentities.release(entry.sessionID, rpc.AgentRuntimeDSH)
@@ -282,26 +290,18 @@ func (s *Service) cleanupFailedDSHStart(ctx context.Context, sessionID string, c
 	return errors.Join(mapDSHExecutionError(startErr), mapDSHExecutionError(disposeErr)), false
 }
 
-func (s *Service) bindDSHConnection(entry *dshLiveSession, connection *rpc.Connection) {
-	generation, _, found := s.dshSessions.binding(entry)
-	if found {
-		s.bindDSHConnectionGeneration(entry, connection, generation)
-	}
-}
-
 func (s *Service) bindDSHConnectionGeneration(entry *dshLiveSession, connection *rpc.Connection, generation uint64) {
 	if connection == nil {
 		return
 	}
-	connection.AddCloseHook(func() { s.dshSessions.detach(entry, generation, connection) })
+	connection.AddCloseHook(func() { s.detachDSHRoute(entry, generation, connection) })
 }
 
-func (s *Service) pumpDSHSubscription(entry *dshLiveSession) {
-	generation, updates, found := s.dshSessions.binding(entry)
-	if !found {
+func (s *Service) pumpDSHSubscription(entry *dshLiveSession, binding dshSubscriptionBinding) {
+	if binding.updates == nil {
 		return
 	}
-	go s.forwardDSHUpdates(entry, generation, updates)
+	go s.forwardDSHUpdates(entry, binding.generation, binding.updates)
 }
 
 func (s *Service) forwardDSHUpdates(entry *dshLiveSession, generation uint64, updates <-chan dsh.SessionUpdate) {
@@ -309,19 +309,48 @@ func (s *Service) forwardDSHUpdates(entry *dshLiveSession, generation uint64, up
 		var route dshRoute
 		var found bool
 		if update.Reset != nil {
-			route, found = s.dshSessions.resetRoute(entry, generation, update.Reset.InstanceID)
+			route, found = s.resetDSHNotificationRoute(entry, generation, update.Reset.InstanceID)
 		} else {
 			route, found = s.dshSessions.route(entry, generation)
 		}
-		if !found || !route.connection.IsOpen() {
+		if !found {
 			continue
 		}
-		if err := s.publishDSHUpdate(route, update); err != nil {
-			s.dshSessions.detach(entry, route.generation, route.connection)
+		if _, err := s.deliverDSHUpdate(entry, route, update); err != nil {
 			return
 		}
 	}
-	s.dshSessions.markUnavailable(entry, generation)
+	s.markDSHNotificationUnavailable(entry, generation)
+}
+
+func (s *Service) deliverDSHUpdate(entry *dshLiveSession, route dshRoute, update dsh.SessionUpdate) (bool, error) {
+	s.dshNotificationMu.Lock()
+	defer s.dshNotificationMu.Unlock()
+	if !s.projectDSHUpdateLocked(route, update) {
+		return false, nil
+	}
+	return s.publishCurrentDSHUpdate(entry, route, update)
+}
+
+func (s *Service) deliverDSHFrontendUpdate(entry *dshLiveSession, generation uint64, update dsh.SessionUpdate) (bool, error) {
+	s.dshNotificationMu.Lock()
+	defer s.dshNotificationMu.Unlock()
+	route, found := s.dshSessions.route(entry, generation)
+	if !found {
+		return false, nil
+	}
+	return s.publishCurrentDSHUpdate(entry, route, update)
+}
+
+func (s *Service) publishCurrentDSHUpdate(entry *dshLiveSession, route dshRoute, update dsh.SessionUpdate) (bool, error) {
+	if route.connection == nil || !route.connection.IsOpen() {
+		return true, nil
+	}
+	if err := s.publishDSHUpdate(route, update); err != nil {
+		_, _ = s.dshSessions.detach(entry, route.generation, route.connection)
+		return true, err
+	}
+	return true, nil
 }
 
 func (s *Service) publishDSHUpdate(route dshRoute, update dsh.SessionUpdate) error {
@@ -428,4 +457,11 @@ func dshAgentOptionsFrom(modelID, provider, defaultProvider, defaultModel string
 		modelID = defaultModel
 	}
 	return dsh.SessionAgentOptions{Model: modelID, Provider: provider}
+}
+
+func (s *Service) detachDSHRoute(entry *dshLiveSession, generation uint64, connection *rpc.Connection) {
+	// A frontend detach is transient: retain notification projection for rebind.
+	s.dshNotificationMu.Lock()
+	defer s.dshNotificationMu.Unlock()
+	_, _ = s.dshSessions.detach(entry, generation, connection)
 }

@@ -333,10 +333,33 @@ try {
     });
     return containsReplay(replay.events);
   });
+  const runStartedNotification = await client.waitForNotification(
+    (notification) => {
+      const payload = getEventPayload(notification);
+      return notification.params?.topic === "notificationEvent" && payload?.workspaceId === workspaceId && payload?.observerStatus?.normalizedEventType === "start";
+    },
+    "DSH running product notification",
+  );
+  assert.equal(runStartedNotification.params.payload.agent, "dsh");
+  assert.equal(runStartedNotification.params.payload.silent, true);
+  assert.deepEqual(runStartedNotification.params.payload.observerStatus, {
+    normalizedEventType: "start",
+    sessionKey: `${workspaceId}:${sessionId}:${sessionId}`,
+  });
 
   const firstPid = await waitFor("first DSH runtime PID", async () => (await readPids(pidPath))[0]);
+  const notificationsBeforeRuntimeCrash = new Set(client.notifications);
   process.kill(firstPid, "SIGKILL");
   await waitForProcessExit(firstPid, "first DSH runtime SIGKILL exit");
+  const runtimeUnavailableNotification = await client.waitForNotification(
+    (notification) => {
+      const payload = getEventPayload(notification);
+      return !notificationsBeforeRuntimeCrash.has(notification) && notification.params?.topic === "notificationEvent" && payload?.workspaceId === workspaceId && payload?.observerStatus?.normalizedEventType === "stop";
+    },
+    "DSH unavailable product notification",
+  );
+  assert.equal(runtimeUnavailableNotification.params.payload.silent, true);
+  assert.equal(runtimeUnavailableNotification.params.payload.notificationEventType, undefined);
   assert.deepEqual(await client.request("daemon.ping", {}), { status: "ok" });
   const restartedPid = await waitFor("restarted DSH runtime PID", async () => (await readPids(pidPath)).find((pid) => pid !== firstPid));
   assert.notEqual(restartedPid, firstPid);

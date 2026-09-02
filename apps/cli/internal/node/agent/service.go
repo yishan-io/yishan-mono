@@ -144,6 +144,8 @@ type Service struct {
 	piSessions *session.Registry
 	// dshSessions owns ephemeral DSH live-session routing state.
 	dshSessions *dshLiveRegistry
+	// dshNotificationMu serializes DSH route validation, lifecycle state, and publication.
+	dshNotificationMu sync.Mutex
 	// runtimeIdentities owns atomic runtime-scoped session-id reservations.
 	runtimeIdentities *runtimeIdentityRegistry
 	// stopProcess is overridden by focused tests to exercise cleanup failures.
