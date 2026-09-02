@@ -220,3 +220,49 @@ describe("DaemonWorkspaceClient", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 });
+
+describe("workspace.create", () => {
+  it("returns the daemon-resolved workspace name and branch", async () => {
+    const invoke = vi.fn(async () => ({
+      id: "workspace-1",
+      workspaceName: "ship-release-2",
+      branch: "task/ship-release-2",
+      status: "pending",
+    }));
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await expect(
+      client.createWorkspace({
+        organizationId: "org-1",
+        projectId: "project-1",
+        repoKey: "owner/repo",
+        sourcePath: "/tmp/repo",
+        sourceBranch: "main",
+        targetBranch: "task/ship-release",
+        workspaceName: "ship-release",
+      }),
+    ).resolves.toMatchObject({ name: "ship-release-2", branch: "task/ship-release-2", status: "pending" });
+  });
+
+  it("passes a Local Task ID to the daemon-owned create workflow", async () => {
+    const invoke = vi.fn(async () => ({ id: "workspace-1" }));
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await client.createWorkspace({
+      organizationId: "org-1",
+      projectId: "project-1",
+      repoKey: "owner/repo",
+      sourcePath: "/tmp/repo",
+      sourceBranch: "main",
+      targetBranch: "task/one",
+      workspaceName: "task-one",
+      localTaskId: "task-1",
+    });
+
+    expect(invoke).toHaveBeenCalledWith(
+      "workspace.create",
+      expect.objectContaining({ localTaskId: "task-1" }),
+      2_400_000,
+    );
+  });
+});

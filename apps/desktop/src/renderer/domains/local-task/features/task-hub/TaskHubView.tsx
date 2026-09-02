@@ -28,6 +28,7 @@ import { LocalTaskHubFilterMenu } from "./LocalTaskHubFilterMenu";
 import { LocalTaskList } from "./LocalTaskList";
 import { TaskHubTaskDetails } from "./TaskHubTaskDetails";
 import { useTaskHubDetailProjection } from "./useTaskHubDetailProjection";
+import { useTaskHubWorkspaceCreation } from "./useTaskHubWorkspaceCreation";
 
 const TASK_HUB_PAGE_SIZE = 20;
 
@@ -117,6 +118,7 @@ export function TaskHubView() {
   const handleOpenCreate = useCallback(() => setIsCreateOpen(true), []);
   const handleCloseCreate = useCallback(() => setIsCreateOpen(false), []);
   const handleSelectTask = useCallback((taskId: string) => setSelectedTaskId(taskId), []);
+  const { creatingTaskIds, handleCreateWorkspace, unavailableTaskIds } = useTaskHubWorkspaceCreation(tasks, projects);
   const handlePageChange = useCallback((_event: React.ChangeEvent<unknown>, page: number) => setCurrentPage(page), []);
   const getPaginationItemAriaLabel = useCallback<NonNullable<PaginationProps["getItemAriaLabel"]>>(
     (type, page, selected) => {
@@ -256,6 +258,9 @@ export function TaskHubView() {
                 onSelect={handleSelectTask}
                 projectDisplayById={projectDisplayById}
                 tagCatalog={detailProjection.tagCatalog}
+                unavailableTaskIds={unavailableTaskIds}
+                creatingTaskIds={creatingTaskIds}
+                onCreateWorkspace={handleCreateWorkspace}
               />
               {pageCount > 1 ? (
                 <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>

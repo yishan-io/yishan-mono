@@ -50,6 +50,7 @@ const historicalTask: LocalTask = {
   createdAt: "2026-01-01T12:00:00.000Z",
   updatedAt: "2026-01-02T12:00:00.000Z",
   completedAt: "2026-01-03T12:00:00.000Z",
+  hasActiveWorkspace: false,
   tags: [],
   tagRefs: [],
 };

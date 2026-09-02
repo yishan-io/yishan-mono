@@ -75,6 +75,7 @@ func (s *Service) executeLocalCreate(ctx context.Context, prepared CreatePlan, r
 // rollbackRegistration closes the local row and the cloud record when a create
 // fails before a worktree exists (dispatch rejection, provision step failure).
 func (s *Service) rollbackRegistration(ctx context.Context, prepared CreatePlan) {
+	s.unlinkLocalTaskWorkspace(ctx, prepared)
 	if err := s.deps.Records.ClosePersisted(ctx, prepared.WorkspaceID); err != nil {
 		return
 	}
@@ -84,6 +85,7 @@ func (s *Service) rollbackRegistration(ctx context.Context, prepared CreatePlan)
 // rollbackCreateFailure rolls back a create that reached finalize: closes the
 // records and tears down the partially created worktree.
 func (s *Service) rollbackCreateFailure(ctx context.Context, prepared CreatePlan, created workspace.Workspace) {
+	s.unlinkLocalTaskWorkspace(ctx, prepared)
 	if err := s.deps.Records.ClosePersisted(ctx, prepared.WorkspaceID); err != nil {
 		return
 	}

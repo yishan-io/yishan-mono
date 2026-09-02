@@ -4,6 +4,7 @@ import "yishan/apps/cli/internal/workspace"
 
 type CreateCommand struct {
 	ID             string                   `json:"id,omitempty"`
+	LocalTaskID    string                   `json:"localTaskId,omitempty"`
 	OrganizationID string                   `json:"organizationId,omitempty"`
 	NodeID         string                   `json:"nodeId,omitempty"`
 	ProjectID      string                   `json:"projectId,omitempty"`

@@ -648,7 +648,7 @@ describe("createWorkspaceEventHandlers", () => {
     stopBindings();
   });
 
-  it("marks the placeholder workspace active on completion and triggers snapshot reload", async () => {
+  it("does not mutate a server-backed provisioning row on completion and triggers snapshot reload", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -710,15 +710,15 @@ describe("createWorkspaceEventHandlers", () => {
     expect(workspaceStore.getState().workspaces).toEqual([
       expect.objectContaining({
         id: "workspace-1",
-        worktreePath: "/tmp/repo/.worktrees/feature-a",
-        status: "active",
+        worktreePath: "",
+        status: "provisioning",
       }),
     ]);
     expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
     stopBindings();
   });
 
-  it("marks the placeholder workspace active on completion even when no progress entry exists", async () => {
+  it("does not mutate a server-backed provisioning row when completion has no progress entry", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -771,8 +771,8 @@ describe("createWorkspaceEventHandlers", () => {
     expect(workspaceStore.getState().workspaces).toEqual([
       expect.objectContaining({
         id: "workspace-1",
-        worktreePath: "/tmp/repo/.worktrees/feature-a",
-        status: "active",
+        worktreePath: "",
+        status: "provisioning",
       }),
     ]);
     expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toBeUndefined();
@@ -780,7 +780,7 @@ describe("createWorkspaceEventHandlers", () => {
     stopBindings();
   });
 
-  it("adds a placeholder row on create start, tracks progress, finalizes on completion, and reloads snapshot", async () => {
+  it("does not add a workspace row on create start, tracks progress, and reloads snapshot on completion", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -829,19 +829,7 @@ describe("createWorkspaceEventHandlers", () => {
     });
     await Promise.resolve();
 
-    expect(workspaceStore.getState().workspaces).toEqual([
-      expect.objectContaining({
-        id: "workspace-1",
-        organizationId: "org-1",
-        projectId: "project-1",
-        repoId: "project-1",
-        name: "feature-a",
-        sourceBranch: "main",
-        branch: "feature-a",
-        worktreePath: "/tmp/repo/.worktrees/feature-a",
-        nodeId: "node-1",
-      }),
-    ]);
+    expect(workspaceStore.getState().workspaces).toEqual([]);
     expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toBeUndefined();
     // Snapshot reload always fires on completion to pick up authoritative API
     // status and clear the provisioning spinner (even if daemon PATCH event

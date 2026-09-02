@@ -5,6 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_LOCAL_TASK_TAGS, MAX_LOCAL_TASK_TAG_CODE_POINTS } from "../../localTaskTags";
 import { localTaskStore } from "../../state/localTaskStore";
 import { TaskHubView, getTaskHubProjectFilterOptions } from "./TaskHubView";
+const projectMocks = vi.hoisted(() => ({
+  projects: Array.from({ length: 100 }, (_, index) => ({
+    id: `project-${index + 1}`,
+    name: index === 0 ? "Renderer Project" : `Renderer Project ${index + 1}`,
+    icon: "bug",
+    color: "error.main",
+    sourceType: "git",
+    repoKey: "renderer-project",
+    localPath: "/projects/renderer-project",
+  })),
+}));
 const commands = vi.hoisted(() => ({
   createLocalTaskTag: vi.fn(),
   loadLocalTaskContext: vi.fn(async () => undefined),
@@ -20,26 +31,29 @@ const commands = vi.hoisted(() => ({
   updateLocalTaskTagColor: vi.fn(async () => undefined),
 }));
 vi.mock("../../commands/localTaskCommands", () => commands);
+const workspaceCommands = vi.hoisted(() => ({
+  createWorkspaceForLocalTask: vi.fn((): Promise<string> => Promise.resolve("workspace-1")),
+}));
+vi.mock("../../commands/localTaskWorkspaceCommands", () => workspaceCommands);
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { field?: string; page?: number }) =>
-      options?.page ? `${key} ${options.page}` : options?.field ? `${key} ${options.field}` : key,
+    t: (key: string, options?: { field?: string; page?: number; title?: string }) =>
+      options?.page
+        ? `${key} ${options.page}`
+        : options?.field
+          ? `${key} ${options.field}`
+          : options?.title
+            ? `${key}: ${options.title}`
+            : key,
     i18n: { language: "en-US" },
   }),
 }));
 vi.mock("@renderer/domains/project", () => ({
   projectStore: (
     selector: (state: { projects: Array<{ id: string; name: string; icon: string; color: string }> }) => unknown,
-  ) =>
-    selector({
-      projects: Array.from({ length: 100 }, (_, index) => ({
-        id: `project-${index + 1}`,
-        name: index === 0 ? "Renderer Project" : `Renderer Project ${index + 1}`,
-        icon: "bug",
-        color: "error.main",
-      })),
-    }),
+  ) => selector({ projects: projectMocks.projects }),
   renderProjectIcon: (iconId: string | undefined) => `project-icon-${iconId}`,
+  supportsGitFeatures: (sourceType?: string) => sourceType !== "unknown",
 }));
 vi.mock("@renderer/domains/workbench", () => ({
   PaneHeader: ({ children }: { children: React.ReactNode }) => children,
@@ -77,10 +91,14 @@ const task = {
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
   completedAt: null,
+  hasActiveWorkspace: false,
   tags: [],
   tagRefs: [],
 };
 const initialState = localTaskStore.getState();
+const defaultProjects = projectMocks.projects;
+const defaultProject = defaultProjects[0];
+if (!defaultProject) throw new Error("Expected a default project fixture");
 describe("getTaskHubProjectFilterOptions", () => {
   it("merges the complete renderer catalog with daemon Hub displays and deduplicates IDs", () => {
     expect(
@@ -104,6 +122,7 @@ describe("getTaskHubProjectFilterOptions", () => {
 describe("TaskHubView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    projectMocks.projects = defaultProjects;
     localTaskStore.setState({
       ...initialState,
       hubTasks: [task],
@@ -142,6 +161,67 @@ describe("TaskHubView", () => {
     expect(screen.getByRole("alert").textContent).toContain("detail projection unavailable");
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.retry" }));
     expect(commands.loadLocalTaskDetails).toHaveBeenCalledWith(task.id);
+  });
+  it("keeps Start disabled after create acceptance until the Hub projection reports an active workspace", async () => {
+    render(<TaskHubView />);
+    const startButton = screen.getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" });
+
+    await userEvent.setup().click(startButton);
+    await waitFor(() => expect(startButton.getAttribute("disabled")).not.toBeNull());
+    fireEvent.click(startButton);
+
+    expect(workspaceCommands.createWorkspaceForLocalTask).toHaveBeenCalledOnce();
+    expect(screen.queryByText("localTask.workspace.details")).toBeNull();
+  });
+  it("keeps each task's create action busy while concurrent launches are in progress", async () => {
+    const secondTask = { ...task, id: "task-2", title: "Ship Workspace" };
+    const resolveLaunches: Array<() => void> = [];
+    workspaceCommands.createWorkspaceForLocalTask.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveLaunches.push(() => resolve("workspace-created"));
+        }),
+    );
+    localTaskStore.setState({ hubTasks: [task, secondTask] });
+    render(<TaskHubView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" }));
+    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Workspace" }));
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" })
+          .getAttribute("disabled"),
+      ).not.toBeNull();
+      expect(
+        screen
+          .getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Workspace" })
+          .getAttribute("disabled"),
+      ).not.toBeNull();
+    });
+    for (const resolveLaunch of resolveLaunches) resolveLaunch();
+  });
+  it.each([
+    ["global", { projectId: null }],
+    ["completed", { status: "done" as const }],
+    ["cancelled", { status: "cancelled" as const }],
+    ["an active workspace", { hasActiveWorkspace: true }],
+  ])("omits workspace creation for %s tasks", (_state, taskOverrides) => {
+    localTaskStore.setState({ hubTasks: [{ ...task, ...taskOverrides }] });
+    render(<TaskHubView />);
+
+    expect(screen.queryByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" })).toBeNull();
+  });
+  it.each([
+    ["repository key", "repoKey"],
+    ["local path", "localPath"],
+  ] as const)("disables workspace creation when the project is missing its %s", (_prerequisite, field) => {
+    projectMocks.projects = [{ ...defaultProject, [field]: "" }];
+    render(<TaskHubView />);
+
+    const createButton = screen.getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" });
+    expect(createButton.getAttribute("disabled")).not.toBeNull();
   });
   it("searches and filters through Local Task commands", async () => {
     render(<TaskHubView />);
@@ -374,7 +454,7 @@ describe("TaskHubView", () => {
       hubTasks: [{ ...task, tagRefs: maximumTags.map((name, index) => ({ id: `tag-${index}`, name })) }],
     });
     render(<TaskHubView />);
-    const taskRow = screen.getByRole("button", { name: /Ship Task Hub/ });
+    const taskRow = screen.getByRole("button", { name: "Ship Task Hub" });
     expect(getComputedStyle(taskRow).height).not.toBe("100%");
     expect(getComputedStyle(taskRow).minHeight).not.toBe("0px");
   });
@@ -390,7 +470,7 @@ describe("TaskHubView", () => {
     expect(priorityIcon.compareDocumentPosition(statusIcon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText("localTask.status.progressing")).toBeNull();
     expect(screen.queryByText("localTask.priority.high")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /Ship Task Hub/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Ship Task Hub" }));
     expect(screen.getByText("Desktop UX")).toBeTruthy();
     expect(screen.getAllByText("Ship Task Hub")).toHaveLength(2);
     expect(screen.queryByRole("textbox", { name: "localTask.search.label" })).toBeNull();
@@ -405,7 +485,7 @@ describe("TaskHubView", () => {
   });
   it("renders daemon projection display metadata without renderer workspace state", () => {
     render(<TaskHubView />);
-    fireEvent.click(screen.getByRole("button", { name: /Ship Task Hub/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Ship Task Hub" }));
     expect(commands.loadLocalTaskDetails).not.toHaveBeenCalled();
     expect(screen.getByText("Project One")).toBeTruthy();
     expect(screen.getByTestId("local-task-project-icon").textContent).toBe("project-icon-rocket");

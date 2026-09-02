@@ -1,4 +1,4 @@
-import { Box, Chip, Paper, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Chip, Paper, Tooltip, Typography } from "@mui/material";
 import { renderProjectIcon } from "@renderer/domains/project";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
@@ -17,10 +17,21 @@ type LocalTaskListProps = {
   onSelect: (taskId: string) => void;
   projectDisplayById: Readonly<Record<string, ProjectDisplay>>;
   tagCatalog: LocalTaskTagCatalogEntry[];
+  unavailableTaskIds: ReadonlySet<string>;
+  creatingTaskIds: ReadonlySet<string>;
+  onCreateWorkspace: (task: LocalTask) => void;
 };
 
 /** Renders a virtualized Local Task result list. */
-export function LocalTaskList({ tasks, onSelect, projectDisplayById, tagCatalog }: LocalTaskListProps) {
+export function LocalTaskList({
+  tasks,
+  onSelect,
+  projectDisplayById,
+  tagCatalog,
+  unavailableTaskIds,
+  creatingTaskIds,
+  onCreateWorkspace,
+}: LocalTaskListProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -47,10 +58,7 @@ export function LocalTaskList({ tasks, onSelect, projectDisplayById, tagCatalog 
               sx={{ position: "absolute", top: 0, left: 0, width: "100%" }}
             >
               <Paper
-                component="button"
-                type="button"
                 elevation={0}
-                onClick={() => onSelect(task.id)}
                 sx={{
                   width: "100%",
                   minHeight: TASK_ROW_ESTIMATE,
@@ -59,67 +67,102 @@ export function LocalTaskList({ tasks, onSelect, projectDisplayById, tagCatalog 
                   display: "flex",
                   alignItems: "center",
                   gap: 1.5,
-                  textAlign: "left",
                   color: "inherit",
                   bgcolor: "transparent",
-                  border: 0,
                   boxShadow: "none",
-                  cursor: "pointer",
                   "&:hover": { bgcolor: "action.hover" },
                 }}
               >
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                    <Tooltip title={t(`localTask.priority.${task.priority}`)}>
-                      <LocalTaskPriorityIcon
-                        priority={task.priority}
-                        aria-label={`${t("localTask.fields.priority")}: ${t(`localTask.priority.${task.priority}`)}`}
+                <Box
+                  component="button"
+                  type="button"
+                  aria-label={task.title}
+                  onClick={() => onSelect(task.id)}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    p: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    textAlign: "left",
+                    color: "inherit",
+                    bgcolor: "transparent",
+                    border: 0,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                      <Tooltip title={t(`localTask.priority.${task.priority}`)}>
+                        <LocalTaskPriorityIcon
+                          priority={task.priority}
+                          aria-label={`${t("localTask.fields.priority")}: ${t(`localTask.priority.${task.priority}`)}`}
+                        />
+                      </Tooltip>
+                      <LocalTaskStatusIcon status={task.status} label={t(`localTask.status.${task.status}`)} />
+                      <Typography sx={{ fontSize: "0.8125rem" }} noWrap>
+                        {task.title}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    {project ? (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        icon={
+                          <Box
+                            sx={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: project.color,
+                            }}
+                          >
+                            {renderProjectIcon(project.icon, 14)}
+                          </Box>
+                        }
+                        label={project.name}
+                        sx={{
+                          "& .MuiChip-icon": { ml: 0.75 },
+                          "& .MuiChip-label": { px: 1.25 },
+                        }}
                       />
-                    </Tooltip>
-                    <LocalTaskStatusIcon status={task.status} label={t(`localTask.status.${task.status}`)} />
-                    <Typography sx={{ fontSize: "0.8125rem" }} noWrap>
-                      {task.title}
-                    </Typography>
+                    ) : task.projectId ? (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={task.projectId}
+                        sx={{ "& .MuiChip-label": { px: 1.25 } }}
+                      />
+                    ) : null}
+                    <LocalTaskTagsDisplay
+                      tagRefs={task.tagRefs}
+                      tags={task.tagRefs.length === 0 ? task.tags : undefined}
+                      maxVisible={2}
+                      tagCatalog={tagCatalog}
+                    />
                   </Box>
                 </Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  {project ? (
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      icon={
-                        <Box
-                          sx={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: project.color,
+                {task.projectId && !task.hasActiveWorkspace && task.status !== "done" && task.status !== "cancelled"
+                  ? (() => {
+                      const isDisabled = unavailableTaskIds.has(task.id) || creatingTaskIds.has(task.id);
+                      return (
+                        <Button
+                          size="small"
+                          disabled={isDisabled}
+                          aria-label={t("localTask.actions.startWorkspaceForTask", { title: task.title })}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onCreateWorkspace(task);
                           }}
                         >
-                          {renderProjectIcon(project.icon, 14)}
-                        </Box>
-                      }
-                      label={project.name}
-                      sx={{
-                        "& .MuiChip-icon": { ml: 0.75 },
-                        "& .MuiChip-label": { px: 1.25 },
-                      }}
-                    />
-                  ) : task.projectId ? (
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={task.projectId}
-                      sx={{ "& .MuiChip-label": { px: 1.25 } }}
-                    />
-                  ) : null}
-                  <LocalTaskTagsDisplay
-                    tagRefs={task.tagRefs}
-                    tags={task.tagRefs.length === 0 ? task.tags : undefined}
-                    maxVisible={2}
-                    tagCatalog={tagCatalog}
-                  />
-                </Box>
+                          {t("localTask.actions.createWorkspace")}
+                        </Button>
+                      );
+                    })()
+                  : null}
               </Paper>
             </Box>
           );

@@ -203,26 +203,29 @@ export class DaemonWorkspaceClient {
     const contextEnabled = readOptionalBoolean(record?.contextEnabled) ?? false;
     const setupHook = readOptionalString(record?.setupHook) || "";
 
-    const createdWorkspace = (await this.invoke(
-      "workspace.create",
-      {
-        organizationId,
-        nodeId: readOptionalString(record?.nodeId) || undefined,
-        projectId: readOptionalString(record?.projectId) || "",
-        repoKey,
-        workspaceName,
-        sourcePath,
-        targetBranch,
-        sourceBranch,
-        contextEnabled,
-        setupHook,
-        taskRun: record?.taskRun,
-      },
-      WORKSPACE_CREATE_TIMEOUT_MS,
-    )) as DaemonWorkspace & { lifecycleScriptWarnings?: unknown[] };
+    const createdWorkspace = asRecord(
+      await this.invoke(
+        "workspace.create",
+        {
+          organizationId,
+          nodeId: readOptionalString(record?.nodeId) || undefined,
+          localTaskId: readOptionalString(record?.localTaskId) || undefined,
+          projectId: readOptionalString(record?.projectId) || "",
+          repoKey,
+          workspaceName,
+          sourcePath,
+          targetBranch,
+          sourceBranch,
+          contextEnabled,
+          setupHook,
+          taskRun: record?.taskRun,
+        },
+        WORKSPACE_CREATE_TIMEOUT_MS,
+      ),
+    );
 
-    const createdWorktreePath = createdWorkspace.path || "";
-    const resolvedId = createdWorkspace.id || "";
+    const createdWorktreePath = readOptionalString(createdWorkspace?.path) || "";
+    const resolvedId = readOptionalString(createdWorkspace?.id) || "";
     if (createdWorktreePath && resolvedId) {
       this.workspaceIdByWorktreePath.set(createdWorktreePath, resolvedId);
     }
@@ -230,12 +233,12 @@ export class DaemonWorkspaceClient {
     return {
       workspaceId: resolvedId,
       projectId: readOptionalString(record?.projectId) || resolvedId,
-      name: workspaceName,
+      name: readOptionalString(createdWorkspace?.workspaceName) || workspaceName,
       sourceBranch,
-      branch: targetBranch,
+      branch: readOptionalString(createdWorkspace?.branch) || targetBranch,
       worktreePath: createdWorktreePath,
-      status: "active",
-      lifecycleScriptWarnings: Array.isArray(createdWorkspace.lifecycleScriptWarnings)
+      status: readOptionalString(createdWorkspace?.status) || "active",
+      lifecycleScriptWarnings: Array.isArray(createdWorkspace?.lifecycleScriptWarnings)
         ? createdWorkspace.lifecycleScriptWarnings
         : [],
     };

@@ -29,17 +29,28 @@ func (s *Service) prepare(ctx context.Context, command CreateCommand) (CreatePla
 	if normalized.Kind == string(workspace.KindPrimary) {
 		return CreatePlan{}, fmt.Errorf("workspace create only supports worktree workspaces; create a new project to create a primary workspace")
 	}
+	if normalized.LocalTaskID != "" && normalized.NodeID != "" && normalized.NodeID != s.deps.NodeID {
+		return CreatePlan{}, workspace.NewError(
+			workspace.ErrCodeInvalidParams,
+			"localTaskId can only be used when creating a workspace on this daemon",
+		)
+	}
 	if isDirectCreate(normalized) {
 		if normalized.NodeID == "" {
 			normalized.NodeID = s.deps.NodeID
 		}
-		return prepareDirectCreate(normalized, s.deps.NodeID), nil
+		return s.reserveAvailableCreate(ctx, prepareDirectCreate(normalized, s.deps.NodeID))
 	}
-	return s.prepareWorktreeCreate(ctx, normalized)
+	prepared, err := s.prepareWorktreeCreate(ctx, normalized)
+	if err != nil {
+		return CreatePlan{}, err
+	}
+	return s.reserveAvailableCreate(ctx, prepared)
 }
 
 func normalizeCreateCommand(command CreateCommand) CreateCommand {
 	command.ID = strings.TrimSpace(command.ID)
+	command.LocalTaskID = strings.TrimSpace(command.LocalTaskID)
 	command.OrganizationID = strings.TrimSpace(command.OrganizationID)
 	command.NodeID = strings.TrimSpace(command.NodeID)
 	command.ProjectID = strings.TrimSpace(command.ProjectID)
@@ -116,6 +127,7 @@ func prepareDirectCreate(command CreateCommand, sourceNodeID string) CreatePlan 
 	}
 	return CreatePlan{
 		WorkspaceID:    command.ID,
+		LocalTaskID:    command.LocalTaskID,
 		OrganizationID: command.OrganizationID,
 		ProjectID:      command.ProjectID,
 		StartedEvent:   buildStartedEvent(command, command.NodeID, command.TargetBranch),
@@ -136,6 +148,12 @@ func (s *Service) prepareWorktreeCreate(ctx context.Context, command CreateComma
 		return CreatePlan{}, err
 	}
 	if nodeID != s.deps.NodeID {
+		if command.LocalTaskID != "" {
+			return CreatePlan{}, workspace.NewError(
+				workspace.ErrCodeInvalidParams,
+				"localTaskId can only be used when creating a workspace on this daemon",
+			)
+		}
 		return prepareRemoteCreate(command, nodeID, s.deps.NodeID), nil
 	}
 	project, err := loadProjectForCreate(s.deps.Environment, command.OrganizationID, command.ProjectID)
@@ -148,7 +166,7 @@ func (s *Service) prepareWorktreeCreate(ctx context.Context, command CreateComma
 	}
 	createReq := workspace.CreateRequest{ID: command.ID, OrganizationID: command.OrganizationID, NodeID: nodeID, ProjectID: command.ProjectID, RepoKey: project.RepoKey, WorkspaceName: command.WorkspaceName, SourcePath: sourcePath, TargetBranch: command.Branch, SourceBranch: command.SourceBranch, ContextEnabled: project.ContextEnabled, SetupHook: project.SetupScript, TaskRun: command.TaskRun}
 	registration := Registration{ID: command.ID, NodeID: nodeID, SourceNodeID: s.deps.NodeID, OrganizationID: command.OrganizationID, ProjectID: command.ProjectID, Kind: workspace.KindWorktree, Branch: command.Branch, SourceBranch: command.SourceBranch}
-	return CreatePlan{WorkspaceID: command.ID, OrganizationID: command.OrganizationID, ProjectID: command.ProjectID, StartedEvent: buildStartedEvent(command, nodeID, command.Branch), RelayReplyNodeID: command.ReplyNodeID, IsRelayed: command.ReplyNodeID != "", LocalCreate: &createReq, Registration: &registration}, nil
+	return CreatePlan{WorkspaceID: command.ID, LocalTaskID: command.LocalTaskID, OrganizationID: command.OrganizationID, ProjectID: command.ProjectID, StartedEvent: buildStartedEvent(command, nodeID, command.Branch), RelayReplyNodeID: command.ReplyNodeID, IsRelayed: command.ReplyNodeID != "", LocalCreate: &createReq, Registration: &registration}, nil
 }
 
 func prepareRemoteCreate(command CreateCommand, targetNodeID string, replyNodeID string) CreatePlan {
@@ -159,7 +177,7 @@ func prepareRemoteCreate(command CreateCommand, targetNodeID string, replyNodeID
 		branch = command.TargetBranch
 	}
 	registration := Registration{ID: command.ID, NodeID: targetNodeID, SourceNodeID: replyNodeID, OrganizationID: command.OrganizationID, ProjectID: command.ProjectID, Kind: workspace.KindWorktree, Branch: branch, SourceBranch: command.SourceBranch}
-	return CreatePlan{WorkspaceID: command.ID, OrganizationID: command.OrganizationID, ProjectID: command.ProjectID, StartedEvent: buildStartedEvent(command, targetNodeID, branch), Registration: &registration, RemoteRequest: &command}
+	return CreatePlan{WorkspaceID: command.ID, LocalTaskID: command.LocalTaskID, OrganizationID: command.OrganizationID, ProjectID: command.ProjectID, StartedEvent: buildStartedEvent(command, targetNodeID, branch), Registration: &registration, RemoteRequest: &command}
 }
 
 func buildStartedEvent(command CreateCommand, nodeID string, branch string) StartedEvent {

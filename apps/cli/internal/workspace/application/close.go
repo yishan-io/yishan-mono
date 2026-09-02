@@ -145,12 +145,16 @@ func (s *Service) finishClose(ctx context.Context, command CloseCommand, closeRe
 		}
 	}
 	persistErr := s.deps.Records.ClosePersisted(ctx, closeReq.WorkspaceID)
+	var unlinkErr error
+	if s.deps.UnlinkLocalTaskWorkspace != nil {
+		unlinkErr = s.deps.UnlinkLocalTaskWorkspace(ctx, closeReq.WorkspaceID)
+	}
 	s.notifyWorkspaceAvailabilityChanged()
 	if s.deps.ClearAgentUsage != nil {
 		s.deps.ClearAgentUsage(command.WorkspaceID)
 	}
 	result := CloseResult{WorkspaceID: command.WorkspaceID, Status: string(workspace.StatusClosed), PostHookResult: teardown.PostHookResult, TerminalCleanupErrors: teardown.TerminalCleanupErrors}
-	return result, errors.Join(teardownErr, persistErr)
+	return result, errors.Join(teardownErr, persistErr, unlinkErr)
 }
 
 func (s *Service) notifyWorkspaceAvailabilityChanged() {

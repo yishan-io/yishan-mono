@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -167,6 +168,57 @@ func TestPrepare_WorktreeCreateRemoteNodeReturnsRelayRequest(t *testing.T) {
 	}
 	if plan.RemoteRequest.ReplyNodeID != "node-local" {
 		t.Fatalf("ReplyNodeID = %q, want %q", plan.RemoteRequest.ReplyNodeID, "node-local")
+	}
+}
+
+type remoteCreateRelay struct {
+	createCalls int
+}
+
+func (r *remoteCreateRelay) DispatchCreate(_ context.Context, _ CreatePlan, _ CreateCommand) error {
+	r.createCalls++
+	return nil
+}
+
+func (r *remoteCreateRelay) DispatchClose(_ context.Context, _ CloseCommand, _ string) error {
+	return nil
+}
+
+func TestCreate_RejectsLocalTaskCreateForRemoteNodeBeforeDispatch(t *testing.T) {
+	env := &fakeEnvironment{apiConfigured: true, nodes: []Node{{ID: "node-remote"}}}
+	relay := &remoteCreateRelay{}
+	service := New(Dependencies{NodeID: "node-local", Environment: env, Relay: relay})
+
+	_, err := service.Create(context.Background(), CreateCommand{
+		LocalTaskID: "task-1", OrganizationID: "org-1", ProjectID: "proj-1",
+		Branch: "feature/test", SourceBranch: "main", NodeID: "node-remote",
+	})
+
+	var validationError *workspace.Error
+	if !errors.As(err, &validationError) || validationError.Code != workspace.ErrCodeInvalidParams {
+		t.Fatalf("err = %v, want invalid workspace params error", err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "localTaskId can only be used when creating a workspace on this daemon") {
+		t.Fatalf("err = %v, want clear local task remote target validation", err)
+	}
+	if relay.createCalls != 0 {
+		t.Fatalf("relay create calls = %d, want 0", relay.createCalls)
+	}
+}
+
+func TestPrepare_RejectsLocalTaskDirectCreateForRemoteNode(t *testing.T) {
+	service := newPrepareTestService(nil)
+	_, err := service.prepare(context.Background(), CreateCommand{
+		LocalTaskID: "task-1", OrganizationID: "org-1", ProjectID: "proj-1", NodeID: "node-remote",
+		SourcePath: "/tmp/primary-repo", RepoKey: "acme/repo", TargetBranch: "feature/test", SourceBranch: "main",
+	})
+
+	var validationError *workspace.Error
+	if !errors.As(err, &validationError) || validationError.Code != workspace.ErrCodeInvalidParams {
+		t.Fatalf("err = %v, want invalid workspace params error", err)
+	}
+	if !strings.Contains(err.Error(), "localTaskId can only be used when creating a workspace on this daemon") {
+		t.Fatalf("err = %v, want clear local task remote target validation", err)
 	}
 }
 

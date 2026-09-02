@@ -70,7 +70,9 @@
       "retryLink": "Retry link",
       "unlink": "Unlink",
       "createLocal": "Create Local Task",
-      "add": "Add tags"
+      "add": "Add tags",
+      "createWorkspace": "Start",
+      "startWorkspaceForTask": "Start {{title}}"
     },
     "states": {
       "loading": "Loading tasks",

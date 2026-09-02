@@ -70,7 +70,9 @@
       "retryLink": "重试关联",
       "unlink": "取消关联",
       "createLocal": "创建本地任务",
-      "add": "添加标签"
+      "add": "添加标签",
+      "createWorkspace": "启动",
+      "startWorkspaceForTask": "启动 {{title}}"
     },
     "states": {
       "loading": "正在加载任务",

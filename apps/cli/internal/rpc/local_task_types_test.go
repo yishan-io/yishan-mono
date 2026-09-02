@@ -44,12 +44,12 @@ func TestLocalTaskWirePayloads_MatchDesktopContract(t *testing.T) {
 		{
 			name:     "task with tags",
 			value:    localtask.Task{ID: "task-1", ProjectID: &projectID, Title: "Imported", Description: "Legacy metadata", Status: localtask.StatusDone, Priority: localtask.PriorityMedium, CreatedAt: "2026-08-24", UpdatedAt: "2026-08-26", CompletedAt: &completedAt, Tags: []string{"first", "second"}, TagRefs: []localtask.TagRef{}},
-			expected: `{"id":"task-1","projectId":"project-1","title":"Imported","description":"Legacy metadata","status":"done","priority":"medium","createdAt":"2026-08-24","updatedAt":"2026-08-26","completedAt":"2026-08-25","tags":["first","second"],"tagRefs":[]}`,
+			expected: `{"id":"task-1","projectId":"project-1","title":"Imported","description":"Legacy metadata","status":"done","priority":"medium","createdAt":"2026-08-24","updatedAt":"2026-08-26","completedAt":"2026-08-25","hasActiveWorkspace":false,"tags":["first","second"],"tagRefs":[]}`,
 		},
 		{
 			name:     "task without tags",
 			value:    localtask.Task{ID: "task-2", Title: "Empty", Status: localtask.StatusProgressing, Priority: localtask.PriorityMedium, Tags: []string{}, TagRefs: []localtask.TagRef{}},
-			expected: `{"id":"task-2","projectId":null,"title":"Empty","description":"","status":"progressing","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"tags":[],"tagRefs":[]}`,
+			expected: `{"id":"task-2","projectId":null,"title":"Empty","description":"","status":"progressing","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"hasActiveWorkspace":false,"tags":[],"tagRefs":[]}`,
 		},
 		{
 			name:     "workspace link",

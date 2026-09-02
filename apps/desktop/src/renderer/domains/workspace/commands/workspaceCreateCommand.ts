@@ -1,5 +1,5 @@
 import { projectStore } from "@renderer/domains/project";
-import { activateWorkspace } from "@renderer/domains/workbench";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
 import { sessionStore } from "@renderer/domains/session";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
@@ -9,9 +9,7 @@ import {
   enqueueWorkspaceLifecycleWarnings,
 } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { getWorkspaceRpc } from "../daemon/daemonWorkspaceClient";
-import { buildWorkspaceCreatePlaceholder } from "../features/create-workspace/workspaceCreatePlaceholder";
 import { workspaceSettingsStore } from "../state/workspaceSettingsStore";
-import { workspaceStore } from "../state/workspaceStore";
 import { normalizeCreateWorkspaceInput } from "../state/workspaceStoreMutations";
 
 type CreateWorkspaceInput = {
@@ -20,6 +18,7 @@ type CreateWorkspaceInput = {
   sourceBranch?: string;
   targetBranch?: string;
   nodeId?: string;
+  localTaskId?: string;
   taskRun?: {
     agentKind: string;
     prompt: string;
@@ -99,9 +98,8 @@ function isReauthRequiredRemoteSyncWarning(message: string): boolean {
   return /authenticated api session|refresh token|unauthorized|yishan login/i.test(message);
 }
 
-/** Creates one workspace by calling backend service when available, then appending it in store state. */
+/** Creates one workspace through the daemon and starts progress tracking after acceptance. */
 export async function createWorkspace(input: CreateWorkspaceInput): Promise<string | undefined> {
-  const store = workspaceStore.getState();
   const { normalizedName } = normalizeCreateWorkspaceInput(input);
   const projectId = input.projectId;
 
@@ -112,19 +110,23 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
   const project = projectStore.getState().projects.find((item) => item.id === projectId);
   const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";
 
-  const repoKey = project?.repoKey?.trim() || project?.key?.trim() || project?.id || "";
+  const repoKey = project?.repoKey?.trim() || project?.key?.trim() || "";
   const sourcePath = project?.localPath?.trim() || project?.path?.trim() || "";
   const sourceBranch = input.sourceBranch?.trim() || "";
   const targetBranch = input.targetBranch?.trim() || sourceBranch;
-  if (!organizationId || !repoKey || !sourcePath || !sourceBranch || !targetBranch) {
-    console.error("Missing required workspace create input", {
-      organizationId,
-      projectId,
-      hasRepoKey: Boolean(repoKey),
-      hasSourcePath: Boolean(sourcePath),
-      hasSourceBranch: Boolean(sourceBranch),
-      hasTargetBranch: Boolean(targetBranch),
-    });
+  const missingPrerequisiteMessage = !organizationId
+    ? "Select an organization before creating a workspace."
+    : !repoKey
+      ? "The selected project is missing its repository key."
+      : !sourcePath
+        ? "The selected project is missing its local path."
+        : !sourceBranch
+          ? "Select a source branch before creating a workspace."
+          : !targetBranch
+            ? "Enter a target branch before creating a workspace."
+            : undefined;
+  if (missingPrerequisiteMessage) {
+    enqueueWorkspaceErrorNotice({ title: "Failed to create workspace", message: missingPrerequisiteMessage });
     return;
   }
 
@@ -136,6 +138,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     created = (await workspaceRpc.createWorkspace({
       organizationId,
       nodeId: normalizedNodeId || undefined,
+      localTaskId: input.localTaskId?.trim() || undefined,
       projectId,
       repoKey,
       workspaceName: normalizedName,
@@ -147,7 +150,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
       taskRun: input.taskRun,
     })) as Record<string, unknown>;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Workspace creation failed.";
+    const message = getErrorMessage(error) || "Workspace creation failed.";
     const daemonPrefixMatch = message.match(/^daemon RPC error -?\d+:\s*(.*)$/s);
     enqueueWorkspaceErrorNotice({
       title: "Failed to create workspace",
@@ -167,22 +170,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     return;
   }
 
-  store.addWorkspace(
-    buildWorkspaceCreatePlaceholder({
-      repoId: projectId,
-      name: normalizedName,
-      sourceBranch,
-      branch: targetBranch,
-      worktreePath: "",
-      nodeId: normalizedNodeId || undefined,
-      workspaceId,
-      organizationId,
-      status: "provisioning",
-      preserveOnMissingSnapshot: true,
-    }),
-  );
   workspaceCreateProgressStore.getState().startWorkspaceCreateProgress(workspaceId);
-  activateWorkspace({ workspaceId, projectId });
 
   return workspaceId;
 }

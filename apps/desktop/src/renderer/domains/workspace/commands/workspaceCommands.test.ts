@@ -7,11 +7,7 @@ import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { projectStore } from "../../project/state/projectStore";
-import {
-  closeWorkspace,
-  createWorkspace,
-  setDisplayRepoIds,
-} from "./workspaceCommands";
+import { closeWorkspace, createWorkspace, setDisplayRepoIds } from "./workspaceCommands";
 
 const rpcMocks = vi.hoisted(() => ({
   createWorkspace: vi.fn(),
@@ -78,7 +74,7 @@ afterEach(() => {
 });
 
 describe("workspaceCommands", () => {
-  it("calls backend service then adds workspace to store", async () => {
+  it("calls backend service without adding or activating a workspace", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     const addWorkspace = vi.fn();
     const resolveTabForWorkspace = vi.fn();
@@ -117,18 +113,7 @@ describe("workspaceCommands", () => {
     });
 
     expect(createdWorkspaceId).toBe("workspace-2");
-    expect(addWorkspace).toHaveBeenCalledWith({
-      repoId: "repo-1",
-      organizationId: "org-1",
-      workspaceId: createdWorkspaceId,
-      name: "feature-a",
-      sourceBranch: "main",
-      branch: "feature-a",
-      worktreePath: "",
-      nodeId: undefined,
-      status: "provisioning",
-      preserveOnMissingSnapshot: true,
-    });
+    expect(addWorkspace).not.toHaveBeenCalled();
     await vi.waitFor(() => {
       expect(rpcMocks.createWorkspace).toHaveBeenCalledWith({
         organizationId: "org-1",
@@ -149,12 +134,7 @@ describe("workspaceCommands", () => {
         isComplete: false,
       }),
     );
-    await vi.waitFor(
-      () => {
-        expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
-      },
-      { timeout: 3_500 },
-    );
+    expect(resolveTabForWorkspace).not.toHaveBeenCalled();
     expect(rpcMocks.enqueueWorkspaceLifecycleWarnings).not.toHaveBeenCalled();
   });
 
@@ -471,5 +451,4 @@ describe("workspaceCommands", () => {
     });
     expect(closeWorkspaceAction).toHaveBeenCalledWith({ repoId: "repo-1", workspaceId: "workspace-1" });
   });
-
 });

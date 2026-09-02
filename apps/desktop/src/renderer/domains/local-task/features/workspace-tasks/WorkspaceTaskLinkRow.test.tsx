@@ -22,6 +22,7 @@ const task = {
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",
   completedAt: null,
+  hasActiveWorkspace: false,
   tags: [],
   tagRefs: [
     { id: "tag-1", name: "Frontend" },

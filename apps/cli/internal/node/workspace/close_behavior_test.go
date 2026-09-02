@@ -2,11 +2,14 @@ package workspace
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"reflect"
 	"testing"
 	"time"
 	"yishan/apps/cli/internal/adapter/sqlite"
+	domainlocaltask "yishan/apps/cli/internal/localtask"
+	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -131,6 +134,70 @@ func TestCloseRemoteNode_Relays(t *testing.T) {
 	}
 	if len(s.deps.Registry.List()) != 0 {
 		t.Fatalf("expected no manager runtime records, got %v", s.deps.Registry.List())
+	}
+}
+
+func TestSuccessfulClose_UnlinksLocalTaskWorkspace(t *testing.T) {
+	testCases := []struct {
+		name  string
+		close func(*Service, string) error
+	}{
+		{name: "local", close: closeLocalTaskWorkspace},
+		{name: "relay executor", close: closeRelayedTaskWorkspace},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assertSuccessfulCloseUnlinksLocalTaskWorkspace(t, testCase.close)
+		})
+	}
+}
+
+func closeLocalTaskWorkspace(s *Service, workspaceID string) error {
+	_, err := s.app.CloseLocal(context.Background(), workspaceCloseParams{WorkspaceID: workspaceID})
+	return err
+}
+
+func closeRelayedTaskWorkspace(s *Service, workspaceID string) error {
+	s.handleRelayedClose(relayWorkspaceCloseEnvelope{WorkspaceID: workspaceID, TargetNodeID: "node-1", Change: relayChangeWorkspaceCloseRequest})
+	return nil
+}
+
+func assertSuccessfulCloseUnlinksLocalTaskWorkspace(t *testing.T, closeWorkspace func(*Service, string) error) {
+	t.Helper()
+	database := openMigratedTestDB(t)
+	workspaceID := "ws-task-close"
+	taskRepository := sqlite.NewLocalTaskStore(database)
+	createLinkedCloseTask(t, taskRepository, database, workspaceID)
+	s := newBehaviorHandler(t, nil, "node-1", database)
+	localTaskSvc := nodelocaltask.NewService(nodelocaltask.Deps{Repository: taskRepository})
+	s.deps.UnlinkLocalTaskWorkspace = localTaskSvc.UnlinkWorkspaceAssociations
+	openLocalWorkspace(t, s, workspaceID, t.TempDir())
+
+	if err := closeWorkspace(s, workspaceID); err != nil {
+		t.Fatalf("close workspace: %v", err)
+	}
+	task, err := taskRepository.Get(context.Background(), "task-1")
+	if err != nil {
+		t.Fatalf("get Local Task: %v", err)
+	}
+	if task.HasActiveWorkspace {
+		t.Fatal("successful close retained an active Local Task workspace association")
+	}
+}
+
+func createLinkedCloseTask(t *testing.T, taskRepository *sqlite.LocalTaskStore, database *sql.DB, workspaceID string) {
+	t.Helper()
+	if _, err := taskRepository.Create(context.Background(), domainlocaltask.Task{ID: "task-1", Title: "Task", Status: domainlocaltask.StatusNew, Priority: domainlocaltask.PriorityMedium}); err != nil {
+		t.Fatalf("create Local Task: %v", err)
+	}
+	workspaceStore := sqlite.NewWorkspaceStore(database)
+	workspaceRow := &sqlite.Workspace{ID: workspaceID, NodeID: "node-1", Kind: string(workspace.KindWorktree), Status: "active", State: string(workspace.StateActive)}
+	if err := workspaceStore.Create(context.Background(), workspaceRow); err != nil {
+		t.Fatalf("create local workspace: %v", err)
+	}
+	link := domainlocaltask.WorkspaceLink{LocalTaskID: "task-1", WorkspaceID: workspaceID, Status: domainlocaltask.StatusProgressing}
+	if _, err := taskRepository.LinkWorkspace(context.Background(), link); err != nil {
+		t.Fatalf("link Local Task workspace: %v", err)
 	}
 }
 

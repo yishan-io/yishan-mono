@@ -171,23 +171,6 @@ function preservePendingWorkspaceDisplayMetadata(
   });
 }
 
-function resolvePreservedHydrationWorkspaces(
-  previousWorkspaces: WorkspaceItem[],
-  reconciledWorkspaces: WorkspaceItem[],
-): WorkspaceItem[] {
-  const reconciledIds = new Set(reconciledWorkspaces.map((workspace) => workspace.id));
-  return previousWorkspaces.filter((workspace) => {
-    if (reconciledIds.has(workspace.id)) {
-      return false;
-    }
-    // Keep workspaces still being created locally (pending with no worktreePath)
-    // and just-created local workspaces marked for transient missing-snapshot
-    // protection. Without this, a snapshot refresh during async creation can
-    // replace the store and destroy the visible workspace row.
-    return workspace.status === "provisioning" || workspace.preserveOnMissingSnapshot === true;
-  });
-}
-
 /** Maps backend API data into workspace projects and open workspaces. */
 function mapApiData(
   projects: ProjectRecord[],
@@ -292,8 +275,7 @@ export function reconcileWorkspaceSnapshot(input: SnapshotReconcilerInput): Snap
     orgPreferences,
     previousProjects: previousState.projects,
   });
-  const preservedWorkspaces = resolvePreservedHydrationWorkspaces(previousState.workspaces, reconciledWorkspaces);
-  const nextWorkspaces = [...nextBaseState.workspaces, ...preservedWorkspaces];
+  const nextWorkspaces = nextBaseState.workspaces;
   const nextSelection = resolveHydratedSelection({
     workspaces: nextWorkspaces,
     previousSelectedProjectId,

@@ -125,3 +125,27 @@ func (s *Service) requireLocalWorkspace(ctx context.Context, workspaceID string)
 	}
 	return workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
 }
+
+// UnlinkWorkspaceAssociations removes every active Local Task association for
+// a workspace. Workspace provisioning rollback calls this through a narrow
+// callback owned by the composition root.
+func (s *Service) UnlinkWorkspaceAssociations(ctx context.Context, workspaceID string) error {
+	resolvedWorkspaceID, err := requireIdentifier(workspaceID, "workspaceId")
+	if err != nil {
+		return err
+	}
+	links, err := s.deps.Repository.ListWorkspaceLinks(ctx, resolvedWorkspaceID)
+	if err != nil {
+		return err
+	}
+	for _, link := range links {
+		if link.UnlinkedAt != nil {
+			continue
+		}
+		if err := s.deps.Repository.UnlinkWorkspace(ctx, link.ID); err != nil {
+			return err
+		}
+	}
+	s.publishTaskChanged()
+	return nil
+}

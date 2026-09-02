@@ -12,6 +12,8 @@ import (
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/adapter/sqlite"
+	domainlocaltask "yishan/apps/cli/internal/localtask"
+	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
@@ -472,5 +474,65 @@ func TestCreateLocalNode_CompletesWhenCloudUnavailable(t *testing.T) {
 	}
 	if _, ok := s.deps.Registry.Get("ws-unreachable"); !ok {
 		t.Fatal("manager workspace missing")
+	}
+}
+
+func TestCreateLocalTask_LinksBeforeCreateAcceptance(t *testing.T) {
+	root := t.TempDir()
+	sourceRepo := filepath.Join(root, "src-repo")
+	initDispatchWorkspaceTestGitRepoWithCommit(t, sourceRepo)
+
+	var linkedTaskID, linkedWorkspaceID string
+	s := newBehaviorHandler(t, nil, "node-1", openMigratedTestDB(t))
+	s.deps.LinkLocalTaskWorkspace = func(_ context.Context, taskID string, workspaceID string) error {
+		linkedTaskID, linkedWorkspaceID = taskID, workspaceID
+		return nil
+	}
+
+	raw := json.RawMessage(`{"id":"ws-task-link","localTaskId":"task-1","organizationId":"org-1","projectId":"project-1","nodeId":"node-1","repoKey":"owner/repo","workspaceName":"task-link","sourcePath":"` + sourceRepo + `","targetBranch":"task-link","sourceBranch":"main","taskRun":{"agentKind":"pi","prompt":"Implement task"}}`)
+	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreate, raw)
+	if err != nil {
+		t.Fatalf("workspace create: %v", err)
+	}
+	accepted, ok := result.(map[string]any)
+	if !ok || accepted["workspaceName"] != "task-link" || accepted["branch"] != "task-link" {
+		t.Fatalf("create acceptance = %#v, want resolved workspaceName and branch", result)
+	}
+	if linkedTaskID != "task-1" || linkedWorkspaceID != "ws-task-link" {
+		t.Fatalf("link = (%q, %q), want (task-1, ws-task-link)", linkedTaskID, linkedWorkspaceID)
+	}
+}
+
+func TestCreateLocalTask_ProvisionFailureUnlinksWorkspace(t *testing.T) {
+	database := openMigratedTestDB(t)
+	taskRepository := sqlite.NewLocalTaskStore(database)
+	if _, err := taskRepository.Create(context.Background(), domainlocaltask.Task{
+		ID: "task-1", Title: "Task", Status: domainlocaltask.StatusNew, Priority: domainlocaltask.PriorityMedium,
+	}); err != nil {
+		t.Fatalf("create local task: %v", err)
+	}
+	localTaskSvc := nodelocaltask.NewService(nodelocaltask.Deps{
+		Repository: taskRepository, WorkspaceStore: sqlite.NewStore(sqlite.NewWorkspaceStore(database)),
+	})
+	s := newBehaviorHandler(t, nil, "node-1", database)
+	s.deps.LinkLocalTaskWorkspace = func(ctx context.Context, taskID string, workspaceID string) error {
+		_, err := localTaskSvc.LinkWorkspace(ctx, rpc.LocalTaskLinkWorkspaceParams{TaskID: taskID, WorkspaceID: workspaceID})
+		return err
+	}
+	s.deps.UnlinkLocalTaskWorkspace = localTaskSvc.UnlinkWorkspaceAssociations
+	subscriptionID, eventCh := s.deps.Events.Subscribe()
+	defer s.deps.Events.Unsubscribe(subscriptionID)
+
+	raw := json.RawMessage(`{"id":"ws-task-fail","localTaskId":"task-1","organizationId":"org-1","projectId":"project-1","nodeId":"node-1","repoKey":"owner/repo","workspaceName":"task-fail","sourcePath":"` + t.TempDir() + `","targetBranch":"task-fail","sourceBranch":"main"}`)
+	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreate, raw); err != nil {
+		t.Fatalf("workspace create: %v", err)
+	}
+	collectUntil(t, eventCh, "workspaceCreateFailed", 20*time.Second)
+	failedTask, err := taskRepository.Get(context.Background(), "task-1")
+	if err != nil {
+		t.Fatalf("get local task: %v", err)
+	}
+	if failedTask.HasActiveWorkspace {
+		t.Fatal("failed provisioning retained an active Local Task workspace association")
 	}
 }

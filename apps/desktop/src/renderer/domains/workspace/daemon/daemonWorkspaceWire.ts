@@ -75,6 +75,7 @@ export type WorkspaceCreateInput = {
   workspaceId?: string;
   organizationId?: string;
   nodeId?: string;
+  localTaskId?: string;
   repoKey?: string;
   sourcePath?: string;
   workspaceName?: string;
