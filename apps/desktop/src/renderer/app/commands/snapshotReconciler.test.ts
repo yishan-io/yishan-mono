@@ -162,6 +162,31 @@ describe("reconcileWorkspaceSnapshot (moves to app/commands after P30)", () => {
     expect(preserved?.title).toBe("My Pending Workspace");
   });
 
+  it("drops a renderer-only provisioning row missing from the backend snapshot", () => {
+    const previous = emptyPreviousState();
+    previous.workspaces = [
+      {
+        id: "ws-local-placeholder",
+        repoId: "repo-1",
+        name: "Pending Workspace",
+        title: "Pending Workspace",
+        sourceBranch: "main",
+        branch: "feature/pending",
+        summaryId: "ws-local-placeholder",
+        status: "provisioning",
+      } satisfies WorkspaceItem,
+    ];
+
+    const result = reconcile({
+      projects: [buildProject()],
+      workspacesFromApi: [],
+      organizationId: "org-1",
+      previousState: previous,
+    });
+
+    expect(result.workspaces).toEqual([]);
+  });
+
   it("never downgrades a completed local workspace to provisioning", () => {
     const previous = emptyPreviousState();
     previous.workspaces = [

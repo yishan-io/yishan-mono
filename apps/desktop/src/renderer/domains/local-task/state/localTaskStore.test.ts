@@ -13,6 +13,7 @@ const task: LocalTask = {
   createdAt: "created",
   updatedAt: "updated",
   completedAt: null,
+  hasActiveWorkspace: false,
   tags: [],
   tagRefs: [],
 };

@@ -34,6 +34,7 @@ export type LocalTask = {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  hasActiveWorkspace: boolean;
   tags: string[];
   tagRefs: LocalTaskTagRef[];
 };

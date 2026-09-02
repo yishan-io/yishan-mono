@@ -60,6 +60,11 @@ type Deps struct {
 	// the set of resolvable local workspaces.
 	WorkspaceAvailabilityChanged func()
 
+	// Local Task workspace associations are injected by app to keep this
+	// service independent from node/localtask.
+	LinkLocalTaskWorkspace   func(context.Context, string, string) error
+	UnlinkLocalTaskWorkspace func(context.Context, string) error
+
 	// Agent cleanup callbacks are attached by app after the agent service is
 	// composed. Their handles stay opaque outside node/agent.
 	BeginAgentCleanup  func(context.Context, string) (any, error)

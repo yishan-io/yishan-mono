@@ -4,8 +4,8 @@ import type { LocalTask, LocalTaskWorkspaceLink } from "../localTaskTypes";
 import { localTaskStore } from "../state/localTaskStore";
 import { createAndLinkLocalTask, openLocalTaskContextInFileTree } from "./localTaskCommands";
 
-const selectFolderInFileTree = vi.hoisted(() => vi.fn());
-vi.mock("@renderer/domains/workspace", () => ({ selectFolderInFileTree }));
+const workspaceMocks = vi.hoisted(() => ({ selectFolderInFileTree: vi.fn() }));
+vi.mock("@renderer/domains/workspace", () => workspaceMocks);
 vi.mock("../daemon/localTaskDaemonClient", () => ({
   localTaskClient: {
     create: vi.fn(),
@@ -39,6 +39,7 @@ const task: LocalTask = {
   createdAt: "created",
   updatedAt: "updated",
   completedAt: null,
+  hasActiveWorkspace: false,
   tags: [],
   tagRefs: [],
 };
@@ -110,6 +111,6 @@ describe("Local Task workspace creation and document commands", () => {
 
     openLocalTaskContextInFileTree("task-1");
 
-    expect(selectFolderInFileTree).toHaveBeenCalledWith(".my-context/task-context/task-1");
+    expect(workspaceMocks.selectFolderInFileTree).toHaveBeenCalledWith(".my-context/task-context/task-1");
   });
 });

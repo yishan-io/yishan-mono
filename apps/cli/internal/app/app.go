@@ -252,6 +252,11 @@ func Bootstrap(cfg Config) (*App, error) {
 		WorkspaceAvailabilityChanged: func() {
 			refreshTaskContextRegistrations(context.Background(), memorySvc, localTaskSvc)
 		},
+		LinkLocalTaskWorkspace: func(ctx context.Context, taskID string, workspaceID string) error {
+			_, err := localTaskSvc.LinkWorkspace(ctx, rpc.LocalTaskLinkWorkspaceParams{TaskID: taskID, WorkspaceID: workspaceID})
+			return err
+		},
+		UnlinkLocalTaskWorkspace: localTaskSvc.UnlinkWorkspaceAssociations,
 	})
 	agentSvc = nodeagent.NewService(nodeagent.Deps{
 		Workspace:         workspaceSvc,

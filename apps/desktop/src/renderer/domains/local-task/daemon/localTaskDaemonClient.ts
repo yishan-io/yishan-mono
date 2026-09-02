@@ -12,12 +12,12 @@ import type {
   LocalTaskPriority,
   LocalTaskProjectDisplay,
   LocalTaskSearchResult,
+  LocalTaskSetTemplatesInput,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
   LocalTaskTagRenameResult,
   LocalTaskTemplate,
   LocalTaskTemplatesResult,
-  LocalTaskSetTemplatesInput,
   LocalTaskWorkspaceDisplay,
   LocalTaskWorkspaceDisplayStatus,
   LocalTaskWorkspaceLink,
@@ -103,7 +103,12 @@ function parseTagCatalog(payload: unknown): LocalTaskTagCatalogEntry[] {
 
 function parseTask(payload: unknown): LocalTask {
   const record = requireRecord(payload, "Local Task");
-  if (!isStatus(record.status) || !isPriority(record.priority) || typeof record.description !== "string") {
+  if (
+    !isStatus(record.status) ||
+    !isPriority(record.priority) ||
+    typeof record.description !== "string" ||
+    (record.hasActiveWorkspace !== undefined && typeof record.hasActiveWorkspace !== "boolean")
+  ) {
     throw new TypeError("invalid Local Task payload");
   }
   return {
@@ -116,6 +121,7 @@ function parseTask(payload: unknown): LocalTask {
     createdAt: requireString(record, "createdAt", "Local Task"),
     updatedAt: requireString(record, "updatedAt", "Local Task"),
     completedAt: requireNullableString(record, "completedAt", "Local Task"),
+    hasActiveWorkspace: record.hasActiveWorkspace ?? false,
     tags: requireStringArray(record, "tags", "Local Task"),
     tagRefs: parseTagRefs(record.tagRefs),
   };

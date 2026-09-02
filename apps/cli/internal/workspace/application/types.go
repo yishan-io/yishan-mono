@@ -10,14 +10,17 @@ import "yishan/apps/cli/internal/workspace"
 // CreateResult is the synchronous result of a create request; the actual
 // create executes asynchronously.
 type CreateResult struct {
-	ID     string
-	Status string
+	ID            string
+	Status        string
+	WorkspaceName string
+	Branch        string
 }
 
 // CreatePlan is a prepared create: all state needed to execute (locally or via
 // relay) a create request, produced by prepare and consumed by execute.
 type CreatePlan struct {
 	WorkspaceID      string
+	LocalTaskID      string
 	OrganizationID   string
 	ProjectID        string
 	StartedEvent     StartedEvent

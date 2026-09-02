@@ -134,7 +134,7 @@ func hydrateLocalTaskTagChunk(ctx context.Context, q localTaskQueryer, byID map[
 	return nil
 }
 func getLocalTask(ctx context.Context, q localTaskQueryer, taskID string) (localtask.Task, error) {
-	task, err := scanLocalTask(q.QueryRowContext(ctx, `SELECT `+localTaskColumns+` FROM local_tasks WHERE id=?`, taskID))
+	task, err := scanLocalTask(q.QueryRowContext(ctx, `SELECT `+localTaskSelectColumns("local_tasks")+` FROM local_tasks WHERE id=?`, taskID))
 	if err != nil {
 		return handleLocalTaskGet(taskID, task, err)
 	}

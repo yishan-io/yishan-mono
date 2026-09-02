@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "@renderer/domains/project";
 import { sessionStore } from "@renderer/domains/session";
 import { tabStore, workbenchNavigationStore } from "@renderer/domains/workbench";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { workspaceCreateProgressStore } from "../state/workspaceCreateProgressStore";
 import { workspaceStore } from "../state/workspaceStore";
 import { createWorkspace } from "./workspaceCreateCommand";
@@ -50,8 +50,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("createWorkspace activation", () => {
-  it("activates the created workspace and its project", async () => {
+describe("createWorkspace acceptance", () => {
+  it("does not add or activate the accepted workspace", async () => {
     const resolveTabForWorkspace = vi.fn();
     tabStore.setState({ resolveTabForWorkspace });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
@@ -94,12 +94,15 @@ describe("createWorkspace activation", () => {
     });
 
     expect(workspaceStore.getState().workspaces).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: "workspace-created", projectId: "project-created" })]),
+      expect.arrayContaining([expect.objectContaining({ id: "workspace-existing", projectId: "project-existing" })]),
+    );
+    expect(workspaceStore.getState().workspaces).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "workspace-created" })]),
     );
     expect(workbenchNavigationStore.getState()).toMatchObject({
-      activeWorkspaceId: "workspace-created",
-      activeProjectId: "project-created",
+      activeWorkspaceId: "workspace-existing",
+      activeProjectId: "project-existing",
     });
-    expect(resolveTabForWorkspace).toHaveBeenCalledWith("workspace-created");
+    expect(resolveTabForWorkspace).not.toHaveBeenCalled();
   });
 });

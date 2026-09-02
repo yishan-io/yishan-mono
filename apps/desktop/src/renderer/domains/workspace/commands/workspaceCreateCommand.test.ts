@@ -3,17 +3,106 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  addWorkspace: vi.fn(),
+  activateWorkspace: vi.fn(),
+  createWorkspace: vi.fn(),
+  enqueueWorkspaceErrorNotice: vi.fn(),
   enqueueWorkspaceLifecycleWarnings: vi.fn(),
+  getWorkspaceRpc: vi.fn(),
+  projectState: { projects: [] as Array<Record<string, unknown>> },
+  sessionState: { selectedOrganizationId: "org-1" },
+  startWorkspaceCreateProgress: vi.fn(),
 }));
 
+vi.mock("@renderer/domains/project", () => ({ projectStore: { getState: () => mocks.projectState } }));
+vi.mock("@renderer/domains/workbench", () => ({ activateWorkspace: mocks.activateWorkspace }));
+vi.mock("@renderer/domains/session", () => ({ sessionStore: { getState: () => mocks.sessionState } }));
+vi.mock("../../../domains/workspace/state/workspaceCreateProgressStore", () => ({
+  workspaceCreateProgressStore: {
+    getState: () => ({ startWorkspaceCreateProgress: mocks.startWorkspaceCreateProgress }),
+  },
+}));
 vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => ({
+  enqueueWorkspaceErrorNotice: mocks.enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings: mocks.enqueueWorkspaceLifecycleWarnings,
 }));
+vi.mock("../daemon/daemonWorkspaceClient", () => ({ getWorkspaceRpc: mocks.getWorkspaceRpc }));
+vi.mock("../state/workspaceSettingsStore", () => ({
+  workspaceSettingsStore: { getState: () => ({ isDefaultContextEnabled: true }) },
+}));
+vi.mock("../state/workspaceStore", () => ({
+  workspaceStore: { getState: () => ({ addWorkspace: mocks.addWorkspace }) },
+}));
+vi.mock("../state/workspaceStoreMutations", () => ({
+  normalizeCreateWorkspaceInput: (input: { name: string }) => ({ normalizedName: input.name.trim() }),
+}));
 
-import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
+import { createWorkspace, notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 
 afterEach(() => {
+  mocks.projectState.projects = [];
+  mocks.sessionState.selectedOrganizationId = "org-1";
   vi.clearAllMocks();
+});
+
+describe("createWorkspace", () => {
+  it.each([
+    [
+      "organization",
+      () => {
+        mocks.sessionState.selectedOrganizationId = "";
+      },
+      "Select an organization before creating a workspace.",
+    ],
+    [
+      "repo key",
+      () => {
+        mocks.projectState.projects = [{ id: "project-1", localPath: "/projects/one" }];
+      },
+      "The selected project is missing its repository key.",
+    ],
+    [
+      "local path",
+      () => {
+        mocks.projectState.projects = [{ id: "project-1", repoKey: "repo-1" }];
+      },
+      "The selected project is missing its local path.",
+    ],
+  ])("shows a visible error when the %s prerequisite is missing", async (_prerequisite, setup, message) => {
+    setup();
+
+    await createWorkspace({ projectId: "project-1", name: "new-workspace", sourceBranch: "main" });
+
+    expect(mocks.enqueueWorkspaceErrorNotice).toHaveBeenCalledWith({ title: "Failed to create workspace", message });
+    expect(mocks.getWorkspaceRpc).not.toHaveBeenCalled();
+  });
+
+  it("accepts creation without adding or activating a renderer workspace row", async () => {
+    mocks.projectState.projects = [{ id: "project-1", repoKey: "repo-1", localPath: "/projects/one" }];
+    mocks.getWorkspaceRpc.mockResolvedValue({ createWorkspace: mocks.createWorkspace });
+    mocks.createWorkspace.mockResolvedValue({ workspaceId: "workspace-created" });
+
+    await expect(
+      createWorkspace({ projectId: "project-1", name: "new-workspace", sourceBranch: "main" }),
+    ).resolves.toBe("workspace-created");
+
+    expect(mocks.startWorkspaceCreateProgress).toHaveBeenCalledWith("workspace-created");
+    expect(mocks.addWorkspace).not.toHaveBeenCalled();
+    expect(mocks.activateWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("shows a visible error when a requested node cannot be used", async () => {
+    mocks.projectState.projects = [{ id: "project-1", repoKey: "repo-1", localPath: "/projects/one" }];
+    mocks.getWorkspaceRpc.mockResolvedValue({ createWorkspace: mocks.createWorkspace });
+    mocks.createWorkspace.mockRejectedValue(new Error("Selected node is offline"));
+
+    await createWorkspace({ projectId: "project-1", name: "new-workspace", sourceBranch: "main", nodeId: "node-1" });
+
+    expect(mocks.enqueueWorkspaceErrorNotice).toHaveBeenCalledWith({
+      title: "Failed to create workspace",
+      message: "Selected node is offline",
+    });
+  });
 });
 
 describe("notifyLifecycleScriptWarnings", () => {

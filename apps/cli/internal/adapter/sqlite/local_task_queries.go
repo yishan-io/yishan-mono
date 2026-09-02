@@ -10,7 +10,7 @@ import (
 )
 
 func buildLocalTaskListQuery(filter localtask.TaskFilter) (string, []any) {
-	query := `SELECT ` + localTaskColumns + ` FROM local_tasks`
+	query := `SELECT ` + localTaskSelectColumns("local_tasks") + ` FROM local_tasks`
 	where, arguments := buildLocalTaskFilter(filter, "local_tasks")
 	if len(where) > 0 {
 		query += " WHERE " + strings.Join(where, " AND ")
@@ -19,9 +19,7 @@ func buildLocalTaskListQuery(filter localtask.TaskFilter) (string, []any) {
 }
 
 func buildLocalTaskSearchQuery(search string, filter localtask.TaskFilter) (string, []any) {
-	query := `SELECT local_tasks.id, local_tasks.project_id, local_tasks.organization_id, local_tasks.title, local_tasks.description,
-		local_tasks.status, local_tasks.priority, local_tasks.created_at, local_tasks.updated_at,
-		local_tasks.completed_at, bm25(local_tasks_fts) FROM local_tasks_fts
+	query := `SELECT ` + localTaskSelectColumns("local_tasks") + `, bm25(local_tasks_fts) FROM local_tasks_fts
 		JOIN local_tasks ON local_tasks.id = local_tasks_fts.local_task_id`
 	where, arguments := buildLocalTaskFilter(filter, "local_tasks")
 	where = append([]string{"local_tasks_fts MATCH ?"}, where...)
@@ -161,7 +159,7 @@ func scanLocalTask(scanner interface{ Scan(...any) error }) (localtask.Task, err
 	task := localtask.Task{Tags: make([]string, 0)}
 	var projectID, organizationID, completedAt sql.NullString
 	err := scanner.Scan(&task.ID, &projectID, &organizationID, &task.Title, &task.Description, &task.Status, &task.Priority,
-		&task.CreatedAt, &task.UpdatedAt, &completedAt)
+		&task.CreatedAt, &task.UpdatedAt, &completedAt, &task.HasActiveWorkspace)
 	if err != nil {
 		return localtask.Task{}, err
 	}
@@ -196,7 +194,7 @@ func scanLocalTaskSearchResult(scanner interface{ Scan(...any) error }) (localta
 	var result localtask.SearchResult
 	var projectID, organizationID, completedAt sql.NullString
 	err := scanner.Scan(&result.ID, &projectID, &organizationID, &result.Title, &result.Description, &result.Status,
-		&result.Priority, &result.CreatedAt, &result.UpdatedAt, &completedAt, &result.Rank)
+		&result.Priority, &result.CreatedAt, &result.UpdatedAt, &completedAt, &result.HasActiveWorkspace, &result.Rank)
 	if err != nil {
 		return localtask.SearchResult{}, err
 	}

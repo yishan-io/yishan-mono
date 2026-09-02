@@ -45,6 +45,18 @@ func (s *Service) newAppService() *application.Service {
 		Relay:                        deps,
 		Events:                       deps,
 		WorkspaceAvailabilityChanged: s.deps.WorkspaceAvailabilityChanged,
+		LinkLocalTaskWorkspace: func(ctx context.Context, taskID string, workspaceID string) error {
+			if s.deps.LinkLocalTaskWorkspace == nil {
+				return fmt.Errorf("local task workspace linking is unavailable")
+			}
+			return s.deps.LinkLocalTaskWorkspace(ctx, taskID, workspaceID)
+		},
+		UnlinkLocalTaskWorkspace: func(ctx context.Context, workspaceID string) error {
+			if s.deps.UnlinkLocalTaskWorkspace == nil {
+				return nil
+			}
+			return s.deps.UnlinkLocalTaskWorkspace(ctx, workspaceID)
+		},
 		HookWarnings: func(setupHook string, result *workspace.HookResult) []any {
 			return buildHookWarnings(setupHook, result, s.deps.LogFilePath)
 		},
@@ -89,7 +101,8 @@ func (s *Service) newAppService() *application.Service {
 		SummarizeAgents: func(workspaceID string, req workspace.CloseRequest) {
 			s.summarizeUsedAgents(workspaceID, req)
 		},
-		ClearAgentUsage: s.clearAgentUsage,
+		ClearAgentUsage:   s.clearAgentUsage,
+		IsCreateAvailable: isLocalCreateAvailable,
 		Warn: func(workspaceID string, path string, message string, err error) {
 			entry := log.Warn().Err(err).Str("workspaceId", workspaceID)
 			if strings.TrimSpace(path) != "" {

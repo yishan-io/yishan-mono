@@ -13,6 +13,14 @@ import (
 )
 
 const localTaskColumns = `id, project_id, organization_id, title, description, status, priority, created_at, updated_at, completed_at`
+
+func localTaskSelectColumns(table string) string {
+	return table + `.id, ` + table + `.project_id, ` + table + `.organization_id, ` + table + `.title, ` + table +
+		`.description, ` + table + `.status, ` + table + `.priority, ` + table + `.created_at, ` + table + `.updated_at, ` +
+		table + `.completed_at, EXISTS (SELECT 1 FROM local_task_workspace_links WHERE local_task_id = ` + table +
+		`.id AND unlinked_at IS NULL)`
+}
+
 const localTaskLinkColumns = `id, local_task_id, workspace_id, status, linked_at, unlinked_at`
 
 // LocalTaskStore persists Local Task metadata and local workspace links.

@@ -24,7 +24,9 @@ func (s *Service) Create(ctx context.Context, req rpc.WorkspaceCreateParams) (an
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": result.ID, "status": result.Status}, nil
+	return map[string]any{
+		"id": result.ID, "status": result.Status, "workspaceName": result.WorkspaceName, "branch": result.Branch,
+	}, nil
 }
 
 func (s *Service) Close(ctx context.Context, req rpc.WorkspaceCloseParams) (any, error) {

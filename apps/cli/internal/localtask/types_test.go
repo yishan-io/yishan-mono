@@ -69,7 +69,7 @@ func TestTaskAndWorkspaceLink_JSONIncludesNullableFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantTask := `{"id":"task-1","projectId":null,"title":"Task","description":"","status":"progressing","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"tags":[],"tagRefs":[]}`
+	wantTask := `{"id":"task-1","projectId":null,"title":"Task","description":"","status":"progressing","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"hasActiveWorkspace":false,"tags":[],"tagRefs":[]}`
 	if string(taskJSON) != wantTask {
 		t.Fatalf("encoded task = %s, want %s", taskJSON, wantTask)
 	}

@@ -20,7 +20,6 @@ import { workspaceCreateProgressStore } from "../../../domains/workspace/state/w
 import { enqueueWorkspaceErrorNotice } from "../../../domains/workspace/state/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { subscribeDaemonConnectionStatus } from "../daemon/daemonWorkspaceClient";
-import { buildWorkspaceCreatePlaceholder } from "../features/create-workspace/workspaceCreatePlaceholder";
 
 const GIT_REFRESH_COALESCE_MS = 2_000;
 const WORKSPACE_SNAPSHOT_REFRESH_DEBOUNCE_MS = 300;
@@ -112,43 +111,12 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
     incrementGitRefreshVersion(workspaceWorktreePath);
   },
   applyWorkspaceCreateStartedEvent: (payload) => {
-    workspaceStore.getState().addWorkspace(
-      buildWorkspaceCreatePlaceholder({
-        workspaceId: payload.workspaceId,
-        projectId: payload.projectId,
-        repoId: payload.projectId,
-        organizationId: payload.organizationId,
-        name: payload.workspaceName,
-        sourceBranch: payload.sourceBranch,
-        branch: payload.branch,
-        worktreePath: "",
-        nodeId: payload.nodeId,
-        status: "provisioning",
-        preserveOnMissingSnapshot: true,
-      }),
-    );
     workspaceCreateProgressStore.getState().startWorkspaceCreateProgress(payload.workspaceId);
   },
   applyWorkspaceCreateProgressEvent: (payload) => {
     workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent(payload);
   },
   applyWorkspaceCreateCompletedEvent: (payload) => {
-    const store = workspaceStore.getState();
-    const existing = store.workspaces.find((ws) => ws.id === payload.workspaceId);
-    if (existing) {
-      store.addWorkspace({
-        workspaceId: existing.id,
-        organizationId: existing.organizationId,
-        projectId: existing.projectId,
-        repoId: existing.repoId,
-        name: existing.name,
-        sourceBranch: existing.sourceBranch,
-        branch: existing.branch,
-        worktreePath: payload.worktreePath,
-        nodeId: existing.nodeId,
-        status: "active",
-      });
-    }
     workspaceCreateProgressStore.getState().clearWorkspaceCreateProgress(payload.workspaceId);
 
     const taskRunSessionId = payload.taskRunSessionId?.trim();
@@ -162,7 +130,7 @@ export const DEFAULT_WORKSPACE_EVENT_DEPENDENCIES: WorkspaceEventDependencies = 
       });
     }
 
-    return Boolean(existing);
+    return false;
   },
   applyWorkspaceCreateFailedEvent: (payload) => {
     workspaceCreateProgressStore.getState().clearWorkspaceCreateProgress(payload.workspaceId);

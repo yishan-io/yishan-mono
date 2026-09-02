@@ -33,6 +33,9 @@ func publishWorkspaceSnapshotChanged(handler *Service, params json.RawMessage) {
 		case workspaceRelayChangeCreateRequest:
 			handler.handleRelayedCreate(payload)
 			handler.republishCreate(payload)
+		case workspaceRelayChangeCreateFailed:
+			handler.unlinkFailedLocalTaskWorkspace(payload.WorkspaceID)
+			handler.republishCreate(payload)
 		default:
 			handler.republishCreate(payload)
 		}
@@ -77,4 +80,13 @@ func publishWorkspaceSnapshotChanged(handler *Service, params json.RawMessage) {
 	}
 
 	handler.deps.Events.Publish(eventbus.Event{Topic: "workspaceSnapshotChanged", Payload: payload})
+}
+
+func (s *Service) unlinkFailedLocalTaskWorkspace(workspaceID string) {
+	if s.deps.UnlinkLocalTaskWorkspace == nil {
+		return
+	}
+	if err := s.deps.UnlinkLocalTaskWorkspace(s.serverContext(), workspaceID); err != nil {
+		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("unlink Local Task after relayed workspace create failure")
+	}
 }

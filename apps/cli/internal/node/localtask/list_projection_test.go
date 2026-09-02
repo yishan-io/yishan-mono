@@ -89,6 +89,43 @@ func taskIDs(tasks []domain.Task) []string {
 	return ids
 }
 
+func TestService_ListProjectionMarksOnlyTasksWithUnlinkedWorkspaceAssociations(t *testing.T) {
+	service, workspaceStore, repository := newTestService(t)
+	createProjectionWorkspace(t, workspaceStore, "workspace-1", "org-1", "project-1")
+	linkedTask := createOrganizationProjectServiceTask(t, repository, "org-1", "project-1")
+	unlinkedTask := createOrganizationProjectServiceTask(t, repository, "org-1", "project-1")
+	link, err := repository.LinkWorkspace(context.Background(), domain.WorkspaceLink{
+		LocalTaskID: linkedTask.ID, WorkspaceID: "workspace-1", Status: domain.StatusProgressing,
+	})
+	if err != nil {
+		t.Fatalf("link workspace: %v", err)
+	}
+	if err := repository.UnlinkWorkspace(context.Background(), link.ID); err != nil {
+		t.Fatalf("unlink workspace: %v", err)
+	}
+	if _, err := repository.LinkWorkspace(context.Background(), domain.WorkspaceLink{
+		LocalTaskID: linkedTask.ID, WorkspaceID: "workspace-1", Status: domain.StatusProgressing,
+	}); err != nil {
+		t.Fatalf("relink workspace: %v", err)
+	}
+
+	value, err := service.ListProjection(context.Background(), rpc.LocalTaskListProjectionParams{})
+	if err != nil {
+		t.Fatalf("ListProjection: %v", err)
+	}
+	projection := value.(domain.ListProjection)
+	hasActiveWorkspaceByTaskID := make(map[string]bool, len(projection.Tasks))
+	for _, task := range projection.Tasks {
+		hasActiveWorkspaceByTaskID[task.ID] = task.HasActiveWorkspace
+	}
+	if !hasActiveWorkspaceByTaskID[linkedTask.ID] {
+		t.Fatalf("linked task active workspace = false, want true")
+	}
+	if hasActiveWorkspaceByTaskID[unlinkedTask.ID] {
+		t.Fatalf("unlinked task active workspace = true, want false")
+	}
+}
+
 func TestService_ListProjectionResolvesAllFilteredProjectsBeforePaging(t *testing.T) {
 	service, workspaceStore, repository := newTestService(t)
 	createProjectionWorkspace(t, workspaceStore, "workspace-1", "org-1", "project-1")

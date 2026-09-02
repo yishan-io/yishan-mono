@@ -11,6 +11,7 @@ const taskPayload = {
   createdAt: "2026-08-24T01:00:00Z",
   updatedAt: "2026-08-24T01:10:00Z",
   completedAt: null,
+  hasActiveWorkspace: false,
   tags: [],
   tagRefs: [{ id: "tag-desktop", name: "Desktop" }],
 };
@@ -250,6 +251,13 @@ describe("DaemonLocalTaskClient", () => {
     await expect(client.listTaskLinks("task-1")).resolves.toEqual([encodedLinkPayload]);
   });
 
+  it("treats a missing active workspace flag from an older daemon as false", async () => {
+    const { hasActiveWorkspace: _hasActiveWorkspace, ...legacyTaskPayload } = taskPayload;
+    const client = new DaemonLocalTaskClient(vi.fn(async () => legacyTaskPayload));
+
+    await expect(client.get("task-1")).resolves.toMatchObject({ hasActiveWorkspace: false });
+  });
+
   it("preserves exact task strings and permits an empty description", async () => {
     const exactPayload = { ...taskPayload, title: "  Ship desktop  ", description: "  details  " };
     const exactClient = new DaemonLocalTaskClient(vi.fn(async () => exactPayload));
@@ -291,6 +299,10 @@ describe("DaemonLocalTaskClient", () => {
       },
     ],
     ["non-string description", (payload: typeof taskPayload) => ({ ...payload, description: 1 })],
+    [
+      "non-boolean active workspace flag",
+      (payload: typeof taskPayload) => ({ ...payload, hasActiveWorkspace: "false" }),
+    ],
     [
       "missing nullable field",
       (payload: typeof taskPayload) => {

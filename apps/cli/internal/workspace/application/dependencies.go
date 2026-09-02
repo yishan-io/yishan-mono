@@ -118,6 +118,11 @@ type Dependencies struct {
 	// local workspace set changes through create, close, or close retry.
 	WorkspaceAvailabilityChanged func()
 
+	// Local Task links are owned by the node-local task service and injected
+	// here so workspace provisioning does not depend on that concrete service.
+	LinkLocalTaskWorkspace   func(context.Context, string, string) error
+	UnlinkLocalTaskWorkspace func(context.Context, string) error
+
 	// HookWarnings builds the lifecycle-script warnings for the completed
 	// event (daemon-side: needs the daemon log path).
 	HookWarnings func(setupHook string, result *workspace.HookResult) []any
@@ -138,4 +143,8 @@ type Dependencies struct {
 	SummarizeAgents    func(workspaceID string, req workspace.CloseRequest)
 	ClearAgentUsage    func(workspaceID string)
 	Warn               func(workspaceID string, path string, message string, err error)
+
+	// IsCreateAvailable reports whether a local worktree name and target branch
+	// are both free on this daemon. It is optional for non-daemon callers.
+	IsCreateAvailable func(context.Context, workspace.CreateRequest) (bool, error)
 }

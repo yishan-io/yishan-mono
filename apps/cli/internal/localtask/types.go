@@ -69,18 +69,19 @@ type Priority string
 
 // Task is Local Task metadata authoritative in the local SQLite database.
 type Task struct {
-	ID             string   `json:"id"`
-	ProjectID      *string  `json:"projectId"`
-	OrganizationID *string  `json:"-"`
-	Title          string   `json:"title"`
-	Description    string   `json:"description"`
-	Status         Status   `json:"status"`
-	Priority       Priority `json:"priority"`
-	CreatedAt      string   `json:"createdAt"`
-	UpdatedAt      string   `json:"updatedAt"`
-	CompletedAt    *string  `json:"completedAt"`
-	Tags           []string `json:"tags"`
-	TagRefs        []TagRef `json:"tagRefs"`
+	ID                 string   `json:"id"`
+	ProjectID          *string  `json:"projectId"`
+	OrganizationID     *string  `json:"-"`
+	Title              string   `json:"title"`
+	Description        string   `json:"description"`
+	Status             Status   `json:"status"`
+	Priority           Priority `json:"priority"`
+	CreatedAt          string   `json:"createdAt"`
+	UpdatedAt          string   `json:"updatedAt"`
+	CompletedAt        *string  `json:"completedAt"`
+	HasActiveWorkspace bool     `json:"hasActiveWorkspace"`
+	Tags               []string `json:"tags"`
+	TagRefs            []TagRef `json:"tagRefs"`
 }
 
 // Tag is one globally retained Local Task tag catalog entry.
