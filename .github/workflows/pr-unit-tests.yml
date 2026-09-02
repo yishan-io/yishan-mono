@@ -285,7 +285,9 @@ jobs:
       - name: Install Electron runtime for CLI DSH tests
         if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
         run: |
-          node apps/desktop/node_modules/electron/install.js
+          node node_modules/electron/install.js
+          mkdir -p apps/desktop/node_modules
+          ln -sfn ../../../node_modules/electron apps/desktop/node_modules/electron
           test -f apps/desktop/node_modules/electron/path.txt
 
       - name: Setup Go for CLI tests
@@ -364,7 +366,9 @@ jobs:
 
       - name: Install Electron runtime
         run: |
-          node apps/desktop/node_modules/electron/install.js
+          node node_modules/electron/install.js
+          mkdir -p apps/desktop/node_modules
+          ln -sfn ../../../node_modules/electron apps/desktop/node_modules/electron
           test -f apps/desktop/node_modules/electron/path.txt
 
       - name: Smoke test local DSH daemon with desktop artifacts and Electron dev runtime
