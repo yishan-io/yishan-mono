@@ -14,13 +14,15 @@ import (
 const officialDSHPluginRegistryURL = "https://registry.npmjs.org"
 
 const (
-	officialDSHDevFlowName      = "@yishan-io/dsh-dev-flow"
-	officialDSHDevFlowVersion   = "0.1.0"
-	officialDSHDevFlowIntegrity = "sha512-hCzrPT4M/gOHT37F8zDnthRM0jCnPB9GLT5HDaO5Ol+WEdjq8It8dWr5hmbjCsT3Gg7N242TR/v3FUnbOWWhOw=="
+	officialDSHDevFlowName          = "@yishan-io/dsh-dev-flow"
+	officialDSHDevFlowVersion       = "0.1.0"
+	officialDSHDevFlowIntegrity     = "sha512-hCzrPT4M/gOHT37F8zDnthRM0jCnPB9GLT5HDaO5Ol+WEdjq8It8dWr5hmbjCsT3Gg7N242TR/v3FUnbOWWhOw=="
+	officialDSHDevFlowSeedIntegrity = "sha512-UaWblyAhamKlq1d3QBu33EnET+4ZIlPetottvVwD5InV26HWx8DmAsXVpkpXzwpFDdhSj73fsQVrnW1xvmhfNA=="
 )
 
 var officialDSHPluginCatalog = []plugins.ApprovedBundle{{
-	Name: officialDSHDevFlowName, Version: officialDSHDevFlowVersion, Integrity: officialDSHDevFlowIntegrity,
+	Name: officialDSHDevFlowName, Version: officialDSHDevFlowVersion,
+	Integrity: officialDSHDevFlowIntegrity, SeedIntegrity: officialDSHDevFlowSeedIntegrity,
 	Entries: []plugins.PluginEntry{{ID: "dev-flow", Entrypoint: "entry.mjs", Config: map[string]any{}, Inject: []string{"skills"}}},
 }}
 

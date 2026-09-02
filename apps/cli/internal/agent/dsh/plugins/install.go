@@ -34,7 +34,7 @@ func (i *Installer) Install(ctx context.Context, request Request) (Inventory, er
 	if err != nil {
 		return Inventory{}, fmt.Errorf("download DSH plugin bundle: %w", err)
 	}
-	return i.InstallArchive(ctx, request, archive)
+	return i.installArchive(ctx, request, approved, archive, approved.Integrity)
 }
 
 // InstallArchive verifies and atomically installs a daemon-approved offline archive.
@@ -46,7 +46,15 @@ func (i *Installer) InstallArchive(ctx context.Context, request Request, archive
 	if !ok {
 		return Inventory{}, fmt.Errorf("%w: %s@%s", ErrBundleNotAllowed, request.Name, request.Version)
 	}
-	if err := validateArchiveIntegrity(archive, approved.Integrity); err != nil {
+	integrity := approved.SeedIntegrity
+	if integrity == "" {
+		integrity = approved.Integrity
+	}
+	return i.installArchive(ctx, request, approved, archive, integrity)
+}
+
+func (i *Installer) installArchive(ctx context.Context, request Request, approved ApprovedBundle, archive []byte, integrity string) (Inventory, error) {
+	if err := validateArchiveIntegrity(archive, integrity); err != nil {
 		return Inventory{}, err
 	}
 	bundle := Bundle{Name: request.Name, Version: request.Version}

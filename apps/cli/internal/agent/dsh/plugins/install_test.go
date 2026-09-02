@@ -67,6 +67,36 @@ func TestInstallerInstall_IgnoresUpstreamPluginMetadata(t *testing.T) {
 	}
 }
 
+func TestInstaller_UsesDistinctRegistryAndOfflineSeedIntegrities(t *testing.T) {
+	seedArchive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "ok"}})
+	registryArchive := bytes.Clone(seedArchive)
+	registryArchive[9] ^= 1 // The gzip OS byte does not change the extracted package tree.
+	bundle := approvedBundle(registryArchive)
+	_, key, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	approved := []ApprovedBundle{{
+		Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity,
+		SeedIntegrity: integrity(seedArchive), Entries: testEntries(),
+	}}
+	networkInstaller, err := NewInstaller(t.TempDir(), key, approved, stubRegistry{bundle}, stubDownloader{registryArchive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := Request{Name: bundle.Name, Version: bundle.Version}
+	if _, err := networkInstaller.Install(context.Background(), request); err != nil {
+		t.Fatalf("network install: %v", err)
+	}
+	offlineInstaller, err := NewInstaller(t.TempDir(), key, approved, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := offlineInstaller.InstallArchive(context.Background(), request, seedArchive); err != nil {
+		t.Fatalf("offline install: %v", err)
+	}
+}
+
 func TestInstallerInstall_RejectsTamperedArchive(t *testing.T) {
 	archive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "ok"}})
 	installer := newTestInstaller(t, t.TempDir(), approvedBundle(archive), append(archive, 'x'))

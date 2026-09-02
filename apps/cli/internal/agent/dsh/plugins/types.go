@@ -38,8 +38,11 @@ type PluginEntry struct {
 
 // ApprovedBundle binds one exact upstream release to reviewed Cordis entries.
 type ApprovedBundle struct {
-	Name, Version, Integrity string
-	Entries                  []PluginEntry
+	Name          string
+	Version       string
+	Integrity     string
+	SeedIntegrity string
+	Entries       []PluginEntry
 }
 
 // Bundle is the registry metadata for one npm tarball.
