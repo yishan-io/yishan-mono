@@ -69,6 +69,7 @@ func apiProjectToLocalRecord(project cloud.Project) sqlite.Project {
 	return sqlite.Project{
 		ID:              project.ID,
 		Name:            project.Name,
+		TaskPrefix:      project.TaskPrefix,
 		SourceType:      project.SourceType,
 		RepoProvider:    optionalString(project.RepoProvider),
 		RepoURL:         optionalString(project.RepoURL),

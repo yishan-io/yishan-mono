@@ -14,6 +14,8 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
@@ -73,6 +75,8 @@ type Config struct {
 	// TokenUsage overrides the default token-usage collector. Tests inject a
 	// fake to record startup/shutdown calls. Nil builds the default collector.
 	TokenUsage tokenusage.Service
+	// LocalTaskKeyAllocator overrides cloud allocation in focused composition tests.
+	LocalTaskKeyAllocator nodelocaltask.KeyAllocator
 
 	// Relay configures the relay client (connection state owned by
 	// internal/relay). Empty URL disables it.
@@ -131,10 +135,19 @@ type App struct {
 	// relay is the relay client (connection state owned by internal/relay).
 	relay *relay.Client
 
-	cleanupCtx           context.Context
-	cancelCleanup        context.CancelFunc
-	cancelAgentLifecycle context.CancelFunc
-	fileCacheSubID       uint64
+	cleanupCtx            context.Context
+	cancelCleanup         context.CancelFunc
+	cancelAgentLifecycle  context.CancelFunc
+	fileCacheSubID        uint64
+	localTaskBackfillOnce sync.Once
+	localTaskBackfillWG   sync.WaitGroup
+}
+
+func resolveLocalTaskKeyAllocator(cfg Config) nodelocaltask.KeyAllocator {
+	if cfg.LocalTaskKeyAllocator != nil {
+		return cfg.LocalTaskKeyAllocator
+	}
+	return newCloudKeyAllocator(cfg.Session)
 }
 
 // Bootstrap composes the daemon's service graph for one account. It mirrors
@@ -218,6 +231,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		Registry:        registry,
 		WorkspaceStore:  store,
 		ProjectResolver: projectSvc,
+		KeyAllocator:    resolveLocalTaskKeyAllocator(cfg),
 		Events:          events,
 		TemplateStore:   templateStore,
 		TaskContextsChanged: func() {
@@ -398,6 +412,39 @@ func (a *App) Start() {
 	}
 	a.StartCleanupRetry()
 	a.StartHealthMonitor()
+	a.StartLocalTaskKeyBackfill()
+}
+
+// StartLocalTaskKeyBackfill periodically retries legacy key reservations until the app closes.
+func (a *App) StartLocalTaskKeyBackfill() {
+	if a.localTaskSvc == nil {
+		return
+	}
+	a.localTaskBackfillOnce.Do(func() {
+		a.localTaskBackfillWG.Add(1)
+		go a.runLocalTaskKeyBackfill()
+	})
+}
+
+func (a *App) runLocalTaskKeyBackfill() {
+	defer a.localTaskBackfillWG.Done()
+	a.backfillLocalTaskKeys()
+	ticker := time.NewTicker(localTaskKeyBackfillInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-a.cleanupCtx.Done():
+			return
+		case <-ticker.C:
+			a.backfillLocalTaskKeys()
+		}
+	}
+}
+
+func (a *App) backfillLocalTaskKeys() {
+	if err := a.localTaskSvc.BackfillTaskKeys(a.cleanupCtx); err != nil && a.cleanupCtx.Err() == nil {
+		log.Debug().Err(err).Msg("Local Task key backfill deferred")
+	}
 }
 
 // applyComputerSettings loads the computer-use feature config from
@@ -451,6 +498,7 @@ func (a *App) Close() error {
 	if a.cancelCleanup != nil {
 		a.cancelCleanup()
 	}
+	a.localTaskBackfillWG.Wait()
 	if a.database != nil {
 		if err := a.database.Close(); err != nil {
 			log.Warn().Err(err).Msg("failed to close local database")

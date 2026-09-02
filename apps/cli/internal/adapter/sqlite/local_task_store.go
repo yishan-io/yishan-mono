@@ -8,14 +8,16 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	modernsqlite "modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
 
 	"yishan/apps/cli/internal/localtask"
 )
 
-const localTaskColumns = `id, project_id, organization_id, title, description, status, priority, created_at, updated_at, completed_at`
+const localTaskColumns = `id, task_key, project_id, organization_id, title, description, status, priority, created_at, updated_at, completed_at`
 
 func localTaskSelectColumns(table string) string {
-	return table + `.id, ` + table + `.project_id, ` + table + `.organization_id, ` + table + `.title, ` + table +
+	return table + `.id, ` + table + `.task_key, ` + table + `.project_id, ` + table + `.organization_id, ` + table + `.title, ` + table +
 		`.description, ` + table + `.status, ` + table + `.priority, ` + table + `.created_at, ` + table + `.updated_at, ` +
 		table + `.completed_at, EXISTS (SELECT 1 FROM local_task_workspace_links WHERE local_task_id = ` + table +
 		`.id AND unlinked_at IS NULL)`
@@ -60,10 +62,13 @@ func (store *LocalTaskStore) insertTask(ctx context.Context, task localtask.Task
 		return localtask.Task{}, fmt.Errorf("begin create local task: %w", err)
 	}
 	if _, err := transaction.ExecContext(ctx, `INSERT INTO local_tasks (`+localTaskColumns+`)
-		VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), datetime('now')), datetime('now'),
-		CASE WHEN ? = 'done' THEN COALESCE(NULLIF(?, ''), datetime('now')) ELSE NULL END)`, task.ID,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), datetime('now')), datetime('now'),
+		CASE WHEN ? = 'done' THEN COALESCE(NULLIF(?, ''), datetime('now')) ELSE NULL END)`, task.ID, task.TaskKey,
 		task.ProjectID, task.OrganizationID, task.Title, task.Description, task.Status, task.Priority, task.CreatedAt, task.Status, task.CompletedAt); err != nil {
 		_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
+		if isLocalTaskIDConflict(err) {
+			return localtask.Task{}, localtask.ErrTaskAlreadyExists
+		}
 		return localtask.Task{}, fmt.Errorf("create local task: %w", err)
 	}
 	if task.TagRefs != nil {
@@ -107,6 +112,36 @@ func (store *LocalTaskStore) List(ctx context.Context, filter localtask.TaskFilt
 		return nil, fmt.Errorf("close local task rows: %w", err)
 	}
 	return store.hydrateTasks(ctx, tasks)
+}
+
+// ListWithoutTaskKey loads legacy tasks that still need a cloud-reserved key.
+func (store *LocalTaskStore) ListWithoutTaskKey(ctx context.Context) ([]localtask.Task, error) {
+	rows, err := store.database.QueryContext(ctx, `SELECT `+localTaskSelectColumns("local_tasks")+` FROM local_tasks WHERE task_key IS NULL ORDER BY id`)
+	if err != nil {
+		return nil, fmt.Errorf("list local tasks without key: %w", err)
+	}
+	tasks, err := scanLocalTasks(rows)
+	if err != nil {
+		_ = rows.Close() // best-effort cleanup; the scan error is authoritative
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, fmt.Errorf("close local task key rows: %w", err)
+	}
+	return store.hydrateTasks(ctx, tasks)
+}
+
+// SetTaskKeyIfEmpty persists a cloud-reserved key only while the row is unkeyed.
+func (store *LocalTaskStore) SetTaskKeyIfEmpty(ctx context.Context, taskID string, taskKey string) (bool, error) {
+	result, err := store.database.ExecContext(ctx, `UPDATE local_tasks SET task_key = ? WHERE id = ? AND task_key IS NULL`, taskKey, taskID)
+	if err != nil {
+		return false, fmt.Errorf("set local task key: %w", err)
+	}
+	updated, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("read updated local task key rows: %w", err)
+	}
+	return updated == 1, nil
 }
 
 // Update applies supplied Local Task metadata and lifecycle updates.
@@ -321,4 +356,9 @@ func (store *LocalTaskStore) getWorkspaceLink(ctx context.Context, linkID string
 		return localtask.WorkspaceLink{}, fmt.Errorf("get local task workspace link: %w", err)
 	}
 	return link, nil
+}
+
+func isLocalTaskIDConflict(err error) bool {
+	var sqliteErr *modernsqlite.Error
+	return errors.As(err, &sqliteErr) && sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY
 }

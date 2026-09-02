@@ -19,6 +19,7 @@ function buildProject(overrides: Partial<ProjectRecord> = {}): ProjectRecord {
     setupScript: "",
     postScript: "",
     contextEnabled: true,
+    taskPrefix: "YISH",
     organizationId: "org-1",
     createdByUserId: "user-1",
     createdAt: "2026-01-01T00:00:00Z",
@@ -84,6 +85,7 @@ describe("reconcileWorkspaceSnapshot (moves to app/commands after P30)", () => {
       name: "yishan-mono",
       worktreePath: "/worktrees/yishan-mono",
       missing: false,
+      taskPrefix: "YISH",
     });
     expect(result.workspaces).toHaveLength(1);
     expect(result.workspaces[0]).toMatchObject({

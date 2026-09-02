@@ -23,6 +23,7 @@ export async function createProject(
   orgId: string,
   input: {
     name: string;
+    taskPrefix: string;
     sourceTypeHint?: "unknown" | "git-local" | "git";
     repoUrl?: string;
     nodeId?: string;
@@ -33,6 +34,15 @@ export async function createProject(
   const response = await requestJson<{ project: ProjectWithWorkspacesRecord }>(`/orgs/${orgId}/projects`, {
     method: "POST",
     body: input,
+  });
+  return response.project;
+}
+
+/** Ensures one project has its immutable task prefix. */
+export async function ensureProjectTaskPrefix(orgId: string, projectId: string): Promise<ProjectRecord> {
+  const response = await requestJson<{ project: ProjectRecord }>(`/orgs/${orgId}/projects/${projectId}/task-prefix`, {
+    method: "POST",
+    body: {},
   });
   return response.project;
 }

@@ -52,6 +52,7 @@ vi.mock("@tanstack/react-virtual", () => ({
 
 const primaryTask = {
   id: "task-primary",
+  key: "TASK-1",
   projectId: "project-1",
   title: "Primary task",
   description: "Primary details",
@@ -267,7 +268,15 @@ describe("WorkspaceTasksView", () => {
     fireEvent.submit(form);
     await waitFor(() =>
       expect(commands.createAndLinkLocalTask).toHaveBeenCalledWith(
-        { projectId: undefined, title: "Workspace task", description: "", priority: "medium", tagIds: [] },
+        expect.objectContaining({
+          id: expect.any(String),
+          projectId: undefined,
+          organizationId: undefined,
+          title: "Workspace task",
+          description: "",
+          priority: "medium",
+          tagIds: [],
+        }),
         "workspace-1",
       ),
     );
@@ -288,7 +297,7 @@ describe("WorkspaceTasksView", () => {
     if (!form) return;
 
     fireEvent.submit(form);
-    expect((await screen.findByRole("alert")).textContent).toContain("task-created");
+    expect((await screen.findByRole("alert")).textContent).toContain("TASK-1");
     expect(screen.getByRole("alert").textContent).toContain("link failed");
     fireEvent.submit(form);
 
@@ -434,7 +443,8 @@ describe("WorkspaceTasksView", () => {
     const statusIcon = cardQueries.getByLabelText("localTask.status.progressing");
     const priorityIcon = cardQueries.getByLabelText("localTask.fields.priority: localTask.priority.high");
     expect(priorityIcon.nextElementSibling).toBe(statusIcon);
-    expect(statusIcon.nextElementSibling?.textContent).toBe("Primary task");
+    expect(statusIcon.nextElementSibling?.textContent).toBe("TASK-1");
+    expect(statusIcon.nextElementSibling?.nextElementSibling?.textContent).toBe("Primary task");
     expect(cardQueries.queryByText("localTask.status.progressing")).toBeNull();
   });
 

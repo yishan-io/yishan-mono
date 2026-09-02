@@ -14,6 +14,7 @@ vi.mock("react-i18next", () => ({
 
 const task = {
   id: "task-1",
+  key: "TASK-1",
   projectId: null,
   title: "Tagged task",
   description: "",

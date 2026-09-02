@@ -42,6 +42,7 @@ vi.mock("@tanstack/react-virtual", () => ({
 const initialState = localTaskStore.getState();
 const historicalTask: LocalTask = {
   id: "historical-task",
+  key: "TASK-1",
   projectId: null,
   title: "Delayed historical task",
   description: "",

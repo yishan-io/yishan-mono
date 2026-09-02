@@ -58,6 +58,7 @@ export type ProjectStoreState = {
   }) => void;
   deleteProject: (projectId: string) => void;
   updateProjectConfig: (projectId: string, config: RepoConfigUpdate) => void;
+  setProjectTaskPrefix: (projectId: string, taskPrefix: string) => void;
   setDisplayProjectIds: (projectIds: string[]) => void;
   setOrganizationDisplayProjectIds: (organizationId: string, projectIds: string[]) => void;
   setLastUsedExternalAppId: (organizationId: string, appId: ExternalAppId) => void;
@@ -199,6 +200,7 @@ function applyCreatedProjectState(
     localPath: input.source === "local" ? repoPath : "",
     worktreePath: input.backendProject.worktreePath ?? (input.source === "local" ? repoPath : ""),
     contextEnabled: input.backendProject.contextEnabled ?? true,
+    taskPrefix: input.backendProject.taskPrefix ?? null,
     defaultBranch: input.backendProject.defaultBranch ?? "",
     icon: input.backendProject.icon || pickRandomProjectIcon(),
     color: input.backendProject.color || pickRandomProjectColor(),
@@ -291,6 +293,14 @@ export const projectStore = create<ProjectStoreState>()(
       updateProjectConfig: (projectId, config) => {
         set((state) => {
           applyUpdatedRepoConfigState(state, projectId, config);
+        });
+      },
+      setProjectTaskPrefix: (projectId, taskPrefix) => {
+        set((state) => {
+          const project = state.projects.find((candidate) => candidate.id === projectId);
+          if (project) {
+            project.taskPrefix = taskPrefix;
+          }
         });
       },
       setDisplayProjectIds: (displayProjectIds) => {

@@ -2,8 +2,10 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 
 import {
+  allocateLocalTaskKeyHandler,
   createProjectHandler,
   deleteProjectHandler,
+  ensureProjectTaskPrefixHandler,
   listProjectsHandler,
   updateProjectHandler,
 } from "@/handlers/project";
@@ -15,7 +17,9 @@ import { workspacePullRequestRouter } from "@/routes/workspace-pull-request";
 
 import { validationErrorResponse } from "@/validation/error-response";
 import {
+  allocateLocalTaskKeyBodySchema,
   createProjectBodySchema,
+  ensureProjectTaskPrefixBodySchema,
   organizationProjectListQuerySchema,
   organizationProjectParamsSchema,
   projectWorkspaceParamsSchema,
@@ -39,6 +43,20 @@ router.post(
   zValidator("param", organizationProjectParamsSchema, validationErrorResponse),
   zValidator("json", createProjectBodySchema, validationErrorResponse),
   (c) => createProjectHandler(c, c.req.valid("param"), c.req.valid("json")),
+);
+
+router.post(
+  "/:projectId/task-prefix",
+  zValidator("param", projectWorkspaceParamsSchema, validationErrorResponse),
+  zValidator("json", ensureProjectTaskPrefixBodySchema, validationErrorResponse),
+  (c) => ensureProjectTaskPrefixHandler(c, c.req.valid("param")),
+);
+
+router.post(
+  "/:projectId/local-tasks/key",
+  zValidator("param", projectWorkspaceParamsSchema, validationErrorResponse),
+  zValidator("json", allocateLocalTaskKeyBodySchema, validationErrorResponse),
+  (c) => allocateLocalTaskKeyHandler(c, c.req.valid("param"), c.req.valid("json")),
 );
 
 router.delete("/:projectId", zValidator("param", projectWorkspaceParamsSchema, validationErrorResponse), (c) =>

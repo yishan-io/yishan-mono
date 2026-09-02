@@ -206,6 +206,7 @@ function mapApiData(
       localPath: path,
       worktreePath: path,
       contextEnabled: repo.contextEnabled,
+      taskPrefix: repo.taskPrefix,
       defaultBranch: preferredWorkspace?.branch ?? "",
       icon: repo.icon,
       color: repo.color,

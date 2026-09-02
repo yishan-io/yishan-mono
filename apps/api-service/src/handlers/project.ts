@@ -2,12 +2,46 @@ import { StatusCodes } from "http-status-codes";
 
 import type { AppContext } from "@/hono";
 import type {
+  AllocateLocalTaskKeyBodyInput,
   CreateProjectBodyInput,
   OrganizationProjectListQueryInput,
   OrganizationProjectParamsInput,
   ProjectWorkspaceParamsInput,
   UpdateProjectBodyInput,
 } from "@/validation/project";
+
+export async function ensureProjectTaskPrefixHandler(c: AppContext, params: ProjectWorkspaceParamsInput) {
+  const actorUser = c.get("sessionUser");
+  const project = await c.get("services").project.ensureProjectTaskPrefix({
+    actorUserId: actorUser.id,
+    organizationId: params.orgId,
+    projectId: params.projectId,
+  });
+  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
+    organizationId: params.orgId,
+    resource: "project",
+    change: "updated",
+    projectId: project.id,
+  });
+
+  return c.json({ project }, StatusCodes.OK);
+}
+
+export async function allocateLocalTaskKeyHandler(
+  c: AppContext,
+  params: ProjectWorkspaceParamsInput,
+  body: AllocateLocalTaskKeyBodyInput,
+) {
+  const actorUser = c.get("sessionUser");
+  const { key } = await c.get("services").project.allocateLocalTaskKey({
+    actorUserId: actorUser.id,
+    organizationId: params.orgId,
+    projectId: params.projectId,
+    localTaskId: body.localTaskId,
+  });
+
+  return c.json({ key }, StatusCodes.OK);
+}
 
 export async function listProjectsHandler(
   c: AppContext,
@@ -34,6 +68,7 @@ export async function createProjectHandler(
     actorUserId: actorUser.id,
     organizationId: params.orgId,
     name: body.name,
+    taskPrefix: body.taskPrefix,
     sourceTypeHint: body.sourceTypeHint,
     repoUrl: body.repoUrl,
     nodeId: body.nodeId,

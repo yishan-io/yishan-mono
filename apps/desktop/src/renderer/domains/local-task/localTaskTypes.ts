@@ -26,6 +26,8 @@ export type LocalTaskSetTemplatesInput = {
 /** Authoritative Local Task metadata returned by the local daemon. */
 export type LocalTask = {
   id: string;
+  /** Daemon-assigned human-readable task key, or null while legacy data is backfilled. */
+  key: string | null;
   projectId: string | null;
   title: string;
   description: string;
@@ -133,6 +135,8 @@ export type LocalTaskTagRenameResult = {
 
 /** Metadata accepted when creating a Local Task. */
 export type CreateLocalTaskInput = {
+  /** Stable UUID retained when retrying the same create request. */
+  id?: string;
   projectId?: string;
   organizationId?: string;
   title: string;

@@ -40,7 +40,7 @@ export function useTaskHubWorkspaceCreation(
     const projectsById = new Map(projects.map((project) => [project.id, project]));
     return new Set(
       tasks.flatMap((task) => {
-        if (!task.projectId) return [];
+        if (!task.projectId || task.key === null) return task.projectId ? [task.id] : [];
         const project = projectsById.get(task.projectId);
         if (!project) return [task.id];
         const canStartWorkspace =

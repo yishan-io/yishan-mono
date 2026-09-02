@@ -108,6 +108,7 @@ describe("workspaceSnapshotFlow", () => {
 
     const creation = createProject({
       name: "Created Project",
+      taskPrefix: "TEST",
       sourceTypeHint: "git",
       gitUrl: "https://github.com/test/created-project.git",
     });
@@ -145,6 +146,7 @@ describe("workspaceSnapshotFlow", () => {
 
     const creation = createProject({
       name: "Remote Repo",
+      taskPrefix: "TEST",
       sourceTypeHint: "git",
       gitUrl: "https://github.com/test/remote-repo.git",
     });
@@ -181,6 +183,7 @@ describe("workspaceSnapshotFlow", () => {
 
     await createProject({
       name: "Created Project",
+      taskPrefix: "TEST",
       sourceTypeHint: "git",
       gitUrl: "https://github.com/test/created-project.git",
     });
@@ -208,6 +211,7 @@ describe("workspaceSnapshotFlow", () => {
 
     await createProject({
       name: "Created Project",
+      taskPrefix: "TEST",
       sourceTypeHint: "git",
       gitUrl: "https://github.com/test/created-project.git",
     });

@@ -30,6 +30,12 @@ func (repository *legacyImportRepository) Update(context.Context, string, TaskUp
 func (repository *legacyImportRepository) Search(context.Context, string, TaskFilter) ([]SearchResult, error) {
 	return nil, nil
 }
+func (repository *legacyImportRepository) ListWithoutTaskKey(context.Context) ([]Task, error) {
+	return nil, nil
+}
+func (repository *legacyImportRepository) SetTaskKeyIfEmpty(context.Context, string, string) (bool, error) {
+	return false, nil
+}
 func (repository *legacyImportRepository) ListTags(context.Context) ([]Tag, error) {
 	return []Tag{}, nil
 }

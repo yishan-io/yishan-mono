@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../../../../domains/project/state/projectStore";
 import { workspaceStore } from "../../../../domains/workspace/state/workspaceStore";
@@ -9,6 +9,8 @@ import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 
 const mocked = vi.hoisted(() => ({
   updateProjectConfig: vi.fn(),
+  ensureProjectTaskPrefix: vi.fn(),
+  copyProjectTaskPrefix: vi.fn(),
   getDefaultWorktreeLocation: vi.fn(async () => "/tmp/worktrees"),
   openEntryInExternalApp: vi.fn(),
   openLocalFolderDialog: vi.fn(),
@@ -28,10 +30,16 @@ vi.mock("@renderer/domains/project", async () => {
     findProjectIconOption: projectIcons.findProjectIconOption,
     renderProjectIcon: projectIcons.renderProjectIcon,
     updateProjectConfig: mocked.updateProjectConfig,
+    ensureProjectTaskPrefix: mocked.ensureProjectTaskPrefix,
     getDefaultWorktreeLocation: mocked.getDefaultWorktreeLocation,
     openLocalFolderDialog: mocked.openLocalFolderDialog,
   };
 });
+
+vi.mock("../../commands/projectCommands", () => ({
+  copyProjectTaskPrefix: mocked.copyProjectTaskPrefix,
+  ensureProjectTaskPrefix: mocked.ensureProjectTaskPrefix,
+}));
 
 vi.mock("@renderer/domains/files", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@renderer/domains/files")>();
@@ -86,6 +94,45 @@ describe("ProjectConfigDialogView", () => {
     expect(screen.queryByDisplayValue("git@github.com:acme/core-repo.git")).toBeNull();
     expect(screen.queryByDisplayValue("core-repo")).toBeNull();
     expect(screen.getByRole("button", { name: "Scripts" })).toBeTruthy();
+  });
+
+  it("offers generation when a project prefix is missing", () => {
+    workspaceStore.setState({ workspaces: [] });
+    projectStore.setState({
+      projects: [{ id: "repo-1", name: "Core Repo", path: "/tmp/core-repo", missing: false, taskPrefix: null }],
+    });
+
+    renderProjectConfigDialog();
+
+    expect(screen.getByRole("button", { name: "Generate Task Prefix" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Copy Task Prefix" })).toBeNull();
+  });
+
+  it("offers copying an existing immutable task prefix", () => {
+    workspaceStore.setState({ workspaces: [] });
+    projectStore.setState({
+      projects: [{ id: "repo-1", name: "Core Repo", path: "/tmp/core-repo", missing: false, taskPrefix: "CORE" }],
+    });
+
+    renderProjectConfigDialog();
+
+    expect(screen.getByText("CORE")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy task prefix" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Generate Task Prefix" })).toBeNull();
+  });
+
+  it("announces clipboard errors", async () => {
+    workspaceStore.setState({ workspaces: [] });
+    projectStore.setState({
+      projects: [{ id: "repo-1", name: "Core Repo", path: "/tmp/core-repo", missing: false, taskPrefix: "CORE" }],
+    });
+    mocked.copyProjectTaskPrefix.mockRejectedValueOnce(new Error("Clipboard unavailable"));
+
+    renderProjectConfigDialog();
+    fireEvent.click(screen.getByRole("button", { name: "Copy task prefix" }));
+
+    await waitFor(() => expect(mocked.copyProjectTaskPrefix).toHaveBeenCalledWith("repo-1"));
+    expect(screen.getByRole("alert").textContent).toContain("Clipboard unavailable");
   });
 
   it("labels the context toggle generically", () => {

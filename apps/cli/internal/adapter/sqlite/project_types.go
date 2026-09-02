@@ -10,6 +10,7 @@ type ProjectCommand struct {
 type Project struct {
 	ID              string           `json:"id"`
 	Name            string           `json:"name"`
+	TaskPrefix      *string          `json:"taskPrefix"`
 	SourceType      string           `json:"sourceType"`
 	RepoProvider    *string          `json:"repoProvider,omitempty"`
 	RepoURL         *string          `json:"repoUrl,omitempty"`

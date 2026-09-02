@@ -1,7 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
-import { oauthAccounts, users } from "@/db/schema";
+import { oauthAccounts, personalLocalTaskKeyAllocations, personalLocalTaskKeyCounters, users } from "@/db/schema";
+import { LocalTaskKeyAllocationFailedError } from "@/errors";
 import { newId } from "@/lib/id";
 import type { NotificationPreferencesPatch } from "@/lib/notification-preferences";
 import { type UserPreferences, type UserPreferencesPatch, mergeUserPreferences } from "@/lib/user-preferences";
@@ -19,6 +20,57 @@ export class UserService {
    */
   setInviteService(inviteService: OrganizationInviteService): void {
     this.inviteService = inviteService;
+  }
+
+  /** Allocates an idempotent API-owned Local Task key for the authenticated user's personal scope. */
+  async allocatePersonalLocalTaskKey(input: { actorUserId: string; localTaskId: string }): Promise<{ key: string }> {
+    try {
+      return await this.db.transaction(async (tx) => {
+        await tx.select({ id: users.id }).from(users).where(eq(users.id, input.actorUserId)).for("update").limit(1);
+
+        const existingAllocations = await tx
+          .select({ key: personalLocalTaskKeyAllocations.key })
+          .from(personalLocalTaskKeyAllocations)
+          .where(
+            and(
+              eq(personalLocalTaskKeyAllocations.userId, input.actorUserId),
+              eq(personalLocalTaskKeyAllocations.localTaskId, input.localTaskId),
+            ),
+          )
+          .limit(1);
+        const existingAllocation = existingAllocations[0];
+        if (existingAllocation) {
+          return existingAllocation;
+        }
+
+        const counterRows = await tx
+          .insert(personalLocalTaskKeyCounters)
+          .values({ userId: input.actorUserId, lastAllocatedNumber: 1 })
+          .onConflictDoUpdate({
+            target: personalLocalTaskKeyCounters.userId,
+            set: { lastAllocatedNumber: sql`${personalLocalTaskKeyCounters.lastAllocatedNumber} + 1` },
+          })
+          .returning({ lastAllocatedNumber: personalLocalTaskKeyCounters.lastAllocatedNumber });
+        const sequenceNumber = counterRows[0]?.lastAllocatedNumber;
+        if (sequenceNumber === undefined) {
+          throw new LocalTaskKeyAllocationFailedError("personal");
+        }
+
+        const key = `PERS-${sequenceNumber}`;
+        await tx.insert(personalLocalTaskKeyAllocations).values({
+          userId: input.actorUserId,
+          localTaskId: input.localTaskId,
+          key,
+          sequenceNumber,
+        });
+        return { key };
+      });
+    } catch (error) {
+      if (error instanceof LocalTaskKeyAllocationFailedError) {
+        throw error;
+      }
+      throw new LocalTaskKeyAllocationFailedError("personal", error);
+    }
   }
 
   async getById(userId: string) {

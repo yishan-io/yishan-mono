@@ -18,6 +18,7 @@ describe("DaemonProjectClient", () => {
         postScript: "",
         commands: "[]",
         contextEnabled: true,
+        taskPrefix: "PROJ",
         createdByUserId: "user-1",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
@@ -59,6 +60,7 @@ describe("DaemonProjectClient", () => {
     const projects = await client.listByOrg("org-1", { withWorkspaces: true });
 
     expect(invoke).toHaveBeenCalledWith("project.listWithWorkspaces", { organizationId: "org-1" });
+    expect(projects[0]?.taskPrefix).toBe("PROJ");
     const broken = projects[0]?.workspaces.find((workspace) => workspace.id === "workspace-1");
     expect(broken?.state).toBe("error");
     expect(broken?.health).toBe("path-missing");

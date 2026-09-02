@@ -65,11 +65,12 @@ func TestValidateLinkStatus_AcceptsLifecycleStatuses(t *testing.T) {
 }
 
 func TestTaskAndWorkspaceLink_JSONIncludesNullableFields(t *testing.T) {
-	taskJSON, err := json.Marshal(Task{ID: "task-1", Title: "Task", Description: "", Status: StatusProgressing, Priority: PriorityMedium, Tags: []string{}, TagRefs: []TagRef{}})
+	taskKey := "TASK-1"
+	taskJSON, err := json.Marshal(Task{ID: "task-1", TaskKey: &taskKey, Title: "Task", Description: "", Status: StatusProgressing, Priority: PriorityMedium, Tags: []string{}, TagRefs: []TagRef{}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantTask := `{"id":"task-1","projectId":null,"title":"Task","description":"","status":"progressing","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"hasActiveWorkspace":false,"tags":[],"tagRefs":[]}`
+	wantTask := `{"id":"task-1","key":"TASK-1","projectId":null,"title":"Task","description":"","status":"progressing","priority":"medium","createdAt":"","updatedAt":"","completedAt":null,"hasActiveWorkspace":false,"tags":[],"tagRefs":[]}`
 	if string(taskJSON) != wantTask {
 		t.Fatalf("encoded task = %s, want %s", taskJSON, wantTask)
 	}

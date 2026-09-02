@@ -21,6 +21,7 @@ import type {
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
 } from "../../localTaskTypes";
+import { LocalTaskKeyDisplay } from "../../ui/LocalTaskKeyDisplay";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
 import { LocalTaskTagsInlineEditor } from "../tags/LocalTaskTagsInlineEditor";
@@ -106,6 +107,12 @@ export function WorkspaceTaskMetadataSidebar({
       spacing={3}
       sx={{ minWidth: 0, position: isSticky ? "sticky" : "static", top: 0, alignSelf: "start" }}
     >
+      <Box>
+        <Typography variant="caption" color="text.secondary" sx={SIDEBAR_SECTION_TITLE_SX}>
+          {t("localTask.fields.key")}
+        </Typography>
+        <LocalTaskKeyDisplay task={task} />
+      </Box>
       {showStatusAndPriority ? (
         <>
           <Box>

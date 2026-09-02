@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -126,14 +127,19 @@ func IsServiceToken(token string) bool {
 }
 
 func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
-	// Service tokens are long-lived and never need refresh
+	return c.DoRawContext(context.Background(), method, path, body)
+}
+
+// DoRawContext sends a request bound to ctx while preserving DoRaw's authentication behavior.
+func (c *Client) DoRawContext(ctx context.Context, method string, path string, body any) ([]byte, error) {
+	// Service tokens are long-lived and never need refresh.
 	if isServiceToken(c.accessToken) {
-		return c.doRaw(method, path, body)
+		return c.doRaw(ctx, method, path, body)
 	}
 
 	if c.shouldProactivelyRefresh(path) {
 		log.Debug().Str("path", path).Dur("window", accessTokenEarlyRefreshWindow).Msg("proactively refreshing API access token")
-		if err := c.refreshAccessToken(); err != nil {
+		if err := c.refreshAccessTokenContext(ctx); err != nil {
 			log.Warn().Err(err).Str("path", path).Msg("proactive API access token refresh failed")
 			if isRefreshTokenPermanentlyInvalid(err) {
 				if clearErr := c.notifyPermanentRefreshFailure(); clearErr != nil {
@@ -143,16 +149,16 @@ func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
 		}
 	}
 
-	responseBody, err := c.doRaw(method, path, body)
+	responseBody, err := c.doRaw(ctx, method, path, body)
 	if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == http.StatusUnauthorized {
 		if c.refreshToken != "" && !isRefreshRequest(path) {
 			if c.isRefreshTokenExpiredOrNearExpiry() {
 				refreshErr := fmt.Errorf("refresh token is expired or near expiry")
 				return nil, c.newTokenRefreshError(err, refreshErr, true)
 			}
-			refreshErr := c.refreshAccessToken()
+			refreshErr := c.refreshAccessTokenContext(ctx)
 			if refreshErr == nil {
-				return c.doRaw(method, path, body)
+				return c.doRaw(ctx, method, path, body)
 			}
 			return nil, c.newTokenRefreshError(err, refreshErr, isRefreshTokenPermanentlyInvalid(refreshErr))
 		}
@@ -210,7 +216,12 @@ func (c *Client) isRefreshTokenExpiredOrNearExpiry() bool {
 }
 
 func (c *Client) DoDecode(method string, path string, body any, out any) error {
-	responseBody, err := c.DoRaw(method, path, body)
+	return c.DoDecodeContext(context.Background(), method, path, body, out)
+}
+
+// DoDecodeContext sends and decodes a request bound to ctx.
+func (c *Client) DoDecodeContext(ctx context.Context, method string, path string, body any, out any) error {
+	responseBody, err := c.DoRawContext(ctx, method, path, body)
 	if err != nil {
 		return err
 	}
@@ -228,8 +239,8 @@ func isRefreshRequest(path string) bool {
 	return strings.TrimSpace(path) == "/auth/refresh"
 }
 
-func (c *Client) doRaw(method string, path string, body any) ([]byte, error) {
-	req := c.http.R()
+func (c *Client) doRaw(ctx context.Context, method string, path string, body any) ([]byte, error) {
+	req := c.http.R().SetContext(ctx)
 	if body != nil {
 		req = req.SetBody(body)
 	}
@@ -275,7 +286,11 @@ func isRefreshTokenPermanentlyInvalid(err error) bool {
 }
 
 func (c *Client) refreshAccessToken() error {
-	responseBody, err := c.doRaw(http.MethodPost, "/auth/refresh", map[string]string{
+	return c.refreshAccessTokenContext(context.Background())
+}
+
+func (c *Client) refreshAccessTokenContext(ctx context.Context) error {
+	responseBody, err := c.doRaw(ctx, http.MethodPost, "/auth/refresh", map[string]string{
 		"refreshToken": c.refreshToken,
 	})
 	if err != nil {

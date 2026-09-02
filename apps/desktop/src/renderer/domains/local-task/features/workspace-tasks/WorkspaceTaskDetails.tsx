@@ -87,9 +87,11 @@ export function WorkspaceTaskDetails({
       >
         <Stack spacing={1} sx={{ minWidth: 0 }}>
           {showTitle ? (
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              {task.title}
-            </Typography>
+            <Box>
+              <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 700 }}>
+                {task.title}
+              </Typography>
+            </Box>
           ) : null}
           {showTagsAboveDescription ? (
             <LocalTaskTagsInlineEditor

@@ -15,10 +15,7 @@ describe("localTaskTemplateStore", () => {
   });
 
   it("stores daemon templates, loading state, and a non-persisted selection", () => {
-    const templates = [
-      DEFAULT_LOCAL_TASK_TEMPLATE,
-      { id: "bug", name: "Bug", content: "## Reproduction" },
-    ];
+    const templates = [DEFAULT_LOCAL_TASK_TEMPLATE, { id: "bug", name: "Bug", content: "## Reproduction" }];
 
     localTaskTemplateStore.getState().setIsTemplatesLoading(true);
     localTaskTemplateStore.getState().setTemplates(templates, "bug");

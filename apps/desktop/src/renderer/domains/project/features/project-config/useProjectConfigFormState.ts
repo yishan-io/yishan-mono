@@ -30,6 +30,7 @@ type ProjectLike = {
   repoKey?: string | null;
   worktreePath?: string | null;
   contextEnabled?: boolean;
+  taskPrefix?: string | null;
   icon?: string | null;
   color?: string | null;
   setupScript?: string | null;

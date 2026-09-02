@@ -56,6 +56,13 @@ function requireNullableString(record: Record<string, unknown>, field: string, p
   return fieldValue;
 }
 
+function parseOptionalTaskKey(record: Record<string, unknown>): string | null {
+  const key = record.key;
+  if (key === undefined || key === null) return null;
+  if (typeof key !== "string" || key.trim().length === 0) throw new TypeError("invalid Local Task payload");
+  return key;
+}
+
 function requireStringArray(record: Record<string, unknown>, field: string, payloadName: string): string[] {
   const fieldValue = record[field];
   if (!Array.isArray(fieldValue) || fieldValue.some((entry) => typeof entry !== "string")) {
@@ -113,6 +120,7 @@ function parseTask(payload: unknown): LocalTask {
   }
   return {
     id: requireString(record, "id", "Local Task"),
+    key: parseOptionalTaskKey(record),
     projectId: requireNullableString(record, "projectId", "Local Task"),
     title: requireString(record, "title", "Local Task"),
     description: record.description,

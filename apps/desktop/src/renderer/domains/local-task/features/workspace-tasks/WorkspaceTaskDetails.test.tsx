@@ -41,6 +41,7 @@ vi.mock("@renderer/domains/project", () => ({
 
 const task = {
   id: "task-1",
+  key: "TASK-1",
   projectId: null,
   title: "Task title",
   description: "Task description",
@@ -302,6 +303,14 @@ describe("WorkspaceTaskDetails", () => {
     const sidebar = screen.getByTestId("local-task-details-sidebar");
     expect(getComputedStyle(sidebar).position).toBe("sticky");
     expect(getComputedStyle(sidebar).top).toBe("0px");
+  });
+
+  it("shows the task key in the metadata sidebar instead of before the title", () => {
+    renderDetails();
+
+    const sidebar = screen.getByTestId("local-task-details-sidebar");
+    expect(sidebar.textContent).toContain("TASK-1");
+    expect(screen.getByRole("heading", { name: task.title }).textContent).toBe(task.title);
   });
 
   it("keeps the default side-by-side layout on wide containers and stacks at narrow widths", () => {

@@ -230,6 +230,17 @@ export class ProjectAlreadyExistsError extends AppError {
   }
 }
 
+/** Indicates that a project task prefix is already assigned in its organization. */
+export class ProjectTaskPrefixAlreadyExistsError extends AppError {
+  constructor(organizationId: string, taskPrefix: string) {
+    super("Project task prefix already exists", StatusCodes.CONFLICT, "PROJECT_TASK_PREFIX_ALREADY_EXISTS", {
+      organizationId,
+      taskPrefix,
+    });
+    this.name = "ProjectTaskPrefixAlreadyExistsError";
+  }
+}
+
 /** Indicates that the project database insert failed without a duplicate Git identity conflict. */
 export class ProjectCreateFailedError extends AppError {
   constructor(cause?: unknown) {
@@ -241,6 +252,47 @@ export class ProjectCreateFailedError extends AppError {
       cause === undefined ? undefined : { cause },
     );
     this.name = "ProjectCreateFailedError";
+  }
+}
+
+/** Indicates that a Local Task key could not be allocated atomically. */
+export class LocalTaskKeyAllocationFailedError extends AppError {
+  constructor(scope: "project" | "personal", cause?: unknown) {
+    super(
+      "Failed to allocate Local Task key",
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "LOCAL_TASK_KEY_ALLOCATION_FAILED",
+      { scope },
+      cause === undefined ? undefined : { cause },
+    );
+    this.name = "LocalTaskKeyAllocationFailedError";
+  }
+}
+
+/** Indicates that a project task prefix could not be ensured. */
+export class ProjectTaskPrefixEnsureFailedError extends AppError {
+  constructor(cause?: unknown) {
+    super(
+      "Failed to ensure project task prefix",
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "PROJECT_TASK_PREFIX_ENSURE_FAILED",
+      undefined,
+      cause === undefined ? undefined : { cause },
+    );
+    this.name = "ProjectTaskPrefixEnsureFailedError";
+  }
+}
+
+/** Indicates that every deterministic legacy-project prefix candidate is occupied. */
+export class ProjectTaskPrefixAllocationExhaustedError extends AppError {
+  constructor(projectId: string) {
+    super(
+      "Unable to allocate a task prefix for this project",
+      StatusCodes.CONFLICT,
+      "PROJECT_TASK_PREFIX_ALLOCATION_EXHAUSTED",
+      { projectId },
+    );
+    this.name = "ProjectTaskPrefixAllocationExhaustedError";
   }
 }
 
