@@ -85,6 +85,22 @@ func TestService_UpdateTitleNotifiesTaskContextLifecycle(t *testing.T) {
 	}
 }
 
+func TestService_CreateRejectsFolderMetadataWithOrganization(t *testing.T) {
+	service, _, _ := newTestService(t)
+	projectID := "folder-1"
+	projectKind := domain.ProjectKindFolder
+	projectName := "Folder"
+	organizationID := "org-1"
+
+	_, err := service.Create(context.Background(), rpc.LocalTaskCreateParams{
+		ProjectID: &projectID, ProjectKind: &projectKind, ProjectName: &projectName,
+		OrganizationID: &organizationID, Title: "Invalid folder task",
+	})
+	if !errors.Is(err, domain.ErrInvalidTask) {
+		t.Fatalf("Create error = %v, want invalid task", err)
+	}
+}
+
 func TestService_CreateRejectsInvalidMetadata(t *testing.T) {
 	service, _, _ := newTestService(t)
 

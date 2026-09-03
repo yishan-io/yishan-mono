@@ -33,12 +33,12 @@ func TestMigrate_013AddsTagCatalogAndBackfillsExistingTags(t *testing.T) {
 	assert012Schema(t, database)
 	assert012ExistingDataPreserved(t, database)
 	assert013CatalogBackfill(t, database)
-	assertMigrationCount(t, database, 20)
+	assertMigrationCount(t, database, 21)
 
 	if err := Migrate(database); err != nil {
 		t.Fatalf("rerun migration: %v", err)
 	}
-	assertMigrationCount(t, database, 20)
+	assertMigrationCount(t, database, 21)
 	assert012ExistingDataPreserved(t, database)
 	assert013CatalogBackfill(t, database)
 	assert013ColorConstraint(t, database)

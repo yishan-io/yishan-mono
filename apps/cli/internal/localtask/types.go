@@ -71,22 +71,32 @@ type Status string
 // Priority is a Local Task's personal priority.
 type Priority string
 
+// ProjectKind identifies task metadata that does not resolve through the project catalog.
+type ProjectKind string
+
+const (
+	// ProjectKindFolder identifies a task created for a local folder.
+	ProjectKindFolder ProjectKind = "folder"
+)
+
 // Task is Local Task metadata authoritative in the local SQLite database.
 type Task struct {
-	ID                 string   `json:"id"`
-	TaskKey            *string  `json:"key,omitempty"`
-	ProjectID          *string  `json:"projectId"`
-	OrganizationID     *string  `json:"-"`
-	Title              string   `json:"title"`
-	Description        string   `json:"description"`
-	Status             Status   `json:"status"`
-	Priority           Priority `json:"priority"`
-	CreatedAt          string   `json:"createdAt"`
-	UpdatedAt          string   `json:"updatedAt"`
-	CompletedAt        *string  `json:"completedAt"`
-	HasActiveWorkspace bool     `json:"hasActiveWorkspace"`
-	Tags               []string `json:"tags"`
-	TagRefs            []TagRef `json:"tagRefs"`
+	ID                 string       `json:"id"`
+	TaskKey            *string      `json:"key,omitempty"`
+	ProjectID          *string      `json:"projectId"`
+	ProjectKind        *ProjectKind `json:"projectKind,omitempty"`
+	ProjectName        *string      `json:"projectName,omitempty"`
+	OrganizationID     *string      `json:"-"`
+	Title              string       `json:"title"`
+	Description        string       `json:"description"`
+	Status             Status       `json:"status"`
+	Priority           Priority     `json:"priority"`
+	CreatedAt          string       `json:"createdAt"`
+	UpdatedAt          string       `json:"updatedAt"`
+	CompletedAt        *string      `json:"completedAt"`
+	HasActiveWorkspace bool         `json:"hasActiveWorkspace"`
+	Tags               []string     `json:"tags"`
+	TagRefs            []TagRef     `json:"tagRefs"`
 }
 
 // Tag is one globally retained Local Task tag catalog entry.
@@ -198,6 +208,12 @@ func ValidateTask(task Task) error {
 		return ErrInvalidTask
 	}
 	if !isValidStatus(task.Status) || !isValidPriority(task.Priority) {
+		return ErrInvalidTask
+	}
+	if (task.ProjectKind == nil) != (task.ProjectName == nil) {
+		return ErrInvalidTask
+	}
+	if task.ProjectKind != nil && (*task.ProjectKind != ProjectKindFolder || task.ProjectID == nil || task.OrganizationID != nil || strings.TrimSpace(*task.ProjectName) == "") {
 		return ErrInvalidTask
 	}
 	if err := validateTaskTagAssociations(task.Tags, task.TagRefs); err != nil {

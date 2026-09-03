@@ -62,10 +62,9 @@ export async function openFoldersForSnapshot(folders: DaemonLocalFolder[], organ
 
 /**
  * Restores the previously selected workspace when it was a local folder and
- * the folder still exists after a snapshot reload. workspaceStore.load() rebuilds
- * workspaces[] without folder items and loses a folder selection to the fallback,
- * so after loadLocalFolders() re-adds the folder rows we restore the selection
- * back to the folder the user was viewing.
+ * the folder still exists after an authoritative local-folder snapshot. `load()`
+ * retains existing folder items until `loadLocalFolders()` replaces them; this
+ * restores the selection after that replacement when the selected folder remains.
  */
 export function restoreFolderSelectionIfNeeded(
   previousWorkspaces: Array<{ id: string; projectId?: string; kind?: string }>,

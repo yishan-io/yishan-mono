@@ -157,8 +157,8 @@ func scanLocalTasks(rows *sql.Rows) ([]localtask.Task, error) {
 
 func scanLocalTask(scanner interface{ Scan(...any) error }) (localtask.Task, error) {
 	task := localtask.Task{Tags: make([]string, 0)}
-	var taskKey, projectID, organizationID, completedAt sql.NullString
-	err := scanner.Scan(&task.ID, &taskKey, &projectID, &organizationID, &task.Title, &task.Description, &task.Status, &task.Priority,
+	var taskKey, projectID, projectKind, projectName, organizationID, completedAt sql.NullString
+	err := scanner.Scan(&task.ID, &taskKey, &projectID, &projectKind, &projectName, &organizationID, &task.Title, &task.Description, &task.Status, &task.Priority,
 		&task.CreatedAt, &task.UpdatedAt, &completedAt, &task.HasActiveWorkspace)
 	if err != nil {
 		return localtask.Task{}, err
@@ -168,6 +168,13 @@ func scanLocalTask(scanner interface{ Scan(...any) error }) (localtask.Task, err
 	}
 	if projectID.Valid {
 		task.ProjectID = stringPointer(projectID.String)
+	}
+	if projectKind.Valid {
+		kind := localtask.ProjectKind(projectKind.String)
+		task.ProjectKind = &kind
+	}
+	if projectName.Valid {
+		task.ProjectName = stringPointer(projectName.String)
 	}
 	if organizationID.Valid {
 		task.OrganizationID = stringPointer(organizationID.String)
@@ -195,8 +202,8 @@ func scanLocalTaskSearchResults(rows *sql.Rows) ([]localtask.SearchResult, error
 
 func scanLocalTaskSearchResult(scanner interface{ Scan(...any) error }) (localtask.SearchResult, error) {
 	var result localtask.SearchResult
-	var taskKey, projectID, organizationID, completedAt sql.NullString
-	err := scanner.Scan(&result.ID, &taskKey, &projectID, &organizationID, &result.Title, &result.Description, &result.Status,
+	var taskKey, projectID, projectKind, projectName, organizationID, completedAt sql.NullString
+	err := scanner.Scan(&result.ID, &taskKey, &projectID, &projectKind, &projectName, &organizationID, &result.Title, &result.Description, &result.Status,
 		&result.Priority, &result.CreatedAt, &result.UpdatedAt, &completedAt, &result.HasActiveWorkspace, &result.Rank)
 	if err != nil {
 		return localtask.SearchResult{}, err
@@ -206,6 +213,13 @@ func scanLocalTaskSearchResult(scanner interface{ Scan(...any) error }) (localta
 	}
 	if projectID.Valid {
 		result.ProjectID = stringPointer(projectID.String)
+	}
+	if projectKind.Valid {
+		kind := localtask.ProjectKind(projectKind.String)
+		result.ProjectKind = &kind
+	}
+	if projectName.Valid {
+		result.ProjectName = stringPointer(projectName.String)
 	}
 	if organizationID.Valid {
 		result.OrganizationID = stringPointer(organizationID.String)

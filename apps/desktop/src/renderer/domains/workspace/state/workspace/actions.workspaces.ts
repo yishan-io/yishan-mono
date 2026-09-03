@@ -1,3 +1,5 @@
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
+
 import type { WorkspaceItem } from "../../workspaceTypes";
 import {
   applyCreatedWorkspaceState,
@@ -27,7 +29,8 @@ export function createWorkspaceActions(set: WorkspaceStoreSetState, _get: Worksp
   return {
     load: (_organizationId: string, workspaces: WorkspaceItem[]) => {
       set((state) => {
-        state.workspaces = workspaces;
+        const localFolders = state.workspaces.filter((workspace) => workspace.projectId === LOCAL_FOLDER_PROJECT_ID);
+        state.workspaces = [...workspaces, ...localFolders];
       });
     },
     addWorkspace: ({

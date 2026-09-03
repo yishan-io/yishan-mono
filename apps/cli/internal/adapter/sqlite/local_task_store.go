@@ -14,10 +14,10 @@ import (
 	"yishan/apps/cli/internal/localtask"
 )
 
-const localTaskColumns = `id, task_key, project_id, organization_id, title, description, status, priority, created_at, updated_at, completed_at`
+const localTaskColumns = `id, task_key, project_id, project_kind, project_name, organization_id, title, description, status, priority, created_at, updated_at, completed_at`
 
 func localTaskSelectColumns(table string) string {
-	return table + `.id, ` + table + `.task_key, ` + table + `.project_id, ` + table + `.organization_id, ` + table + `.title, ` + table +
+	return table + `.id, ` + table + `.task_key, ` + table + `.project_id, ` + table + `.project_kind, ` + table + `.project_name, ` + table + `.organization_id, ` + table + `.title, ` + table +
 		`.description, ` + table + `.status, ` + table + `.priority, ` + table + `.created_at, ` + table + `.updated_at, ` +
 		table + `.completed_at, EXISTS (SELECT 1 FROM local_task_workspace_links WHERE local_task_id = ` + table +
 		`.id AND unlinked_at IS NULL)`
@@ -62,9 +62,9 @@ func (store *LocalTaskStore) insertTask(ctx context.Context, task localtask.Task
 		return localtask.Task{}, fmt.Errorf("begin create local task: %w", err)
 	}
 	if _, err := transaction.ExecContext(ctx, `INSERT INTO local_tasks (`+localTaskColumns+`)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), datetime('now')), datetime('now'),
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), datetime('now')), datetime('now'),
 		CASE WHEN ? = 'done' THEN COALESCE(NULLIF(?, ''), datetime('now')) ELSE NULL END)`, task.ID, task.TaskKey,
-		task.ProjectID, task.OrganizationID, task.Title, task.Description, task.Status, task.Priority, task.CreatedAt, task.Status, task.CompletedAt); err != nil {
+		task.ProjectID, task.ProjectKind, task.ProjectName, task.OrganizationID, task.Title, task.Description, task.Status, task.Priority, task.CreatedAt, task.Status, task.CompletedAt); err != nil {
 		_ = transaction.Rollback() // best-effort cleanup; the operation error is authoritative
 		if isLocalTaskIDConflict(err) {
 			return localtask.Task{}, localtask.ErrTaskAlreadyExists

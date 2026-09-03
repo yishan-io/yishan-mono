@@ -34,6 +34,24 @@ func TestLocalTaskStore_CreateUpdateAndSearch(t *testing.T) {
 	}
 }
 
+func TestLocalTaskStore_PersistsFolderProjectMetadata(t *testing.T) {
+	store, _ := openTestLocalTaskStore(t)
+	projectID := "folder-1"
+	projectKind := localtask.ProjectKindFolder
+	projectName := "My Folder"
+	created, err := store.Create(context.Background(), localtask.Task{
+		ProjectID: &projectID, ProjectKind: &projectKind, ProjectName: &projectName,
+		Title: "Folder task", Status: localtask.StatusNew, Priority: localtask.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("create folder task: %v", err)
+	}
+	loaded, err := store.Get(context.Background(), created.ID)
+	if err != nil || loaded.ProjectKind == nil || *loaded.ProjectKind != localtask.ProjectKindFolder || loaded.ProjectName == nil || *loaded.ProjectName != projectName {
+		t.Fatalf("loaded folder task = %#v, %v", loaded, err)
+	}
+}
+
 func TestLocalTaskStore_CreateDefaultsToNew(t *testing.T) {
 	store, _ := openTestLocalTaskStore(t)
 	task, err := store.Create(context.Background(), localtask.Task{Title: "Default lifecycle", Priority: localtask.PriorityMedium})

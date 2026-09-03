@@ -42,6 +42,26 @@ vi.mock("@renderer/domains/project", () => ({
     }),
   renderProjectIcon: (icon: string | undefined) => <span data-testid="project-icon" data-icon={icon} />,
 }));
+const workspaceMocks = vi.hoisted(() => ({
+  workspaces: [
+    {
+      id: "folder-workspace-1",
+      repoId: "folder-project-1",
+      projectId: "local-folder",
+      name: "Local Folder",
+      title: "Local Folder",
+      sourceBranch: "",
+      branch: "",
+      summaryId: "folder-workspace-1",
+      kind: "folder",
+    },
+  ],
+}));
+vi.mock("@renderer/domains/workspace", () => ({
+  workspaceStore: (selector: (state: { workspaces: typeof workspaceMocks.workspaces }) => unknown) =>
+    selector({ workspaces: workspaceMocks.workspaces }),
+  isFolderWorkspace: (workspace: { kind: string }) => workspace.kind === "folder",
+}));
 vi.mock("@renderer/ui/components/VirtualizedListbox", () => ({
   VirtualizedListbox: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
     <ul {...props}>{children}</ul>
@@ -205,6 +225,29 @@ describe("CreateLocalTaskDialog", () => {
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.tags" }));
 
     expect(dialog.contains(screen.getByRole("option", { name: "Backend" }))).toBe(false);
+  });
+
+  it("selects a folder workspace as a project without sending an organization ID", async () => {
+    renderDialog();
+    fireEvent.change(getTitleInput(), { target: { value: "Folder task" } });
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "localTask.fields.project" }));
+    fireEvent.click(screen.getByRole("option", { name: "Local Folder" }));
+
+    submitDialog();
+
+    await waitFor(() =>
+      expect(commands.createLocalTask).toHaveBeenCalledWith({
+        id: expect.any(String),
+        projectId: "folder-workspace-1",
+        projectKind: "folder",
+        projectName: "Local Folder",
+        organizationId: undefined,
+        title: "Folder task",
+        description: "",
+        priority: "medium",
+        tagIds: [],
+      }),
+    );
   });
 
   it("submits the selected metadata and Markdown emitted by the description editor", async () => {

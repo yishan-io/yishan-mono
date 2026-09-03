@@ -71,3 +71,38 @@ func TestService_ListContextRootsUsesGlobalResolverForProjectlessTask(t *testing
 		t.Fatalf("roots = %#v", roots)
 	}
 }
+
+func TestService_ListContextRootsResolvesFolderTaskByWorkspaceID(t *testing.T) {
+	service, _, repository := newTestService(t)
+	folderID, folderKind, folderName := "folder-workspace-1", domain.ProjectKindFolder, "Folder context"
+	task, err := repository.Create(context.Background(), domain.Task{
+		ProjectID: &folderID, ProjectKind: &folderKind, ProjectName: &folderName, Title: "Folder context", Status: domain.StatusProgressing, Priority: domain.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worktreePath := t.TempDir()
+	contextRoot := filepath.Join(t.TempDir(), "folder-context")
+	if err := os.MkdirAll(contextRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(contextRoot, filepath.Join(worktreePath, ".my-context")); err != nil {
+		t.Fatal(err)
+	}
+	service.deps.Registry = contextTestRegistry{workspaces: []workspace.Workspace{{
+		ID: folderID, ProjectID: "local-folder", Path: worktreePath,
+	}}}
+
+	roots, err := service.ListContextRoots(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalRoot, err := filepath.EvalSymlinks(contextRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantDirectory := filepath.Join(canonicalRoot, "task-context", task.ID)
+	if len(roots) != 1 || roots[0].Directory != wantDirectory || roots[0].ProjectID != folderID {
+		t.Fatalf("roots = %#v", roots)
+	}
+}
