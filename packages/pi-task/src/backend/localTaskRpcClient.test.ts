@@ -3,7 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import contractFixture from "../../../../fixtures/local-task-rpc-contract.json";
 
 import { LocalTaskRpcClient, validateLocalTaskDaemonURL } from "./localTaskRpcClient";
-import { parseLocalTask, parseLocalTaskContextDetails, parseLocalTaskTemplates } from "./localTaskTypes";
+import {
+  parseLocalTask,
+  parseLocalTaskContextDetails,
+  parseLocalTaskSearchResults,
+  parseLocalTaskTemplates,
+} from "./localTaskTypes";
 
 class FakeWebSocket {
   readonly listeners = new Map<string, Set<(event: Event) => void>>();
@@ -237,6 +242,12 @@ describe("LocalTaskRpcClient", () => {
 
   it("strictly parses contract task results", () => {
     expect(parseLocalTask(task)).toEqual(task);
+    expect(parseLocalTask({ ...task, key: "YISHA-438" })).toEqual({ ...task, key: "YISHA-438" });
+    expect(parseLocalTaskSearchResults([{ ...task, key: "YISHA-438", rank: 1 }])).toEqual([
+      { ...task, key: "YISHA-438", rank: 1 },
+    ]);
+    const { hasActiveWorkspace: _hasActiveWorkspace, ...legacyTask } = task as Record<string, unknown>;
+    expect(parseLocalTask(legacyTask)).toEqual(legacyTask);
     for (const status of ["new", "progressing", "done", "cancelled"] as const) {
       expect(parseLocalTask({ ...task, status })).toMatchObject({ status });
     }
