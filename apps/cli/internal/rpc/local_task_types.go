@@ -23,14 +23,16 @@ type LocalTaskSetTemplatesParams struct {
 // LocalTaskCreateParams contains Local Task creation metadata.
 type LocalTaskCreateParams struct {
 	// ID is a caller-generated idempotency key and the stable local task ID.
-	ID             string                      `json:"id,omitempty"`
-	ProjectID      *string                     `json:"projectId,omitempty"`
-	OrganizationID *string                     `json:"organizationId,omitempty"`
-	Title          string                      `json:"title"`
-	Description    string                      `json:"description,omitempty"`
-	Priority       localtasktemplates.Priority `json:"priority,omitempty"`
-	Tags           []string                    `json:"tags,omitempty"`
-	TagRefs        []localtasktemplates.TagRef `json:"tagRefs,omitempty"`
+	ID             string                          `json:"id,omitempty"`
+	ProjectID      *string                         `json:"projectId,omitempty"`
+	ProjectKind    *localtasktemplates.ProjectKind `json:"projectKind,omitempty"`
+	ProjectName    *string                         `json:"projectName,omitempty"`
+	OrganizationID *string                         `json:"organizationId,omitempty"`
+	Title          string                          `json:"title"`
+	Description    string                          `json:"description,omitempty"`
+	Priority       localtasktemplates.Priority     `json:"priority,omitempty"`
+	Tags           []string                        `json:"tags,omitempty"`
+	TagRefs        []localtasktemplates.TagRef     `json:"tagRefs,omitempty"`
 }
 
 // LocalTaskIDParams identifies one Local Task.

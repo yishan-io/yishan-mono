@@ -18,6 +18,7 @@ type LocalTaskListProps = {
   tasks: LocalTask[];
   onSelect: (taskId: string) => void;
   projectDisplayById: Readonly<Record<string, ProjectDisplay>>;
+  folderProjectIds: ReadonlySet<string>;
   tagCatalog: LocalTaskTagCatalogEntry[];
   unavailableTaskIds: ReadonlySet<string>;
   creatingTaskIds: ReadonlySet<string>;
@@ -29,6 +30,7 @@ export function LocalTaskList({
   tasks,
   onSelect,
   projectDisplayById,
+  folderProjectIds,
   tagCatalog,
   unavailableTaskIds,
   creatingTaskIds,
@@ -53,7 +55,11 @@ export function LocalTaskList({
             if (!task) return null;
             const project = task.projectId ? projectDisplayById[task.projectId] : undefined;
             const canCreateWorkspace =
-              task.projectId && !task.hasActiveWorkspace && task.status !== "done" && task.status !== "cancelled";
+              task.projectId &&
+              !folderProjectIds.has(task.projectId) &&
+              !task.hasActiveWorkspace &&
+              task.status !== "done" &&
+              task.status !== "cancelled";
             const isWorkspaceCreationDisabled = unavailableTaskIds.has(task.id) || creatingTaskIds.has(task.id);
             return (
               <Paper

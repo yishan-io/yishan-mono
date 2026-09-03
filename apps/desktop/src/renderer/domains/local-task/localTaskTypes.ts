@@ -29,6 +29,10 @@ export type LocalTask = {
   /** Daemon-assigned human-readable task key, or null while legacy data is backfilled. */
   key: string | null;
   projectId: string | null;
+  /** Folder classification persisted by the daemon; absent for real projects and legacy tasks. */
+  projectKind?: "folder";
+  /** Folder name persisted with a folder task so it survives workspace removal. */
+  projectName?: string;
   title: string;
   description: string;
   status: LocalTaskStatus;
@@ -138,6 +142,8 @@ export type CreateLocalTaskInput = {
   /** Stable UUID retained when retrying the same create request. */
   id?: string;
   projectId?: string;
+  projectKind?: "folder";
+  projectName?: string;
   organizationId?: string;
   title: string;
   description?: string;

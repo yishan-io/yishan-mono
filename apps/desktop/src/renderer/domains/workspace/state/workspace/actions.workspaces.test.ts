@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { describe, expect, it } from "vitest";
 import { createWorkspaceActions } from "./actions.workspaces";
 
@@ -7,6 +8,7 @@ type TestState = {
   projects: Array<{ id: string; localPath?: string; worktreePath: string }>;
   workspaces: Array<{
     id: string;
+    projectId?: string;
     repoId: string;
     name: string;
     title: string;
@@ -67,6 +69,34 @@ function createHarness() {
 }
 
 describe("createWorkspaceActions", () => {
+  it("preserves local-folder workspaces until their authoritative snapshot loads", () => {
+    const harness = createHarness();
+    harness.getState().workspaces.push({
+      id: "folder-1",
+      projectId: LOCAL_FOLDER_PROJECT_ID,
+      repoId: "folder-1",
+      name: "My Folder",
+      title: "My Folder",
+      sourceBranch: "",
+      branch: "",
+      summaryId: "folder-1",
+    });
+
+    harness.actions.load("org-1", [
+      {
+        id: "workspace-2",
+        repoId: "repo-1",
+        name: "loaded",
+        title: "Loaded",
+        sourceBranch: "main",
+        branch: "loaded",
+        summaryId: "workspace-2",
+      },
+    ]);
+
+    expect(harness.getState().workspaces.map((workspace) => workspace.id)).toEqual(["workspace-2", "folder-1"]);
+  });
+
   it("adds workspace state and updates selection", () => {
     const harness = createHarness();
 

@@ -137,3 +137,26 @@ func TestCloudKeyAllocator_UsesPersonalFallbackWhenLegacyProjectNoLongerExists(t
 		t.Fatalf("allocation paths = %q, want %q", got, want)
 	}
 }
+
+func TestCloudKeyAllocator_UsesPersonalRouteForFolderTask(t *testing.T) {
+	paths := make([]string, 0, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		paths = append(paths, request.URL.Path)
+		_, _ = io.WriteString(writer, `{"key":"PERSONAL-1"}`)
+	}))
+	defer server.Close()
+	allocator := newCloudKeyAllocator(session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "token"}}))
+	folderID, folderKind := "folder-workspace-1", localtask.ProjectKindFolder
+	key, err := allocator.AllocateTaskKey(context.Background(), nodelocaltask.KeyAllocationRequest{
+		TaskID: "folder-task", ProjectID: &folderID, ProjectKind: &folderKind,
+	})
+	if err != nil {
+		t.Fatalf("allocate folder task key: %v", err)
+	}
+	if key != "PERSONAL-1" {
+		t.Fatalf("key = %q, want personal key", key)
+	}
+	if got, want := len(paths), 1; got != want || paths[0] != "/me/local-tasks/key" {
+		t.Fatalf("allocation paths = %#v, want only personal allocation", paths)
+	}
+}

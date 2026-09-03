@@ -56,6 +56,20 @@ function requireNullableString(record: Record<string, unknown>, field: string, p
   return fieldValue;
 }
 
+function parseOptionalFolderProjectKind(record: Record<string, unknown>): "folder" | undefined {
+  if (record.projectKind === undefined || record.projectKind === null) return undefined;
+  if (record.projectKind !== "folder") throw new TypeError("invalid Local Task payload");
+  return "folder";
+}
+
+function parseOptionalFolderProjectName(record: Record<string, unknown>): string | undefined {
+  if (record.projectName === undefined || record.projectName === null) return undefined;
+  if (typeof record.projectName !== "string" || record.projectName.trim().length === 0) {
+    throw new TypeError("invalid Local Task payload");
+  }
+  return record.projectName;
+}
+
 function parseOptionalTaskKey(record: Record<string, unknown>): string | null {
   const key = record.key;
   if (key === undefined || key === null) return null;
@@ -122,6 +136,8 @@ function parseTask(payload: unknown): LocalTask {
     id: requireString(record, "id", "Local Task"),
     key: parseOptionalTaskKey(record),
     projectId: requireNullableString(record, "projectId", "Local Task"),
+    projectKind: parseOptionalFolderProjectKind(record),
+    projectName: parseOptionalFolderProjectName(record),
     title: requireString(record, "title", "Local Task"),
     description: record.description,
     status: record.status,

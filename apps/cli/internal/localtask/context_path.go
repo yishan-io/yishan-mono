@@ -11,6 +11,7 @@ const projectContextDirectoryName = ".my-context"
 
 // ContextWorkspace supplies an authoritative local workspace path for context resolution.
 type ContextWorkspace struct {
+	ID           string
 	ProjectID    string
 	WorktreePath string
 }
@@ -34,7 +35,11 @@ func ResolveTaskContextPath(task Task, workspaces []ContextWorkspace) (string, e
 		return ResolveDefaultGlobalContextPath(task.ID)
 	}
 	for _, workspace := range workspaces {
-		if workspace.ProjectID != *task.ProjectID {
+		workspaceKey := workspace.ProjectID
+		if task.ProjectKind != nil && *task.ProjectKind == ProjectKindFolder {
+			workspaceKey = workspace.ID
+		}
+		if workspaceKey != *task.ProjectID {
 			continue
 		}
 		directory, err := ResolveProjectContextPath(workspace.WorktreePath, task.ID)

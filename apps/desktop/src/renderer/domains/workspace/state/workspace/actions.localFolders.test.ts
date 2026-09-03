@@ -140,6 +140,16 @@ describe("createLocalFolderActions", () => {
     expect(workspaceState.filter((w) => w.id === "folder-2")).toHaveLength(1);
   });
 
+  it("removes folders omitted from an authoritative empty snapshot", () => {
+    const harness = createHarness();
+    harness.actions.loadLocalFolders([folder({ id: "folder-1", path: "/a" })]);
+
+    harness.actions.loadLocalFolders([]);
+
+    expect(harness.getState().workspaces.some((workspace) => workspace.id === "folder-1")).toBe(false);
+    expect(harness.getState().workspaces.some((workspace) => workspace.id === "workspace-1")).toBe(true);
+  });
+
   it("dedupes folder ids within a single snapshot", () => {
     const harness = createHarness();
 

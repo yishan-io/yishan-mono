@@ -13,6 +13,7 @@ type KeyAllocationRequest struct {
 	TaskID         string
 	ProjectID      *string
 	OrganizationID *string
+	ProjectKind    *domain.ProjectKind
 }
 
 // KeyAllocator reserves cloud-backed display keys for Local Tasks.
@@ -36,7 +37,7 @@ func (s *Service) allocateTaskKey(ctx context.Context, task domain.Task) (*strin
 		return nil, &KeyAllocationError{Cause: domain.ErrKeyAllocationUnavailable}
 	}
 	key, err := s.deps.KeyAllocator.AllocateTaskKey(ctx, KeyAllocationRequest{
-		TaskID: task.ID, ProjectID: task.ProjectID, OrganizationID: task.OrganizationID,
+		TaskID: task.ID, ProjectID: task.ProjectID, OrganizationID: task.OrganizationID, ProjectKind: task.ProjectKind,
 	})
 	if err != nil {
 		return nil, &KeyAllocationError{Cause: err}

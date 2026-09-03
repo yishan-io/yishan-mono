@@ -130,3 +130,41 @@ func assertContextDetails(t *testing.T, details domain.ContextDetails, directory
 		}
 	}
 }
+
+func TestService_GetContextDetailsResolvesFolderTaskByWorkspaceID(t *testing.T) {
+	service, _, repository := newTestService(t)
+	folderID, folderKind, folderName := "folder-workspace-1", domain.ProjectKindFolder, "Folder context"
+	task, err := repository.Create(context.Background(), domain.Task{
+		ProjectID: &folderID, ProjectKind: &folderKind, ProjectName: &folderName, Title: "Folder context", Status: domain.StatusProgressing, Priority: domain.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worktreePath, contextRoot := createContextWorkspace(t)
+	service.deps.Registry = contextTestRegistry{workspaces: []workspace.Workspace{{
+		ID: folderID, ProjectID: "local-folder", Path: worktreePath,
+	}}}
+
+	contextValue, err := service.GetContextDetails(context.Background(), rpc.LocalTaskIDParams{ID: task.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalRoot, err := filepath.EvalSymlinks(contextRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertContextDetails(t, contextValue.(domain.ContextDetails), filepath.Join(canonicalRoot, "task-context", task.ID), nil)
+}
+
+func createContextWorkspace(t *testing.T) (string, string) {
+	t.Helper()
+	worktreePath := t.TempDir()
+	contextRoot := filepath.Join(t.TempDir(), "canonical-context")
+	if err := os.MkdirAll(contextRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(contextRoot, filepath.Join(worktreePath, ".my-context")); err != nil {
+		t.Fatal(err)
+	}
+	return worktreePath, contextRoot
+}

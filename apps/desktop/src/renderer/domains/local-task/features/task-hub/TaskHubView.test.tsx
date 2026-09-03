@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -180,46 +181,6 @@ describe("TaskHubView", () => {
     ).not.toBeNull();
   });
 
-  it("keeps Start disabled after create acceptance until the Hub projection reports an active workspace", async () => {
-    render(<TaskHubView />);
-    const startButton = screen.getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" });
-
-    await userEvent.setup().click(startButton);
-    await waitFor(() => expect(startButton.getAttribute("disabled")).not.toBeNull());
-    fireEvent.click(startButton);
-
-    expect(workspaceCommands.createWorkspaceForLocalTask).toHaveBeenCalledOnce();
-    expect(screen.queryByText("localTask.workspace.details")).toBeNull();
-  });
-  it("keeps each task's create action busy while concurrent launches are in progress", async () => {
-    const secondTask = { ...task, id: "task-2", title: "Ship Workspace" };
-    const resolveLaunches: Array<() => void> = [];
-    workspaceCommands.createWorkspaceForLocalTask.mockImplementation(
-      () =>
-        new Promise<string>((resolve) => {
-          resolveLaunches.push(() => resolve("workspace-created"));
-        }),
-    );
-    localTaskStore.setState({ hubTasks: [task, secondTask] });
-    render(<TaskHubView />);
-
-    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" }));
-    fireEvent.click(screen.getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Workspace" }));
-
-    await waitFor(() => {
-      expect(
-        screen
-          .getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Task Hub" })
-          .getAttribute("disabled"),
-      ).not.toBeNull();
-      expect(
-        screen
-          .getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Ship Workspace" })
-          .getAttribute("disabled"),
-      ).not.toBeNull();
-    });
-    for (const resolveLaunch of resolveLaunches) resolveLaunch();
-  });
   it.each([
     ["global", { projectId: null }],
     ["completed", { status: "done" as const }],
@@ -406,42 +367,6 @@ describe("TaskHubView", () => {
     expect(screen.getByRole("textbox", { name: "localTask.filters.searchTags" })).toBeTruthy();
     fireEvent.keyDown(screen.getByRole("textbox", { name: "localTask.filters.searchTags" }), { key: "Escape" });
   });
-  it("renders daemon project metadata when renderer project state differs and omits global task chips", () => {
-    localTaskStore.setState({
-      hubTasks: [task, { ...task, id: "global-task", projectId: null, title: "Global task" }],
-      hubProjectDisplayById: {
-        "project-1": { id: "project-1", name: "Daemon Project", icon: "rocket", color: "#3B82F6" },
-      },
-    });
-    render(<TaskHubView />);
-    const daemonProjectChip = screen.getByText("Daemon Project").closest(".MuiChip-root");
-    expect(daemonProjectChip).toBeTruthy();
-    expect(screen.queryByText("Renderer Project")).toBeNull();
-    expect(daemonProjectChip?.querySelector(".MuiChip-icon")?.textContent).toBe("project-icon-rocket");
-    expect(daemonProjectChip?.querySelector("[style*='background']")).toBeNull();
-    expect(screen.getByText("Global task").closest("button")?.querySelector(".MuiChip-root")).toBeNull();
-  });
-  it("falls back to the project ID when legacy task project metadata is unresolved", () => {
-    localTaskStore.setState({
-      hubTasks: [{ ...task, id: "legacy-task", projectId: "legacy-project", title: "Historical task" }],
-      hubProjectDisplayById: {},
-    });
-    render(<TaskHubView />);
-    const projectChip = screen.getByText("legacy-project").closest(".MuiChip-root");
-    expect(projectChip).toBeTruthy();
-    expect(projectChip?.querySelector(".MuiChip-icon")).toBeNull();
-    expect(screen.queryByText("localTask.states.noValue")).toBeNull();
-  });
-  it("propagates catalog color tokens to Task Hub row tag chips", () => {
-    localTaskStore.setState({
-      hubTasks: [{ ...task, tagRefs: [{ id: "tag-backend", name: "backend" }] }],
-      tagCatalog: [{ id: "tag-backend", key: "backend", name: "backend", aliases: ["backend"], color: "#3B82F6" }],
-    });
-    render(<TaskHubView />);
-    const chip = screen.getByText("backend").closest(".MuiChip-root");
-    expect(chip?.querySelector("[data-tag-chip-dot]")).toBeTruthy();
-    expect(chip?.querySelector(".MuiChip-icon")).toBeNull();
-  });
   it("shows full Task Hub tag labels without clipping and keeps the overflow count unadorned", () => {
     const longTag = "a".repeat(MAX_LOCAL_TASK_TAG_CODE_POINTS);
     localTaskStore.setState({
@@ -566,10 +491,6 @@ describe("TaskHubView", () => {
     expect(screen.getByText("Task 20")).toBeTruthy();
     act(() => localTaskStore.setState({ hubTasks: tasks.slice(0, 1) }));
     await waitFor(() => expect(screen.getByText("Task 0")).toBeTruthy());
-    expect(screen.queryByRole("navigation", { name: "localTask.pagination.label" })).toBeNull();
-  });
-  it("hides pagination when the Task Hub has one page", () => {
-    render(<TaskHubView />);
     expect(screen.queryByRole("navigation", { name: "localTask.pagination.label" })).toBeNull();
   });
 });

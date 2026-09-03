@@ -16,11 +16,12 @@ import {
   TextField,
 } from "@mui/material";
 import { type WorkspaceProjectRecord, projectStore, renderProjectIcon } from "@renderer/domains/project";
+import { isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
 import { VirtualizedListbox } from "@renderer/ui/components/VirtualizedListbox";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   createAndLinkLocalTask,
@@ -37,6 +38,7 @@ import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskTagsInput } from "../tags/LocalTaskTagsInput";
 import { LocalTaskDescriptionEditor } from "./LocalTaskDescriptionEditor";
 import { LocalTaskTemplateControls } from "./LocalTaskTemplateControls";
+import { getLocalTaskProjectOptions } from "./localTaskProjectOptions";
 
 type CreateLocalTaskDialogProps = {
   open: boolean;
@@ -66,6 +68,8 @@ const PRIORITY_VALUE_SX = { display: "flex", alignItems: "center", gap: 0.75 };
 export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLocalTaskDialogProps) {
   const { t } = useTranslation();
   const projects = projectStore((state) => state.projects);
+  const workspaces = workspaceStore((state) => state.workspaces);
+  const projectOptions = useMemo(() => getLocalTaskProjectOptions(projects, workspaces), [projects, workspaces]);
   const isMutationLoading = localTaskStore((state) => state.isMutationLoading);
   const tagCatalog = localTaskStore((state) => state.tagCatalog);
   const [project, setProject] = useState<WorkspaceProjectRecord | null>(null);
@@ -172,9 +176,13 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
         }
         const createAttemptId = createAttemptIdRef.current ?? generateId();
         createAttemptIdRef.current = createAttemptId;
+        const folderWorkspace = workspaces.find(
+          (workspace) => isFolderWorkspace(workspace) && workspace.id === project?.id,
+        );
         const input = {
           id: createAttemptId,
           projectId: project?.id,
+          ...(folderWorkspace ? { projectKind: "folder" as const, projectName: folderWorkspace.name } : {}),
           organizationId: project?.organizationId,
           title: trimmedTitle,
           description: description.trim(),
@@ -212,6 +220,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
       tagIds,
       title,
       workspaceId,
+      workspaces,
     ],
   );
   const handleDialogClose = useCallback(() => {
@@ -236,7 +245,7 @@ export function CreateLocalTaskDialog({ open, onClose, workspaceId }: CreateLoca
           <Autocomplete
             size="small"
             disabled={isMutationLoading || Boolean(createdTask)}
-            options={projects}
+            options={projectOptions}
             value={project}
             onChange={handleProjectChange}
             getOptionLabel={(option) => option.name}

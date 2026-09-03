@@ -92,6 +92,7 @@ export function WorkspaceTaskMetadataSidebar({
     [onPriorityChange],
   );
   const project = details?.project;
+  const folderName = task.projectKind === "folder" ? task.projectName : undefined;
   const handleContextFileSelect = useCallback(
     (path: string, isDirectory: boolean) => {
       if (isDirectory) return;
@@ -228,6 +229,8 @@ export function WorkspaceTaskMetadataSidebar({
                 </Box>
                 <Typography variant="body2">{project.name}</Typography>
               </ButtonBase>
+            ) : folderName ? (
+              <Typography variant="body2">{folderName}</Typography>
             ) : (
               <Typography variant="body2" color="text.secondary">
                 {task.projectId === null && details?.workspaces.length === 0

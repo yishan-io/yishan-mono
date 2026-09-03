@@ -138,7 +138,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     workbenchNavigationStore.getState().setActiveProjectId(reconciled.selectedProjectId);
     workbenchNavigationStore.getState().setActiveWorkspaceId(reconciled.selectedWorkspaceId);
 
-    // load() rebuilds workspaces[] and drops folder items; re-merge folders after it.
+    // load() retains prior folder items until the authoritative folder snapshot replaces them.
     const daemonFolders = await listLocalFolders();
 
     if (!isLatestWorkspaceSnapshotRequest(requestId)) {

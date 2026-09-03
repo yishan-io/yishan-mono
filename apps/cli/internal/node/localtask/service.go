@@ -114,8 +114,8 @@ func buildNewTask(req rpc.LocalTaskCreateParams) (domain.Task, error) {
 		taskID = req.ID
 	}
 	task := domain.Task{
-		ID: taskID, ProjectID: req.ProjectID, OrganizationID: req.OrganizationID, Title: req.Title,
-		Description: req.Description, Status: domain.StatusNew, Priority: req.Priority, Tags: req.Tags, TagRefs: req.TagRefs,
+		ID: taskID, ProjectID: req.ProjectID, ProjectKind: req.ProjectKind, ProjectName: req.ProjectName,
+		OrganizationID: req.OrganizationID, Title: req.Title, Description: req.Description, Status: domain.StatusNew, Priority: req.Priority, Tags: req.Tags, TagRefs: req.TagRefs,
 	}
 	if task.Priority == "" {
 		task.Priority = domain.PriorityMedium
@@ -317,7 +317,7 @@ func (s *Service) resolveContextDirectory(task domain.Task) (string, error) {
 	if s.deps.Registry != nil {
 		for _, localWorkspace := range s.deps.Registry.List() {
 			workspaces = append(workspaces, domain.ContextWorkspace{
-				ProjectID: localWorkspace.ProjectID, WorktreePath: localWorkspace.Path,
+				ID: localWorkspace.ID, ProjectID: localWorkspace.ProjectID, WorktreePath: localWorkspace.Path,
 			})
 		}
 	}

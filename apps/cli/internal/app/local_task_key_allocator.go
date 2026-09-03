@@ -6,6 +6,7 @@ import (
 
 	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/adapter/cloud/session"
+	domain "yishan/apps/cli/internal/localtask"
 	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 )
 
@@ -29,7 +30,7 @@ func (allocator *cloudKeyAllocator) AllocateTaskKey(ctx context.Context, request
 
 func (allocator *cloudKeyAllocator) allocate(ctx context.Context, request nodelocaltask.KeyAllocationRequest) (string, error) {
 	client := allocator.session.APIClient()
-	if request.ProjectID == nil {
+	if request.ProjectID == nil || (request.ProjectKind != nil && *request.ProjectKind == domain.ProjectKindFolder) {
 		response, err := client.AllocatePersonalLocalTaskKeyContext(ctx, request.TaskID)
 		return response.Key, err
 	}

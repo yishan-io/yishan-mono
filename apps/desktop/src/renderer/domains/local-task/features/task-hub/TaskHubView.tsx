@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { type WorkspaceProjectRecord, projectStore } from "@renderer/domains/project";
 import { PaneHeader, PaneToggleButton, useWorkspacePaneVisibilityContext } from "@renderer/domains/workbench";
+import { type WorkspaceItem, workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeft, LuListFilter, LuListTodo, LuPanelLeft, LuPlus, LuRefreshCw, LuSearch } from "react-icons/lu";
@@ -21,18 +22,51 @@ import {
   refreshLocalTaskHub,
   setLocalTaskHubSearchQuery,
 } from "../../commands/localTaskCommands";
+import type { LocalTask, LocalTaskProjectDisplay } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
 import { LocalTaskHubFilterChips } from "./LocalTaskHubFilterChips";
 import { LocalTaskHubFilterMenu } from "./LocalTaskHubFilterMenu";
 import { LocalTaskList } from "./LocalTaskList";
 import { TaskHubTaskDetails } from "./TaskHubTaskDetails";
+import { getFolderWorkspaceProjectOptions } from "./localTaskProjectOptions";
 import { useTaskHubDetailProjection } from "./useTaskHubDetailProjection";
 import { useTaskHubWorkspaceCreation } from "./useTaskHubWorkspaceCreation";
 
 const TASK_HUB_PAGE_SIZE = 20;
 
 type TaskHubProjectFilterOption = Pick<WorkspaceProjectRecord, "id" | "name" | "icon">;
+type TaskHubProjectDisplay = LocalTaskProjectDisplay;
+type TaskHubProjectDisplays = {
+  projectDisplayById: Record<string, TaskHubProjectDisplay>;
+  folderProjectIds: ReadonlySet<string>;
+};
+
+/** Resolves Task Hub displays for daemon projects and synthetic folder projects. */
+export function resolveTaskHubProjectDisplays(
+  projectDisplayById: Record<string, TaskHubProjectDisplay>,
+  tasks: LocalTask[],
+  workspaces: WorkspaceItem[],
+): TaskHubProjectDisplays {
+  const folderProjectIds = new Set<string>();
+  const resolvedProjectDisplayById = { ...projectDisplayById };
+  for (const task of tasks) {
+    if (task.projectId && task.projectKind === "folder" && task.projectName) {
+      folderProjectIds.add(task.projectId);
+      resolvedProjectDisplayById[task.projectId] = {
+        id: task.projectId,
+        name: task.projectName,
+        icon: "folder",
+        color: "text.secondary",
+      };
+    }
+  }
+  for (const folderProject of getFolderWorkspaceProjectOptions(workspaces)) {
+    folderProjectIds.add(folderProject.id);
+    resolvedProjectDisplayById[folderProject.id] = folderProject;
+  }
+  return { projectDisplayById: resolvedProjectDisplayById, folderProjectIds };
+}
 
 /** Merges the renderer catalog with all daemon-resolved Hub project displays by stable project ID. */
 export function getTaskHubProjectFilterOptions(
@@ -72,6 +106,11 @@ export function TaskHubView() {
   const taskById = localTaskStore((state) => state.taskById);
   const projectDisplayById = localTaskStore((state) => state.hubProjectDisplayById);
   const projects = projectStore((state) => state.projects);
+  const workspaces = workspaceStore((state) => state.workspaces);
+  const taskHubProjectDisplays = useMemo(
+    () => resolveTaskHubProjectDisplays(projectDisplayById, tasks, workspaces),
+    [projectDisplayById, tasks, workspaces],
+  );
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [filterMenuAnchor, setFilterMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -88,8 +127,8 @@ export function TaskHubView() {
     : undefined;
   const detailProjection = useTaskHubDetailProjection(selectedTask);
   const filterProjects = useMemo(
-    () => getTaskHubProjectFilterOptions(projects, projectDisplayById),
-    [projectDisplayById, projects],
+    () => getTaskHubProjectFilterOptions(projects, taskHubProjectDisplays.projectDisplayById),
+    [projects, taskHubProjectDisplays.projectDisplayById],
   );
 
   useEffect(() => {
@@ -256,7 +295,8 @@ export function TaskHubView() {
               <LocalTaskList
                 tasks={paginatedTasks}
                 onSelect={handleSelectTask}
-                projectDisplayById={projectDisplayById}
+                projectDisplayById={taskHubProjectDisplays.projectDisplayById}
+                folderProjectIds={taskHubProjectDisplays.folderProjectIds}
                 tagCatalog={detailProjection.tagCatalog}
                 unavailableTaskIds={unavailableTaskIds}
                 creatingTaskIds={creatingTaskIds}

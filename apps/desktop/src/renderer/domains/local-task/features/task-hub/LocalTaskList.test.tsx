@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LocalTask } from "../../localTaskTypes";
 import { LocalTaskList } from "./LocalTaskList";
 
@@ -37,6 +37,37 @@ const task: LocalTask = {
 };
 
 describe("LocalTaskList", () => {
+  afterEach(cleanup);
+
+  it("shows a folder project's name but omits its workspace action while retaining regular project actions", () => {
+    const folderTask = { ...task, id: "folder-task", projectId: "folder-1", title: "Review folder task" };
+    const projectTask = { ...task, id: "project-task", projectId: "project-1", title: "Review project task" };
+
+    render(
+      <LocalTaskList
+        tasks={[folderTask, projectTask]}
+        onSelect={vi.fn()}
+        projectDisplayById={{
+          "folder-1": { name: "My Folder", icon: "folder", color: "warning.main" },
+          "project-1": { name: "Project One", icon: "rocket", color: "primary.main" },
+        }}
+        folderProjectIds={new Set(["folder-1"])}
+        tagCatalog={[]}
+        unavailableTaskIds={new Set()}
+        creatingTaskIds={new Set()}
+        onCreateWorkspace={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("My Folder")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "localTask.actions.startWorkspaceForTask: Review folder task" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "localTask.actions.startWorkspaceForTask: Review project task" }),
+    ).toBeTruthy();
+  });
+
   it("renders compact Priority, Key, Status, and Title cells without a table header", () => {
     const onSelect = vi.fn();
     render(
@@ -44,6 +75,7 @@ describe("LocalTaskList", () => {
         tasks={[task]}
         onSelect={onSelect}
         projectDisplayById={{}}
+        folderProjectIds={new Set()}
         tagCatalog={[]}
         unavailableTaskIds={new Set()}
         creatingTaskIds={new Set()}
