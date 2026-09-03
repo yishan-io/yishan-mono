@@ -13,6 +13,7 @@ export type LocalTaskTagRef = { id: string; name?: string };
 /** Authoritative Local Task metadata returned by the daemon. */
 export type LocalTask = {
   id: string;
+  key?: string;
   projectId: string | null;
   title: string;
   description: string;
@@ -21,6 +22,7 @@ export type LocalTask = {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  hasActiveWorkspace: boolean;
   tags: string[];
   tagRefs: LocalTaskTagRef[];
 };
@@ -69,11 +71,21 @@ function hasExactKeys(record: WireRecord, keys: readonly string[]): boolean {
   const actualKeys = Object.keys(record);
   return actualKeys.length === keys.length && actualKeys.every((key) => keys.includes(key));
 }
-function requireRecord(payload: unknown, name: string, keys: readonly string[]): WireRecord {
+function requireRecord(
+  payload: unknown,
+  name: string,
+  keys: readonly string[],
+  optionalKeys: readonly string[] = [],
+): WireRecord {
   if (payload === null || typeof payload !== "object" || Array.isArray(payload))
     throw new TypeError(`invalid ${name} payload`);
   const record = payload as WireRecord;
-  if (!hasExactKeys(record, keys)) throw new TypeError(`invalid ${name} payload`);
+  const recordKeys = Object.keys(record);
+  if (
+    !keys.every((key) => key in record) ||
+    !recordKeys.every((key) => keys.includes(key) || optionalKeys.includes(key))
+  )
+    throw new TypeError(`invalid ${name} payload`);
   return record;
 }
 /** Parses an opaque daemon or imported task ID without imposing an ID format. */
@@ -115,19 +127,25 @@ function parsePriority(payload: unknown): LocalTaskPriority {
 }
 /** Strictly parses a daemon Local Task result. */
 export function parseLocalTask(payload: unknown): LocalTask {
-  const record = requireRecord(payload, "Local Task", [
-    "id",
-    "projectId",
-    "title",
-    "description",
-    "status",
-    "priority",
-    "createdAt",
-    "updatedAt",
-    "completedAt",
-    "tags",
-    "tagRefs",
-  ]);
+  const record = requireRecord(
+    payload,
+    "Local Task",
+    [
+      "id",
+      "projectId",
+      "title",
+      "description",
+      "status",
+      "priority",
+      "createdAt",
+      "updatedAt",
+      "completedAt",
+      "hasActiveWorkspace",
+      "tags",
+      "tagRefs",
+    ],
+    ["key"],
+  );
   if (
     typeof record.title !== "string" ||
     typeof record.description !== "string" ||
@@ -137,6 +155,7 @@ export function parseLocalTask(payload: unknown): LocalTask {
     throw new TypeError("invalid Local Task payload");
   return {
     id: parseLocalTaskID(record.id),
+    ...(record.key === undefined ? {} : { key: parseLocalTaskID(record.key) }),
     projectId: parseNullableString(record.projectId, "Local Task"),
     title: record.title,
     description: record.description,
@@ -145,10 +164,15 @@ export function parseLocalTask(payload: unknown): LocalTask {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     completedAt: parseNullableString(record.completedAt, "Local Task"),
+    hasActiveWorkspace: typeof record.hasActiveWorkspace === "boolean" ? record.hasActiveWorkspace : invalidLocalTask(),
     tags: parseStringArray(record.tags, "Local Task"),
     tagRefs: parseLocalTaskTagRefs(record.tagRefs),
   };
 }
+function invalidLocalTask(): never {
+  throw new TypeError("invalid Local Task payload");
+}
+
 /** Strictly parses current personal task templates and the agent default. */
 export function parseLocalTaskTemplates(payload: unknown): LocalTaskTemplatesResult {
   const templatesPayload = requireRecord(payload, "Local Task templates", ["templates", "agentDefaultId"]);
@@ -193,20 +217,26 @@ export function parseLocalTaskList(payload: unknown): LocalTask[] {
 export function parseLocalTaskSearchResults(payload: unknown): LocalTaskSearchResult[] {
   if (!Array.isArray(payload)) throw new TypeError("invalid Local Task search payload");
   return payload.map((entry) => {
-    const record = requireRecord(entry, "Local Task search", [
-      "id",
-      "projectId",
-      "title",
-      "description",
-      "status",
-      "priority",
-      "createdAt",
-      "updatedAt",
-      "completedAt",
-      "tags",
-      "tagRefs",
-      "rank",
-    ]);
+    const record = requireRecord(
+      entry,
+      "Local Task search",
+      [
+        "id",
+        "projectId",
+        "title",
+        "description",
+        "status",
+        "priority",
+        "createdAt",
+        "updatedAt",
+        "completedAt",
+        "hasActiveWorkspace",
+        "tags",
+        "tagRefs",
+        "rank",
+      ],
+      ["key"],
+    );
     if (typeof record.rank !== "number" || !Number.isFinite(record.rank))
       throw new TypeError("invalid Local Task search payload");
     const { rank: _rank, ...taskPayload } = record;

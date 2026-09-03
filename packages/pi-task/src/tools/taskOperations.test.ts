@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LocalTaskRPCError } from "../backend/localTaskRpcClient";
 import type { LocalTask, LocalTaskSearchResult } from "../backend/localTaskTypes";
 
 import { buildDescription, createLocalTaskOperations } from "./taskOperations";
@@ -71,12 +72,37 @@ describe("LocalTaskOperations", () => {
     });
   });
 
-  it("uses daemon-generated and imported opaque IDs without imposing an ID pattern", async () => {
+  it("reads daemon-generated and imported opaque IDs when search fails", async () => {
     const client = createClient({ get: projectTask });
     const operations = createLocalTaskOperations(client, "project-a");
+    client.search.mockRejectedValueOnce(new Error("Search timed out."));
 
     await expect(operations.get("imported/task-id")).resolves.toEqual(projectTask);
     expect(client.get).toHaveBeenCalledWith("imported/task-id");
+    expect(client.search).not.toHaveBeenCalled();
+  });
+
+  it("resolves an exact task key within project and global scope after an ID miss", async () => {
+    const duplicateProjectTask = createTask({ ...projectTask, id: "project-task", key: "TASK-438" });
+    const duplicateGlobalTask = createTask({ ...globalTask, id: "global-task", key: "TASK-438" });
+    const client = createClient({ search: [searchResult(duplicateProjectTask), searchResult(duplicateGlobalTask)] });
+    client.get.mockRejectedValue(new LocalTaskRPCError(-32004, "local task not found"));
+
+    await expect(createLocalTaskOperations(client, "project-a").get("TASK-438")).resolves.toEqual(duplicateProjectTask);
+    expect(client.search).toHaveBeenLastCalledWith("TASK-438", { projectId: "project-a" });
+    await expect(createLocalTaskOperations(client).get("TASK-438")).resolves.toEqual(duplicateGlobalTask);
+    expect(client.search).toHaveBeenLastCalledWith("TASK-438", {});
+    expect(client.get).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not search when direct ID lookup fails for a reason other than not found", async () => {
+    const client = createClient();
+    const operations = createLocalTaskOperations(client, "project-a");
+    const getError = new Error("Local Task RPC connection failed");
+    client.get.mockRejectedValueOnce(getError);
+
+    await expect(operations.get("imported/task-id")).rejects.toBe(getError);
+    expect(client.search).not.toHaveBeenCalled();
   });
 
   it("sends project filters and rejects cross-project get and update IDs", async () => {
@@ -250,6 +276,7 @@ function createTask(overrides: Partial<LocalTask> = {}): LocalTask {
     createdAt: "2026-08-23T00:00:00Z",
     updatedAt: "2026-08-23T00:00:00Z",
     completedAt: null,
+    hasActiveWorkspace: false,
     tags: ["tag"],
     tagRefs: [],
     ...overrides,

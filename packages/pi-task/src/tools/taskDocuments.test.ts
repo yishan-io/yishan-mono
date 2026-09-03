@@ -167,6 +167,7 @@ function task(status: LocalTask["status"] = "progressing"): LocalTask {
     createdAt: "",
     updatedAt: "",
     completedAt: null,
+    hasActiveWorkspace: false,
     tags: [],
     tagRefs: [],
   };
