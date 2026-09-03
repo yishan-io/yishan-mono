@@ -1,7 +1,12 @@
 import { lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, normalize, resolve } from "node:path";
 
-import type { LocalTaskContextDetails, LocalTaskStatus, UpdateLocalTaskInput } from "../backend/localTaskTypes";
+import type {
+  LocalTask,
+  LocalTaskContextDetails,
+  LocalTaskStatus,
+  UpdateLocalTaskInput,
+} from "../backend/localTaskTypes";
 import type { LocalTaskOperationOptions, LocalTaskOperations } from "./taskOperations";
 
 const DOCUMENT_BASENAMES = { plan: "plan.md", notes: "notes.md", outcome: "outcome.md" } as const;
@@ -100,7 +105,7 @@ export class LocalTaskDocuments {
       options.signal === undefined
         ? await this.metadata.get(id)
         : await this.metadata.get(id, { signal: options.signal });
-    const documentPath = await this.resolveDocumentPath(id, "outcome", options, task.status);
+    const documentPath = await this.resolveDocumentPath(id, "outcome", options, task);
     return withFileMutationQueue(documentPath, async () => {
       throwIfAborted(options.signal);
       await writeAtomic(documentPath.directory, documentPath.path, "outcome", outcome, options.signal);
@@ -108,8 +113,8 @@ export class LocalTaskDocuments {
       throwIfAborted(options.signal);
       try {
         return options.signal === undefined
-          ? await this.backend.update(id, { status: "done" })
-          : await this.backend.update(id, { status: "done" }, { signal: options.signal });
+          ? await this.backend.update(task.id, { status: "done" })
+          : await this.backend.update(task.id, { status: "done" }, { signal: options.signal });
       } catch (error) {
         throw new Error("Outcome was saved, but task completion failed. Retry task_finish to mark the task done.", {
           cause: error,
@@ -122,17 +127,18 @@ export class LocalTaskDocuments {
     id: string,
     document: TaskContextDocument,
     options: TaskDocumentOptions,
-    knownStatus?: LocalTaskStatus,
+    resolvedTask?: Pick<LocalTask, "id" | "status">,
   ): Promise<{ directory: string; path: string }> {
-    if (knownStatus === undefined)
-      options.signal === undefined
+    const task =
+      resolvedTask ??
+      (options.signal === undefined
         ? await this.metadata.get(id)
-        : await this.metadata.get(id, { signal: options.signal });
+        : await this.metadata.get(id, { signal: options.signal }));
     throwIfAborted(options.signal);
     const context =
       options.signal === undefined
-        ? await this.backend.getContextDetails(id)
-        : await this.backend.getContextDetails(id, { signal: options.signal });
+        ? await this.backend.getContextDetails(task.id)
+        : await this.backend.getContextDetails(task.id, { signal: options.signal });
     throwIfAborted(options.signal);
     return validateContextDocumentPath(context, document);
   }

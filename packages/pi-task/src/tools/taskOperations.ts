@@ -1,3 +1,4 @@
+import { LocalTaskRPCError } from "../backend/localTaskRpcClient";
 import type {
   CreateLocalTaskInput,
   LocalTask,
@@ -54,6 +55,7 @@ export type UpdateTaskInput = Omit<UpdateLocalTaskInput, "status"> & {
 
 const MAX_TAGS_PER_TASK = 12;
 const MAX_TAG_CODE_POINTS = 32;
+const LOCAL_TASK_RPC_NOT_FOUND_CODE = -32004;
 
 /** Performs scoped Local Task metadata operations without touching legacy task files. */
 export class LocalTaskOperations {
@@ -115,12 +117,33 @@ export class LocalTaskOperations {
     return results.filter((task) => this.isInScope(task));
   }
 
-  /** Gets one opaque Local Task ID after enforcing configured project/global scope. */
-  async get(id: string, options: LocalTaskOperationOptions = {}): Promise<LocalTask> {
-    const taskId = requireTaskId(id);
-    return this.assertInScope(
-      options.signal === undefined ? await this.client.get(taskId) : await this.client.get(taskId, options),
-    );
+  /** Gets one Local Task by its opaque ID or stable key within the configured scope. */
+  async get(identifier: string, options: LocalTaskOperationOptions = {}): Promise<LocalTask> {
+    const taskIdentifier = requireTaskId(identifier);
+    try {
+      return this.assertInScope(
+        options.signal === undefined
+          ? await this.client.get(taskIdentifier)
+          : await this.client.get(taskIdentifier, options),
+      );
+    } catch (error) {
+      if (!isTaskNotFoundError(error)) throw error;
+      const matchedTask = await this.findTaskByKey(taskIdentifier, options);
+      if (matchedTask !== undefined) return matchedTask;
+      throw error;
+    }
+  }
+
+  private async findTaskByKey(identifier: string, options: LocalTaskOperationOptions): Promise<LocalTask | undefined> {
+    const filters = this.buildFilters({});
+    const results =
+      options.signal === undefined
+        ? await this.client.search(identifier, filters)
+        : await this.client.search(identifier, filters, options);
+    const match = results.find((task) => task.key === identifier && this.isInScope(task));
+    if (match === undefined) return undefined;
+    const { rank: _rank, ...task } = match;
+    return task;
   }
 
   /** Updates mutable metadata after checking the opaque task ID belongs to the configured scope. */
@@ -128,11 +151,11 @@ export class LocalTaskOperations {
     assertRuntimeUpdateStatus(input.status);
     assertRuntimeTags(input.tags);
     const taskId = requireTaskId(id);
-    await this.get(taskId, options);
+    const resolvedTask = await this.get(taskId, options);
     const task =
       options.signal === undefined
-        ? await this.client.update(taskId, input)
-        : await this.client.update(taskId, input, options);
+        ? await this.client.update(resolvedTask.id, input)
+        : await this.client.update(resolvedTask.id, input, options);
     return this.assertInScope(task);
   }
 
@@ -205,6 +228,10 @@ export function buildDescription(
 export function getProjectIdFromEnvironment(): string | undefined {
   const projectId = process.env.YISHAN_PROJECT_ID?.trim();
   return projectId || undefined;
+}
+
+function isTaskNotFoundError(error: unknown): error is LocalTaskRPCError {
+  return error instanceof LocalTaskRPCError && error.code === LOCAL_TASK_RPC_NOT_FOUND_CODE;
 }
 
 function assertRuntimeUpdateStatus(status: UpdateTaskInput["status"]): void {

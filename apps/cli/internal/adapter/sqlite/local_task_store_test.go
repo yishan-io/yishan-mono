@@ -42,6 +42,26 @@ func TestLocalTaskStore_CreateDefaultsToNew(t *testing.T) {
 	}
 }
 
+func TestLocalTaskStore_SearchMatchesTaskKeysIncludingBackfilledKeys(t *testing.T) {
+	ctx := context.Background()
+	store, _ := openTestLocalTaskStore(t)
+	keyed := "TASK-438"
+	created, err := store.Create(ctx, localtask.Task{TaskKey: &keyed, Title: "Title only", Status: localtask.StatusNew, Priority: localtask.PriorityMedium})
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := createTestLocalTask(t, store, "Legacy task")
+	if updated, err := store.SetTaskKeyIfEmpty(ctx, legacy.ID, "TASK-439"); err != nil || !updated {
+		t.Fatalf("SetTaskKeyIfEmpty = %t, %v", updated, err)
+	}
+	for _, test := range []struct{ query, wantID string }{{"438", created.ID}, {"439", legacy.ID}, {"Title", created.ID}} {
+		results, err := store.Search(ctx, test.query, localtask.TaskFilter{})
+		if err != nil || len(results) != 1 || results[0].ID != test.wantID {
+			t.Fatalf("Search(%q) = %#v, %v", test.query, results, err)
+		}
+	}
+}
+
 func TestLocalTaskStore_SearchEscapesFTS5Syntax(t *testing.T) {
 	ctx := context.Background()
 	store, _ := openTestLocalTaskStore(t)

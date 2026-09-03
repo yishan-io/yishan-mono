@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LocalTaskRPCError } from "../backend/localTaskRpcClient";
 import type {
   LocalTask,
   LocalTaskContextDetails,
@@ -158,6 +159,44 @@ describe("registerTaskTools", () => {
     await expect(access(join(projectDirectory, ".my-context", "tasks", "completed"))).rejects.toThrow();
   });
 
+  it("reads task metadata by stable key and returns its canonical task ID", async () => {
+    const backend = createBackend({ searchResult: task({ id: "canonical-id", key: "TASK-438" }) });
+    backend.get = vi.fn().mockRejectedValue(new LocalTaskRPCError(-32004, "local task not found"));
+    const tools = collectTools(backend);
+
+    const response = await execute(tools, "task_read", { id: "TASK-438" });
+
+    expect(response.details).toMatchObject({ id: "TASK-438", document: "task" });
+    expect(backend.get).toHaveBeenCalledWith("TASK-438");
+    expect(backend.search).toHaveBeenCalledWith("TASK-438", { projectId: "project-a" });
+    expect(response.content[0]?.text).toContain("**ID:** canonical-id");
+  });
+
+  it("uses a stable key's canonical ID for task_update", async () => {
+    const canonicalTask = task({ id: "canonical-id", key: "TASK-438" });
+    const backend = createBackend({ searchResult: canonicalTask });
+    backend.get = vi.fn().mockRejectedValue(new LocalTaskRPCError(-32004, "local task not found"));
+
+    await execute(collectTools(backend), "task_update", { id: "TASK-438", title: "Updated" });
+
+    expect(backend.update).toHaveBeenCalledWith("canonical-id", { title: "Updated" });
+    expect(backend.get).toHaveBeenCalledTimes(1);
+    expect(backend.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses a stable key's canonical ID for task_finish daemon calls", async () => {
+    const canonicalTask = task({ id: "canonical-id", key: "TASK-438" });
+    const backend = createBackend({ searchResult: canonicalTask });
+    backend.get = vi.fn().mockRejectedValue(new LocalTaskRPCError(-32004, "local task not found"));
+
+    await execute(collectTools(backend), "task_finish", { id: "TASK-438", outcome: "Done" });
+
+    expect(backend.getContextDetails).toHaveBeenCalledWith("canonical-id");
+    expect(backend.update).toHaveBeenCalledWith("canonical-id", { status: "done" });
+    expect(backend.get).toHaveBeenCalledTimes(1);
+    expect(backend.search).toHaveBeenCalledTimes(1);
+  });
+
   it("enforces project scope before document routing", async () => {
     const backend = createBackend({ getResult: task({ projectId: "other-project" }) });
     const tools = collectTools(backend);
@@ -205,14 +244,16 @@ function requireTool(tools: RegisteredTool[], name: string): RegisteredTool {
 function execute(tools: RegisteredTool[], name: string, params: Record<string, unknown>): Promise<ToolResult> {
   return requireTool(tools, name).execute("call", params as never, undefined, undefined, { cwd: projectDirectory });
 }
-function createBackend(overrides: { getResult?: LocalTask } = {}): LocalTaskToolBackend {
+function createBackend(overrides: { getResult?: LocalTask; searchResult?: LocalTask } = {}): LocalTaskToolBackend {
   const localTask = task();
   const details: LocalTaskContextDetails = { directory: contextDirectory, files: [] };
   return {
     create: vi.fn().mockResolvedValue(localTask),
     get: vi.fn().mockResolvedValue(overrides.getResult ?? localTask),
     list: vi.fn().mockResolvedValue([localTask]),
-    search: vi.fn().mockResolvedValue([{ ...localTask, rank: 1 } satisfies LocalTaskSearchResult]),
+    search: vi
+      .fn()
+      .mockResolvedValue([{ ...(overrides.searchResult ?? localTask), rank: 1 } satisfies LocalTaskSearchResult]),
     update: vi.fn().mockResolvedValue({ ...localTask, status: "done" }),
     linkWorkspace: vi.fn(),
     getContextDetails: vi.fn().mockResolvedValue(details),
@@ -239,6 +280,7 @@ function task(overrides: Partial<LocalTask> = {}): LocalTask {
     createdAt: "2026-08-23T00:00:00Z",
     updatedAt: "2026-08-23T00:00:00Z",
     completedAt: null,
+    hasActiveWorkspace: false,
     tags: ["tag"],
     tagRefs: [],
     ...overrides,

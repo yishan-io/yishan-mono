@@ -21,7 +21,7 @@ func TestMigrate_015RebuildsTagRelationsWithOpaqueIDs(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("upgrade through 014: %v", err)
 	}
-	assertMigrationCount(t, database, 19)
+	assertMigrationCount(t, database, 20)
 	assertColumnExists(t, database, "local_task_tag_catalog", "id")
 	assertColumnAbsent(t, database, "local_task_tags", "tag")
 	assertColumnAbsent(t, database, "local_task_tags", "normalized_tag")
@@ -50,7 +50,7 @@ func TestMigrate_015RebuildsTagRelationsWithOpaqueIDs(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("rerun migrate: %v", err)
 	}
-	assertMigrationCount(t, database, 19)
+	assertMigrationCount(t, database, 20)
 }
 
 func TestMigrate_015RejectsMissingRelationCatalogWithoutChangingPriorSchema(t *testing.T) {
@@ -109,7 +109,7 @@ func TestMigrate_015PreservesCatalogAndAssignmentDataAfterReopen(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("remigrate reopened database: %v", err)
 	}
-	assertMigrationCount(t, database, 19)
+	assertMigrationCount(t, database, 20)
 	assert015CatalogFixtures(t, database)
 	assertForeignKeyCheckEmpty(t, database)
 }
