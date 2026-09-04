@@ -212,10 +212,11 @@ export async function loadDSHSessionModels(
         ? (models.find(
             (model) => model.id === configuredModel && model.provider?.trim().toLowerCase() === configuredProvider,
           ) ?? models[0])
-        : undefined);
+        : undefined) ??
+      null;
 
     agentChatStore.getState().setAvailableModels(tabId, models);
-    agentChatStore.getState().setCurrentModel(tabId, currentModel ?? null);
+    agentChatStore.getState().setCurrentModel(tabId, currentModel);
     if (hasExplicitSelection && !persistedModel) {
       agentChatStore
         .getState()

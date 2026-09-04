@@ -12,6 +12,16 @@ const daemonMocks = vi.hoisted(() => ({
   createWorkspace: vi.fn(),
 }));
 
+const agentMocks = vi.hoisted(() => ({
+  getAgentCapabilities: vi.fn(),
+}));
+
+vi.mock("@renderer/domains/agent", () => ({
+  getAgentCapabilities: agentMocks.getAgentCapabilities,
+  selectNewAgentChatRuntime: ({ dsh }: { dsh: { configured: boolean; ready: boolean } }) =>
+    dsh.configured && dsh.ready ? "dsh" : "pi",
+}));
+
 vi.mock("@renderer/rpc", () => ({
   subscribeConnectionStatus: vi.fn(() => vi.fn()),
 }));
