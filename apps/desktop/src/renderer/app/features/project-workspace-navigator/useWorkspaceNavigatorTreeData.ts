@@ -62,8 +62,8 @@ export function useWorkspaceNavigatorTreeData(input: {
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const gitChangeTotalsByWorkspaceId = gitProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
-  const workspaceAgentStatusByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceAgentStatusByWorkspaceId);
-  const workspaceUnreadToneByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const statuses = workspaceAgentIndicatorStore((state) => state.statuses);
+  const unreadTones = workspaceAgentIndicatorStore((state) => state.unreadTones);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
 
   const nodesQuery = useQuery({
@@ -165,10 +165,10 @@ export function useWorkspaceNavigatorTreeData(input: {
           kind: workspace.kind === "local" || localDisplayWorkspaceId === workspace.id ? "local" : "managed",
           additions: gitChangeTotalsByWorkspaceId[workspace.id]?.additions ?? 0,
           deletions: gitChangeTotalsByWorkspaceId[workspace.id]?.deletions ?? 0,
-          runtimeStatus: workspaceAgentStatusByWorkspaceId[workspace.id] ?? "idle",
+          runtimeStatus: statuses[workspace.id] ?? "idle",
           notificationTone: resolveWorkspaceNotificationTone({
-            runtimeStatus: workspaceAgentStatusByWorkspaceId[workspace.id] ?? "idle",
-            unreadTone: workspaceUnreadToneByWorkspaceId[workspace.id],
+            runtimeStatus: statuses[workspace.id] ?? "idle",
+            unreadTone: unreadTones[workspace.id],
           }),
           isCreating,
           lifecycleState: workspace.state,
@@ -227,9 +227,9 @@ export function useWorkspaceNavigatorTreeData(input: {
     nodeOrderByParentId,
     workspaceOrderByParentId,
     workspaceListHierarchyMode,
-    workspaceAgentStatusByWorkspaceId,
+    statuses,
     workspaceByProjectId,
-    workspaceUnreadToneByWorkspaceId,
+    unreadTones,
     workspaces,
   ]);
 

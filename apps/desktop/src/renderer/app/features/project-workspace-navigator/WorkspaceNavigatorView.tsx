@@ -59,7 +59,7 @@ export function WorkspaceNavigatorView() {
   const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
-  const workspaceUnreadToneByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const unreadTones = workspaceAgentIndicatorStore((state) => state.unreadTones);
   const {
     menu: projectContextMenu,
     openMenu: openProjectContextMenu,
@@ -220,12 +220,12 @@ export function WorkspaceNavigatorView() {
       return;
     }
 
-    if (!(focusedWorkspaceId in workspaceUnreadToneByWorkspaceId)) {
+    if (!(focusedWorkspaceId in unreadTones)) {
       return;
     }
 
-    workspaceAgentIndicatorStore.getState().markWorkspaceNotificationsRead(focusedWorkspaceId);
-  }, [isAppFocused, selectedWorkspaceId, workspaceUnreadToneByWorkspaceId]);
+    workspaceAgentIndicatorStore.getState().clearUnread(focusedWorkspaceId);
+  }, [isAppFocused, selectedWorkspaceId, unreadTones]);
   /** Closes workspace context menu and nested submenu layers together. */
   const closeWorkspaceMenus = () => {
     closeWorkspaceContextMenu();

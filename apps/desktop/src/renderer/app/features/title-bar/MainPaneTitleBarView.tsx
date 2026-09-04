@@ -39,8 +39,8 @@ export function MainPaneTitleBarView() {
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
-  const workspaceAgentStatusByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceAgentStatusByWorkspaceId);
-  const workspaceUnreadToneByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const statuses = workspaceAgentIndicatorStore((state) => state.statuses);
+  const unreadTones = workspaceAgentIndicatorStore((state) => state.unreadTones);
   const openTab = openTabWithContentSeed;
   const selectedRepo = projects.find((project) => project.id === selectedProjectId);
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
@@ -94,8 +94,8 @@ export function MainPaneTitleBarView() {
   const resolveWorkspaceIconColor = (workspaceId: string) =>
     resolveWorkspaceNotificationColor(
       resolveWorkspaceNotificationTone({
-        runtimeStatus: workspaceAgentStatusByWorkspaceId[workspaceId] ?? "idle",
-        unreadTone: workspaceUnreadToneByWorkspaceId[workspaceId],
+        runtimeStatus: statuses[workspaceId] ?? "idle",
+        unreadTone: unreadTones[workspaceId],
       }),
     );
   useEffect(() => {

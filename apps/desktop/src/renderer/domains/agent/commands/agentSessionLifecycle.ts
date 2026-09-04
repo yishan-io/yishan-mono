@@ -82,7 +82,7 @@ export function parseObserverSessionKey(
  */
 export function recordAgentObserverStatus(
   payload: NotificationEventPayload,
-  dependencies: { setWorkspaceAgentStatusByWorkspaceId: (status: Record<string, WorkspaceAgentStatus>) => void },
+  dependencies: { setStatuses: (statuses: Record<string, WorkspaceAgentStatus>) => void },
 ): void {
   const workspaceId = payload.workspaceId?.trim();
   const observerStatus = payload.observerStatus;
@@ -105,7 +105,7 @@ export function recordAgentObserverStatus(
     });
   }
 
-  dependencies.setWorkspaceAgentStatusByWorkspaceId(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
+  dependencies.setStatuses(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
 }
 
 /**
@@ -130,9 +130,7 @@ export function clearTerminalAgentStatus(tabId: string): void {
   }
 
   if (changed) {
-    workspaceAgentIndicatorStore
-      .getState()
-      .setWorkspaceAgentStatusByWorkspaceId(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
+    workspaceAgentIndicatorStore.getState().setStatuses(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
   }
 }
 

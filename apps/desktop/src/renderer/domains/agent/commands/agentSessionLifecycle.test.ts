@@ -285,22 +285,22 @@ describe("clearTerminalAgentStatus", () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const setStatuses = vi.fn();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
     const initialChatState = workspaceAgentIndicatorStore.getState();
     workspaceAgentIndicatorStore.setState({
-      setWorkspaceAgentStatusByWorkspaceId,
+      setStatuses,
     });
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
     });
@@ -321,11 +321,11 @@ describe("clearTerminalAgentStatus", () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenLastCalledWith({ "workspace-1": "running" });
+    expect(setStatuses).toHaveBeenLastCalledWith({ "workspace-1": "running" });
 
     clearTerminalAgentStatus("tab-agent-1");
 
-    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenLastCalledWith({});
+    expect(setStatuses).toHaveBeenLastCalledWith({});
 
     stopBindings();
     workspaceAgentIndicatorStore.setState(initialChatState, true);

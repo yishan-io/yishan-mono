@@ -5,12 +5,12 @@ export type WorkspaceAgentStatus = "running" | "waiting_input" | "idle";
 export type WorkspaceUnreadTone = "success" | "error";
 
 export type WorkspaceAgentIndicatorStoreState = {
-  workspaceAgentStatusByWorkspaceId: Record<string, WorkspaceAgentStatus>;
-  workspaceUnreadToneByWorkspaceId: Record<string, WorkspaceUnreadTone>;
-  setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId: Record<string, WorkspaceAgentStatus>) => void;
-  recordWorkspaceUnreadNotification: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
-  markWorkspaceNotificationsRead: (workspaceId: string) => void;
-  removeWorkspaceIndicatorData: (workspaceIds: string[]) => void;
+  statuses: Record<string, WorkspaceAgentStatus>;
+  unreadTones: Record<string, WorkspaceUnreadTone>;
+  setStatuses: (statuses: Record<string, WorkspaceAgentStatus>) => void;
+  markUnread: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
+  clearUnread: (workspaceId: string) => void;
+  remove: (workspaceIds: string[]) => void;
 };
 
 /** Keeps only entries whose keys are not present in the removal set. */
@@ -21,62 +21,59 @@ function omitKeys<T>(record: Record<string, T>, removedIds: Set<string>): Record
 /** Stores workspace-level agent status and unread notifications. */
 export const workspaceAgentIndicatorStore = create<WorkspaceAgentIndicatorStoreState>()(
   immer((set) => ({
-    workspaceAgentStatusByWorkspaceId: {},
-    workspaceUnreadToneByWorkspaceId: {},
-    setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId) => {
+    statuses: {},
+    unreadTones: {},
+    setStatuses: (statuses) => {
       set(() => ({
-        workspaceAgentStatusByWorkspaceId: { ...statusByWorkspaceId },
+        statuses: { ...statuses },
       }));
     },
-    recordWorkspaceUnreadNotification: (workspaceId, tone) => {
+    markUnread: (workspaceId, tone) => {
       const trimmedWorkspaceId = workspaceId.trim();
       if (!trimmedWorkspaceId) {
         return;
       }
 
       set((state) => {
-        const previousTone = state.workspaceUnreadToneByWorkspaceId[trimmedWorkspaceId];
+        const previousTone = state.unreadTones[trimmedWorkspaceId];
         const nextTone = previousTone === "error" ? "error" : tone;
         if (previousTone === nextTone) {
           return state;
         }
 
         return {
-          workspaceUnreadToneByWorkspaceId: {
-            ...state.workspaceUnreadToneByWorkspaceId,
+          unreadTones: {
+            ...state.unreadTones,
             [trimmedWorkspaceId]: nextTone,
           },
         };
       });
     },
-    markWorkspaceNotificationsRead: (workspaceId) => {
+    clearUnread: (workspaceId) => {
       const trimmedWorkspaceId = workspaceId.trim();
       if (!trimmedWorkspaceId) {
         return;
       }
 
       set((state) => {
-        if (!(trimmedWorkspaceId in state.workspaceUnreadToneByWorkspaceId)) {
+        if (!(trimmedWorkspaceId in state.unreadTones)) {
           return state;
         }
 
         return {
-          workspaceUnreadToneByWorkspaceId: omitKeys(
-            state.workspaceUnreadToneByWorkspaceId,
-            new Set([trimmedWorkspaceId]),
-          ),
+          unreadTones: omitKeys(state.unreadTones, new Set([trimmedWorkspaceId])),
         };
       });
     },
-    removeWorkspaceIndicatorData: (workspaceIds) => {
+    remove: (workspaceIds) => {
       if (workspaceIds.length === 0) {
         return;
       }
 
       const removedWorkspaceIds = new Set(workspaceIds);
       set((state) => ({
-        workspaceAgentStatusByWorkspaceId: omitKeys(state.workspaceAgentStatusByWorkspaceId, removedWorkspaceIds),
-        workspaceUnreadToneByWorkspaceId: omitKeys(state.workspaceUnreadToneByWorkspaceId, removedWorkspaceIds),
+        statuses: omitKeys(state.statuses, removedWorkspaceIds),
+        unreadTones: omitKeys(state.unreadTones, removedWorkspaceIds),
       }));
     },
   })),

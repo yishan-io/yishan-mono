@@ -32,6 +32,6 @@ export async function syncTabStoreWithWorkspace(previousWorkspaces: WorkspaceIte
   resolveTabForWorkspace(workbenchNavigationStore.getState().activeWorkspaceId);
 
   if (removedWorkspaceIds.length > 0) {
-    workspaceAgentIndicatorStore.getState().removeWorkspaceIndicatorData(removedWorkspaceIds);
+    workspaceAgentIndicatorStore.getState().remove(removedWorkspaceIds);
   }
 }

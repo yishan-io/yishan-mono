@@ -147,10 +147,10 @@ vi.mock("../../../domains/project/state/projectStore", () => {
 vi.mock("../../../domains/agent/state/workspaceAgentIndicatorStore", () => ({
   workspaceAgentIndicatorStore: (
     selector: (state: {
-      workspaceAgentStatusByWorkspaceId: Record<string, unknown>;
-      workspaceUnreadToneByWorkspaceId: Record<string, unknown>;
+      statuses: Record<string, unknown>;
+      unreadTones: Record<string, unknown>;
     }) => unknown,
-  ) => selector({ workspaceAgentStatusByWorkspaceId: {}, workspaceUnreadToneByWorkspaceId: {} }),
+  ) => selector({ statuses: {}, unreadTones: {} }),
 }));
 
 vi.mock("../../../app/commands/appCommands", () => ({

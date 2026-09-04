@@ -39,6 +39,6 @@ export function buildMainPaneStoreState(isInitializing: boolean) {
     refreshDiffTabContent: () => undefined,
     updateFileTabContent: () => undefined,
     markFileTabSaved: () => undefined,
-    workspaceUnreadToneByWorkspaceId: {},
+    unreadTones: {},
   };
 }

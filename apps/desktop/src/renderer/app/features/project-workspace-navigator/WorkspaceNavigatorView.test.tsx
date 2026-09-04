@@ -61,9 +61,9 @@ const mocked = vi.hoisted(() => {
       renameWorkspaceBranch: (input: { repoId: string; workspaceId: string; branch: string }) => Promise<void>;
       closeWorkspace: (input: { repoId: string; workspaceId: string }) => Promise<void>;
       deleteProject: (input: { repoId: string }) => Promise<void>;
-      workspaceAgentStatusByWorkspaceId: Record<string, "running" | "waiting_input">;
-      workspaceUnreadToneByWorkspaceId: Record<string, "success" | "error">;
-      markWorkspaceNotificationsRead: (workspaceId: string) => void;
+      statuses: Record<string, "running" | "waiting_input">;
+      unreadTones: Record<string, "success" | "error">;
+      clearUnread: (workspaceId: string) => void;
       orderedWorkspaceIds: string[];
       setOrderedWorkspaceIds: (ids: string[]) => void;
       progressByWorkspaceId: Record<string, { isComplete: boolean }>;
@@ -91,25 +91,25 @@ const mocked = vi.hoisted(() => {
       renameWorkspaceBranch: async () => undefined,
       closeWorkspace: async () => undefined,
       deleteProject: async () => undefined,
-      workspaceAgentStatusByWorkspaceId: {},
-      workspaceUnreadToneByWorkspaceId: {},
-      markWorkspaceNotificationsRead: () => {},
+      statuses: {},
+      unreadTones: {},
+      clearUnread: () => {},
       orderedWorkspaceIds: [],
       setOrderedWorkspaceIds: () => {},
       progressByWorkspaceId: {},
     },
   };
 
-  const markWorkspaceNotificationsRead = vi.fn((workspaceId: string) => {
+  const clearUnread = vi.fn((workspaceId: string) => {
     const trimmedWorkspaceId = workspaceId.trim();
     if (!trimmedWorkspaceId) {
       return;
     }
 
-    const { [trimmedWorkspaceId]: _removed, ...rest } = stateRef.current.workspaceUnreadToneByWorkspaceId;
-    stateRef.current.workspaceUnreadToneByWorkspaceId = rest;
+    const { [trimmedWorkspaceId]: _removed, ...rest } = stateRef.current.unreadTones;
+    stateRef.current.unreadTones = rest;
   });
-  stateRef.current.markWorkspaceNotificationsRead = markWorkspaceNotificationsRead;
+  stateRef.current.clearUnread = clearUnread;
 
   const workspaceStore = Object.assign(
     vi.fn((selector: (state: typeof stateRef.current) => unknown) => selector(stateRef.current)),
@@ -126,7 +126,7 @@ const mocked = vi.hoisted(() => {
     setLastUsedExternalAppId,
     openEntryInExternalApp,
     listDetectedExternalAppIds,
-    markWorkspaceNotificationsRead,
+    clearUnread,
     setWorkspaceCurrentBranch: vi.fn((workspaceId: string, branch: string) => {
       stateRef.current.currentBranchByWorkspaceId = {
         ...stateRef.current.currentBranchByWorkspaceId,
@@ -463,9 +463,9 @@ function renderFolderList() {
     renameWorkspaceBranch: mocked.renameWorkspaceBranch,
     closeWorkspace: mocked.closeWorkspace,
     deleteProject: mocked.deleteProject,
-    workspaceAgentStatusByWorkspaceId: {},
-    workspaceUnreadToneByWorkspaceId: {},
-    markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
+    statuses: {},
+    unreadTones: {},
+    clearUnread: mocked.clearUnread,
     orderedWorkspaceIds: [],
     setOrderedWorkspaceIds: vi.fn(),
     progressByWorkspaceId: {},
@@ -542,9 +542,9 @@ function renderRepoList(
     renameWorkspaceBranch: mocked.renameWorkspaceBranch,
     closeWorkspace: mocked.closeWorkspace,
     deleteProject: mocked.deleteProject,
-    workspaceAgentStatusByWorkspaceId: {},
-    workspaceUnreadToneByWorkspaceId: {},
-    markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
+    statuses: {},
+    unreadTones: {},
+    clearUnread: mocked.clearUnread,
     orderedWorkspaceIds: [],
     setOrderedWorkspaceIds: vi.fn(),
     progressByWorkspaceId: {},
@@ -700,9 +700,9 @@ describe("WorkspaceNavigatorView", () => {
       renameWorkspaceBranch: mocked.renameWorkspaceBranch,
       closeWorkspace: mocked.closeWorkspace,
       deleteProject: mocked.deleteProject,
-      workspaceAgentStatusByWorkspaceId: {},
-      workspaceUnreadToneByWorkspaceId: {},
-      markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
+      statuses: {},
+      unreadTones: {},
+      clearUnread: mocked.clearUnread,
       orderedWorkspaceIds: [],
       setOrderedWorkspaceIds: vi.fn(),
     };
@@ -1078,7 +1078,7 @@ describe("WorkspaceNavigatorView", () => {
 
   it("renders running spinner when workspace status is running", () => {
     renderRepoList();
-    mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
+    mocked.stateRef.current.statuses = { "workspace-1": "running" };
     cleanup();
     renderWorkspaceNavigatorView();
     expect(screen.getByTestId("workspace-status-running-spinner-workspace-1")).toBeTruthy();
@@ -1086,7 +1086,7 @@ describe("WorkspaceNavigatorView", () => {
 
   it("renders waiting-input dot when workspace status is waiting_input", () => {
     renderRepoList();
-    mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "waiting_input" };
+    mocked.stateRef.current.statuses = { "workspace-1": "waiting_input" };
     cleanup();
     renderWorkspaceNavigatorView();
     expect(screen.getByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeTruthy();
@@ -1096,8 +1096,8 @@ describe("WorkspaceNavigatorView", () => {
     "keeps the waiting-input badge when the workspace also has an unread %s notification",
     (unreadTone) => {
       renderRepoList();
-      mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "waiting_input" };
-      mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": unreadTone };
+      mocked.stateRef.current.statuses = { "workspace-1": "waiting_input" };
+      mocked.stateRef.current.unreadTones = { "workspace-1": unreadTone };
       cleanup();
       renderWorkspaceNavigatorView();
 
@@ -1144,8 +1144,8 @@ describe("WorkspaceNavigatorView", () => {
     }
 
     mocked.stateRef.current.workspaces = [{ ...existingWorkspace, status: "provisioning", worktreePath: "" }];
-    mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
-    mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "error" };
+    mocked.stateRef.current.statuses = { "workspace-1": "running" };
+    mocked.stateRef.current.unreadTones = { "workspace-1": "error" };
     cleanup();
     renderWorkspaceNavigatorView();
 
@@ -1156,8 +1156,8 @@ describe("WorkspaceNavigatorView", () => {
 
   it("keeps the running spinner ahead of unread notification badges", () => {
     renderRepoList([], undefined, "workspace-2");
-    mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
-    mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
+    mocked.stateRef.current.statuses = { "workspace-1": "running" };
+    mocked.stateRef.current.unreadTones = { "workspace-1": "success" };
     cleanup();
     renderWorkspaceNavigatorView();
 
@@ -1178,7 +1178,7 @@ describe("WorkspaceNavigatorView", () => {
 
   it("renders done indicator for background workspace notifications", () => {
     renderRepoList([], undefined, "workspace-2");
-    mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
+    mocked.stateRef.current.unreadTones = { "workspace-1": "success" };
     cleanup();
     renderWorkspaceNavigatorView();
 
@@ -1188,7 +1188,7 @@ describe("WorkspaceNavigatorView", () => {
 
   it("renders failed indicator for background workspace notifications", () => {
     renderRepoList([], undefined, "workspace-2");
-    mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "error" };
+    mocked.stateRef.current.unreadTones = { "workspace-1": "error" };
     cleanup();
     renderWorkspaceNavigatorView();
 
@@ -1198,7 +1198,7 @@ describe("WorkspaceNavigatorView", () => {
 
   it("clears unread indicator after opening that workspace while app is focused", () => {
     const { rerender } = renderRepoList([], undefined, "workspace-2");
-    mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
+    mocked.stateRef.current.unreadTones = { "workspace-1": "success" };
     rerender(<WorkspaceNavigatorView />);
     expect(screen.getByTestId("workspace-status-done-badge-workspace-1")).toBeTruthy();
 
