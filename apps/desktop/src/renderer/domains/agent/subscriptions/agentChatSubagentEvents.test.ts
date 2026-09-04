@@ -395,6 +395,11 @@ describe("applySubagentLiveTranscripts", () => {
         content: [{ type: "text", text: "Working" }],
       },
     ]);
+    expect(agentChatStore.getState().sessionsByTabId["subagent-tab"]?.hydration).toEqual({
+      messages: true,
+      models: false,
+      state: false,
+    });
   });
 
   it("applies the child model to the matching subagent-detail session", () => {

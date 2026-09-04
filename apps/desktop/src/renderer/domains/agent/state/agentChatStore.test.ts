@@ -4,7 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveAgentToolCallLifecycleStates } from "../chat/agentChatSubagents";
 import type { AgentMessage } from "../chat/agentChatTypes";
 import { agentChatStore } from "./agentChatStore";
-import { selectFinishedSubagents, selectRunningSubagents } from "./agentChatStoreSession";
+import {
+  createAgentChatSession,
+  isHydrated,
+  selectFinishedSubagents,
+  selectRunningSubagents,
+} from "./agentChatStoreSession";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 
@@ -16,6 +21,40 @@ afterEach(() => {
 const MAX_MESSAGES = 1000;
 const MAX_SUBAGENT_CHILDREN = 20;
 const MAX_PER_TAB_AGGREGATE_UTF8_BYTES = 8 * 1024 * 1024; // 8 MiB
+
+describe("agent chat session hydration", () => {
+  it.each([
+    ["absent session", undefined, false],
+    ["no resources", { messages: false, models: false, state: false }, false],
+    ["messages only", { messages: true, models: false, state: false }, false],
+    ["models only", { messages: false, models: true, state: false }, false],
+    ["state only", { messages: false, models: false, state: true }, false],
+    ["messages and models", { messages: true, models: true, state: false }, false],
+    ["messages and state", { messages: true, models: false, state: true }, false],
+    ["models and state", { messages: false, models: true, state: true }, false],
+    ["every resource", { messages: true, models: true, state: true }, true],
+  ])("isHydrated is %s", (_description, hydration, expected) => {
+    const session = hydration ? { ...createAgentChatSession("session-1"), hydration } : undefined;
+    expect(isHydrated(session)).toBe(expected);
+  });
+
+  it.each([
+    ["replaceMessages", (tabId: string) => agentChatStore.getState().replaceMessages(tabId, []), "messages"],
+    ["setAvailableModels", (tabId: string) => agentChatStore.getState().setAvailableModels(tabId, []), "models"],
+    ["markStateLoaded", (tabId: string) => agentChatStore.getState().markStateLoaded(tabId), "state"],
+  ] as const)("%s marks only its hydration resource", (_name, write, resource) => {
+    const tabId = `tab-${resource}`;
+    agentChatStore.getState().initSession(tabId, "session-1");
+
+    write(tabId);
+
+    expect(agentChatStore.getState().sessionsByTabId[tabId]?.hydration).toEqual({
+      messages: resource === "messages",
+      models: resource === "models",
+      state: resource === "state",
+    });
+  });
+});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +92,21 @@ function seedMessages(tabId: string, count: number, prefix = "fill"): void {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("agentChatStore", () => {
+  it("sets DSH transcript retry availability and clears only the active stream", () => {
+    const tabId = "tab-dsh-retry-and-clear";
+    agentChatStore.getState().initSession(tabId, "session-dsh-retry-and-clear");
+    agentChatStore.getState().appendMessage(tabId, makeMessage("committed"));
+    agentChatStore.getState().updateStreamingMessage(tabId, makeMessage("streaming"));
+
+    agentChatStore.getState().setDSHTranscriptRetryAvailable(tabId, true);
+    agentChatStore.getState().clearStreamingMessage(tabId);
+
+    const session = agentChatStore.getState().sessionsByTabId[tabId];
+    expect(session?.dshTranscriptRetryAvailable).toBe(true);
+    expect(session?.streamingMessage).toBeNull();
+    expect(session?.messages.map((message) => message.id)).toEqual(["committed"]);
+  });
+
   // ─── finalizeStreamingMessage DOES enforce MAX_MESSAGES_PER_TAB ─────────────
 
   describe("finalizeStreamingMessage cap enforcement", () => {
@@ -244,16 +298,6 @@ describe("agentChatStore", () => {
 
       agentChatStore.getState().replaceMessages(tabId, []);
       expect(agentChatStore.getState().sessionsByTabId[tabId]?.streamingMessage).toBeNull();
-    });
-
-    it("marks hasLoadedMessages after replace", () => {
-      const tabId = "tab-replace-loaded";
-      agentChatStore.getState().initSession(tabId, "session-replace-loaded");
-
-      expect(agentChatStore.getState().sessionsByTabId[tabId]?.hasLoadedMessages).toBe(false);
-
-      agentChatStore.getState().replaceMessages(tabId, []);
-      expect(agentChatStore.getState().sessionsByTabId[tabId]?.hasLoadedMessages).toBe(true);
     });
 
     it("retains a single oversized message via the always-keep-one rule", { timeout: 60_000 }, () => {

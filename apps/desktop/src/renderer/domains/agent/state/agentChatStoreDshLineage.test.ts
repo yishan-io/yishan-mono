@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import type { RunningSubagentSummary } from "../chat/agentChatSubagents";
 import { agentChatStore } from "./agentChatStore";
 import { selectRunningSubagents } from "./agentChatStoreSession";
 
@@ -61,6 +62,75 @@ describe("DSH lineage subagent snapshots", () => {
     agentChatStore.getState().setDshRunningSubagents(tabId, []);
     expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId]).map((row) => row.rowId)).toEqual([
       "shared-id",
+    ]);
+  });
+
+  it("ignores stale generations and parent sessions while replacing only DSH rows", () => {
+    const tabId = "tab-lineage-generation";
+    agentChatStore.getState().initSession(tabId, "parent-session");
+    agentChatStore.getState().setPiRunningSubagents(tabId, [
+      {
+        rowId: "pi-child",
+        runtime: "pi",
+        agentName: "Pi child",
+        childSessionId: "pi-child",
+        title: "Pi child",
+        promptSummary: "Pi child",
+        state: "running",
+      },
+    ]);
+    const staleGeneration = agentChatStore.getState().beginDshSubagentLineageRefresh(tabId, "parent-session");
+    const currentGeneration = agentChatStore.getState().beginDshSubagentLineageRefresh(tabId, "parent-session");
+
+    expect(staleGeneration).not.toBeNull();
+    expect(currentGeneration).not.toBeNull();
+    if (staleGeneration === null || currentGeneration === null) throw new Error("expected lineage generations");
+
+    const staleRows = [
+      {
+        rowId: "dsh:stale-child",
+        runtime: "dsh" as const,
+        agentName: "Stale child",
+        childSessionId: "stale-child",
+        title: "Stale child",
+        promptSummary: "Stale child",
+        state: "running" as const,
+      },
+    ] satisfies RunningSubagentSummary[];
+    const currentRows = [
+      {
+        rowId: "dsh:current-child",
+        runtime: "dsh",
+        agentName: "Current child",
+        childSessionId: "current-child",
+        title: "Current child",
+        promptSummary: "Current child",
+        state: "running",
+      },
+    ] satisfies RunningSubagentSummary[];
+
+    agentChatStore.getState().applyDshSubagentLineageRefresh({
+      tabId,
+      parentSessionId: "parent-session",
+      generation: staleGeneration,
+      rows: staleRows,
+    });
+    agentChatStore.getState().applyDshSubagentLineageRefresh({
+      tabId,
+      parentSessionId: "other-parent",
+      generation: currentGeneration,
+      rows: staleRows,
+    });
+    agentChatStore.getState().applyDshSubagentLineageRefresh({
+      tabId,
+      parentSessionId: "parent-session",
+      generation: currentGeneration,
+      rows: currentRows,
+    });
+
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId]).map((row) => row.rowId)).toEqual([
+      "pi-child",
+      "dsh:current-child",
     ]);
   });
 

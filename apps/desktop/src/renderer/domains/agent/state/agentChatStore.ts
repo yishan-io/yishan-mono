@@ -6,7 +6,7 @@ import {
   trimSessionMessages,
   trimSubagentLiveTranscripts,
 } from "../chat/agentChatRetention";
-import { deriveRunningSubagents, type RunningSubagentSummary } from "../chat/agentChatSubagents";
+import { type RunningSubagentSummary, deriveRunningSubagents } from "../chat/agentChatSubagents";
 import type {
   AgentCompactionReason,
   AgentMessage,
@@ -25,14 +25,11 @@ import {
   setDshRunningSubagentsIfChanged,
   setPiRunningSubagentsIfChanged,
 } from "./agentChatStoreSession";
-import {
-  mergeUsage,
-  reconcileStats,
-  recordStatsRequest,
-} from "./agentChatUsageLedger";
+import { mergeUsage, reconcileStats, recordStatsRequest } from "./agentChatUsageLedger";
 
 export type AgentChatStoreState = {
   sessionsByTabId: Record<string, AgentChatSessionData>;
+  dshLineageGenerationByTabId: Record<string, number>;
 
   // Actions
   initSession: (tabId: string, sessionId: string) => void;
@@ -40,12 +37,14 @@ export type AgentChatStoreState = {
   setTurnActive: (tabId: string, active: boolean) => void;
   setCompactionReason: (tabId: string, reason: AgentCompactionReason) => void;
   setSessionError: (tabId: string, error: string) => void;
+  setDSHTranscriptRetryAvailable: (tabId: string, available: boolean) => void;
   setTurnError: (tabId: string, error: string) => void;
   clearTurnError: (tabId: string) => void;
   appendMessage: (tabId: string, message: AgentMessage) => void;
   replaceMessages: (tabId: string, messages: AgentMessage[]) => void;
   updateStreamingMessage: (tabId: string, message: AgentMessage) => void;
   finalizeStreamingMessage: (tabId: string) => void;
+  clearStreamingMessage: (tabId: string) => void;
   setActiveCoreTurnAssistantId: (tabId: string, assistantId: string | null) => void;
   finalizeActiveCoreTurnAssistant: (tabId: string, endedAtMs: number) => void;
   setAvailableModels: (tabId: string, models: AgentModel[]) => void;
@@ -58,6 +57,13 @@ export type AgentChatStoreState = {
   setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
   setPiRunningSubagents: (tabId: string, rows: RunningSubagentSummary[]) => void;
   setDshRunningSubagents: (tabId: string, rows: RunningSubagentSummary[]) => void;
+  beginDshSubagentLineageRefresh: (tabId: string, parentSessionId: string) => number | null;
+  applyDshSubagentLineageRefresh: (input: {
+    tabId: string;
+    parentSessionId: string;
+    generation: number;
+    rows: RunningSubagentSummary[];
+  }) => void;
   setSubagentProgressTargets: (tabId: string, targets: AgentSubagentProgressTarget[]) => void;
   setSubagentLiveTranscripts: (tabId: string, transcripts: Record<string, AgentMessage[]>) => void;
   setSubagentCancelState: (tabId: string, rowKey: string, state: AgentSubagentCancelState) => void;
@@ -88,8 +94,9 @@ function hasToolCall(message: AgentMessage): boolean {
 }
 
 export const agentChatStore = create<AgentChatStoreState>()(
-  immer((set) => ({
+  immer((set, get) => ({
     sessionsByTabId: {},
+    dshLineageGenerationByTabId: {},
 
     initSession: (tabId, sessionId) => {
       set((state) => {
@@ -130,6 +137,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session) {
           session.state = "error";
           session.error = error;
+        }
+      });
+    },
+
+    setDSHTranscriptRetryAvailable: (tabId, available) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.dshTranscriptRetryAvailable = available;
         }
       });
     },
@@ -213,7 +229,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.rendererFinalTranscript.toolCallAssistantIds,
           session.messages,
         );
-        session.hasLoadedMessages = true;
+        session.hydration.messages = true;
         if (!hasLiveStream) {
           session.streamingMessage = null;
           session.activeCoreTurnAssistantId = null;
@@ -275,6 +291,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
       });
     },
 
+    clearStreamingMessage: (tabId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.streamingMessage = null;
+        }
+      });
+    },
+
     setActiveCoreTurnAssistantId: (tabId, assistantId) => {
       set((state) => {
         const session = state.sessionsByTabId[tabId];
@@ -302,7 +327,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.availableModels = models;
-        session.hasLoadedModels = true;
+        session.hydration.models = true;
         const firstModel = models[0];
         if (!session.currentModel && firstModel) {
           session.currentModel = firstModel;
@@ -385,6 +410,29 @@ export const agentChatStore = create<AgentChatStoreState>()(
       });
     },
 
+    beginDshSubagentLineageRefresh: (tabId, parentSessionId) => {
+      const session = get().sessionsByTabId[tabId];
+      if (session?.sessionId !== parentSessionId) return null;
+
+      let generation: number | null = null;
+      set((state) => {
+        const nextGeneration = (state.dshLineageGenerationByTabId[tabId] ?? 0) + 1;
+        state.dshLineageGenerationByTabId[tabId] = nextGeneration;
+        generation = nextGeneration;
+      });
+      return generation;
+    },
+
+    applyDshSubagentLineageRefresh: ({ tabId, parentSessionId, generation, rows }) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session?.sessionId !== parentSessionId || state.dshLineageGenerationByTabId[tabId] !== generation) {
+          return;
+        }
+        setDshRunningSubagentsIfChanged(session, rows);
+      });
+    },
+
     setSubagentProgressTargets: (tabId, targets) => {
       set((state) => {
         const session = state.sessionsByTabId[tabId];
@@ -449,7 +497,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
-        session.hasLoadedState = true;
+        session.hydration.state = true;
       });
     },
 

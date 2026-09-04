@@ -1191,6 +1191,11 @@ describe("AgentChatView", () => {
         { id: "child-message-1", role: "assistant", content: [{ type: "text", text: "Working" }] },
       ]);
     });
+    expect(agentChatStore.getState().sessionsByTabId["tab-1"]?.hydration).toEqual({
+      messages: true,
+      models: true,
+      state: true,
+    });
     expect(mocked.ensurePiSession).not.toHaveBeenCalled();
   });
 

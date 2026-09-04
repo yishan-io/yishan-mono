@@ -32,7 +32,7 @@ import {
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
-import { selectFinishedSubagents } from "../state/agentChatStoreSession";
+import { isHydrated, selectFinishedSubagents } from "../state/agentChatStoreSession";
 import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } from "../subscriptions/agentChatPiEventShared";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
@@ -125,11 +125,7 @@ export async function startAgentChatSession(opts: {
     });
 
     const session = agentChatStore.getState().sessionsByTabId[opts.tabId];
-    const isSessionLoaded =
-      session?.sessionId === startedSessionId &&
-      session.hasLoadedState &&
-      session.hasLoadedMessages &&
-      session.hasLoadedModels;
+    const isSessionLoaded = session?.sessionId === startedSessionId && isHydrated(session);
     if (isSessionLoaded) {
       // React remounts reuse the live session handle. Its snapshot is still in
       // the store, so only reconnect recovery should explicitly rehydrate it.

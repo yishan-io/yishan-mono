@@ -237,7 +237,7 @@ describe("agentChatCommands.startAgentChatSession", () => {
   });
 
   it("does not rehydrate an already loaded session when its UI remounts", async () => {
-    mocks.start.mockResolvedValue({ sessionId: "session-loaded" });
+    mocks.startAgent.mockResolvedValue({ sessionId: "session-loaded" });
     const options = {
       tabId: "tab-loaded",
       workspaceId: "workspace-1",
@@ -247,6 +247,9 @@ describe("agentChatCommands.startAgentChatSession", () => {
     };
 
     await startAgentChatSession(options);
+    for (const type of ["get_state", "get_messages", "get_available_models"]) {
+      expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({ command: expect.objectContaining({ type }) }));
+    }
     agentChatStore.getState().replaceMessages("tab-loaded", []);
     agentChatStore.getState().setAvailableModels("tab-loaded", []);
     agentChatStore.getState().markStateLoaded("tab-loaded");
@@ -436,14 +439,19 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
     });
     mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "dsh-empty" });
 
-    await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
+    await startAgentChatSession({
+      tabId,
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      runtime: "dsh",
+      sessionView: "full",
+    });
 
     expect(agentChatStore.getState().sessionsByTabId[tabId]).toMatchObject({
       state: "idle",
       messages: [],
       availableModels: [],
-      hasLoadedModels: true,
-      hasLoadedState: true,
+      hydration: expect.objectContaining({ messages: true, models: true, state: true }),
     });
   });
 
@@ -484,8 +492,7 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
       state: "running",
       messages: [expect.objectContaining({ id: "projected" })],
       availableModels: [],
-      hasLoadedModels: true,
-      hasLoadedState: true,
+      hydration: expect.objectContaining({ messages: true, models: true, state: true }),
     });
   });
   it("maps DSH provider catalog metadata without using Pi provider defaults", async () => {

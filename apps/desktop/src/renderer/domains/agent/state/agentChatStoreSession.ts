@@ -47,9 +47,11 @@ export type AgentChatSessionData = {
   subagentLiveTranscripts: Record<string, AgentMessage[]>;
   subagentCancelStates: Record<string, AgentSubagentCancelState>;
   subagentSessionEndedAtMs: number | null;
-  hasLoadedMessages: boolean;
-  hasLoadedModels: boolean;
-  hasLoadedState: boolean;
+  hydration: {
+    messages: boolean;
+    models: boolean;
+    state: boolean;
+  };
   dshTranscriptRetryAvailable: boolean;
   error: string | null;
   turnError: string | null;
@@ -83,13 +85,20 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
     subagentLiveTranscripts: {},
     subagentCancelStates: {},
     subagentSessionEndedAtMs: null,
-    hasLoadedMessages: false,
-    hasLoadedModels: false,
-    hasLoadedState: false,
+    hydration: {
+      messages: false,
+      models: false,
+      state: false,
+    },
     dshTranscriptRetryAvailable: false,
     error: null,
     turnError: null,
   };
+}
+
+/** Returns whether every independently hydrated session resource is available. */
+export function isHydrated(session: AgentChatSessionData | undefined): boolean {
+  return Boolean(session?.hydration.messages && session.hydration.models && session.hydration.state);
 }
 
 /** Selects Pi rows before DSH rows, retaining the prior combined array when neither source changed. */
