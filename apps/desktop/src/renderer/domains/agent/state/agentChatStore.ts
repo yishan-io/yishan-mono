@@ -6,7 +6,7 @@ import {
   trimSessionMessages,
   trimSubagentLiveTranscripts,
 } from "../chat/agentChatRetention";
-import { deriveRunningSubagents } from "../chat/agentChatSubagents";
+import { deriveRunningSubagents, type RunningSubagentSummary } from "../chat/agentChatSubagents";
 import type {
   AgentCompactionReason,
   AgentMessage,
@@ -22,7 +22,7 @@ import {
   type AgentChatSessionData,
   type AgentSubagentProgressTarget,
   createAgentChatSession,
-  setFinishedSubagents,
+  setDshRunningSubagentsIfChanged,
   setPiRunningSubagentsIfChanged,
 } from "./agentChatStoreSession";
 import {
@@ -56,6 +56,8 @@ export type AgentChatStoreState = {
   setQueue: (tabId: string, queue: AgentQueueState) => void;
   setPendingUiRequest: (tabId: string, request: AgentPendingUiRequest) => void;
   setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
+  setPiRunningSubagents: (tabId: string, rows: RunningSubagentSummary[]) => void;
+  setDshRunningSubagents: (tabId: string, rows: RunningSubagentSummary[]) => void;
   setSubagentProgressTargets: (tabId: string, targets: AgentSubagentProgressTarget[]) => void;
   setSubagentLiveTranscripts: (tabId: string, transcripts: Record<string, AgentMessage[]>) => void;
   setSubagentCancelState: (tabId: string, rowKey: string, state: AgentSubagentCancelState) => void;
@@ -159,22 +161,24 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session.messages.some((m) => m.id === message.id)) return;
         session.messages.push(message);
         if (message.role === "assistant") {
-          session.rendererFinalAssistantIds[message.id] = true;
+          session.rendererFinalTranscript.assistantIds[message.id] = true;
         }
         if (hasToolCall(message)) {
-          session.rendererFinalToolCallAssistantIds[message.id] = true;
+          session.rendererFinalTranscript.toolCallAssistantIds[message.id] = true;
         }
         session.messages = trimSessionMessages(session.messages);
-        session.rendererFinalAssistantIds = retainMessageIds(session.rendererFinalAssistantIds, session.messages);
-        session.rendererFinalToolCallAssistantIds = retainMessageIds(
-          session.rendererFinalToolCallAssistantIds,
+        session.rendererFinalTranscript.assistantIds = retainMessageIds(
+          session.rendererFinalTranscript.assistantIds,
+          session.messages,
+        );
+        session.rendererFinalTranscript.toolCallAssistantIds = retainMessageIds(
+          session.rendererFinalTranscript.toolCallAssistantIds,
           session.messages,
         );
         setPiRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
-        setFinishedSubagents(session);
       });
     },
 
@@ -191,19 +195,22 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const retainedToolResultIds = getRetainedToolResultIds(
           historyMessages,
           session.messages,
-          session.rendererFinalAssistantIds,
-          session.rendererFinalToolCallAssistantIds,
+          session.rendererFinalTranscript.assistantIds,
+          session.rendererFinalTranscript.toolCallAssistantIds,
         );
         const nextMessages = mergeActiveTurnHistory(
           historyMessages,
           session.messages,
-          session.rendererFinalAssistantIds,
-          session.rendererFinalToolCallAssistantIds,
+          session.rendererFinalTranscript.assistantIds,
+          session.rendererFinalTranscript.toolCallAssistantIds,
         );
         session.messages = trimSessionMessages(nextMessages, retainedToolResultIds);
-        session.rendererFinalAssistantIds = retainMessageIds(session.rendererFinalAssistantIds, session.messages);
-        session.rendererFinalToolCallAssistantIds = retainMessageIds(
-          session.rendererFinalToolCallAssistantIds,
+        session.rendererFinalTranscript.assistantIds = retainMessageIds(
+          session.rendererFinalTranscript.assistantIds,
+          session.messages,
+        );
+        session.rendererFinalTranscript.toolCallAssistantIds = retainMessageIds(
+          session.rendererFinalTranscript.toolCallAssistantIds,
           session.messages,
         );
         session.hasLoadedMessages = true;
@@ -215,7 +222,6 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
-        setFinishedSubagents(session);
       });
     },
 
@@ -231,7 +237,6 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
-        setFinishedSubagents(session);
       });
     },
 
@@ -249,22 +254,24 @@ export const agentChatStore = create<AgentChatStoreState>()(
         }
         session.messages = trimSessionMessages(session.messages);
         if (msg.role === "assistant") {
-          session.rendererFinalAssistantIds[msg.id] = true;
+          session.rendererFinalTranscript.assistantIds[msg.id] = true;
         }
         if (hasToolCall(msg)) {
-          session.rendererFinalToolCallAssistantIds[msg.id] = true;
+          session.rendererFinalTranscript.toolCallAssistantIds[msg.id] = true;
         }
         session.streamingMessage = null;
-        session.rendererFinalAssistantIds = retainMessageIds(session.rendererFinalAssistantIds, session.messages);
-        session.rendererFinalToolCallAssistantIds = retainMessageIds(
-          session.rendererFinalToolCallAssistantIds,
+        session.rendererFinalTranscript.assistantIds = retainMessageIds(
+          session.rendererFinalTranscript.assistantIds,
+          session.messages,
+        );
+        session.rendererFinalTranscript.toolCallAssistantIds = retainMessageIds(
+          session.rendererFinalTranscript.toolCallAssistantIds,
           session.messages,
         );
         setPiRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, undefined, session.subagentSessionEndedAtMs),
         );
-        setFinishedSubagents(session);
       });
     },
 
@@ -335,7 +342,6 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.sessionStats = stats;
           if (stats) {
             session.usageLedger = reconcileStats(session.usageLedger, stats, requestId);
-            session.rendererFinalAssistantIds = { ...session.usageLedger.liveIds };
           }
         }
       });
@@ -362,6 +368,20 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.pendingUiAutoResponse = response;
+      });
+    },
+
+    setPiRunningSubagents: (tabId, rows) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) setPiRunningSubagentsIfChanged(session, rows);
+      });
+    },
+
+    setDshRunningSubagents: (tabId, rows) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) setDshRunningSubagentsIfChanged(session, rows);
       });
     },
 

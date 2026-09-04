@@ -32,6 +32,7 @@ import {
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
+import { selectFinishedSubagents } from "../state/agentChatStoreSession";
 import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } from "../subscriptions/agentChatPiEventShared";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
@@ -76,7 +77,7 @@ export async function startAgentChatSession(opts: {
       : undefined;
     const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
     const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
-    const isChildFinished = parentSession?.finishedSubagents.some(
+    const isChildFinished = selectFinishedSubagents(parentSession).some(
       (subagent) => subagent.childSessionId === childSessionId,
     );
     const isParentTrackingChild =

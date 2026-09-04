@@ -34,16 +34,15 @@ export type AgentChatSessionData = {
   thinkingLevel: string | null;
   sessionStats: AgentSessionStats | null;
   usageLedger: ReturnType<typeof createAgentChatUsageLedger>;
-  rendererFinalAssistantIds: Record<string, true>;
-  rendererFinalToolCallAssistantIds: Record<string, true>;
+  rendererFinalTranscript: {
+    assistantIds: Record<string, true>;
+    toolCallAssistantIds: Record<string, true>;
+  };
   queue: AgentQueueState;
   pendingUiRequest: AgentPendingUiRequest | null;
   pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
-  /** Combined Pi-derived and DSH snapshot rows shown in the parent tab. */
-  runningSubagents: RunningSubagentSummary[];
   piRunningSubagents: RunningSubagentSummary[];
   dshRunningSubagents: RunningSubagentSummary[];
-  finishedSubagents: RunningSubagentSummary[];
   subagentProgressTargets: AgentSubagentProgressTarget[];
   subagentLiveTranscripts: Record<string, AgentMessage[]>;
   subagentCancelStates: Record<string, AgentSubagentCancelState>;
@@ -71,15 +70,15 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
     thinkingLevel: null,
     sessionStats: null,
     usageLedger: createAgentChatUsageLedger(),
-    rendererFinalAssistantIds: {},
-    rendererFinalToolCallAssistantIds: {},
+    rendererFinalTranscript: {
+      assistantIds: {},
+      toolCallAssistantIds: {},
+    },
     queue: { steering: [], followUp: [] },
     pendingUiRequest: null,
     pendingUiAutoResponse: null,
-    runningSubagents: [],
     piRunningSubagents: [],
     dshRunningSubagents: [],
-    finishedSubagents: [],
     subagentProgressTargets: [],
     subagentLiveTranscripts: {},
     subagentCancelStates: {},
@@ -93,30 +92,61 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
   };
 }
 
-/** Updates running sub-agent state only when its display fields changed. */
+/** Selects Pi rows before DSH rows, retaining the prior combined array when neither source changed. */
+export function selectRunningSubagents(session: AgentChatSessionData | undefined): RunningSubagentSummary[] {
+  if (!session) return EMPTY_SUBAGENTS;
+  const dshSelections = runningSubagentSelections.get(session.piRunningSubagents);
+  const cachedRows = dshSelections?.get(session.dshRunningSubagents);
+  if (cachedRows) return cachedRows;
+
+  const rows = [...session.piRunningSubagents, ...session.dshRunningSubagents];
+  const nextDshSelections = dshSelections ?? new WeakMap<RunningSubagentSummary[], RunningSubagentSummary[]>();
+  nextDshSelections.set(session.dshRunningSubagents, rows);
+  runningSubagentSelections.set(session.piRunningSubagents, nextDshSelections);
+  return rows;
+}
+
+/** Selects completed rows from committed messages only, retaining the result while messages are unchanged. */
+export function selectFinishedSubagents(session: AgentChatSessionData | undefined): RunningSubagentSummary[] {
+  if (!session) return EMPTY_SUBAGENTS;
+  const cachedRows = finishedSubagentSelections.get(session.messages);
+  if (cachedRows) return cachedRows;
+
+  const rows = deriveFinishedSubagents(session.messages);
+  finishedSubagentSelections.set(session.messages, rows);
+  return rows;
+}
+
+/** Updates Pi-derived rows only when their display fields changed. */
 export function setPiRunningSubagentsIfChanged(
   session: AgentChatSessionData,
   nextRunning: RunningSubagentSummary[],
 ): void {
+  if (areSubagentRowsEqual(session.piRunningSubagents, nextRunning)) return;
   session.piRunningSubagents = nextRunning;
-  setRunningSubagentsIfChanged(session, [...nextRunning, ...session.dshRunningSubagents]);
 }
 
-/** Replaces the authoritative DSH lineage snapshot for a parent session. */
+/** Updates the authoritative DSH lineage snapshot only when its display fields changed. */
 export function setDshRunningSubagentsIfChanged(
   session: AgentChatSessionData,
   nextRunning: RunningSubagentSummary[],
 ): void {
+  if (areSubagentRowsEqual(session.dshRunningSubagents, nextRunning)) return;
   session.dshRunningSubagents = nextRunning;
-  setRunningSubagentsIfChanged(session, [...session.piRunningSubagents, ...nextRunning]);
 }
 
-/** Updates the effective displayed rows only when their display fields changed. */
-function setRunningSubagentsIfChanged(session: AgentChatSessionData, nextRunning: RunningSubagentSummary[]): void {
-  if (
-    session.runningSubagents.length === nextRunning.length &&
-    session.runningSubagents.every((subagent, index) => {
-      const nextSubagent = nextRunning[index];
+const EMPTY_SUBAGENTS: RunningSubagentSummary[] = [];
+const runningSubagentSelections = new WeakMap<
+  RunningSubagentSummary[],
+  WeakMap<RunningSubagentSummary[], RunningSubagentSummary[]>
+>();
+const finishedSubagentSelections = new WeakMap<AgentMessage[], RunningSubagentSummary[]>();
+
+function areSubagentRowsEqual(currentRows: RunningSubagentSummary[], nextRows: RunningSubagentSummary[]): boolean {
+  return (
+    currentRows.length === nextRows.length &&
+    currentRows.every((subagent, index) => {
+      const nextSubagent = nextRows[index];
       return (
         nextSubagent &&
         subagent.rowId === nextSubagent.rowId &&
@@ -130,30 +160,5 @@ function setRunningSubagentsIfChanged(session: AgentChatSessionData, nextRunning
         subagent.startedAtMs === nextSubagent.startedAtMs
       );
     })
-  )
-    return;
-  session.runningSubagents = nextRunning;
-}
-
-/** Re-derives finished sub-agent display state from the retained transcript. */
-export function setFinishedSubagents(session: AgentChatSessionData): void {
-  const nextFinished = deriveFinishedSubagents(session.messages);
-  if (
-    session.finishedSubagents.length === nextFinished.length &&
-    session.finishedSubagents.every((subagent, index) => {
-      const nextSubagent = nextFinished[index];
-      return (
-        nextSubagent &&
-        subagent.rowId === nextSubagent.rowId &&
-        subagent.runtime === nextSubagent.runtime &&
-        subagent.agentId === nextSubagent.agentId &&
-        subagent.agentName === nextSubagent.agentName &&
-        subagent.childSessionId === nextSubagent.childSessionId &&
-        subagent.title === nextSubagent.title &&
-        subagent.promptSummary === nextSubagent.promptSummary
-      );
-    })
-  )
-    return;
-  session.finishedSubagents = nextFinished;
+  );
 }

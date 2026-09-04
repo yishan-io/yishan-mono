@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tabStore } from "../../workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
+import { selectFinishedSubagents, selectRunningSubagents } from "../state/agentChatStoreSession";
 import {
   applySubagentLifecycleWidget,
   applySubagentLiveTranscripts,
@@ -115,7 +116,7 @@ describe("applySubagentLifecycleWidget", () => {
       },
     ]);
 
-    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([
       {
         rowId: "child-session-1",
         agentId: "agent-1",
@@ -151,8 +152,8 @@ describe("applySubagentLifecycleWidget", () => {
       },
     ]);
 
-    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([]);
-    expect(agentChatStore.getState().sessionsByTabId[tabId]?.finishedSubagents).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([]);
+    expect(selectFinishedSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([
       expect.objectContaining({ rowId: "child-session-1", childSessionId: "child-session-1" }),
     ]);
   });

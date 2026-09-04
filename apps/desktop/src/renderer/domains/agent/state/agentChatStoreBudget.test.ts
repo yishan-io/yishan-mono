@@ -283,7 +283,7 @@ describe("usage ledger retention", () => {
     expect(agentChatStore.getState().sessionsByTabId[tabId]?.messages).toEqual([finalMessage, liveResult]);
   });
 
-  it("compacts renderer-final IDs at a stats boundary while retaining post-boundary replay protection", () => {
+  it("keeps renderer-final transcript IDs distinct from usage ledger live IDs at a stats boundary", () => {
     const tabId = "tab-ledger-renderer-final-compaction";
     agentChatStore.getState().initSession(tabId, "session-ledger-renderer-final-compaction");
     agentChatStore.getState().updateStreamingMessage(tabId, makeBilledAssistant("before-request", 3));
@@ -302,7 +302,11 @@ describe("usage ledger retention", () => {
       );
 
     const session = agentChatStore.getState().sessionsByTabId[tabId];
-    expect(session?.rendererFinalAssistantIds).toEqual({ "after-request": true });
+    expect(session?.rendererFinalTranscript.assistantIds).toEqual({
+      "before-request": true,
+      "after-request": true,
+    });
+    expect(session?.usageLedger.liveIds).toEqual({ "after-request": true });
     agentChatStore
       .getState()
       .replaceMessages(tabId, [{ id: afterRequest.id, role: "assistant", content: [{ type: "text", text: "stale" }] }]);

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { agentChatStore } from "./agentChatStore";
+import { selectRunningSubagents } from "./agentChatStoreSession";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 
@@ -36,7 +37,7 @@ describe("DSH lineage subagent snapshots", () => {
       },
     ]);
 
-    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents.map((row) => row.rowId)).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId]).map((row) => row.rowId)).toEqual([
       "shared-id",
       "dsh:shared-id",
     ]);
@@ -52,14 +53,36 @@ describe("DSH lineage subagent snapshots", () => {
         state: "running",
       },
     ]);
-    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents.map((row) => row.rowId)).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId]).map((row) => row.rowId)).toEqual([
       "shared-id",
       "dsh:new-child",
     ]);
 
     agentChatStore.getState().setDshRunningSubagents(tabId, []);
-    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents.map((row) => row.rowId)).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId]).map((row) => row.rowId)).toEqual([
       "shared-id",
     ]);
+  });
+
+  it("keeps the combined selection reference stable when Pi and DSH sources are unchanged", () => {
+    const tabId = "tab-stable-lineage";
+    const dshRows = [
+      {
+        rowId: "dsh:child",
+        runtime: "dsh" as const,
+        agentName: "DSH child",
+        childSessionId: "child",
+        title: "DSH child",
+        promptSummary: "DSH child",
+        state: "running" as const,
+      },
+    ];
+    agentChatStore.getState().initSession(tabId, "parent-session");
+    agentChatStore.getState().setDshRunningSubagents(tabId, dshRows);
+
+    const initialRows = selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId]);
+    agentChatStore.getState().setDshRunningSubagents(tabId, [...dshRows]);
+
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toBe(initialRows);
   });
 });

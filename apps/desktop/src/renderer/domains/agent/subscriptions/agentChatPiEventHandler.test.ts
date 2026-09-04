@@ -5,6 +5,7 @@ import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore"
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { compactAgent, respondToAgentExtensionUiRequest } from "../commands/agentChatCommands";
 import { agentChatStore } from "../state/agentChatStore";
+import { selectRunningSubagents } from "../state/agentChatStoreSession";
 import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
 import { refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
 
@@ -133,7 +134,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
 
     // The row now carries the real ids, so the cancel path has a target
     // without relying on progress-widget name matching.
-    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([
       expect.objectContaining({
         rowId: "child-session-live",
         agentId: "agent-live",
@@ -198,7 +199,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
 
     agentChatStore.getState().replaceMessages(tabId, [toolCall, acceptedBackgroundResult]);
 
-    expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([
       expect.objectContaining({ childSessionId: "child-session-live", state: "running" }),
     ]);
   });
@@ -307,7 +308,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
       },
     });
 
-    expect(agentChatStore.getState().sessionsByTabId["tab-string-details-history"]?.runningSubagents).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId["tab-string-details-history"])).toEqual([
       {
         rowId: "child-session-string-details",
         state: "running",
@@ -431,7 +432,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
       },
     });
 
-    expect(agentChatStore.getState().sessionsByTabId["tab-subagents-history"]?.runningSubagents).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId["tab-subagents-history"])).toEqual([
       {
         rowId: "child-session-2",
         state: "running",
@@ -487,7 +488,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
         content: "",
       },
     ]);
-    expect(agentChatStore.getState().sessionsByTabId["tab-malformed-message-end"]?.runningSubagents).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId["tab-malformed-message-end"])).toEqual([
       {
         rowId: "child-session-message-end",
         state: "running",
@@ -566,7 +567,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
       },
     });
 
-    expect(agentChatStore.getState().sessionsByTabId["tab-subagents-live"]?.runningSubagents).toEqual([
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId["tab-subagents-live"])).toEqual([
       {
         rowId: "child-session-live",
         agentId: "agent-live",
@@ -603,7 +604,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
       },
     });
 
-    expect(agentChatStore.getState().sessionsByTabId["tab-subagents-live"]?.runningSubagents).toEqual([]);
+    expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId["tab-subagents-live"])).toEqual([]);
   });
 
   it("stores assistant turn errors separately from transcript content", () => {

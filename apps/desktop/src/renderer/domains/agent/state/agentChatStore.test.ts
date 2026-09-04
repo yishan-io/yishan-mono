@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveAgentToolCallLifecycleStates } from "../chat/agentChatSubagents";
 import type { AgentMessage } from "../chat/agentChatTypes";
 import { agentChatStore } from "./agentChatStore";
+import { selectFinishedSubagents, selectRunningSubagents } from "./agentChatStoreSession";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 
@@ -363,7 +364,7 @@ describe("agentChatStore", () => {
       const session = agentChatStore.getState().sessionsByTabId[tabId];
       expect(session?.messages).toEqual([finalizedAssistant, toolResult]);
       expect(resolveAgentToolCallLifecycleStates(session?.messages ?? []).get("tool-call-1")).toBe("completed");
-      expect(session?.runningSubagents).toEqual([]);
+      expect(selectRunningSubagents(session)).toEqual([]);
     });
 
     it("keeps a finalized tool-call owner when returning history contains its result after stats reconciliation", () => {
@@ -650,7 +651,7 @@ describe("agentChatStore", () => {
 
       let session = agentChatStore.getState().sessionsByTabId[tabId];
       expect(session?.messages).toEqual([startedMessage]);
-      expect(session?.runningSubagents).toEqual([
+      expect(selectRunningSubagents(session)).toEqual([
         expect.objectContaining({ childSessionId: "child-session-1", state: "running" }),
       ]);
 
@@ -658,8 +659,33 @@ describe("agentChatStore", () => {
 
       session = agentChatStore.getState().sessionsByTabId[tabId];
       expect(session?.messages).toEqual([completedMessage]);
-      expect(session?.runningSubagents).toEqual([]);
-      expect(session?.finishedSubagents).toEqual([expect.objectContaining({ childSessionId: "child-session-1" })]);
+      expect(selectRunningSubagents(session)).toEqual([]);
+      expect(selectFinishedSubagents(session)).toEqual([expect.objectContaining({ childSessionId: "child-session-1" })]);
+    });
+
+    it("derives finished rows from committed messages and not the streaming message", () => {
+      const tabId = "tab-finished-committed";
+      agentChatStore.getState().initSession(tabId, "session-finished-committed");
+      agentChatStore.getState().updateStreamingMessage(tabId, {
+        id: "completed-child",
+        role: "custom",
+        customType: "pi-subagent-child",
+        display: false,
+        content: "",
+        details: {
+          event: "completed",
+          agentId: "agent-1",
+          agentName: "builder",
+          childSessionId: "child-session-1",
+        },
+      });
+
+      expect(selectFinishedSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([]);
+
+      agentChatStore.getState().finalizeStreamingMessage(tabId);
+      expect(selectFinishedSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([
+        expect.objectContaining({ childSessionId: "child-session-1" }),
+      ]);
     });
 
     it("updates an existing Agent row from preparing to queued when its background result arrives", () => {
@@ -679,7 +705,7 @@ describe("agentChatStore", () => {
         ],
       });
 
-      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+      expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([
         expect.objectContaining({ rowId: "tool-background-agent", state: "preparing" }),
       ]);
 
@@ -692,7 +718,7 @@ describe("agentChatStore", () => {
         details: { mode: "background" },
       });
 
-      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+      expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([
         expect.objectContaining({ rowId: "tool-background-agent", state: "queued" }),
       ]);
     });
@@ -736,15 +762,15 @@ describe("agentChatStore", () => {
       };
       agentChatStore.getState().appendMessage(tabId, startedMessage);
 
-      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+      expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([
         expect.objectContaining({ childSessionId: "child-session-1" }),
       ]);
 
       agentChatStore.getState().setSubagentSessionEndedAt(tabId, 1_700_000_000_500);
-      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([]);
+      expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([]);
 
       agentChatStore.getState().setSubagentSessionEndedAt(tabId, null);
-      expect(agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents).toEqual([
+      expect(selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId])).toEqual([
         expect.objectContaining({ childSessionId: "child-session-1" }),
       ]);
     });

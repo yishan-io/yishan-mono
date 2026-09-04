@@ -3,6 +3,7 @@
 import { requestTabFocus } from "@renderer/domains/workbench";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { selectFinishedSubagents } from "../../../state/agentChatStoreSession";
 import type { AgentMessage, AgentModel } from "../../../chat/agentChatTypes";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { AgentChatView } from "./AgentChatView";
@@ -92,7 +93,7 @@ const mocked = vi.hoisted(() => {
           const parentTabId = mocked.findTabWithSession(opts.subagentParentSessionId);
           const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
           const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
-          const isChildFinished = parentSession?.finishedSubagents.some(
+          const isChildFinished = selectFinishedSubagents(parentSession).some(
             (subagent) => subagent.childSessionId === childSessionId,
           );
           const isParentTrackingChild =
