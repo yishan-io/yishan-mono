@@ -149,8 +149,8 @@ describe("usage ledger retention", () => {
     expect(session?.messages.some((message) => message.id === "evicted-parent")).toBe(false);
     expect(session?.messages.some((message) => message.id === "completed-evicted-child")).toBe(false);
     expect(session?.usageLedger).toMatchObject({
-      fallbackParentTotal: { input: 3, cost: 0.03 },
-      childUsageBySessionId: { "evicted-child": { input: 5, cost: 0.05 } },
+      fallback: { input: 3, cost: 0.03 },
+      childUsageById: { "evicted-child": { input: 5, cost: 0.05 } },
     });
   });
 
@@ -170,8 +170,8 @@ describe("usage ledger retention", () => {
     const session = agentChatStore.getState().sessionsByTabId[tabId];
     expect(session?.messages.some((message) => message.id === "completed-evicted-child")).toBe(false);
     expect(session?.usageLedger).toMatchObject({
-      fallbackParentTotal: { input: 3, cost: 0.03 },
-      childUsageBySessionId: { "evicted-child": { input: 5, cost: 0.05 } },
+      fallback: { input: 3, cost: 0.03 },
+      childUsageById: { "evicted-child": { input: 5, cost: 0.05 } },
     });
   });
 
@@ -190,7 +190,7 @@ describe("usage ledger retention", () => {
     expect(session?.messages.map((message) => message.id)).toEqual(["stale-parent", "committed-parent"]);
     expect(session?.streamingMessage?.id).toBe("live-assistant");
     expect(session?.activeCoreTurnAssistantId).toBe("live-assistant");
-    expect(session?.usageLedger.fallbackParentTotal).toMatchObject({ input: 3, cost: 0.03 });
+    expect(session?.usageLedger.fallback).toMatchObject({ input: 3, cost: 0.03 });
   });
 
   it("preserves prompt-created streaming state when history arrives before turn_start", () => {
@@ -235,7 +235,7 @@ describe("usage ledger retention", () => {
 
     const session = agentChatStore.getState().sessionsByTabId[tabId];
     expect(session?.messages).toEqual([liveFinal]);
-    expect(session?.usageLedger.fallbackParentTotal).toMatchObject({ input: 7, cost: 0.07 });
+    expect(session?.usageLedger.fallback).toMatchObject({ input: 7, cost: 0.07 });
   });
 
   it("replaces a stale same-ID history placeholder with the finalized active streaming message", () => {
@@ -321,8 +321,8 @@ describe("usage ledger retention", () => {
     agentChatStore.getState().replaceMessages(tabId, [makeBilledAssistant("historical-parent", 7)]);
 
     expect(agentChatStore.getState().sessionsByTabId[tabId]?.usageLedger).toMatchObject({
-      parentBaseline: { input: 20, cost: 0.2 },
-      parentPostBaselineDeltas: {},
+      baseline: { input: 20, cost: 0.2 },
+      deltas: {},
     });
   });
 
@@ -343,8 +343,8 @@ describe("usage ledger retention", () => {
     agentChatStore.getState().appendMessage(tabId, makeCompletedChildLifecycle("child-live", 8));
 
     expect(agentChatStore.getState().sessionsByTabId[tabId]?.usageLedger).toMatchObject({
-      parentPostBaselineDeltas: { "finalized-parent": { input: 3, cost: 0.03 } },
-      childUsageBySessionId: { "child-live": { input: 8, cost: 0.08 } },
+      deltas: { "finalized-parent": { input: 3, cost: 0.03 } },
+      childUsageById: { "child-live": { input: 8, cost: 0.08 } },
     });
   });
 });

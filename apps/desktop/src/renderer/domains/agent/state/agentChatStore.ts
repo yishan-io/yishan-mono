@@ -26,10 +26,9 @@ import {
   setPiRunningSubagentsIfChanged,
 } from "./agentChatStoreSession";
 import {
-  mergeAgentChatUsageLedgerHistory,
-  reconcileAgentChatUsageLedgerStats,
-  recordAgentChatUsageLedgerLiveMessages,
-  recordAgentChatUsageLedgerStatsRequest,
+  mergeUsage,
+  reconcileStats,
+  recordStatsRequest,
 } from "./agentChatUsageLedger";
 
 export type AgentChatStoreState = {
@@ -155,7 +154,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
-        session.usageLedger = recordAgentChatUsageLedgerLiveMessages(session.usageLedger, [message]);
+        session.usageLedger = mergeUsage(session.usageLedger, [message], "live");
         // Deduplicate: skip if message with same id already exists.
         if (session.messages.some((m) => m.id === message.id)) return;
         session.messages.push(message);
@@ -188,11 +187,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const historyMessages = hasLiveStream
           ? messages.filter((message) => message.id !== session.streamingMessage?.id)
           : messages;
-        session.usageLedger = mergeAgentChatUsageLedgerHistory(
-          session.usageLedger,
-          historyMessages,
-          !session.hasLoadedMessages,
-        );
+        session.usageLedger = mergeUsage(session.usageLedger, historyMessages, "history");
         const retainedToolResultIds = getRetainedToolResultIds(
           historyMessages,
           session.messages,
@@ -245,7 +240,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session || !session.streamingMessage) return;
         const msg = session.streamingMessage;
-        session.usageLedger = recordAgentChatUsageLedgerLiveMessages(session.usageLedger, [msg]);
+        session.usageLedger = mergeUsage(session.usageLedger, [msg], "live");
         const existingMessageIndex = session.messages.findIndex((message) => message.id === msg.id);
         if (existingMessageIndex >= 0) {
           session.messages[existingMessageIndex] = msg;
@@ -328,7 +323,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (session) {
-          session.usageLedger = recordAgentChatUsageLedgerStatsRequest(session.usageLedger, requestId);
+          session.usageLedger = recordStatsRequest(session.usageLedger, requestId);
         }
       });
     },
@@ -339,8 +334,8 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session) {
           session.sessionStats = stats;
           if (stats) {
-            session.usageLedger = reconcileAgentChatUsageLedgerStats(session.usageLedger, stats, requestId);
-            session.rendererFinalAssistantIds = { ...session.usageLedger.liveParentAssistantIds };
+            session.usageLedger = reconcileStats(session.usageLedger, stats, requestId);
+            session.rendererFinalAssistantIds = { ...session.usageLedger.liveIds };
           }
         }
       });
