@@ -3,16 +3,14 @@ import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "@shared/async/delay";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
-import { projectDshLineageSubagents } from "../chat/agentChatDshLineage";
 import { isAgentSessionBusy } from "../chat/agentChatTypes";
 import {
   getAgentCapabilities,
-  listAgentSessionLineage,
   listDSHProviders,
   renamePiCompatibilitySession,
   sendPiCompatibilityCommand,
 } from "../daemon/daemonAgentProcedures";
-import type { AgentRuntime, AgentSessionLineageResult } from "../daemon/daemonAgentTypes";
+import type { AgentRuntime } from "../daemon/daemonAgentTypes";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import { normalizeAgentChatRuntime, selectNewAgentChatRuntime } from "../runtime/agentRuntimeSelection";
 import {
@@ -24,6 +22,7 @@ import {
   fetchPiAgentModelsCompatibility,
   fetchPiAgentStateCompatibility,
   findTabWithSession,
+  isActiveDshParent,
   promptAgentSession,
   reattachPiSession,
   recoverAgentSessionAfterReconnect as recoverAgentSessionRuntimeAfterReconnect,
@@ -31,6 +30,7 @@ import {
   stopAgentSession,
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
+import { refreshLineage as refreshDshLineage } from "../runtime/dshSubagentLifecycle";
 import { agentChatStore } from "../state/agentChatStore";
 import { isHydrated, selectFinishedSubagents } from "../state/agentChatStoreSession";
 import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } from "../subscriptions/agentChatPiEventShared";
@@ -156,7 +156,7 @@ export async function startAgentChatSession(opts: {
 
     if (runtime === "dsh" && opts.sessionView === "full") {
       // fire-and-forget: lineage is supplementary and must not delay session hydration.
-      void refreshDshSubagentLineage({
+      void refreshLineage({
         tabId: opts.tabId,
         workspaceId: opts.workspaceId,
         cwd: opts.cwd,
@@ -228,42 +228,11 @@ export async function loadDSHSessionModels(
   }
 }
 
-export async function refreshDshSubagentLineage(opts: {
-  tabId: string;
-  workspaceId: string;
-  cwd: string;
-  rootSessionId: string;
-}): Promise<AgentSessionLineageResult | null> {
-  if (!isCurrentDshLineageParent(opts.tabId, opts.rootSessionId)) return null;
-  const generation = agentChatStore.getState().beginDshSubagentLineageRefresh(opts.tabId, opts.rootSessionId);
-  if (generation === null) return null;
-
-  try {
-    const lineage = await listAgentSessionLineage({
-      runtime: "dsh",
-      workspaceId: opts.workspaceId,
-      cwd: opts.cwd,
-      rootSessionId: opts.rootSessionId,
-      mode: "children",
-    });
-    if (!isCurrentDshLineageParent(opts.tabId, opts.rootSessionId)) return null;
-    agentChatStore.getState().applyDshSubagentLineageRefresh({
-      tabId: opts.tabId,
-      parentSessionId: opts.rootSessionId,
-      generation,
-      rows: projectDshLineageSubagents(lineage),
-    });
-    return lineage;
-  } catch (error) {
-    console.warn("Failed to refresh DSH subagent lineage", getErrorMessage(error));
-    return null;
-  }
-}
-
-/** Checks that a tab still owns the DSH parent session requested by lineage refresh. */
-function isCurrentDshLineageParent(tabId: string, parentSessionId: string): boolean {
-  const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
-  return tab?.kind === "agent-chat" && tab.data.runtime === "dsh" && tab.data.sessionId === parentSessionId;
+/** Refreshes DSH lineage using the runtime coordinator's parent-session guard. */
+export async function refreshLineage(
+  opts: Omit<Parameters<typeof refreshDshLineage>[0], "isActiveDshParent">,
+): ReturnType<typeof refreshDshLineage> {
+  return await refreshDshLineage({ ...opts, isActiveDshParent });
 }
 
 /** Recovers a session and refreshes DSH lineage only after a usable parent recovery. */
@@ -279,7 +248,7 @@ export async function recoverAgentSessionAfterReconnect(
   }
 
   // fire-and-forget: lineage is supplementary and must not delay reconnect recovery.
-  void refreshDshSubagentLineage({
+  void refreshLineage({
     tabId: opts.tabId,
     workspaceId: opts.workspaceId,
     cwd: opts.cwd,

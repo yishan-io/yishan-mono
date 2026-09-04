@@ -75,7 +75,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("agentSessionRuntime.DSH recovery", () => {
+describe("dshAgentSessionAdapter recovery", () => {
   it("restarts an initially unavailable restored DSH session on reconnect without changing its identity", async () => {
     mocks.startAgent.mockRejectedValueOnce(new Error("dsh runtime unavailable")).mockResolvedValueOnce({
       runtime: "dsh",

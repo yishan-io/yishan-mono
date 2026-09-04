@@ -2,7 +2,6 @@ import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { tabStore } from "@renderer/domains/workbench";
 import { delay } from "@shared/async/delay";
 import type { AgentRuntime } from "../daemon/daemonAgentTypes";
-import type { DSHTranscriptController } from "../subscriptions/dshTranscriptController";
 import { buildAgentRuntimeSessionKey } from "./agentSessionIdentity";
 
 const CLOSING_SESSION_WAIT_TIMEOUT_MS = 6_000;
@@ -21,9 +20,6 @@ export type AgentRuntimeSessionRecord = {
   state: "starting" | "running" | "closing";
   closeRequested: boolean;
   startPromise: Promise<void> | null;
-  dshTranscriptController: DSHTranscriptController | null;
-  lifecycleRevisionsByInstanceId: Map<string, number>;
-  currentLifecycleInstanceId: string | null;
 };
 
 const activeSessions = new Map<string, AgentRuntimeSessionRecord>();

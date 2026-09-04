@@ -1,24 +1,23 @@
-import { tabStore } from "@renderer/domains/workbench";
-import { bindAgentChatTabSession } from "@renderer/domains/workbench";
+import { bindAgentChatTabSession, tabStore } from "@renderer/domains/workbench";
 import type { AgentChatSessionView } from "@renderer/domains/workbench";
-import { delay } from "@shared/async/delay";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
 import {
   abortAgentSession as abortAgentSessionProcedure,
   attachAgentSession as attachAgentSessionProcedure,
   disposeAgentSession as disposeAgentSessionProcedure,
-  getAgentCapabilities,
   promptAgentSession as promptAgentSessionProcedure,
-  readAgentRuntimeHistory,
   startAgentSession as startAgentSessionProcedure,
 } from "../daemon/daemonAgentProcedures";
-import type { AgentDSHAttachResult, AgentRuntime } from "../daemon/daemonAgentTypes";
+import type { AgentRuntime } from "../daemon/daemonAgentTypes";
 import { agentChatStore } from "../state/agentChatStore";
-import { registerAgentChatDSHEventRouter } from "../subscriptions/agentChatDSHEventRouter";
-import type { DSHFrontendPayload } from "../subscriptions/dshTranscript";
-import { DSHTranscriptController } from "../subscriptions/dshTranscriptController";
 import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
+import {
+  attachDSHAgentSession,
+  createDSHTranscriptController,
+  registerDSHAgentSessionRouter,
+  retryDSHAgentTranscript,
+} from "./dshAgentSessionAdapter";
 import {
   clearPiAgentSessionStats,
   ensurePiAgentSessionRouterReady,
@@ -45,6 +44,18 @@ import {
 import type { AgentRuntimeSessionRecord } from "./agentSessionRegistry";
 
 export { fetchPiAgentMessagesCompatibility, fetchPiAgentModelsCompatibility, fetchPiAgentStateCompatibility };
+
+/** Returns whether a tab and chat session still own the expected DSH parent. */
+export function isActiveDshParent(tabId: string, sessionId: string): boolean {
+  const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
+  const session = agentChatStore.getState().sessionsByTabId[tabId];
+  return (
+    tab?.kind === "agent-chat" &&
+    tab.data.runtime === "dsh" &&
+    tab.data.sessionId === sessionId &&
+    session?.sessionId === sessionId
+  );
+}
 
 /** Ensures a Pi session exists, preserving the legacy public API. */
 export async function ensurePiSession(opts: EnsureAgentSessionOptions): Promise<EnsureAgentSessionResult> {
@@ -97,12 +108,9 @@ export async function ensureAgentSession(opts: EnsureAgentSessionOptions): Promi
     state: "starting",
     closeRequested: false,
     startPromise: null,
-    dshTranscriptController: null,
-    lifecycleRevisionsByInstanceId: new Map(),
-    currentLifecycleInstanceId: null,
   };
-  record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
-  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
+  if (runtime === "dsh") createDSHTranscriptController(record, opts.tabId);
+  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record);
   const deferredStart = createAgentSessionDeferred<void>();
   record.startPromise = deferredStart.promise;
   // This promise can reject when startup fails without a concurrent stop.
@@ -166,7 +174,7 @@ export async function reattachAgentSession(tabId: string): Promise<boolean> {
 export async function retryDSHTranscript(tabId: string): Promise<void> {
   const record = getActiveAgentSessionRecord(tabId);
   if (record?.runtime !== "dsh") return;
-  await record.dshTranscriptController?.retry();
+  await retryDSHAgentTranscript(record);
 }
 /** Reattaches a live Pi session through the legacy API. */
 export async function reattachPiSession(tabId: string): Promise<void> {
@@ -250,168 +258,10 @@ function registerRuntimeRouter(
   runtime: AgentRuntime,
   tabId: string,
   sessionId: string,
-  controller: DSHTranscriptController | null,
   record: AgentRuntimeSessionRecord,
 ): () => void {
   if (runtime === "pi") return registerPiAgentSessionRouter(tabId, sessionId);
-  if (!controller) throw new Error("DSH transcript controller is required");
-  return registerAgentChatDSHEventRouter({
-    tabId,
-    sessionId,
-    onEvent: (payload) => controller.handle(payload),
-    onLifecycleUpdate: (payload) => {
-      if (!advanceDshLifecycleWatermark(record, payload)) return;
-      refreshDshSubagentLineageForLifecycle(record, tabId, payload);
-    },
-    onMalformedPayload: () => controller.handleMalformedPayload(),
-  });
-}
-function refreshDshSubagentLineageForLifecycle(
-  record: AgentRuntimeSessionRecord,
-  tabId: string,
-  payload: DSHFrontendPayload,
-): void {
-  if (
-    record.sessionView !== "full" ||
-    payload.sessionId !== record.sessionId ||
-    (payload.update.lifecycle?.parentSessionId ?? payload.update.lifecycleResync?.parentSessionId) !==
-      record.sessionId ||
-    !isCurrentDshRuntimeParent(record, tabId)
-  ) {
-    return;
-  }
-  // fire-and-forget: lineage is supplementary and must not delay DSH event handling.
-  void import("../commands/agentChatCommands")
-    .then(async ({ refreshDshSubagentLineage }) => {
-      const lineage = await refreshDshSubagentLineage({
-        tabId,
-        workspaceId: record.workspaceId,
-        cwd: record.cwd,
-        rootSessionId: record.sessionId,
-      });
-      if (
-        !payload.update.lifecycle ||
-        !isCurrentDshLifecycleWatermark(record, payload) ||
-        !isCurrentDshRuntimeParent(record, tabId)
-      ) {
-        return;
-      }
-      const { confirmDshSubagentCancellationFromLifecycle } = await import(
-        "../commands/agentChatDshSubagentCancellation"
-      );
-      confirmDshSubagentCancellationFromLifecycle({
-        tabId,
-        sessionId: record.sessionId,
-        rowKey: payload.update.lifecycle.childSessionId,
-        childSessionId: payload.update.lifecycle.childSessionId,
-        lifecycle: payload.update.lifecycle,
-        lineage,
-      });
-    })
-    .catch((error: unknown) => console.warn("Failed to load DSH subagent lineage refresh", getErrorMessage(error)));
-}
-
-/** Advances the current lifecycle instance ID only for a newer lifecycle or resync revision. */
-function advanceDshLifecycleWatermark(record: AgentRuntimeSessionRecord, payload: DSHFrontendPayload): boolean {
-  const lifecycleUpdate = payload.update.lifecycle ?? payload.update.lifecycleResync;
-  if (!lifecycleUpdate) return false;
-
-  const isNewInstanceId = record.currentLifecycleInstanceId !== lifecycleUpdate.instanceId;
-  if (isNewInstanceId && record.lifecycleRevisionsByInstanceId.has(lifecycleUpdate.instanceId)) return false;
-
-  const latestRevision = record.lifecycleRevisionsByInstanceId.get(lifecycleUpdate.instanceId);
-  if (latestRevision !== undefined && lifecycleUpdate.revision <= latestRevision) return false;
-
-  record.lifecycleRevisionsByInstanceId.set(lifecycleUpdate.instanceId, lifecycleUpdate.revision);
-  if (isNewInstanceId) record.currentLifecycleInstanceId = lifecycleUpdate.instanceId;
-  return true;
-}
-
-/** Returns whether an async lifecycle refresh still represents the active lifecycle revision. */
-function isCurrentDshLifecycleWatermark(record: AgentRuntimeSessionRecord, payload: DSHFrontendPayload): boolean {
-  const lifecycle = payload.update.lifecycle;
-  return (
-    lifecycle !== undefined &&
-    record.currentLifecycleInstanceId === lifecycle.instanceId &&
-    record.lifecycleRevisionsByInstanceId.get(lifecycle.instanceId) === lifecycle.revision
-  );
-}
-
-function isCurrentDshRuntimeParent(record: AgentRuntimeSessionRecord, tabId: string): boolean {
-  const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
-  const session = agentChatStore.getState().sessionsByTabId[tabId];
-  return (
-    tab?.kind === "agent-chat" &&
-    tab.data.runtime === "dsh" &&
-    tab.data.sessionId === record.sessionId &&
-    session?.sessionId === record.sessionId
-  );
-}
-
-function createDSHTranscriptController(
-  record: AgentRuntimeSessionRecord,
-  tabId: string,
-): DSHTranscriptController | null {
-  if (record.runtime !== "dsh") return null;
-  return new DSHTranscriptController(
-    tabId,
-    record.sessionId,
-    agentChatStore.getState(),
-    async () =>
-      await loadDSHDurableHistory({
-        sessionId: record.sessionId,
-        workspaceId: record.workspaceId,
-        cwd: record.cwd,
-      }),
-    () => {},
-    async (cursor): Promise<AgentDSHAttachResult> => {
-      const snapshot = await attachAgentSessionProcedure({
-        runtime: "dsh",
-        sessionId: record.sessionId,
-        tabId,
-        workspaceId: record.workspaceId,
-        cwd: record.cwd,
-        afterSeq: cursor.durableThroughSeq,
-      });
-      if (!("events" in snapshot)) throw new TypeError("invalid DSH recovery attach response");
-      return snapshot;
-    },
-  );
-}
-// DSH's supervisor defaults to a one-second restart backoff. Keep polling long
-// enough to observe that restart while keeping transcript recovery bounded.
-const DSH_RECOVERY_POLL_WINDOW_MS = 2_500;
-const DSH_RECOVERY_RETRY_DELAY_MS = 100;
-const DSH_RECOVERY_ATTEMPTS = Math.ceil(DSH_RECOVERY_POLL_WINDOW_MS / DSH_RECOVERY_RETRY_DELAY_MS) + 1;
-
-async function loadDSHDurableHistory(input: {
-  sessionId: string;
-  workspaceId: string;
-  cwd: string;
-}) {
-  let lastUnavailableError: unknown;
-  for (let attempt = 0; attempt < DSH_RECOVERY_ATTEMPTS; attempt++) {
-    try {
-      const history = await readAgentRuntimeHistory({ runtime: "dsh", ...input });
-      if (history.runtime !== "dsh") throw new TypeError("DSH history loader returned another runtime");
-      return history.dsh;
-    } catch (error) {
-      if (!isDSHRuntimeUnavailable(error) || attempt === DSH_RECOVERY_ATTEMPTS - 1) throw error;
-      lastUnavailableError = error;
-    }
-    const capabilities = await getAgentCapabilities();
-    if (!capabilities.dsh.ready) await delay(DSH_RECOVERY_RETRY_DELAY_MS);
-  }
-  throw lastUnavailableError;
-}
-
-const DSH_RUNTIME_UNAVAILABLE_CODE = "DSH_RUNTIME_UNAVAILABLE";
-
-function isDSHRuntimeUnavailable(error: unknown): boolean {
-  if (typeof error !== "object" || error === null || !("data" in error)) return false;
-  const { data } = error as { data: unknown };
-  if (typeof data !== "object" || data === null || !("code" in data)) return false;
-  return data.code === DSH_RUNTIME_UNAVAILABLE_CODE;
+  return registerDSHAgentSessionRouter(record, tabId, isActiveDshParent);
 }
 
 async function adoptExistingChatSession(
@@ -431,12 +281,9 @@ async function adoptExistingChatSession(
     state: "running",
     closeRequested: false,
     startPromise: null,
-    dshTranscriptController: null,
-    lifecycleRevisionsByInstanceId: new Map(),
-    currentLifecycleInstanceId: null,
   };
-  record.dshTranscriptController = createDSHTranscriptController(record, opts.tabId);
-  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record.dshTranscriptController, record);
+  if (runtime === "dsh") createDSHTranscriptController(record, opts.tabId);
+  record.unsubscribe = registerRuntimeRouter(runtime, opts.tabId, sessionId, record);
   registerAgentSessionRecord(opts.tabId, record);
   return { sessionId, attached: true, runtime };
 }
@@ -458,20 +305,17 @@ async function startRuntimeSession(record: AgentRuntimeSessionRecord, opts: Ensu
   });
 }
 async function attachRuntimeSession(record: AgentRuntimeSessionRecord, tabId: string): Promise<void> {
-  const result = await attachAgentSessionProcedure({
+  if (record.runtime === "dsh") {
+    await attachDSHAgentSession(record, tabId);
+    return;
+  }
+  await attachAgentSessionProcedure({
     runtime: record.runtime,
     sessionId: record.sessionId,
     tabId,
     workspaceId: record.workspaceId,
     cwd: record.cwd,
-    ...(record.runtime === "dsh" ? { afterSeq: record.dshTranscriptController?.getDurableThroughSeq() ?? -1 } : {}),
   });
-  if (record.runtime === "dsh") {
-    if (result.runtime !== "dsh" || !("events" in result) || !record.dshTranscriptController) {
-      throw new TypeError("invalid DSH attach response");
-    }
-    record.dshTranscriptController.applyAttachSnapshot(result);
-  }
 }
 async function releaseOrDisposeSession(tabId: string, record: AgentRuntimeSessionRecord): Promise<void> {
   if (record.state === "closing") return;

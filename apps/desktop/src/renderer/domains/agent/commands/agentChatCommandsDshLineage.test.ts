@@ -5,7 +5,7 @@ import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
 import {
   recoverAgentSessionAfterReconnect,
-  refreshDshSubagentLineage,
+  refreshLineage,
   startAgentChatSession,
 } from "./agentChatCommands";
 
@@ -161,7 +161,7 @@ describe("agentChatCommands DSH lineage", () => {
       ],
     });
 
-    await refreshDshSubagentLineage({
+    await refreshLineage({
       tabId: "tab-dsh-lineage",
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
@@ -196,7 +196,7 @@ describe("agentChatCommands DSH lineage", () => {
     ]);
     mocks.listSessionLineage.mockRejectedValue(new Error("lineage unavailable"));
 
-    await refreshDshSubagentLineage({
+    await refreshLineage({
       tabId: "tab-dsh-lineage-failure",
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
@@ -226,13 +226,13 @@ describe("agentChatCommands DSH lineage", () => {
           }),
       );
 
-    const firstRefresh = refreshDshSubagentLineage({
+    const firstRefresh = refreshLineage({
       tabId,
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
       rootSessionId: "parent-session",
     });
-    const secondRefresh = refreshDshSubagentLineage({
+    const secondRefresh = refreshLineage({
       tabId,
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
@@ -260,14 +260,14 @@ describe("agentChatCommands DSH lineage", () => {
         }),
     );
 
-    const refresh = refreshDshSubagentLineage({
+    const refresh = refreshLineage({
       tabId,
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
       rootSessionId: "old-parent",
     });
     agentChatStore.getState().initSession(tabId, "new-parent");
-    setDshParentTab(tabId, "new-parent", "pi");
+    setDshParentTab(tabId, "new-parent");
     resolveLineage(createLineage("old-parent", "old-child", "Old child"));
     await refresh;
 

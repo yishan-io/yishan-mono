@@ -94,7 +94,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("agentSessionRuntime.DSH", () => {
+describe("dshAgentSessionAdapter", () => {
   it("keeps equal Pi and DSH session ids in distinct tabs", () => {
     tabStore.setState({
       tabs: [
@@ -383,6 +383,90 @@ describe("agentSessionRuntime.DSH", () => {
       expect(agentChatStore.getState().sessionsByTabId["dsh-cancellation-tab"]?.dshRunningSubagents).toEqual([]);
       expect(agentChatStore.getState().sessionsByTabId["dsh-cancellation-tab"]?.subagentCancelStates).toEqual({});
     });
+  });
+
+  it("ignores an in-flight DSH lineage result after a same-session Pi rebind", async () => {
+    tabStore.setState({
+      tabs: [
+        {
+          id: "dsh-rebind-tab",
+          workspaceId: "workspace-1",
+          title: "DSH",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/workspace", sessionId: "shared-session", runtime: "dsh" },
+        },
+      ],
+    });
+    mocks.startAgent.mockResolvedValue({ runtime: "dsh", sessionId: "shared-session" });
+    await ensureAgentSession({
+      runtime: "dsh",
+      tabId: "dsh-rebind-tab",
+      workspaceId: "workspace-1",
+      cwd: "/workspace",
+      sessionId: "shared-session",
+      sessionView: "full",
+    });
+    agentChatStore.getState().setDshRunningSubagents("dsh-rebind-tab", [
+      {
+        rowId: "dsh:child-session",
+        runtime: "dsh",
+        agentName: "Worker",
+        childSessionId: "child-session",
+        title: "Worker",
+        promptSummary: "Worker",
+        state: "running",
+      },
+    ]);
+    agentChatStore.getState().setSubagentCancelState("dsh-rebind-tab", "child-session", { status: "cancelling" });
+
+    let resolveLineage!: (lineage: { runtime: "dsh"; rootSessionId: string; mode: "children"; children: [] }) => void;
+    mocks.listSessionLineage.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveLineage = resolve;
+        }),
+    );
+    mocks.dshLifecycleHandler?.(
+      lifecyclePayload(
+        {
+          lifecycle: {
+            version: 1,
+            parentSessionId: "shared-session",
+            instanceId: "run-1",
+            revision: 0,
+            event: "finished",
+            runId: "child-run",
+            childSessionId: "child-session",
+            provider: "pi",
+            local: true,
+            stopReason: "aborted",
+          },
+        },
+        "shared-session",
+        "dsh-rebind-tab",
+      ),
+    );
+
+    await vi.waitFor(() => expect(mocks.listSessionLineage).toHaveBeenCalledOnce());
+    tabStore.setState({
+      tabs: [
+        {
+          id: "dsh-rebind-tab",
+          workspaceId: "workspace-1",
+          title: "Pi",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/workspace", sessionId: "shared-session", runtime: "pi" },
+        },
+      ],
+    });
+    resolveLineage({ runtime: "dsh", rootSessionId: "shared-session", mode: "children", children: [] });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    const session = agentChatStore.getState().sessionsByTabId["dsh-rebind-tab"];
+    expect(session?.dshRunningSubagents).toHaveLength(1);
+    expect(session?.subagentCancelStates).toEqual({ "child-session": { status: "cancelling" } });
   });
 
   it("uses lifecycle resync revisions as the lifecycle watermark", async () => {
