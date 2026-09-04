@@ -1,4 +1,3 @@
-import { chatStore } from "@renderer/domains/agent";
 import type { FileDiffEntry } from "@renderer/domains/workbench";
 import { diffTabContentStore } from "../state/diffTabContentStore";
 

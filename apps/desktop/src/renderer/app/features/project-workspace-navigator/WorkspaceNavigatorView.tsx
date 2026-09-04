@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { chatStore } from "@renderer/domains/agent";
+import { workspaceAgentIndicatorStore } from "@renderer/domains/agent";
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { useDetectedExternalAppIds } from "@renderer/domains/files";
 import {
@@ -59,7 +59,7 @@ export function WorkspaceNavigatorView() {
   const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
-  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const workspaceUnreadToneByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const {
     menu: projectContextMenu,
     openMenu: openProjectContextMenu,
@@ -224,7 +224,7 @@ export function WorkspaceNavigatorView() {
       return;
     }
 
-    chatStore.getState().markWorkspaceNotificationsRead(focusedWorkspaceId);
+    workspaceAgentIndicatorStore.getState().markWorkspaceNotificationsRead(focusedWorkspaceId);
   }, [isAppFocused, selectedWorkspaceId, workspaceUnreadToneByWorkspaceId]);
   /** Closes workspace context menu and nested submenu layers together. */
   const closeWorkspaceMenus = () => {

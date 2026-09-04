@@ -63,7 +63,12 @@ export type { AgentRuntime } from "./daemon/daemonAgentTypes";
 export { getAgentCapabilities } from "./daemon/daemonAgentProcedures";
 export { selectNewAgentChatRuntime } from "./runtime/agentRuntimeSelection";
 export { agentChatStore, type AgentChatStoreState } from "./state/agentChatStore";
-export { chatStore, type ChatStoreState, type WorkspaceAgentStatus, type WorkspaceUnreadTone } from "./state/chatStore";
+export {
+  workspaceAgentIndicatorStore,
+  type WorkspaceAgentIndicatorStoreState,
+  type WorkspaceAgentStatus,
+  type WorkspaceUnreadTone,
+} from "./state/workspaceAgentIndicatorStore";
 // Agent event-pipeline entry points required by cross-feature composition.
 // Re-exported through the public API instead of the events module.
 
@@ -105,17 +110,6 @@ export {
 export { AGENT_SETTINGS_STORE_STORAGE_KEY } from "./state/agentSettingsStore";
 export { agentSettingsStore, type AgentSettingsStoreState } from "./state/agentSettingsStore";
 export { AgentChatRecoveryCoordinator } from "./runtime/agentChatRecovery";
-export {
-  appendChatMessages,
-  closeAgentSession,
-  createWorkspaceChatEventHandler,
-  ensureChatSession,
-  getChatMessages,
-  runChatPrompt,
-  setChatAvailableModels,
-  setChatCurrentModel,
-  updateChatMessage,
-} from "./commands/chatCommands";
 // Agent configuration + definition commands (desktop7 Phase 23 — moved from Settings).
 
 export { getVoiceTranscriptionUsage } from "./api/voiceTranscriptionApi";

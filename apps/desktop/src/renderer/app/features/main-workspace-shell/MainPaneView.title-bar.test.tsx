@@ -149,8 +149,8 @@ vi.mock("../../../domains/workbench/state/tabStore", () => ({
   tabStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../domains/agent/state/chatStore", () => ({
-  chatStore: (
+vi.mock("../../../domains/agent/state/workspaceAgentIndicatorStore", () => ({
+  workspaceAgentIndicatorStore: (
     selector: (state: {
       workspaceUnreadToneByWorkspaceId: Record<string, "success" | "error">;
       workspaceAgentStatusByWorkspaceId: Record<string, "running" | "waiting_input" | "idle">;

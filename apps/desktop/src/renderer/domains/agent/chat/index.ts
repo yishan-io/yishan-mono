@@ -18,7 +18,6 @@ export type {
   AgentQueueState,
 } from "./agentChatTypes";
 export { isAgentSessionBusy } from "./agentChatTypes";
-export type { ChatMessage, AvailableCommand, AvailableModel } from "./chatTypes";
 export {
   PER_MESSAGE_UTF8_BYTES,
   MAX_DETAILS_DEPTH,

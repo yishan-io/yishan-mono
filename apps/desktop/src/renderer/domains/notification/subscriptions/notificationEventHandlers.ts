@@ -1,4 +1,4 @@
-import { chatStore } from "@renderer/domains/agent";
+import { workspaceAgentIndicatorStore } from "@renderer/domains/agent";
 
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -263,10 +263,10 @@ export function handleInAppNotification(
 
 export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependencies = {
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId) => {
-    chatStore.getState().setWorkspaceAgentStatusByWorkspaceId(statusByWorkspaceId);
+    workspaceAgentIndicatorStore.getState().setWorkspaceAgentStatusByWorkspaceId(statusByWorkspaceId);
   },
   recordWorkspaceUnreadNotification: (workspaceId, tone) => {
-    chatStore.getState().recordWorkspaceUnreadNotification(workspaceId, tone);
+    workspaceAgentIndicatorStore.getState().recordWorkspaceUnreadNotification(workspaceId, tone);
   },
   dispatchSystemNotification: async (input) => {
     await dispatchNotification(input);

@@ -358,8 +358,8 @@ vi.mock("../../../domains/session/state/sessionStore", () => ({
   ),
 }));
 
-vi.mock("../../../domains/agent/state/chatStore", () => ({
-  chatStore: mocked.workspaceStore,
+vi.mock("../../../domains/agent/state/workspaceAgentIndicatorStore", () => ({
+  workspaceAgentIndicatorStore: mocked.workspaceStore,
 }));
 
 vi.mock("../../../domains/workspace/state/workspaceCreateProgressStore", () => ({

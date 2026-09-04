@@ -2,7 +2,7 @@
 
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 import { closeWorkspace, deleteLocalFolder } from "./workspaceCommands";
@@ -38,13 +38,13 @@ vi.mock("../../../domains/workspace/daemon/daemonWorkspaceClient", () => ({
 
 const initialWorkspaceStoreState = workspaceStore.getState();
 const initialTabStoreState = tabStore.getState();
-const initialChatStoreState = chatStore.getState();
+const initialWorkspaceAgentIndicatorStoreState = workspaceAgentIndicatorStore.getState();
 const initialWorkbenchNavigationStoreState = workbenchNavigationStore.getState();
 
 afterEach(() => {
   workspaceStore.setState(initialWorkspaceStoreState, true);
   tabStore.setState(initialTabStoreState, true);
-  chatStore.setState(initialChatStoreState, true);
+  workspaceAgentIndicatorStore.setState(initialWorkspaceAgentIndicatorStoreState, true);
   workbenchNavigationStore.setState(initialWorkbenchNavigationStoreState, true);
   vi.clearAllMocks();
 });
@@ -321,9 +321,7 @@ describe("workspace close selection", () => {
       }),
     );
     const resolveTabForWorkspace = vi.fn();
-    const removeWorkspaceTaskCounts = vi.fn();
     tabStore.setState({ resolveTabForWorkspace });
-    chatStore.setState({ removeWorkspaceTaskCounts });
     workspaceStore.setState({
       workspaces: [
         {
@@ -373,6 +371,5 @@ describe("workspace close selection", () => {
       activeProjectId: "project-b",
     });
     expect(resolveTabForWorkspace).toHaveBeenLastCalledWith("workspace-b");
-    expect(removeWorkspaceTaskCounts).toHaveBeenCalledWith(["workspace-a", "folder-1"]);
   });
 });

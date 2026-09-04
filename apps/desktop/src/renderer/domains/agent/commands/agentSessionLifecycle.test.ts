@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
@@ -292,8 +292,8 @@ describe("clearTerminalAgentStatus", () => {
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
-    const initialChatState = chatStore.getState();
-    chatStore.setState({
+    const initialChatState = workspaceAgentIndicatorStore.getState();
+    workspaceAgentIndicatorStore.setState({
       setWorkspaceAgentStatusByWorkspaceId,
     });
 
@@ -328,6 +328,6 @@ describe("clearTerminalAgentStatus", () => {
     expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenLastCalledWith({});
 
     stopBindings();
-    chatStore.setState(initialChatState, true);
+    workspaceAgentIndicatorStore.setState(initialChatState, true);
   });
 });

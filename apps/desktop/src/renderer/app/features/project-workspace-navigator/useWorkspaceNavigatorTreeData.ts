@@ -3,7 +3,7 @@ import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
 import { listOrgNodes } from "@renderer/domains/node";
 import { filterVisibleProjects, projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
-import { chatStore } from "@renderer/domains/agent";
+import { workspaceAgentIndicatorStore } from "@renderer/domains/agent";
 import { gitProjectionStore } from "@renderer/domains/git";
 import { sessionStore } from "@renderer/domains/session";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
@@ -62,8 +62,8 @@ export function useWorkspaceNavigatorTreeData(input: {
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
   const gitChangeTotalsByWorkspaceId = gitProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
-  const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
-  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const workspaceAgentStatusByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceAgentStatusByWorkspaceId);
+  const workspaceUnreadToneByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
 
   const nodesQuery = useQuery({

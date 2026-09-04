@@ -3,7 +3,7 @@ import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
 
 import { resolveWorkspaceNotificationColor } from "@renderer/domains/notification";
 
-import { chatStore } from "@renderer/domains/agent";
+import { workspaceAgentIndicatorStore } from "@renderer/domains/agent";
 import { projectStore, renderProjectIcon, updateProjectConfig } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
 import { activateProject, activateWorkspace, workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -39,8 +39,8 @@ export function MainPaneTitleBarView() {
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
-  const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
-  const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const workspaceAgentStatusByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceAgentStatusByWorkspaceId);
+  const workspaceUnreadToneByWorkspaceId = workspaceAgentIndicatorStore((state) => state.workspaceUnreadToneByWorkspaceId);
   const openTab = openTabWithContentSeed;
   const selectedRepo = projects.find((project) => project.id === selectedProjectId);
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);

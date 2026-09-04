@@ -47,31 +47,6 @@ import type {
  * wrappers are the only agent code that touches transport.
  */
 
-// ─── chat ────────────────────────────────────────────────────────────────────
-
-export async function ensureWorkspaceChatSession(input: {
-  workspaceId: string;
-  sessionId?: string;
-  title?: string;
-  agentKind?: string;
-}): Promise<unknown> {
-  return request("chat.ensureWorkspaceChatSession", input);
-}
-
-export async function runWorkspaceChatPrompt(input: {
-  workspaceId: string;
-  sessionId: string;
-  prompt: string;
-  agentKind?: string;
-  suppressCompletionNotification?: boolean;
-}): Promise<unknown> {
-  return request("chat.runWorkspaceChatPrompt", input);
-}
-
-export async function closeAgentSession(input: { sessionId: string; deleteRecord?: boolean }): Promise<unknown> {
-  return request("chat.closeAgentSession", input);
-}
-
 // ─── pi ──────────────────────────────────────────────────────────────────────
 
 /**

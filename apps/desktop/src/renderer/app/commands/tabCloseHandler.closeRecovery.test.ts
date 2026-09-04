@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { AgentChatRecoveryCoordinator } from "@renderer/domains/agent/runtime/agentChatRecovery";
-import { chatStore } from "@renderer/domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "@renderer/domains/agent/state/workspaceAgentIndicatorStore";
 import { tabStore } from "@renderer/domains/workbench/state/tabStore";
 import type { TabStoreState } from "@renderer/domains/workbench/state/tabStore";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -22,13 +22,13 @@ vi.mock("@renderer/domains/agent/commands/agentChatCommands", () => ({
 }));
 
 const initialTabStoreState = tabStore.getState();
-const initialChatStoreState = chatStore.getState();
+const initialWorkspaceAgentIndicatorStoreState = workspaceAgentIndicatorStore.getState();
 
 afterEach(() => {
   daemon.activeSessions.clear();
   vi.clearAllMocks();
   tabStore.setState(initialTabStoreState, true);
-  chatStore.setState(initialChatStoreState, true);
+  workspaceAgentIndicatorStore.setState(initialWorkspaceAgentIndicatorStoreState, true);
 });
 
 function createEmptyTabStoreAccess() {
