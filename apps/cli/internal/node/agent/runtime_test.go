@@ -87,6 +87,25 @@ func TestService_AgentInspectionDispatchesToAuthorizedRuntime(t *testing.T) {
 	}
 }
 
+func TestService_AgentGetSessionFilePathDispatchesToAuthorizedRuntime(t *testing.T) {
+	runtime := &recordingDSHSessions{filePathResult: dsh.SessionFilePathResult{FilePath: "/authorized/session.jsonl"}}
+	service := NewService(Deps{
+		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
+			return workspace.Workspace{ID: workspaceID, Path: "/authorized", State: workspace.StateActive}, nil
+		}),
+		DSH: runtime,
+	})
+	result, err := service.AgentGetSessionFilePath(context.Background(), rpc.AgentGetSessionFilePathParams{
+		Runtime: rpc.AgentRuntimeDSH, SessionID: "dsh-1", WorkspaceID: "workspace-1", CWD: "/authorized",
+	})
+	if err != nil {
+		t.Fatalf("AgentGetSessionFilePath: %v", err)
+	}
+	if response := result.(rpc.AgentSessionFilePathResult); response.FilePath != "/authorized/session.jsonl" || runtime.readCWD != "/authorized" {
+		t.Fatalf("response = %#v, runtime cwd = %q", response, runtime.readCWD)
+	}
+}
+
 func TestService_AgentExecutionMethodsRequireDSHRegistryOwnership(t *testing.T) {
 	service := NewService(Deps{Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
 		return workspace.Workspace{ID: workspaceID, Path: "/w", State: workspace.StateActive}, nil

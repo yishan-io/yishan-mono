@@ -134,6 +134,7 @@ func (s *Service) resolveDSHWorkspacePath(workspaceID string) (string, error) {
 }
 
 var _ DSHSessions = (*dsh.Supervisor)(nil)
+var _ DSHSessionFilePath = (*dsh.Supervisor)(nil)
 var _ DSHSessionLineage = (*dsh.Supervisor)(nil)
 
 // resolveDSHTeardownWorkspacePath admits a closing workspace only while its

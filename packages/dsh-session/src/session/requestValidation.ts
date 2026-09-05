@@ -8,6 +8,7 @@ import type {
 } from "./protocol";
 import type {
   SessionDisposeRequest,
+  SessionFilePathRequest,
   SessionLineageRequest,
   SessionListRequest,
   SessionReadRequest,
@@ -58,6 +59,10 @@ export function parseSessionDisposeRequest(payload: unknown): SessionDisposeRequ
 }
 /** Parses a session read request. */
 export function parseSessionReadRequest(payload: unknown): SessionReadRequest {
+  return sessionExecutionRequestSchema.parse(payload);
+}
+/** Parses a session artifact-path request. */
+export function parseSessionFilePathRequest(payload: unknown): SessionFilePathRequest {
   return sessionExecutionRequestSchema.parse(payload);
 }
 /** Parses a workspace-scoped session-list request. */

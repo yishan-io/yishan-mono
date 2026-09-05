@@ -43,7 +43,12 @@ async function mountRuntime(): Promise<Harness> {
   ];
   const ctx = new Context();
   await ctx.plugin(agentSpine, { workspaceContext: false });
-  ctx.provide("sessionPersistence", { readFrom: async () => [] });
+  ctx.provide("sessionPersistence", {
+    readFrom: async () => [],
+    supportsRawArtifacts: true,
+    readRaw: async () => undefined,
+    locate: () => ({ kind: "jsonl", path: "/sessions/session.jsonl" }),
+  });
   vi.spyOn(ctx.llm, "listProviders").mockReturnValue([{ id: "deepseek-official", name: "DeepSeek" }]);
   vi.spyOn(ctx.llm, "listModels").mockImplementation(async (provider: string) => [
     { provider, id: "test-model", name: "Test model" },
@@ -108,6 +113,54 @@ describe("SessionRequestHandler session inspection", () => {
       await expect(waitForFrame(harness, 12)).resolves.toMatchObject({
         result: { sessions: [{ sessionId: "root", createdAt: 1, agentPreset: "fast", live: true, persisted: true }] },
       });
+    } finally {
+      await harness.server.close();
+      await harness.ctx.fiber.dispose();
+    }
+  });
+
+  it("returns only a materialized artifact path for the requested workspace session", async () => {
+    const harness = await mountRuntime();
+    const readRaw = vi.spyOn(harness.ctx.sessionPersistence, "readRaw").mockResolvedValue({
+      meta: { version: 0, id: "session-1" as never, createdAt: 1, cwd: "/workspace" },
+      filename: "session.jsonl",
+      content: '{"id":"session-1"}\n',
+    });
+    const locate = vi.spyOn(harness.ctx.sessionPersistence, "locate").mockReturnValue({
+      kind: "jsonl",
+      path: "/sessions/session-1.jsonl",
+    });
+    try {
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 13, method: YISHAN_METHODS.filePath, params: { cwd: "/workspace", sessionId: "session-1" } })}\n`,
+      );
+      await expect(waitForFrame(harness, 13)).resolves.toMatchObject({
+        result: { filePath: "/sessions/session-1.jsonl" },
+      });
+      expect(readRaw).toHaveBeenCalledWith("session-1");
+      expect(locate).toHaveBeenCalledWith(expect.objectContaining({ id: "session-1", cwd: "/workspace" }));
+
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 14, method: YISHAN_METHODS.filePath, params: { cwd: "/other", sessionId: "session-1" } })}\n`,
+      );
+      await expect(waitForFrame(harness, 14)).resolves.toMatchObject({
+        error: {
+          message: "YISHAN_SESSION_WORKSPACE_MISMATCH: session does not belong to the current workspace: session-1",
+        },
+      });
+    } finally {
+      await harness.server.close();
+      await harness.ctx.fiber.dispose();
+    }
+  });
+
+  it("returns an empty file path when the artifact has not materialized", async () => {
+    const harness = await mountRuntime();
+    try {
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 15, method: YISHAN_METHODS.filePath, params: { cwd: "/workspace", sessionId: "session-1" } })}\n`,
+      );
+      await expect(waitForFrame(harness, 15)).resolves.toMatchObject({ result: { filePath: "" } });
     } finally {
       await harness.server.close();
       await harness.ctx.fiber.dispose();

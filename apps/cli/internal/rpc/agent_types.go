@@ -107,6 +107,19 @@ type AgentListSessionsParams struct {
 	CWD         string       `json:"cwd"`
 }
 
+// AgentGetSessionFilePathParams resolves one materialized runtime session artifact.
+type AgentGetSessionFilePathParams struct {
+	Runtime     AgentRuntime `json:"runtime"`
+	SessionID   string       `json:"sessionId"`
+	WorkspaceID string       `json:"workspaceId"`
+	CWD         string       `json:"cwd"`
+}
+
+// AgentSessionFilePathResult identifies a materialized runtime session artifact.
+type AgentSessionFilePathResult struct {
+	FilePath string `json:"filePath"`
+}
+
 // AgentReadHistoryParams reads the durable history for one session.
 type AgentReadHistoryParams struct {
 	Runtime                   AgentRuntime `json:"runtime"`

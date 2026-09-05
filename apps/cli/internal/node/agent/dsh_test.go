@@ -28,6 +28,8 @@ type recordingDSHSessions struct {
 	listResult        dsh.SessionListResult
 	listErr           error
 	readErr           error
+	filePathResult    dsh.SessionFilePathResult
+	filePathErr       error
 	lineageRequest    dsh.SessionLineageRequest
 	lineageResult     dsh.SessionLineageResult
 	lineageErr        error
@@ -49,6 +51,11 @@ func (r *recordingDSHSessions) ListSessionLineage(_ context.Context, request dsh
 func (r *recordingDSHSessions) InterruptSubagent(_ context.Context, request dsh.SubagentInterruptRequest) (dsh.SubagentInterruptResult, error) {
 	r.interruptRequest = request
 	return r.interruptResult, r.interruptErr
+}
+
+func (r *recordingDSHSessions) GetSessionFilePath(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionFilePathResult, error) {
+	r.readCWD = request.CWD
+	return r.filePathResult, r.filePathErr
 }
 
 func (r *recordingDSHSessions) ReadSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionReadResult, error) {

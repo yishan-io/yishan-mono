@@ -10,6 +10,7 @@ import (
 const (
 	yishanProvidersListMethod     = "yishan.v1.providers.list"
 	yishanSessionDisposeMethod    = "yishan.v1.session.dispose"
+	yishanSessionFilePathMethod   = "yishan.v1.session.file-path"
 	yishanSessionListMethod       = "yishan.v1.session.list"
 	yishanSessionReadMethod       = "yishan.v1.session.read"
 	yishanSessionResumeMethod     = "yishan.v1.session.resume"
@@ -83,6 +84,11 @@ type SessionListEntry struct {
 // SessionListResult is the response to a session list request.
 type SessionListResult struct {
 	Sessions []SessionListEntry `json:"sessions"`
+}
+
+// SessionFilePathResult identifies a materialized DSH session artifact.
+type SessionFilePathResult struct {
+	FilePath string `json:"filePath"`
 }
 
 // SessionReadRequest reads a persisted workspace session.
@@ -180,6 +186,18 @@ func (s *Supervisor) ListSessions(ctx context.Context, request SessionListReques
 	var response sessionListWireResult
 	if err := s.call(ctx, yishanSessionListMethod, request, &response); err != nil {
 		return SessionListResult{}, err
+	}
+	return response.validate()
+}
+
+// GetSessionFilePath resolves one materialized session artifact without resuming the session.
+func (s *Supervisor) GetSessionFilePath(ctx context.Context, request SessionReadRequest) (SessionFilePathResult, error) {
+	if err := validateSessionReadRequest(request); err != nil {
+		return SessionFilePathResult{}, err
+	}
+	var response sessionFilePathWireResult
+	if err := s.call(ctx, yishanSessionFilePathMethod, request, &response); err != nil {
+		return SessionFilePathResult{}, err
 	}
 	return response.validate()
 }

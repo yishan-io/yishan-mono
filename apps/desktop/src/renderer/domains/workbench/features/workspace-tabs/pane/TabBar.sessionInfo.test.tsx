@@ -99,7 +99,8 @@ describe("TabBar session info context menu", () => {
     expect(copyToClipboard).toHaveBeenCalledWith("/fake/sessions/chat_session-abc.jsonl");
   });
 
-  it("does not offer Pi transcript actions for a DSH tab", async () => {
+  it("offers and copies session info for a DSH tab", async () => {
+    fetchAgentSessionFilePathMock.mockResolvedValue("/fake/sessions/dsh-session.jsonl");
     renderTabBar({
       tabs: [
         {
@@ -117,9 +118,18 @@ describe("TabBar session info context menu", () => {
 
     fireEvent.contextMenu(getTabWrapperByTitle("DSH Agent Chat"), { clientX: 20, clientY: 20 });
 
-    expect(screen.queryByRole("menuitem", { name: /Copy Session ID/ })).toBeNull();
-    expect(screen.queryByRole("menuitem", { name: /Copy Session File Path/ })).toBeNull();
-    expect(fetchAgentSessionFilePathMock).not.toHaveBeenCalled();
+    const pathItem = await screen.findByRole("menuitem", { name: /Copy Session File Path/ });
+    await waitFor(() => {
+      expect(pathItem.getAttribute("aria-disabled")).not.toBe("true");
+    });
+    fireEvent.click(pathItem);
+
+    expect(fetchAgentSessionFilePathMock).toHaveBeenCalledWith("same-id", "/fake/cwd", "dsh");
+    expect(copyToClipboard).toHaveBeenCalledWith("/fake/sessions/dsh-session.jsonl");
+
+    fireEvent.contextMenu(getTabWrapperByTitle("DSH Agent Chat"), { clientX: 20, clientY: 20 });
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Copy Session ID/ }));
+    expect(copyToClipboard).toHaveBeenCalledWith("same-id");
   });
 
   it("keeps Copy Session File Path disabled when no transcript exists yet", async () => {

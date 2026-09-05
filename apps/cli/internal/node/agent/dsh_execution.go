@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"yishan/apps/cli/internal/agent/dsh"
 	"yishan/apps/cli/internal/agent/session"
@@ -411,12 +412,16 @@ func mapDSHExecutionError(err error) error {
 	}
 	var requestErr *dsh.RequestError
 	if errors.As(err, &requestErr) {
-		switch dshRequestErrorCode(requestErr.Data) {
+		code := dshRequestErrorCode(requestErr.Data)
+		if code == "" {
+			code = dshRequestErrorMessageCode(requestErr.Message)
+		}
+		switch code {
 		case "YISHAN_SESSION_COLLISION", "YISHAN_SESSION_DISPOSING", "YISHAN_SESSION_BINDING_CONFLICT":
 			return rpc.NewRPCError(rpc.CodeSessionExists, "dsh session conflict")
 		case "YISHAN_SESSION_WORKSPACE_MISMATCH", "YISHAN_SESSION_ID_MISMATCH":
 			return rpc.NewRPCError(rpc.CodeInvalidParams, "dsh session workspace mismatch")
-		case "YISHAN_SESSION_NOT_PERSISTED":
+		case "YISHAN_SESSION_NOT_FOUND", "YISHAN_SESSION_NOT_PERSISTED":
 			return rpc.NewRPCError(rpc.CodeNotFound, "dsh session not found")
 		case "YISHAN_DURABILITY_UNAVAILABLE":
 			return rpc.NewRPCErrorWithData(rpc.CodeServerError, "dsh runtime unavailable", map[string]any{
@@ -435,6 +440,14 @@ func dshRequestErrorCode(raw json.RawMessage) string {
 		return ""
 	}
 	return data.Code
+}
+
+func dshRequestErrorMessageCode(message string) string {
+	code, _, found := strings.Cut(message, ":")
+	if !found || !strings.HasPrefix(code, "YISHAN_") {
+		return ""
+	}
+	return code
 }
 
 const defaultDSHProvider = "deepseek-official"

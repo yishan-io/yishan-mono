@@ -92,6 +92,7 @@ const (
 	MethodAgentListSessionLineage    = "agent.listSessionLineage"
 	MethodAgentCancelSubagent        = "agent.cancelSubagent"
 	MethodAgentReadHistory           = "agent.readHistory"
+	MethodAgentGetSessionFilePath    = "agent.getSessionFilePath"
 	MethodPiStart                    = "pi.start"
 	MethodPiAttach                   = "pi.attach"
 	MethodPiStop                     = "pi.stop"

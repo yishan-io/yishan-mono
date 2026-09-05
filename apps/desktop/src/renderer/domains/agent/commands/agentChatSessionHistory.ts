@@ -2,6 +2,7 @@ import { workspaceStore } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import {
   getAgentCapabilities,
+  getAgentSessionFilePath,
   listActivePiCompatibilitySessions as listActivePiSessionsProcedure,
   listAgentRuntimeSessions as listAgentRuntimeSessionsProcedure,
   readAgentRuntimeHistory as readAgentRuntimeHistoryProcedure,
@@ -52,13 +53,15 @@ export async function fetchSessionHistory(cwd: string): Promise<RuntimeAgentSess
   }
 }
 
-/** Resolves the transcript file path for one Pi session. Empty when no transcript exists yet. */
-export async function fetchAgentSessionFilePath(sessionId: string, cwd: string): Promise<string> {
-  const history = await readAgentSessionHistory(sessionId, cwd);
-  if (history.runtime !== "pi") {
-    throw new Error("Pi session history returned a non-Pi runtime");
-  }
-  return history.pi.filePath;
+/** Resolves one runtime session artifact path. Empty when no artifact exists yet. */
+export async function fetchAgentSessionFilePath(
+  sessionId: string,
+  cwd: string,
+  runtime: Rpc.AgentRuntime = "pi",
+): Promise<string> {
+  const workspaceId = resolveOpenWorkspaceId(cwd);
+  const result = await getAgentSessionFilePath({ runtime, sessionId, workspaceId, cwd });
+  return result.filePath;
 }
 
 /** Fetches live Pi sessions currently held by the daemon. */

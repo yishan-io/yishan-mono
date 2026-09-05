@@ -28,6 +28,7 @@ const SESSION_METHODS = [
   YISHAN_METHODS.flush,
   YISHAN_METHODS.resume,
   YISHAN_METHODS.dispose,
+  YISHAN_METHODS.filePath,
   YISHAN_METHODS.list,
   YISHAN_METHODS.read,
   YISHAN_METHODS.lineage,

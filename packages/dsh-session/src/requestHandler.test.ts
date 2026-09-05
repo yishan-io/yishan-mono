@@ -61,6 +61,9 @@ async function mountRuntime(): Promise<Harness> {
   await ctx.plugin(agentSpine, { workspaceContext: false });
   ctx.provide("sessionPersistence", {
     readFrom: async () => [],
+    supportsRawArtifacts: true,
+    readRaw: async () => undefined,
+    locate: () => ({ kind: "jsonl", path: "/sessions/session.jsonl" }),
   });
   vi.spyOn(ctx.llm, "listProviders").mockReturnValue([{ id: "deepseek-official", name: "DeepSeek" }]);
   vi.spyOn(ctx.llm, "listModels").mockImplementation(async (provider: string) => [

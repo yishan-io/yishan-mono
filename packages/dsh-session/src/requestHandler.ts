@@ -8,6 +8,8 @@ import { parseStockSessionPromptRequest } from "./session/protocol";
 import type {
   SessionDisposeRequest,
   SessionDisposeResult,
+  SessionFilePathRequest,
+  SessionFilePathResult,
   SessionHeaderResult,
   SessionLineageEntry,
   SessionLineageRequest,
@@ -21,6 +23,7 @@ import type {
 } from "./session/query";
 import {
   RequestPolicyError,
+  SessionError,
   SessionNotFoundError,
   SessionWorkspaceMismatchError,
   UnsupportedMethodError,
@@ -28,6 +31,7 @@ import {
 import {
   parseSessionCancelRequest,
   parseSessionDisposeRequest,
+  parseSessionFilePathRequest,
   parseSessionFlushRequest,
   parseSessionLineageRequest,
   parseSessionListRequest,
@@ -157,6 +161,8 @@ export class SessionRequestHandler {
         return await this.resumeSession(parseSessionResumeRequest(params));
       case YISHAN_METHODS.dispose:
         return await this.disposeSession(parseSessionDisposeRequest(params));
+      case YISHAN_METHODS.filePath:
+        return await this.getSessionFilePath(parseSessionFilePathRequest(params));
       case YISHAN_METHODS.list:
         return await this.listSessions(parseSessionListRequest(params));
       case YISHAN_METHODS.read:
@@ -178,6 +184,22 @@ export class SessionRequestHandler {
       sessionId: request.sessionId,
       disposed: await this.runtime.disposeSession(request),
     };
+  }
+
+  private async getSessionFilePath(request: SessionFilePathRequest): Promise<SessionFilePathResult> {
+    try {
+      const record = (await this.ctx.sessionQuery.listSessions()).find(({ header }) => header.id === request.sessionId);
+      if (record === undefined) throw new SessionNotFoundError(request.sessionId);
+      if (record.header.cwd !== request.cwd) throw new SessionWorkspaceMismatchError(request.sessionId);
+      if (!record.persisted || !this.ctx.sessionPersistence.supportsRawArtifacts) return { filePath: "" };
+      const artifact = await this.ctx.sessionPersistence.readRaw(request.sessionId as SessionId);
+      if (artifact === undefined || artifact.meta.id !== request.sessionId || artifact.meta.cwd !== request.cwd)
+        return { filePath: "" };
+      return { filePath: this.ctx.sessionPersistence.locate(record.header)?.path ?? "" };
+    } catch (error) {
+      if (error instanceof SessionError) throw new Error(`${error.code}: ${error.message}`);
+      throw error;
+    }
   }
 
   private async listSessions(request: SessionListRequest): Promise<SessionListResult> {

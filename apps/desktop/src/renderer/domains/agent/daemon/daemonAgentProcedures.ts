@@ -19,6 +19,8 @@ import type {
   AgentDefinitionUpdateInput,
   AgentDisposeRequest,
   AgentHistoryResult,
+  AgentGetSessionFilePathRequest,
+  AgentSessionFilePathResult,
   AgentListSessionLineageRequest,
   AgentListSessionsRequest,
   AgentPromptRequest,
@@ -215,6 +217,11 @@ export async function listAgentSessionLineage(
 /** Requests interruption of one direct DSH subagent. */
 export async function cancelAgentSubagent(input: AgentCancelSubagentRequest): Promise<AgentCancelSubagentResult> {
   return parseAgentCancelSubagentResult(await request("agent.cancelSubagent", input), input);
+}
+
+/** Resolves one materialized runtime session artifact. */
+export async function getAgentSessionFilePath(input: AgentGetSessionFilePathRequest): Promise<AgentSessionFilePathResult> {
+  return (await request("agent.getSessionFilePath", input)) as AgentSessionFilePathResult;
 }
 
 /** Reads durable history without interpreting runtime-specific event payloads. */

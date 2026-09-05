@@ -48,6 +48,14 @@ export type SessionLineageResult = {
 /** Workspace-scoped request to read one DSH session. */
 export type SessionReadRequest = SessionExecutionRequest;
 
+/** Workspace-scoped request to locate a materialized DSH session artifact. */
+export type SessionFilePathRequest = SessionExecutionRequest;
+
+/** The absolute artifact path, or empty when no artifact is available. */
+export type SessionFilePathResult = {
+  filePath: string;
+};
+
 /** Stable session header data exposed through Yishan's session protocol. */
 export type SessionHeaderResult = {
   sessionId: string;

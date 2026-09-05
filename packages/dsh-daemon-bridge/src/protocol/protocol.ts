@@ -8,6 +8,7 @@ export const YISHAN_METHODS = {
   providersList: yishanMethod("providers.list"),
   cancel: yishanMethod("session.cancel"),
   dispose: yishanMethod("session.dispose"),
+  filePath: yishanMethod("session.file-path"),
   flush: yishanMethod("session.flush"),
   list: yishanMethod("session.list"),
   lineage: yishanMethod("session.lineage"),

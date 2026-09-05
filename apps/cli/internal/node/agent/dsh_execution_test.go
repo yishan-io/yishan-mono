@@ -458,3 +458,23 @@ func TestMapDSHExecutionError_MapsBindingConflictToSessionExists(t *testing.T) {
 		t.Fatalf("binding conflict = %#v", err)
 	}
 }
+
+func TestMapDSHExecutionError_MapsSerializedSessionQueryErrors(t *testing.T) {
+	cases := []struct {
+		name    string
+		message string
+		code    int
+	}{
+		{name: "not found", message: "YISHAN_SESSION_NOT_FOUND: session does not exist", code: rpc.CodeNotFound},
+		{name: "workspace mismatch", message: "YISHAN_SESSION_WORKSPACE_MISMATCH: wrong workspace", code: rpc.CodeInvalidParams},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			err := mapDSHExecutionError(&dsh.RequestError{Message: test.message})
+			rpcErr, ok := err.(*rpc.Error)
+			if !ok || rpcErr.Code != test.code {
+				t.Fatalf("query error = %#v", err)
+			}
+		})
+	}
+}

@@ -267,6 +267,19 @@ export type AgentListSessionsRequest = {
   cwd: string;
 };
 
+/** Resolves a materialized runtime session artifact. */
+export type AgentGetSessionFilePathRequest = {
+  runtime: AgentRuntime;
+  sessionId: string;
+  workspaceId: string;
+  cwd: string;
+};
+
+/** Identifies a materialized runtime session artifact. */
+export type AgentSessionFilePathResult = {
+  filePath: string;
+};
+
 /** Reads durable history for one runtime session. */
 export type AgentReadHistoryRequest = {
   runtime: AgentRuntime;

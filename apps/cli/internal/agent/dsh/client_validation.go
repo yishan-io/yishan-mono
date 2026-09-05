@@ -7,6 +7,14 @@ import (
 	"io"
 )
 
+type sessionFilePathWireResult struct {
+	FilePath string `json:"filePath"`
+}
+
+func (response sessionFilePathWireResult) validate() (SessionFilePathResult, error) {
+	return SessionFilePathResult{FilePath: response.FilePath}, nil
+}
+
 type sessionDisposeWireResult struct {
 	SessionID string `json:"sessionId"`
 	Disposed  *bool  `json:"disposed"`

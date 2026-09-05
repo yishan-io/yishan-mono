@@ -80,6 +80,11 @@ type DSHSessions interface {
 	Health() dsh.Health
 }
 
+// DSHSessionFilePath exposes optional materialized-artifact lookup.
+type DSHSessionFilePath interface {
+	GetSessionFilePath(context.Context, dsh.SessionReadRequest) (dsh.SessionFilePathResult, error)
+}
+
 // DSHSessionLineage exposes the optional DSH lineage capability.
 type DSHSessionLineage interface {
 	ListSessionLineage(context.Context, dsh.SessionLineageRequest) (dsh.SessionLineageResult, error)
