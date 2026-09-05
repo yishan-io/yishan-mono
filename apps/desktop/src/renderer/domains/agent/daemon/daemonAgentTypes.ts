@@ -208,7 +208,7 @@ export type DSHProviderCatalogEntry = {
   setupStatus: "ready" | "needs-credential" | "ambient";
   /** Safe provider-owned setup text. It excludes credentials and local paths. */
   setupGuidance: string;
-  models: Array<{ id: string; name: string }>;
+  models: Array<{ id: string; name: string; contextWindow?: number }>;
 };
 
 export type DSHProviderCatalogResult = { providers: DSHProviderCatalogEntry[] };

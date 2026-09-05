@@ -8,14 +8,15 @@ import (
 )
 
 const (
-	yishanProvidersListMethod       = "yishan.v1.providers.list"
-	yishanSessionDisposeMethod      = "yishan.v1.session.dispose"
-	yishanSessionFilePathMethod     = "yishan.v1.session.file-path"
-	yishanSessionListMethod         = "yishan.v1.session.list"
-	yishanSessionTitleSummaryMethod = "yishan.v1.session.title-summary"
-	yishanSessionReadMethod         = "yishan.v1.session.read"
-	yishanSessionResumeMethod       = "yishan.v1.session.resume"
-	yishanSubagentInterruptMethod   = "yishan.v1.subagent.interrupt"
+	yishanProviderContextWindowsMethod = "yishan.v1.providers.context-windows"
+	yishanProvidersListMethod          = "yishan.v1.providers.list"
+	yishanSessionDisposeMethod         = "yishan.v1.session.dispose"
+	yishanSessionFilePathMethod        = "yishan.v1.session.file-path"
+	yishanSessionListMethod            = "yishan.v1.session.list"
+	yishanSessionTitleSummaryMethod    = "yishan.v1.session.title-summary"
+	yishanSessionReadMethod            = "yishan.v1.session.read"
+	yishanSessionResumeMethod          = "yishan.v1.session.resume"
+	yishanSubagentInterruptMethod      = "yishan.v1.subagent.interrupt"
 )
 
 var (
@@ -53,18 +54,88 @@ type ProviderCatalogProvider struct {
 
 // ProviderCatalogModel is one selectable model on a provider route.
 type ProviderCatalogModel struct {
-	Provider string `json:"provider"`
-	ID       string `json:"id"`
-	Name     string `json:"name"`
+	Provider      string `json:"provider"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	ContextWindow *int64 `json:"contextWindow,omitempty"`
 }
 
-// ListProviderCatalog reads the safe runtime-owned provider catalog.
+// ProviderContextWindowRoute identifies one exact provider-owned model route.
+type ProviderContextWindowRoute struct {
+	Provider string `json:"provider"`
+	Model    string `json:"model"`
+}
+
+// ProviderContextWindowRequest requests optional capacities for catalog routes.
+type ProviderContextWindowRequest struct {
+	Routes []ProviderContextWindowRoute `json:"routes"`
+}
+
+// ProviderContextWindow is one matched route capacity returned by a runtime.
+type ProviderContextWindow struct {
+	Provider      string `json:"provider"`
+	Model         string `json:"model"`
+	ContextWindow int64  `json:"contextWindow"`
+}
+
+// ProviderContextWindowResult contains only routes whose safe capacity the runtime resolved.
+type ProviderContextWindowResult struct {
+	ContextWindows []ProviderContextWindow `json:"contextWindows"`
+}
+
+// ListProviderCatalog reads the compatible runtime-owned provider catalog and optionally enriches it with capacities.
 func (s *Supervisor) ListProviderCatalog(ctx context.Context) (ProviderCatalog, error) {
 	var response providerCatalogWire
 	if err := s.call(ctx, yishanProvidersListMethod, struct{}{}, &response); err != nil {
 		return ProviderCatalog{}, err
 	}
-	return response.validate()
+	catalog, err := response.validate()
+	if err != nil {
+		return ProviderCatalog{}, err
+	}
+	contextWindows, err := s.ListProviderContextWindows(ctx, providerCatalogRoutes(catalog))
+	if err != nil {
+		return catalog, nil
+	}
+	return applyProviderContextWindows(catalog, contextWindows), nil
+}
+
+// ListProviderContextWindows reads optional capacities for already-known provider catalog routes.
+func (s *Supervisor) ListProviderContextWindows(ctx context.Context, request ProviderContextWindowRequest) (ProviderContextWindowResult, error) {
+	if err := validateProviderContextWindowRequest(request); err != nil {
+		return ProviderContextWindowResult{}, err
+	}
+	var response providerContextWindowWireResult
+	if err := s.call(ctx, yishanProviderContextWindowsMethod, request, &response); err != nil {
+		return ProviderContextWindowResult{}, err
+	}
+	return response.validate(request)
+}
+
+func providerCatalogRoutes(catalog ProviderCatalog) ProviderContextWindowRequest {
+	routes := make([]ProviderContextWindowRoute, 0)
+	for _, provider := range catalog.Providers {
+		for _, model := range provider.Models {
+			routes = append(routes, ProviderContextWindowRoute{Provider: provider.ID, Model: model.ID})
+		}
+	}
+	return ProviderContextWindowRequest{Routes: routes}
+}
+
+func applyProviderContextWindows(catalog ProviderCatalog, result ProviderContextWindowResult) ProviderCatalog {
+	contextWindows := make(map[string]int64, len(result.ContextWindows))
+	for _, entry := range result.ContextWindows {
+		contextWindows[entry.Provider+"\x00"+entry.Model] = entry.ContextWindow
+	}
+	for providerIndex := range catalog.Providers {
+		for modelIndex := range catalog.Providers[providerIndex].Models {
+			model := &catalog.Providers[providerIndex].Models[modelIndex]
+			if contextWindow, ok := contextWindows[model.Provider+"\x00"+model.ID]; ok {
+				model.ContextWindow = &contextWindow
+			}
+		}
+	}
+	return catalog
 }
 
 // SessionListRequest lists persisted top-level sessions for a workspace.

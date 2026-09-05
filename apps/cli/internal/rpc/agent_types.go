@@ -415,8 +415,9 @@ type DSHProviderCatalogEntry struct {
 	Models         []DSHProviderCatalogModel `json:"models"`
 }
 type DSHProviderCatalogModel struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	ContextWindow *int64 `json:"contextWindow,omitempty"`
 }
 
 // ---- dsh credentials ----

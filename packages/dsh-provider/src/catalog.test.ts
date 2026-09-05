@@ -15,6 +15,7 @@ import {
   YISHAN_PI_AI_PROVIDER_ALLOWLIST,
   YISHAN_UNSUPPORTED_PI_AI_PROVIDERS,
   assertPiAiProviderManifest,
+  listProviderContextWindows,
   listProviders,
   validateProviderSelection,
 } from "./catalog";
@@ -88,6 +89,7 @@ describe("Yishan external provider catalog", () => {
         { provider, id: "selected-model", name: "Selected model" },
         { provider: "openai-codex", id: "excluded-model", name: "Excluded model" },
       ],
+      resolveModelInfo: async () => ({ context: { contextWindow: 128_000 } }),
     });
 
     expect(catalog).toEqual({
@@ -108,7 +110,65 @@ describe("Yishan external provider catalog", () => {
     });
     expect(JSON.stringify(catalog)).not.toContain("openai-codex");
     expect(Object.keys(catalog.providers[0] ?? {})).toEqual(["id", "authentication", "setupRequired", "models"]);
+    expect(Object.keys(catalog.providers[0]?.models[0] ?? {})).toEqual(["provider", "id", "name"]);
     expect(JSON.stringify(catalog)).not.toContain("credential-value");
+  });
+
+  it("keeps models available when context metadata is unavailable", async () => {
+    const catalog = await listProviders({
+      listProviders: () => [{ id: "deepseek-official" }],
+      listModels: async (provider) => [{ provider, id: "selected-model", name: "Selected model" }],
+      resolveModelInfo: async () => {
+        throw new Error("model metadata unavailable");
+      },
+    });
+
+    expect(catalog.providers[0]?.models).toEqual([
+      { provider: "deepseek-official", id: "selected-model", name: "Selected model" },
+    ]);
+  });
+
+  it("returns context windows only for requested provider-owned catalog routes", async () => {
+    const llm = {
+      listProviders: () => [{ id: "deepseek-official" }],
+      listModels: async (provider: string) => [{ provider, id: "selected-model", name: "Selected model" }],
+      resolveModelInfo: async () => ({ context: { contextWindow: 128_000 } }),
+    };
+
+    await expect(listProviderContextWindows(llm, [{ provider: "other", model: "selected-model" }])).rejects.toThrow(
+      "provider context windows are unavailable",
+    );
+    await expect(
+      listProviderContextWindows(llm, [{ provider: "deepseek-official", model: "selected-model" }]),
+    ).resolves.toEqual({
+      contextWindows: [{ provider: "deepseek-official", model: "selected-model", contextWindow: 128_000 }],
+    });
+  });
+
+  it("rejects malformed or duplicate context window routes", async () => {
+    const llm = {
+      listProviders: () => [{ id: "deepseek-official" }],
+      listModels: async (provider: string) => [{ provider, id: "selected-model", name: "Selected model" }],
+    };
+
+    await expect(
+      listProviderContextWindows(llm, [
+        { provider: "deepseek-official", model: "selected-model" },
+        { provider: "deepseek-official", model: "selected-model" },
+      ]),
+    ).rejects.toThrow("invalid provider context window routes");
+  });
+
+  it("omits unavailable or unsafe context windows", async () => {
+    const llm = {
+      listProviders: () => [{ id: "deepseek-official" }],
+      listModels: async (provider: string) => [{ provider, id: "selected-model", name: "Selected model" }],
+      resolveModelInfo: async () => ({ context: { contextWindow: 0 } }),
+    };
+
+    await expect(
+      listProviderContextWindows(llm, [{ provider: "deepseek-official", model: "selected-model" }]),
+    ).resolves.toEqual({ contextWindows: [] });
   });
 
   it("accepts only an exact active provider-qualified model selection", async () => {

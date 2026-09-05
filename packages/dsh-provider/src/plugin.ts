@@ -6,8 +6,10 @@ import { YISHAN_METHODS } from "@yishan-io/dsh-daemon-bridge";
 
 import {
   type ProviderCatalog,
+  type ProviderContextWindowRoute,
   YISHAN_PI_AI_CONFIG,
   assertPiAiProviderManifest,
+  listProviderContextWindows,
   listProviders,
   validateProviderSelection,
 } from "./catalog";
@@ -44,6 +46,11 @@ export class ProviderCatalogService extends Service {
     return await listProviders(this.context.llm);
   }
 
+  /** Lists valid context capacities for requested active provider/model routes. */
+  async listContextWindows(routes: unknown) {
+    return await listProviderContextWindows(this.context.llm, parseProviderContextWindowRoutes(routes));
+  }
+
   /** Rejects a model selection outside the active Yishan catalog. */
   async validateSelection(selection: ModelSelection): Promise<void> {
     await validateProviderSelection(this.context.llm, selection);
@@ -63,6 +70,26 @@ export async function apply(context: Context, config: ProviderPluginConfig): Pro
   const catalog = new ProviderCatalogService(context);
   const unregister = context.daemonBridge.registerHandlers(name, {
     [YISHAN_METHODS.providersList]: async () => await catalog.list(),
+    [YISHAN_METHODS.providerContextWindows]: async ({ routes }) => await catalog.listContextWindows(routes),
   });
   context.effect(() => unregister, `${name}.route`);
+}
+
+/** Validates untyped bridge input before context capacities reach the catalog service. */
+function parseProviderContextWindowRoutes(value: unknown): ProviderContextWindowRoute[] {
+  if (!Array.isArray(value)) throw new TypeError("invalid provider context window routes");
+  const routes: ProviderContextWindowRoute[] = [];
+  for (const route of value) {
+    if (!isProviderContextWindowRoute(route)) throw new TypeError("invalid provider context window routes");
+    routes.push(route);
+  }
+  return routes;
+}
+
+function isProviderContextWindowRoute(value: unknown): value is ProviderContextWindowRoute {
+  if (typeof value !== "object" || value === null) return false;
+  const keys = Object.keys(value);
+  if (keys.length !== 2 || !keys.includes("provider") || !keys.includes("model")) return false;
+  const { provider, model } = value as { provider: unknown; model: unknown };
+  return typeof provider === "string" && provider.length > 0 && typeof model === "string" && model.length > 0;
 }

@@ -210,6 +210,11 @@ export async function loadDSHSessionModels(
           provider: provider.id,
           providerName: provider.displayName,
           ...(provider.credentialRef ? { credentialRef: provider.credentialRef } : {}),
+          ...(typeof model.contextWindow === "number" &&
+          Number.isSafeInteger(model.contextWindow) &&
+          model.contextWindow > 0
+            ? { contextWindow: model.contextWindow }
+            : {}),
         })),
       );
     const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);

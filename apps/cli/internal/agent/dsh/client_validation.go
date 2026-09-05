@@ -193,6 +193,57 @@ func (response providerCatalogWire) validate() (ProviderCatalog, error) {
 	return ProviderCatalog{Providers: providers}, nil
 }
 
+type providerContextWindowWire struct {
+	Provider      string `json:"provider"`
+	Model         string `json:"model"`
+	ContextWindow int64  `json:"contextWindow"`
+}
+
+type providerContextWindowWireResult struct {
+	ContextWindows []providerContextWindowWire `json:"contextWindows"`
+}
+
+func validateProviderContextWindowRequest(request ProviderContextWindowRequest) error {
+	seenRoutes := make(map[string]struct{}, len(request.Routes))
+	for _, route := range request.Routes {
+		if route.Provider == "" || route.Model == "" {
+			return errors.New("invalid DSH provider context window request")
+		}
+		key := route.Provider + "\x00" + route.Model
+		if _, exists := seenRoutes[key]; exists {
+			return errors.New("invalid DSH provider context window request")
+		}
+		seenRoutes[key] = struct{}{}
+	}
+	return nil
+}
+
+func (result providerContextWindowWireResult) validate(request ProviderContextWindowRequest) (ProviderContextWindowResult, error) {
+	if result.ContextWindows == nil {
+		return ProviderContextWindowResult{}, errors.New("invalid DSH provider context window response")
+	}
+	requestedRoutes := make(map[string]struct{}, len(request.Routes))
+	for _, route := range request.Routes {
+		requestedRoutes[route.Provider+"\x00"+route.Model] = struct{}{}
+	}
+	contextWindows := make([]ProviderContextWindow, 0, len(result.ContextWindows))
+	for _, entry := range result.ContextWindows {
+		key := entry.Provider + "\x00" + entry.Model
+		if entry.Provider == "" || entry.Model == "" || entry.ContextWindow <= 0 || entry.ContextWindow > maxSafeInteger {
+			return ProviderContextWindowResult{}, errors.New("invalid DSH provider context window response")
+		}
+		if _, requested := requestedRoutes[key]; !requested {
+			return ProviderContextWindowResult{}, errors.New("invalid DSH provider context window response")
+		}
+		delete(requestedRoutes, key)
+		contextWindows = append(contextWindows, ProviderContextWindow{Provider: entry.Provider, Model: entry.Model, ContextWindow: entry.ContextWindow})
+	}
+	if len(contextWindows) != len(result.ContextWindows) {
+		return ProviderContextWindowResult{}, errors.New("invalid DSH provider context window response")
+	}
+	return ProviderContextWindowResult{ContextWindows: contextWindows}, nil
+}
+
 type sessionTitleSummaryWire struct {
 	SessionID   string  `json:"sessionId"`
 	PreviewText *string `json:"previewText"`

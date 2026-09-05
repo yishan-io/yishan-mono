@@ -181,6 +181,8 @@ export type ProviderCatalog = { providers: ProviderCatalogEntry[] };
 export type RuntimeLlmCatalog = {
   listProviders(): readonly { id: string }[];
   listModels(provider: string): Promise<readonly { provider: string; id: string; name: string }[]>;
+  /** Resolves optional exact-model capacity when supported by the runtime. */
+  resolveModelInfo?: (provider: string, model: string) => Promise<{ context?: { contextWindow: number } }>;
 };
 
 /** Raised when a caller selects no active provider/model route. */
@@ -255,4 +257,63 @@ function getProviderAuthentication(provider: string): ProviderAuthentication {
 
 function isAmbientPiAiProvider(provider: string): provider is AmbientPiAiProviderId {
   return YISHAN_AMBIENT_PI_AI_PROVIDER_IDS.some((ambientProvider) => ambientProvider === provider);
+}
+
+/** One exact provider/model route whose context capacity is requested. */
+export type ProviderContextWindowRoute = { provider: string; model: string };
+
+/** One valid exact route context capacity. */
+export type ProviderContextWindow = ProviderContextWindowRoute & { contextWindow: number };
+
+/** Resolves capacities only for active, provider-owned model routes. */
+export async function listProviderContextWindows(
+  llm: RuntimeLlmCatalog,
+  routes: readonly ProviderContextWindowRoute[],
+): Promise<{ contextWindows: ProviderContextWindow[] }> {
+  validateContextWindowRoutes(routes);
+  const catalog = await listProviders(llm);
+  const ownedRoutes = new Set(
+    catalog.providers.flatMap((provider) => provider.models.map((model) => `${provider.id}\u0000${model.id}`)),
+  );
+  if (routes.some((route) => !ownedRoutes.has(`${route.provider}\u0000${route.model}`))) {
+    throw new Error("provider context windows are unavailable");
+  }
+  const contextWindows = await Promise.all(
+    routes.map(async ({ provider, model }) => {
+      const contextWindow = await resolveContextWindow(llm, provider, model);
+      return contextWindow === undefined ? undefined : { provider, model, contextWindow };
+    }),
+  );
+  return {
+    contextWindows: contextWindows.filter(
+      (contextWindow): contextWindow is ProviderContextWindow => contextWindow !== undefined,
+    ),
+  };
+}
+
+function validateContextWindowRoutes(routes: readonly ProviderContextWindowRoute[]): void {
+  const seenRoutes = new Set<string>();
+  for (const route of routes) {
+    if (!route.provider || !route.model || seenRoutes.has(`${route.provider}\u0000${route.model}`)) {
+      throw new Error("invalid provider context window routes");
+    }
+    seenRoutes.add(`${route.provider}\u0000${route.model}`);
+  }
+}
+
+/** Resolves a safe context capacity without requiring model metadata to be present. */
+async function resolveContextWindow(
+  llm: RuntimeLlmCatalog,
+  provider: string,
+  model: string,
+): Promise<number | undefined> {
+  try {
+    const resolvedModel = llm.resolveModelInfo ? await llm.resolveModelInfo(provider, model) : undefined;
+    const contextWindow = resolvedModel?.context?.contextWindow;
+    return typeof contextWindow === "number" && Number.isSafeInteger(contextWindow) && contextWindow > 0
+      ? contextWindow
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }

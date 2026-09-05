@@ -293,7 +293,7 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
           authentication: "api-key",
           credentialRef: "ANTHROPIC_API_KEY",
           configured: true,
-          models: [{ id: "claude", name: "Claude" }],
+          models: [{ id: "claude", name: "Claude", contextWindow: 200_000 }],
         },
       ],
     });
@@ -307,6 +307,7 @@ describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
       provider: "anthropic",
       providerName: "Anthropic",
       credentialRef: "ANTHROPIC_API_KEY",
+      contextWindow: 200_000,
     });
   });
 });
