@@ -288,7 +288,8 @@ try {
     sourceBranch: "main",
     taskRun: { runtime: "dsh", agentKind: "pi", prompt: "replay this deterministically" },
   });
-  assert.deepEqual(created, { id: workspaceId, status: "pending" });
+  assert.equal(created.id, workspaceId);
+  assert.equal(created.status, "pending");
 
   const completed = await client.waitForNotification(
     (notification) => notification.method === "events.frontendStream" && ["workspaceCreateCompleted", "workspaceCreateFailed"].includes(notification.params?.topic),
