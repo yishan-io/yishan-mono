@@ -50,8 +50,21 @@ export function getLandlockNativePackageName(platform, architecture) {
   return `@deepseek-ai/node-addon-landlock-run-${platform}-${architecture}`;
 }
 
-function resolveNativeRuntimePackage(packageName) {
-  let packageDirectory = dirname(dshRuntimePackageRequire.resolve(packageName, { paths: [subprocessPackageDirectory] }));
+export function resolveNativeRuntimePackage(packageName) {
+  for (const specifier of [packageName, `${packageName}/package.json`]) {
+    for (const options of [{ paths: [subprocessPackageDirectory] }, undefined]) {
+      try {
+        return findNativeRuntimePackageRoot(packageName, dshRuntimePackageRequire.resolve(specifier, options));
+      } catch {
+        // The target package may be a data-only native asset without a module entry point.
+      }
+    }
+  }
+  throw new Error(`Unable to find package root for ${packageName}.`);
+}
+
+function findNativeRuntimePackageRoot(packageName, packagePath) {
+  let packageDirectory = dirname(packagePath);
   while (!existsSync(resolve(packageDirectory, "package.json"))) {
     const parentDirectory = dirname(packageDirectory);
     if (parentDirectory === packageDirectory) throw new Error(`Unable to find package root for ${packageName}.`);

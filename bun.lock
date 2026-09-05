@@ -226,6 +226,10 @@
       "devDependencies": {
         "@types/node": "^24.12.4",
       },
+      "optionalDependencies": {
+        "@deepseek-ai/node-addon-landlock-run-linux-arm64": "0.1.1",
+        "@deepseek-ai/node-addon-landlock-run-linux-x64": "0.1.1",
+      },
     },
     "packages/dsh-session": {
       "name": "@yishan-io/dsh-session",

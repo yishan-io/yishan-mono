@@ -8,6 +8,7 @@ import {
   inlineDshPackageVersions,
   getLandlockNativePackageName,
   getNativeRuntimePackageNames,
+  resolveNativeRuntimePackage,
 } from "./buildDshRuntime.mjs";
 
 const temporaryDirectory = await mkdtemp(resolve(tmpdir(), "yishan-dsh-runtime-package-"));
@@ -38,6 +39,20 @@ try {
   assert.equal(getLandlockNativePackageName("darwin", "arm64"), undefined);
   assert.deepEqual(getNativeRuntimePackageNames("darwin", "x64"), ["koffi", "@koromix/koffi-darwin-x64", "node-pty"]);
   assert.deepEqual(getNativeRuntimePackageNames("darwin", "arm64"), ["koffi", "@koromix/koffi-darwin-arm64", "node-pty"]);
+
+  const dshRuntimePackage = JSON.parse(
+    await readFile(resolve(import.meta.dirname, "..", "..", "..", "packages", "dsh-runtime", "package.json"), "utf8"),
+  );
+  assert.deepEqual(dshRuntimePackage.optionalDependencies, {
+    "@deepseek-ai/node-addon-landlock-run-linux-arm64": "0.1.1",
+    "@deepseek-ai/node-addon-landlock-run-linux-x64": "0.1.1",
+  });
+  if (process.platform === "linux" && process.arch === "x64") {
+    assert.equal(
+      existsSync(resolveNativeRuntimePackage("@deepseek-ai/node-addon-landlock-run-linux-x64")),
+      true,
+    );
+  }
 
   const packageFixtures = new Map();
   for (const packageName of [

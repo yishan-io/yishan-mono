@@ -105,6 +105,11 @@ describe("continuable fixed-role delegation", () => {
         }),
       ),
     );
+
+    // turn/end is persisted before the in-process child driver finishes its cleanup.
+    // Release the continuable activation before RuntimeHost.close() disposes the root graph.
+    await runtime.context.subagents.drainContinuableChildren(parent.agent, [childId]);
+    expect(runtime.context.agents.get(childId)).toBeUndefined();
   });
 });
 
