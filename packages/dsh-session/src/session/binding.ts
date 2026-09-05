@@ -5,9 +5,23 @@ import { type SessionBoundData, type WorkspaceBindingPolicy, sessionBoundDataSch
 
 export type { SessionBoundData, WorkspaceBindingPolicy };
 
+/** Bounded terminal diagnostic emitted for a failed delegated child session. */
+export type SubagentSettlementDiagnostic = {
+  reason: "aborted" | "error" | "max-tokens" | "refusal";
+};
+
+/** Bounded durable terminal state for one delegated child session. */
+export type SubagentSettlementData = {
+  version: 1;
+  childSessionId: string;
+  state: "completed" | "aborted" | "error";
+  diagnostic?: SubagentSettlementDiagnostic;
+};
+
 declare module "@deepseek-ai/dsh-session/types" {
   interface SessionEventMap {
     "yishan/session-bound.v1": SessionBoundData;
+    "yishan/subagent-settled.v1": SubagentSettlementData;
   }
 }
 
@@ -16,6 +30,7 @@ export function registerSessionEventTypes(): void {
   if (!(KNOWN_SESSION_EVENT_TYPES instanceof Set)) return;
   const knownEventTypes = KNOWN_SESSION_EVENT_TYPES as Set<string>;
   knownEventTypes.add("yishan/session-bound.v1");
+  knownEventTypes.add("yishan/subagent-settled.v1");
 }
 
 /** Parses data persisted for a session-bound event. */

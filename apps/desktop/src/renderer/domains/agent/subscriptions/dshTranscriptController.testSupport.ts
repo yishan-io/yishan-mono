@@ -16,6 +16,8 @@ export function setup() {
     clearTurnError: vi.fn(),
     setDSHTranscriptRetryAvailable: vi.fn(),
     setTurnActive: vi.fn(),
+    setDshDelegationLifecycle: vi.fn(),
+    replaceDshDelegationLifecycle: vi.fn(),
   };
   return {
     actions,

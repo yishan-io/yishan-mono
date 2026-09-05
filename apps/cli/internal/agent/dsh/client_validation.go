@@ -68,6 +68,7 @@ type sessionReadWireResult struct {
 		SessionID     string `json:"sessionId"`
 		CreatedAt     *int64 `json:"createdAt"`
 		ParentSession string `json:"parentSession,omitempty"`
+		Origin        string `json:"origin,omitempty"`
 		AgentPreset   string `json:"agentPreset,omitempty"`
 	} `json:"session"`
 	Events            []json.RawMessage `json:"events"`
@@ -91,7 +92,7 @@ func (response sessionReadWireResult) validate(request SessionReadRequest) (Sess
 	return SessionReadResult{
 		Session: SessionHeader{
 			SessionID: response.Session.SessionID, CreatedAt: *response.Session.CreatedAt,
-			ParentSession: response.Session.ParentSession, AgentPreset: response.Session.AgentPreset,
+			ParentSession: response.Session.ParentSession, Origin: response.Session.Origin, AgentPreset: response.Session.AgentPreset,
 		},
 		Events: response.Events, InstanceID: response.InstanceID, AsOfSeq: *response.AsOfSeq, DurableThroughSeq: *response.DurableThroughSeq,
 	}, nil

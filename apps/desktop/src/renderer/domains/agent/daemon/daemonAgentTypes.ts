@@ -389,6 +389,8 @@ export type AgentDSHSessionMetadata = {
   sessionId: string;
   createdAt: number;
   parentSession?: string;
+  /** Present only when the durable session was created as a DSH subagent child. */
+  origin?: "subagent";
   agentPreset?: string;
 };
 

@@ -272,12 +272,14 @@ export class SessionRequestHandler {
     id: string;
     createdAt: number;
     parentSession?: string;
+    origin?: "subagent";
     agentPreset?: string;
   }): SessionHeaderResult {
     return {
       sessionId: header.id,
       createdAt: header.createdAt,
       ...(header.parentSession === undefined ? {} : { parentSession: header.parentSession }),
+      ...(header.origin === undefined ? {} : { origin: header.origin }),
       ...(header.agentPreset === undefined ? {} : { agentPreset: header.agentPreset }),
     };
   }

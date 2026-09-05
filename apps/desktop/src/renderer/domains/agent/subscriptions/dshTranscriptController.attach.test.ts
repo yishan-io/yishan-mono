@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { resolveDshDelegationStates } from "../chat/agentChatDshDelegation";
 import { DSHTranscriptController, agentChatStore, event, setup } from "./dshTranscriptController.testSupport";
 
 describe("DSHTranscriptController attach replay", () => {
@@ -23,6 +24,103 @@ describe("DSHTranscriptController attach replay", () => {
     expect(controller.getDurableThroughSeq()).toBe(0);
     expect(actions.setSessionState).not.toHaveBeenCalledWith("tab", "error");
   });
+  it("retains a terminal delegation card state from an attach suffix", () => {
+    agentChatStore.getState().initSession("tab", "session");
+    const controller = new DSHTranscriptController(
+      "tab",
+      "session",
+      agentChatStore.getState(),
+      async () => ({
+        session: { sessionId: "session", createdAt: 0 },
+        events: [],
+        instanceId: "inc",
+        asOfSeq: -1,
+        durableThroughSeq: -1,
+      }),
+      () => {},
+    );
+
+    controller.applyAttachSnapshot({
+      runtime: "dsh",
+      sessionId: "session",
+      instanceId: "inc",
+      events: [
+        {
+          type: "assistant/message",
+          seq: 0,
+          time: 0,
+          data: {
+            turn: 0,
+            step: 0,
+            message: {
+              id: "delegate-call",
+              role: "assistant",
+              content: [{ type: "tool-call", id: "call", name: "delegate_explore", arguments: "{}" }],
+              source: { kind: "model", provider: "provider", model: "model" },
+            },
+          },
+          surfaceOp: "append",
+        },
+        {
+          type: "tool/result",
+          seq: 1,
+          time: 1,
+          data: {
+            turn: 0,
+            step: 0,
+            message: {
+              id: "delegate-result",
+              role: "user",
+              content: [{ type: "tool-result", toolCallId: "call", content: [{ type: "text", text: "accepted" }] }],
+              source: { kind: "tool", callId: "call" },
+            },
+            meta: { delegation: { version: 1, childId: "child" } },
+          },
+          surfaceOp: "append",
+        },
+        {
+          type: "agent/inbox/spliced",
+          seq: 2,
+          time: 2,
+          data: {
+            target: "next-step",
+            start: 0,
+            inserted: [
+              {
+                id: "settlement-notice",
+                role: "user",
+                content: [{ type: "text", text: "Background subagent child settled." }],
+                source: {
+                  kind: "subagent-settled",
+                  form: "notice",
+                  summary: "Background subagent child settled.",
+                  senderSessionId: "child",
+                },
+              },
+            ],
+          },
+        },
+        {
+          type: "yishan/subagent-settled.v1",
+          seq: 3,
+          time: 3,
+          data: { version: 1, childSessionId: "child", state: "completed" },
+        },
+      ],
+      asOfSeq: 2,
+      durableThroughSeq: 2,
+      headSeq: 3,
+    });
+
+    const session = agentChatStore.getState().sessionsByTabId.tab;
+    expect(
+      resolveDshDelegationStates(
+        session?.messages ?? [],
+        new Map(Object.entries(session?.dshDelegationLifecycleByChildSessionId ?? {})),
+      ).get("call"),
+    ).toBe("completed");
+  });
+
   it("coalesces a synchronous replay burst into one transcript projection", async () => {
     const { controller, actions } = setup();
 

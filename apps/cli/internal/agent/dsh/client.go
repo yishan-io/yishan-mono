@@ -103,6 +103,7 @@ type SessionHeader struct {
 	SessionID     string `json:"sessionId"`
 	CreatedAt     int64  `json:"createdAt"`
 	ParentSession string `json:"parentSession,omitempty"`
+	Origin        string `json:"origin,omitempty"`
 	AgentPreset   string `json:"agentPreset,omitempty"`
 }
 

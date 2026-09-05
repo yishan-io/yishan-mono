@@ -13,15 +13,22 @@
 import { existsSync, copyFileSync, chmodSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { buildDshRuntime } from "./buildDshRuntime.mjs";
+
 /** @param {import("electron-builder").BeforePackContext} context */
 export default async function beforePack(context) {
-  const { arch, appOutDir } = context;
+  const { arch } = context;
 
   // electron-builder Arch enum: 0=ia32, 1=x64, 2=armv7l, 3=arm64, 4=universal
   const archMap = { 0: "ia32", 1: "amd64", 2: "armv7l", 3: "arm64", 4: "universal" };
   const goArch = archMap[arch];
-
   if (!goArch) return;
+
+  const runtimeArchMap = { 0: "ia32", 1: "x64", 2: "armv7l", 3: "arm64" };
+  const runtimeArchitecture = runtimeArchMap[arch];
+  if (runtimeArchitecture) {
+    await buildDshRuntime({ platform: context.electronPlatformName, architecture: runtimeArchitecture });
+  }
 
   const resourcesDir = resolve(context.packager.projectDir, "dist/resources");
   const suffixedBin = resolve(resourcesDir, `yishan-${goArch}`);

@@ -114,10 +114,17 @@ describe("SessionRequestHandler session inspection", () => {
     }
   });
 
-  it("maps durable reads and resume/dispose results through the RPC server", async () => {
+  it("reads a durable child transcript and maps resume/dispose results through the RPC server", async () => {
     vi.stubEnv("DEEPSEEK_API_KEY", "test-key");
     const read = vi.spyOn(SessionRuntime.prototype, "readDurableSession").mockResolvedValue({
-      session: { version: 0, id: "session-1", createdAt: 1 },
+      session: {
+        version: 0,
+        id: "child",
+        createdAt: 1,
+        cwd: "/workspace",
+        origin: "subagent",
+        parentSession: "parent",
+      },
       events: [],
       instanceId: "run-1",
       asOfSeq: 2,
@@ -128,15 +135,16 @@ describe("SessionRequestHandler session inspection", () => {
     const harness = await mountRuntime();
     try {
       harness.input.write(
-        `${JSON.stringify({ jsonrpc: "2.0", id: 13, method: YISHAN_METHODS.read, params: { cwd: "/workspace", sessionId: "session-1" } })}\n`,
+        `${JSON.stringify({ jsonrpc: "2.0", id: 13, method: YISHAN_METHODS.read, params: { cwd: "/workspace", sessionId: "child" } })}\n`,
       );
       await expect(waitForFrame(harness, 13)).resolves.toMatchObject({
         result: {
-          session: { sessionId: "session-1" },
+          session: { sessionId: "child", origin: "subagent", parentSession: "parent" },
           asOfSeq: 2,
           durableThroughSeq: 1,
         },
       });
+      expect(read).toHaveBeenCalledWith({ cwd: "/workspace", sessionId: "child" });
       harness.input.write(
         `${JSON.stringify({ jsonrpc: "2.0", id: 14, method: "initialize", params: { cwd: "/workspace", provider: "deepseek-official", model: "test-model" } })}\n`,
       );
@@ -187,7 +195,7 @@ describe("SessionRequestHandler session inspection", () => {
     }
   });
 
-  it("maps direct and descendant native lineage while excluding invalid workspace ancestry", async () => {
+  it("maps fixed-role continuable direct children and excludes invalid workspace ancestry", async () => {
     const harness = await mountRuntime();
     const listChildren = vi.spyOn(harness.ctx.subagents, "listChildren");
     const listDescendants = vi.spyOn(harness.ctx.subagents, "listDescendants");
@@ -222,7 +230,14 @@ describe("SessionRequestHandler session inspection", () => {
         },
       ];
       listChildren.mockResolvedValue([
-        { kind: "child", id: "child", activity: "inactive", hasChildren: false, mode: "one-shot" },
+        {
+          kind: "child",
+          id: "child",
+          activity: "running",
+          hasChildren: false,
+          mode: "continuable",
+          label: "Explore task",
+        },
         { kind: "child", id: "outside", activity: "inactive", hasChildren: false, mode: "one-shot" },
       ] as never);
       harness.input.write(
@@ -231,7 +246,14 @@ describe("SessionRequestHandler session inspection", () => {
       await expect(waitForFrame(harness, 19)).resolves.toMatchObject({
         result: {
           children: [
-            { sessionId: "child", parentSessionId: "root", relativeDepth: 1, activity: "inactive", mode: "one-shot" },
+            {
+              sessionId: "child",
+              parentSessionId: "root",
+              relativeDepth: 1,
+              activity: "running",
+              mode: "continuable",
+              label: "Explore task",
+            },
           ],
         },
       });

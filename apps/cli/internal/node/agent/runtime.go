@@ -218,7 +218,7 @@ func (s *Service) AgentReadHistory(ctx context.Context, req rpc.AgentReadHistory
 			return nil, mapDSHTranscriptProtocolError(err)
 		}
 		return rpc.AgentHistoryResult{Runtime: req.Runtime, DSH: &rpc.AgentDSHHistory{
-			Session: rpc.AgentDSHSessionMetadata{SessionID: history.Session.SessionID, CreatedAt: history.Session.CreatedAt, ParentSession: history.Session.ParentSession, AgentPreset: history.Session.AgentPreset},
+			Session: rpc.AgentDSHSessionMetadata{SessionID: history.Session.SessionID, CreatedAt: history.Session.CreatedAt, ParentSession: history.Session.ParentSession, Origin: history.Session.Origin, AgentPreset: history.Session.AgentPreset},
 			Events:  projectedEvents, InstanceID: history.InstanceID, AsOfSeq: history.AsOfSeq,
 			DurableThroughSeq: history.DurableThroughSeq,
 		}}, nil

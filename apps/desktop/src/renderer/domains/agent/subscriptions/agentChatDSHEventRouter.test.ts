@@ -118,6 +118,8 @@ describe("agentChatDSHEventRouter", () => {
       clearTurnError: vi.fn(),
       setDSHTranscriptRetryAvailable: vi.fn(),
       setTurnActive: vi.fn(),
+      setDshDelegationLifecycle: vi.fn(),
+      replaceDshDelegationLifecycle: vi.fn(),
     };
     const controller = new DSHTranscriptController("tab-a", "session-a", actions, loader, () => {});
     const dispose = registerAgentChatDSHEventRouter({

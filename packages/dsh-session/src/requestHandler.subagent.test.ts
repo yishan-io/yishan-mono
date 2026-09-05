@@ -275,6 +275,7 @@ describe("SessionRequestHandler subagent routes", () => {
   it("publishes scoped lifecycle edges with exact version, instance, and revision field ordering", async () => {
     const harness = await mountRuntime();
     const owned = vi.spyOn(SessionRuntime.prototype, "owns").mockReturnValue(true);
+    const settlement = vi.spyOn(SessionRuntime.prototype, "recordSubagentSettlement").mockResolvedValue(undefined);
     const parent = { id: "parent-1", session: { id: "parent-1" } };
     try {
       for (const callback of harness.ctx.events.dispatch("emit", [
@@ -290,6 +291,7 @@ describe("SessionRequestHandler subagent routes", () => {
       ]))
         callback({ runId: "run-1", id: "child-1", provider: "spawn", local: true, stopReason: "completed" });
       await vi.waitFor(() => expect(getLifecycleFrames(harness)).toHaveLength(2));
+      expect(settlement).toHaveBeenCalledWith("parent-1", "child-1", "completed");
       expect(getLifecycleFrames(harness)).toEqual([
         {
           jsonrpc: "2.0",
@@ -335,6 +337,7 @@ describe("SessionRequestHandler subagent routes", () => {
         "local",
       ]);
     } finally {
+      settlement.mockRestore();
       owned.mockRestore();
       await harness.server.close();
       await harness.ctx.fiber.dispose();

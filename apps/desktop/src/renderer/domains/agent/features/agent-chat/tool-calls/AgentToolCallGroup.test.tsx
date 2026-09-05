@@ -39,12 +39,14 @@ vi.mock("./AgentToolCallCard", () => ({
   AgentToolCallCard: ({
     toolCall,
     agentLifecycleState,
+    dshDelegationState,
   }: {
     toolCall: { id: string };
     agentLifecycleState?: string;
+    dshDelegationState?: string;
   }) => (
     <div data-testid="tool-call-card">
-      {toolCall.id}:{agentLifecycleState}
+      {toolCall.id}:{agentLifecycleState ?? dshDelegationState}
     </div>
   ),
 }));
@@ -189,6 +191,22 @@ describe("AgentToolCallGroup", () => {
     expect(live.textContent).toContain("agent-running:running");
     expect(live.textContent).toContain("read-running:");
     expect(live.textContent).not.toContain("agent-completed");
+  });
+
+  it("keeps a DSH delegation with an immediate result visible while its child is running", () => {
+    render(
+      <AgentToolCallGroup
+        id="g-dsh-running-after-parent"
+        blocks={[toolCallBlock("delegate-1", "delegate_explore", resultMessage("delegate-1-result"))]}
+        showRunningBlocks={false}
+        dshDelegationStates={new Map([["delegate-1", "running"]])}
+        runtime="dsh"
+      />,
+    );
+
+    expect(screen.getByTestId("agent-tool-call-group-live").textContent).toContain("delegate-1:running");
+    const headerText = screen.getByTestId("agent-tool-call-group-header-text");
+    expect(getComputedStyle(headerText).animation).toContain("tool-stack-gradient");
   });
 
   it("drops a card from the live stack once its result arrives", () => {

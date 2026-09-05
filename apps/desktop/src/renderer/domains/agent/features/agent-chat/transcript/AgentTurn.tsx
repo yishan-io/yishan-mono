@@ -2,6 +2,10 @@ import { Box, CircularProgress, IconButton, Paper, Typography } from "@mui/mater
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
+import type {
+  DshDelegationDiagnostic,
+  DshDelegationState,
+} from "../../../../../domains/agent/chat/agentChatDshDelegation";
 import type { AgentToolCallLifecycleState } from "../../../../../domains/agent/chat/agentChatSubagents";
 import { AgentToolCallGroup } from "../tool-calls/AgentToolCallGroup";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
@@ -26,6 +30,9 @@ type AgentTurnProps = {
   turn: Turn;
   workspacePath?: string;
   agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>;
+  dshDelegationStates?: ReadonlyMap<string, DshDelegationState>;
+  dshDelegationDiagnostics?: ReadonlyMap<string, DshDelegationDiagnostic>;
+  runtime?: import("../../../daemon/daemonAgentTypes").AgentRuntime;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
@@ -36,7 +43,15 @@ type AgentTurnProps = {
  * hides only the working content (thinking, tool calls); the final summary
  * message's thinking and text stay visible below the header.
  */
-export function AgentTurn({ turn, workspacePath, agentToolCallStates, onOpenCompletedSubagent }: AgentTurnProps) {
+export function AgentTurn({
+  turn,
+  workspacePath,
+  agentToolCallStates,
+  dshDelegationStates,
+  dshDelegationDiagnostics,
+  runtime,
+  onOpenCompletedSubagent,
+}: AgentTurnProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(() => !collapsedTurnIds.has(turn.id));
   const isExpanded = open || turn.isWorking;
@@ -146,6 +161,9 @@ export function AgentTurn({ turn, workspacePath, agentToolCallStates, onOpenComp
                 blocks={section.blocks}
                 showRunningBlocks={turn.isWorking}
                 agentToolCallStates={agentToolCallStates}
+                dshDelegationStates={dshDelegationStates}
+                dshDelegationDiagnostics={dshDelegationDiagnostics}
+                runtime={runtime}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />

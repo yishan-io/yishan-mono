@@ -4,13 +4,11 @@ import { type ModelSelectionRef, installModelSelection } from "@deepseek-ai/dsh-
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { type SessionId, foldRequestHeader } from "@deepseek-ai/dsh-session";
 import type {} from "@deepseek-ai/dsh-session-persistence";
-
 import { type BridgeNotificationSink, YISHAN_NOTIFICATIONS } from "@yishan-io/dsh-daemon-bridge";
 import type { ProviderCatalogService } from "@yishan-io/dsh-provider";
 import type {} from "@yishan-io/dsh-workspace";
 import type { DurableCursor } from "../shared/cursor";
-
-import { type SessionBoundData, registerSessionEventTypes } from "./binding";
+import { type SessionBoundData, type SubagentSettlementDiagnostic, registerSessionEventTypes } from "./binding";
 import { SessionExecutionError } from "./errors";
 import type {
   SequencedSessionEvent,
@@ -34,6 +32,7 @@ import {
   requireMatchingBinding,
   requireMatchingBindingData,
 } from "./runtimeBinding";
+import { recordDurableSubagentSettlement } from "./runtimeSubagentSettlement";
 import {
   requireAuthoritativeCwd,
   requireContiguousPersistedEvents,
@@ -43,7 +42,6 @@ import {
 } from "./runtimeValidation";
 import type { AgentHandle, CwdTask, DurableSessionSnapshot, InitializeOptions, LiveSession } from "./types";
 export type { DurableSessionSnapshot } from "./types";
-
 /** Owns all Yishan-created or resumed DSH agent handles for one runtime instance ID. */
 export class SessionRuntime {
   private readonly handles = new Map<string, AgentHandle>();
@@ -55,7 +53,6 @@ export class SessionRuntime {
   private initializeOptions: InitializeOptions = {};
   private hasInitialized = false;
   private isShuttingDown = false;
-
   /** Creates the runtime and mints its opaque process-local instance ID. */
   constructor(
     private readonly ctx: Context,
@@ -66,12 +63,9 @@ export class SessionRuntime {
     registerSessionEventTypes();
     this.instanceId = instanceId ?? `yishan-${randomBytes(24).toString("hex")}`;
   }
-
   getInstanceId(): string {
     return this.instanceId;
   }
-
-  /** Reads one physical durable snapshot without flushing or consulting live events. */
   async readDurableSession(request: SessionExecutionRequest): Promise<DurableSessionSnapshot> {
     const live = this.ctx.sessions.get(request.sessionId as SessionId);
     if (live !== undefined && this.owns(request.sessionId) && live.seq === 0) {
@@ -94,20 +88,17 @@ export class SessionRuntime {
       durableThroughSeq,
     };
   }
-
   init(options: InitializeOptions): void {
     if (this.hasInitialized) throw new Error("runtime is already initialized");
     this.initializeOptions = { ...options };
     this.hasInitialized = true;
   }
-
   /** Creates one Yishan-owned session with the caller's exact workspace cwd. */
   async start(request: SessionStartRequest): Promise<SessionStartResult> {
     this.requireAdmitted();
     await this.getOrCreate(request.sessionId, request.cwd, "start", request.binding, request.agentOptions);
     return { sessionId: request.sessionId, instanceId: this.instanceId };
   }
-
   /** Resumes one persisted session into Yishan ownership after checking its durable workspace. */
   async resume(request: SessionRuntimeResumeRequest): Promise<void> {
     this.requireAdmitted();
@@ -118,7 +109,6 @@ export class SessionRuntime {
     }
     await this.getOrCreate(request.sessionId, request.cwd, "resume", undefined, undefined, request.workspaceId);
   }
-
   /** Adds text-only prompt blocks as one semantic user message to an owned session. */
   async prompt(request: SessionPromptRequest): Promise<SessionPromptResult> {
     this.requireAdmitted();
@@ -126,7 +116,6 @@ export class SessionRuntime {
     requireCwd(handle.agent.session.header.cwd, request);
     return this.followup(handle, request.contentBlocks);
   }
-
   /** Adds a stock prompt to an owned session using only its authoritative handle cwd. */
   async stockPrompt(sessionId: string, contentBlocks: TextPromptContentBlock[]): Promise<SessionPromptResult> {
     this.requireAdmitted();
@@ -134,7 +123,6 @@ export class SessionRuntime {
     requireAuthoritativeCwd(handle.agent.session);
     return this.followup(handle, contentBlocks);
   }
-
   /** Updates the model for the next turn of a live session without restarting it. */
   async setModel(request: SetModelRequest): Promise<void> {
     this.requireAdmitted();
@@ -153,8 +141,6 @@ export class SessionRuntime {
       throw new SessionExecutionError("session is owned by stock DSH", "YISHAN_SESSION_COLLISION");
     selectionRef.current = selection;
   }
-
-  /** Cancels an owned session while retaining its handle and queued inbox. */
   async cancel(request: SessionCancelRequest): Promise<SessionCancelResult> {
     this.requireAdmitted();
     const handle = await this.requireOwnedHandle(request.sessionId);
@@ -162,7 +148,6 @@ export class SessionRuntime {
     handle.agent.cancel({ kind: "user" }, { keepInbox: true });
     return { sessionId: request.sessionId, cancelled: true };
   }
-
   /** Disposes one owned handle, retaining ownership until the handle disposal settles. */
   async disposeSession(request: SessionExecutionRequest): Promise<boolean> {
     this.requireAdmitted();
@@ -177,12 +162,10 @@ export class SessionRuntime {
     }
     return await this.disposeOwned(request.sessionId, request.cwd);
   }
-
   async flushSession(request: SessionFlushRequest): Promise<DurableCursor> {
     this.requireAdmitted();
     return await this.getOrStartFlush(request);
   }
-
   /** Reads the durable tail after a cursor and reports its physical durable head. */
   async subscribe(request: SessionSubscribeRequest): Promise<SessionSubscribeResult> {
     const live = this.ctx.sessions.get(request.sessionId as SessionId);
@@ -224,8 +207,6 @@ export class SessionRuntime {
       headSeq: durableThroughSeq,
     };
   }
-
-  /** Starts a coalesced durability checkpoint when an owned turn ends. */
   handleSessionEvent(session: LiveSession, event: SequencedSessionEvent): void {
     if (this.isShuttingDown || !this.handles.has(session.id)) return;
     if (event.type !== "turn/end") return;
@@ -236,8 +217,6 @@ export class SessionRuntime {
       console.error("failed to auto-flush Yishan session", error);
     });
   }
-
-  /** Closes admission, flushes every owned session, and then disposes all owned handles. */
   async dispose(): Promise<void> {
     this.isShuttingDown = true;
     const activeDisposalResults = await Promise.allSettled([...this.disposals.values()].map(({ task }) => task));
@@ -254,6 +233,24 @@ export class SessionRuntime {
       .map((result) => result.reason);
     if (failures.length === 1) throw failures[0];
     if (failures.length > 1) throw new AggregateError(failures, "failed to shut down Yishan sessions");
+  }
+
+  async recordSubagentSettlement(
+    parentSessionId: string,
+    childSessionId: string,
+    state: "completed" | "aborted" | "error",
+    diagnostic?: SubagentSettlementDiagnostic,
+  ): Promise<void> {
+    const handle = this.handles.get(parentSessionId);
+    if (handle === undefined) return;
+    await recordDurableSubagentSettlement(
+      handle,
+      parentSessionId,
+      this.flushSession.bind(this),
+      childSessionId,
+      state,
+      diagnostic,
+    );
   }
 
   getOwnedLiveSession(sessionId: string): LiveSession | undefined {

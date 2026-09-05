@@ -6,6 +6,7 @@ import { openSubagentSessionInRightSplitPane } from "../../../commands/agentChat
 import type { AgentMessage, AgentModel, AgentQueueState } from "../../../chat/agentChatTypes";
 import { formatSupportedThinkingLevels } from "../../../providers/agentThinkingLevels";
 import { THINKING_LEVEL_LABELS } from "../../select-model/ThinkingLevelControl";
+import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentMessageList } from "../transcript/AgentMessageList";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
@@ -19,6 +20,7 @@ type AgentChatTranscriptPaneProps = {
   isActive: boolean;
   isReadOnlySubagentDetail: boolean;
   parentSessionId?: string;
+  runtime: import("../../../daemon/daemonAgentTypes").AgentRuntime;
   emptyHelpLines?: string[];
   emptyHelpPrefix?: string;
 };
@@ -72,6 +74,7 @@ function AgentChatTranscriptPane({
   isActive,
   isReadOnlySubagentDetail,
   parentSessionId,
+  runtime,
   emptyHelpLines,
   emptyHelpPrefix,
 }: AgentChatTranscriptPaneProps) {
@@ -103,7 +106,7 @@ function AgentChatTranscriptPane({
     return null;
   }, [messages]);
   const handleOpenCompletedSubagent = useCallback(
-    async (target: { agentId?: string; childSessionId: string; title: string }) => {
+    async (target: CompletedSubagentOpenTarget) => {
       await openSubagentSessionInRightSplitPane({
         workspaceId,
         cwd,
@@ -135,6 +138,8 @@ function AgentChatTranscriptPane({
         emptyHelpLines={emptyHelpLines}
         emptyHelpPrefix={emptyHelpPrefix}
         onOpenCompletedSubagent={handleOpenCompletedSubagent}
+        runtime={runtime}
+        dshDelegationLifecycleByChildSessionId={session?.dshDelegationLifecycleByChildSessionId}
       />
       {isReadOnlySubagentDetail ? (
         <AgentChatSubagentDetailFooter model={footerModel} usage={latestUsage} thinkingLevel={thinkingLevel} />

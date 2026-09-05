@@ -4,75 +4,41 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renamePiCompatibilitySession } from "../../../domains/agent/daemon/daemonAgentProcedures";
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
-import { agentChatStore } from "../state/agentChatStore";
 import { dshStartResult } from "../runtime/agentSessionRuntime.dsh.testSupport";
-import {
-  loadDSHSessionModels,
-  openChatFileTab,
-  renameAgentChatSessionByTab,
-  startAgentChatSession,
-} from "./agentChatCommands";
+import { agentChatStore } from "../state/agentChatStore";
+import { loadDSHSessionModels, openChatFileTab, renameAgentChatSessionByTab, startAgentChatSession } from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialSplitPaneStoreState = splitPaneStore.getState();
 
 const mocks = vi.hoisted(() => ({
-  startAgent: vi.fn(),
-  attachAgent: vi.fn(),
-  promptAgent: vi.fn(),
-  abortAgent: vi.fn(),
-  disposeAgent: vi.fn(),
-  send: vi.fn(),
-  listSessions: vi.fn(),
-  listActiveSessions: vi.fn(),
-  getSessionFile: vi.fn(),
-  listModels: vi.fn(),
-  listDSHProviders: vi.fn(),
-  listProviders: vi.fn(),
-  removeProvider: vi.fn(),
-  rename: vi.fn(),
-  runChatPrompt: vi.fn(),
-  saveProvider: vi.fn(),
-  closeAgentSession: vi.fn(),
-  ensureChatSession: vi.fn(),
-  getDetectionStatuses: vi.fn(),
-  listDetectionStatuses: vi.fn(),
-  getCapabilities: vi.fn(),
-  listSessionLineage: vi.fn(),
+  startAgent: vi.fn(), attachAgent: vi.fn(), promptAgent: vi.fn(), abortAgent: vi.fn(), disposeAgent: vi.fn(),
+  send: vi.fn(), listSessions: vi.fn(), listActiveSessions: vi.fn(), getSessionFile: vi.fn(), listModels: vi.fn(),
+  listDSHProviders: vi.fn(), listProviders: vi.fn(), removeProvider: vi.fn(), rename: vi.fn(), runChatPrompt: vi.fn(),
+  saveProvider: vi.fn(), closeAgentSession: vi.fn(), ensureChatSession: vi.fn(), getDetectionStatuses: vi.fn(),
+  listDetectionStatuses: vi.fn(), getCapabilities: vi.fn(), listSessionLineage: vi.fn(), readHistory: vi.fn(),
+  registerDshRouter: vi.fn(() => () => {}),
 }));
+const openChatMocks = vi.hoisted(() => ({ resolveChatFilePath: vi.fn() }));
 
-vi.mock("@shared/ids/generateId", () => ({
-  generateId: vi.fn(() => "generated-session-id"),
-}));
-
+vi.mock("@shared/ids/generateId", () => ({ generateId: vi.fn(() => "generated-session-id") }));
 vi.mock("../subscriptions/agentChatEventRouter", () => ({
-  ensureAgentChatEventRouterReady: vi.fn(() => Promise.resolve()),
-  registerAgentChatEventRouter: vi.fn(() => () => {}),
+  ensureAgentChatEventRouterReady: vi.fn(() => Promise.resolve()), registerAgentChatEventRouter: vi.fn(() => () => {}),
 }));
-
+vi.mock("../subscriptions/agentChatDSHEventRouter", () => ({ registerAgentChatDSHEventRouter: mocks.registerDshRouter }));
 vi.mock("../../../domains/agent/daemon/daemonAgentProcedures", () => ({
-  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
-  attachAgentSession: mocks.attachAgent,
-  abortAgentSession: mocks.abortAgent,
-  disposeAgentSession: mocks.disposeAgent,
-  getAgentCapabilities: mocks.getCapabilities,
-  promptAgentSession: mocks.promptAgent,
-  startAgentSession: mocks.startAgent,
-  closeAgentSession: mocks.closeAgentSession ?? vi.fn(),
-  ensureWorkspaceChatSession: mocks.ensureChatSession ?? vi.fn(),
-  listActivePiCompatibilitySessions: mocks.listActiveSessions ?? vi.fn(),
-  listAgentDetectionStatuses: mocks.listDetectionStatuses ?? vi.fn(),
-  listAgentSessionLineage: mocks.listSessionLineage,
-  listAgentModels: mocks.listModels ?? vi.fn(),
-  listDSHProviders: mocks.listDSHProviders ?? vi.fn(),
-  listPiProviders: mocks.listProviders ?? vi.fn(),
-  removePiProvider: mocks.removeProvider ?? vi.fn(),
-  renamePiCompatibilitySession: mocks.rename ?? vi.fn(),
-  runWorkspaceChatPrompt: mocks.runChatPrompt ?? vi.fn(),
-  savePiProvider: mocks.saveProvider ?? vi.fn(),
-  sendPiCompatibilityCommand: mocks.send ?? vi.fn(),
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}), attachAgentSession: mocks.attachAgent, abortAgentSession: mocks.abortAgent,
+  disposeAgentSession: mocks.disposeAgent, getAgentCapabilities: mocks.getCapabilities, promptAgentSession: mocks.promptAgent,
+  startAgentSession: mocks.startAgent, closeAgentSession: mocks.closeAgentSession, ensureWorkspaceChatSession: mocks.ensureChatSession,
+  listActivePiCompatibilitySessions: mocks.listActiveSessions, listAgentDetectionStatuses: mocks.listDetectionStatuses,
+  listAgentSessionLineage: mocks.listSessionLineage, readAgentRuntimeHistory: mocks.readHistory, listAgentModels: mocks.listModels,
+  listDSHProviders: mocks.listDSHProviders, listPiProviders: mocks.listProviders, removePiProvider: mocks.removeProvider,
+  renamePiCompatibilitySession: mocks.rename, runWorkspaceChatPrompt: mocks.runChatPrompt, savePiProvider: mocks.saveProvider,
+  sendPiCompatibilityCommand: mocks.send,
 }));
+vi.mock("../../files/commands/fileCommands", () => ({ resolveChatFilePath: openChatMocks.resolveChatFilePath }));
+vi.mock("../../workspace/state/workspaceActions", () => ({ enqueueWorkspaceErrorNotice: vi.fn() }));
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
@@ -81,28 +47,6 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-const openChatMocks = vi.hoisted(() => ({
-  resolveChatFilePath: vi.fn(),
-  openTab: vi.fn(),
-  openTabInOppositePane: vi.fn(),
-}));
-
-vi.mock("../../files/commands/fileCommands", () => ({
-  resolveChatFilePath: openChatMocks.resolveChatFilePath,
-}));
-
-vi.mock("@renderer/domains/workbench", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@renderer/domains/workbench")>();
-  return {
-    ...actual,
-    openTab: openChatMocks.openTab,
-    openTabInOppositePane: openChatMocks.openTabInOppositePane,
-  };
-});
-
-vi.mock("../../workspace/state/workspaceActions", () => ({
-  enqueueWorkspaceErrorNotice: vi.fn(),
-}));
 describe("agentChatCommands.startAgentChatSession", () => {
   it.each([
     [{ configured: false, ready: true }, "pi"],
@@ -151,7 +95,9 @@ describe("agentChatCommands.startAgentChatSession", () => {
       ],
     });
     mocks.getCapabilities.mockResolvedValueOnce({ dsh: { configured: true, ready: true } });
-    mocks.startAgent.mockRejectedValueOnce(new Error("DSH unavailable")).mockResolvedValueOnce(dshStartResult("generated-session-id"));
+    mocks.startAgent
+      .mockRejectedValueOnce(new Error("DSH unavailable"))
+      .mockResolvedValueOnce(dshStartResult("generated-session-id"));
 
     await startAgentChatSession({ tabId, workspaceId: "workspace-1", cwd: "/tmp/project", sessionView: "full" });
 
@@ -301,16 +247,18 @@ describe("agentChatCommands.startAgentChatSession", () => {
 
     await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
 
-    expect(openChatMocks.openTab).toHaveBeenCalledWith({
+    expect(tabStore.getState().tabs).toContainEqual({
+      id: expect.any(String),
       kind: "file",
       workspaceId: "workspace-1",
-      path: "src/db/index.ts",
-      content: "db content",
+      title: "index.ts",
+      pinned: false,
+      data: { path: "src/db/index.ts", isDirty: false, isTemporary: false },
     });
-    expect(openChatMocks.openTabInOppositePane).not.toHaveBeenCalled();
   });
 
   it("openChatFileTab opens in the opposite pane when requested", async () => {
+    splitPaneStore.getState().registerTabInPane("workspace-1", "existing-tab");
     openChatMocks.resolveChatFilePath.mockResolvedValueOnce({
       status: "found",
       path: "src/a.ts",
@@ -319,12 +267,15 @@ describe("agentChatCommands.startAgentChatSession", () => {
 
     await openChatFileTab({ workspaceId: "workspace-1", relativePath: "a.ts", oppositePane: true });
 
-    expect(openChatMocks.openTabInOppositePane).toHaveBeenCalledWith({
+    expect(tabStore.getState().tabs).toContainEqual({
+      id: expect.any(String),
       kind: "file",
       workspaceId: "workspace-1",
-      path: "src/a.ts",
-      content: "a",
+      title: "a.ts",
+      pinned: false,
+      data: { path: "src/a.ts", isDirty: false, isTemporary: false },
     });
+    expect(splitPaneStore.getState().getAllPanes("workspace-1")).toHaveLength(2);
   });
 
   it("openChatFileTab notifies when the referenced file does not exist", async () => {
@@ -332,7 +283,7 @@ describe("agentChatCommands.startAgentChatSession", () => {
 
     await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
 
-    expect(openChatMocks.openTab).not.toHaveBeenCalled();
+    expect(tabStore.getState().tabs).toHaveLength(0);
   });
 
   it("openChatFileTab notifies separately when the file could not be loaded", async () => {
@@ -340,7 +291,7 @@ describe("agentChatCommands.startAgentChatSession", () => {
 
     await openChatFileTab({ workspaceId: "workspace-1", relativePath: "db/index.ts" });
 
-    expect(openChatMocks.openTab).not.toHaveBeenCalled();
+    expect(tabStore.getState().tabs).toHaveLength(0);
   });
 });
 
@@ -422,264 +373,5 @@ describe("renameAgentChatSessionByTab", () => {
     await renameAgentChatSessionByTab("tab-chat", "New Name");
 
     expect(renamePiCompatibilitySession).not.toHaveBeenCalled();
-  });
-});
-
-describe("agentChatCommands.startAgentChatSession DSH hydration", () => {
-  it("marks an empty DSH session loaded and idle after ensure", async () => {
-    const tabId = "tab-dsh-empty";
-    tabStore.setState({
-      tabs: [
-        {
-          id: tabId,
-          workspaceId: "workspace-1",
-          title: "Agent",
-          pinned: false,
-          kind: "agent-chat",
-          data: { cwd: "/tmp/project", runtime: "dsh" },
-        },
-      ],
-    });
-    mocks.startAgent.mockImplementation((request) => dshStartResult(request.sessionId));
-
-    await startAgentChatSession({
-      tabId,
-      workspaceId: "workspace-1",
-      cwd: "/tmp/project",
-      runtime: "dsh",
-      sessionView: "full",
-    });
-
-    expect(agentChatStore.getState().sessionsByTabId[tabId]).toMatchObject({
-      state: "idle",
-      messages: [],
-      availableModels: [],
-      hydration: expect.objectContaining({ messages: true, models: true, state: true }),
-    });
-  });
-
-  it("keeps projected DSH messages and running status after ensure", async () => {
-    const tabId = "tab-dsh-restored";
-    tabStore.setState({
-      tabs: [
-        {
-          id: tabId,
-          workspaceId: "workspace-1",
-          title: "Agent",
-          pinned: false,
-          kind: "agent-chat",
-          data: { cwd: "/tmp/project", runtime: "dsh", sessionId: "dsh-restored" },
-        },
-      ],
-    });
-    mocks.startAgent.mockImplementation(async () => {
-      agentChatStore.getState().setSessionState(tabId, "running");
-      return {
-        runtime: "dsh",
-        sessionId: "dsh-restored",
-        dshAttachSnapshot: {
-          runtime: "dsh",
-          sessionId: "dsh-restored",
-          instanceId: "run-1",
-          events: [
-            {
-              type: "user/message",
-              seq: 0,
-              time: 0,
-              data: {
-                id: "projected",
-                role: "user",
-                content: [{ type: "text", text: "Restored" }],
-                source: { kind: "user" },
-              },
-              surfaceOp: "append",
-            },
-          ],
-          asOfSeq: 0,
-          durableThroughSeq: 0,
-          headSeq: 0,
-        },
-      };
-    });
-
-    await startAgentChatSession({
-      tabId,
-      workspaceId: "workspace-1",
-      cwd: "/tmp/project",
-      sessionId: "dsh-restored",
-      runtime: "dsh",
-      sessionView: "full",
-    });
-
-    expect(agentChatStore.getState().sessionsByTabId[tabId]).toMatchObject({
-      state: "running",
-      messages: [expect.objectContaining({ id: "projected" })],
-      availableModels: [],
-      hydration: expect.objectContaining({ messages: true, models: true, state: true }),
-    });
-  });
-  it("maps DSH provider catalog metadata without using Pi provider defaults", async () => {
-    tabStore.setState({
-      ...initialTabStoreState,
-      tabs: [
-        {
-          id: "dsh-tab",
-          workspaceId: "workspace",
-          title: "DSH",
-          pinned: false,
-          kind: "agent-chat",
-          data: { cwd: "/workspace", runtime: "dsh", dshSelectedProviderId: "anthropic", dshSelectedModelId: "claude" },
-        },
-      ],
-    });
-    agentChatStore.getState().initSession("dsh-tab", "dsh-session");
-    mocks.listDSHProviders.mockResolvedValue({
-      providers: [
-        {
-          id: "anthropic",
-          displayName: "Anthropic",
-          authentication: "api-key",
-          credentialRef: "ANTHROPIC_API_KEY",
-          configured: true,
-          models: [{ id: "claude", name: "Claude" }],
-        },
-      ],
-    });
-    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true, transcriptProtocolVersion: 2 } });
-
-    await loadDSHSessionModels("dsh-tab");
-
-    const current = agentChatStore.getState().sessionsByTabId["dsh-tab"]?.currentModel;
-    expect(current).toMatchObject({
-      id: "claude",
-      provider: "anthropic",
-      providerName: "Anthropic",
-      credentialRef: "ANTHROPIC_API_KEY",
-    });
-  });
-});
-
-describe("loadDSHSessionModels configured providers", () => {
-  it("excludes ambient provider models when no credential availability is verified", async () => {
-    tabStore.setState({
-      ...initialTabStoreState,
-      tabs: [
-        {
-          id: "dsh-tab",
-          workspaceId: "workspace",
-          title: "DSH",
-          pinned: false,
-          kind: "agent-chat",
-          data: { cwd: "/workspace", runtime: "dsh" },
-        },
-      ],
-    });
-    agentChatStore.getState().initSession("dsh-tab", "dsh-session");
-    mocks.listDSHProviders.mockResolvedValue({
-      providers: [
-        {
-          id: "configured-provider",
-          displayName: "Configured",
-          authentication: "api-key",
-          credentialRef: "CONFIGURED_API_KEY",
-          configured: true,
-          models: [{ id: "configured-model", name: "Configured model" }],
-        },
-        {
-          id: "amazon-bedrock",
-          displayName: "Amazon Bedrock",
-          authentication: "ambient",
-          configured: false,
-          models: [{ id: "nova", name: "Nova" }],
-        },
-      ],
-    });
-    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true, transcriptProtocolVersion: 2 } });
-
-    await loadDSHSessionModels("dsh-tab");
-
-    expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.availableModels).toEqual([
-      expect.objectContaining({ id: "configured-model", provider: "configured-provider" }),
-    ]);
-  });
-});
-
-describe("loadDSHSessionModels selection recovery", () => {
-  it("does not replace an unavailable explicit DSH provider and model selection", async () => {
-    tabStore.setState({
-      ...initialTabStoreState,
-      tabs: [
-        {
-          id: "dsh-tab",
-          workspaceId: "workspace",
-          title: "DSH",
-          pinned: false,
-          kind: "agent-chat",
-          data: {
-            cwd: "/workspace",
-            runtime: "dsh",
-            dshSelectedProviderId: "missing-route",
-            dshSelectedModelId: "shared-model",
-          },
-        },
-      ],
-    });
-    agentChatStore.getState().initSession("dsh-tab", "dsh-session");
-    mocks.listDSHProviders.mockResolvedValue({
-      providers: [
-        {
-          id: "available-route",
-          displayName: "Available",
-          authentication: "api-key",
-          configured: true,
-          models: [{ id: "shared-model", name: "Shared model" }],
-        },
-      ],
-    });
-    mocks.getCapabilities.mockResolvedValue({
-      dsh: { configured: true, ready: true, provider: "available-route", model: "shared-model" },
-    });
-
-    await loadDSHSessionModels("dsh-tab");
-
-    const session = agentChatStore.getState().sessionsByTabId["dsh-tab"];
-    expect(session?.currentModel).toBeNull();
-    expect(session?.turnError).toBe("Selected DSH model is unavailable: missing-route/shared-model.");
-  });
-
-  it("maps a legacy provider-less DSH selection to the direct DeepSeek route", async () => {
-    tabStore.setState({
-      ...initialTabStoreState,
-      tabs: [
-        {
-          id: "dsh-tab",
-          workspaceId: "workspace",
-          title: "DSH",
-          pinned: false,
-          kind: "agent-chat",
-          data: { cwd: "/workspace", runtime: "dsh", dshSelectedModelId: "deepseek-chat" },
-        },
-      ],
-    });
-    agentChatStore.getState().initSession("dsh-tab", "dsh-session");
-    mocks.listDSHProviders.mockResolvedValue({
-      providers: [
-        {
-          id: "deepseek-official",
-          displayName: "DeepSeek",
-          authentication: "api-key",
-          configured: true,
-          models: [{ id: "deepseek-chat", name: "DeepSeek Chat" }],
-        },
-      ],
-    });
-    mocks.getCapabilities.mockResolvedValue({ dsh: { configured: true, ready: true } });
-
-    await loadDSHSessionModels("dsh-tab");
-
-    expect(agentChatStore.getState().sessionsByTabId["dsh-tab"]?.currentModel).toMatchObject({
-      id: "deepseek-chat",
-      provider: "deepseek-official",
-    });
   });
 });

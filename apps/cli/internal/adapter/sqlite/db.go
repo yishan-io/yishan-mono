@@ -16,6 +16,29 @@ import (
 
 const databaseFileName = "yishan.db"
 
+const (
+	backgroundJobsMigrationName       = "022_background_jobs.sql"
+	legacyBackgroundJobsMigrationName = "019_background_jobs.sql"
+)
+
+type schemaObject struct {
+	objectType string
+	name       string
+}
+
+var backgroundJobsSchemaObjects = []schemaObject{
+	{objectType: "table", name: "background_jobs"},
+	{objectType: "index", name: "idx_background_jobs_workspace_created"},
+	{objectType: "index", name: "idx_background_jobs_recovery"},
+	{objectType: "trigger", name: "validate_background_job_workspace_ownership"},
+}
+
+// legacyMigrationAliases records migrations renamed after release without
+// executing their already-applied SQL again.
+var legacyMigrationAliases = map[string]string{
+	backgroundJobsMigrationName: legacyBackgroundJobsMigrationName,
+}
+
 // legacyProfileFileNames are pre-SQLite state files that no longer have any
 // code references. They are removed on every DB open so old profiles converge
 // on the SQLite-only layout (same pattern as cleanupLegacyMetadataKeys).
@@ -129,11 +152,118 @@ func applyMigration(database *sql.DB, migrationName string) error {
 	if isApplied {
 		return nil
 	}
+	isLegacyAliasRecorded, err := recordLegacyMigrationAlias(database, migrationName)
+	if err != nil {
+		return err
+	}
+	if isLegacyAliasRecorded {
+		return nil
+	}
 
 	migrationSQL, err := migrationFiles.ReadFile(filepath.Join("migrations", migrationName))
 	if err != nil {
 		return fmt.Errorf("read migration %q: %w", migrationName, err)
 	}
+	return executeMigration(database, migrationName, migrationSQL)
+}
+
+func recordLegacyMigrationAlias(database *sql.DB, migrationName string) (bool, error) {
+	legacyMigrationName, hasLegacyAlias := legacyMigrationAliases[migrationName]
+	if !hasLegacyAlias {
+		return false, nil
+	}
+	isLegacyApplied, err := migrationApplied(database, legacyMigrationName)
+	if err != nil {
+		return false, err
+	}
+	if !isLegacyApplied {
+		return false, nil
+	}
+	if err := validateLegacyMigrationSchema(database, migrationName); err != nil {
+		return false, err
+	}
+
+	result, err := database.Exec(`INSERT INTO _migrations (name) VALUES (?) ON CONFLICT(name) DO NOTHING`, migrationName)
+	if err != nil {
+		return false, fmt.Errorf("record renamed migration %q: %w", migrationName, err)
+	}
+	rowsRecorded, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("confirm renamed migration %q recording: %w", migrationName, err)
+	}
+	if rowsRecorded == 1 {
+		return true, nil
+	}
+
+	isMigrationNowApplied, err := migrationApplied(database, migrationName)
+	if err != nil {
+		return false, err
+	}
+	if isMigrationNowApplied {
+		return true, nil
+	}
+	return false, fmt.Errorf("record renamed migration %q: migration was not recorded", migrationName)
+}
+
+func validateLegacyMigrationSchema(database *sql.DB, migrationName string) error {
+	if migrationName != backgroundJobsMigrationName {
+		return nil
+	}
+	expectedDefinitions, err := readSchemaObjectDefinitions(migrationName)
+	if err != nil {
+		return err
+	}
+	for _, object := range backgroundJobsSchemaObjects {
+		var actualDefinition string
+		err := database.QueryRow(`SELECT sql FROM sqlite_master WHERE type = ? AND name = ? AND tbl_name = 'background_jobs'`, object.objectType, object.name).Scan(&actualDefinition)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("legacy migration %q schema does not match %q: missing %s %q", legacyBackgroundJobsMigrationName, migrationName, object.objectType, object.name)
+		}
+		if err != nil {
+			return fmt.Errorf("check legacy migration %q %s %q: %w", legacyBackgroundJobsMigrationName, object.objectType, object.name, err)
+		}
+		if normalizeSchemaDefinition(actualDefinition) != normalizeSchemaDefinition(expectedDefinitions[object.name]) {
+			return fmt.Errorf("legacy migration %q schema does not match %q: altered %s %q", legacyBackgroundJobsMigrationName, migrationName, object.objectType, object.name)
+		}
+	}
+	return nil
+}
+
+func readSchemaObjectDefinitions(migrationName string) (map[string]string, error) {
+	migrationSQL, err := migrationFiles.ReadFile(filepath.Join("migrations", migrationName))
+	if err != nil {
+		return nil, fmt.Errorf("read expected schema for migration %q: %w", migrationName, err)
+	}
+	definitions := make(map[string]string, len(backgroundJobsSchemaObjects))
+	migrationDefinition := string(migrationSQL)
+	for index, object := range backgroundJobsSchemaObjects {
+		start := strings.Index(migrationDefinition, schemaObjectPrefix(object))
+		if start == -1 {
+			return nil, fmt.Errorf("read expected schema for migration %q: missing %s %q", migrationName, object.objectType, object.name)
+		}
+		end := len(migrationDefinition)
+		if index+1 < len(backgroundJobsSchemaObjects) {
+			nextStart := strings.Index(migrationDefinition[start+1:], schemaObjectPrefix(backgroundJobsSchemaObjects[index+1]))
+			if nextStart == -1 {
+				return nil, fmt.Errorf("read expected schema for migration %q: missing %s %q", migrationName, backgroundJobsSchemaObjects[index+1].objectType, backgroundJobsSchemaObjects[index+1].name)
+			}
+			end = start + 1 + nextStart
+		}
+		definitions[object.name] = migrationDefinition[start:end]
+	}
+	return definitions, nil
+}
+
+func schemaObjectPrefix(object schemaObject) string {
+	return "CREATE " + strings.ToUpper(object.objectType) + " " + object.name
+}
+
+func normalizeSchemaDefinition(definition string) string {
+	definition = strings.TrimSuffix(strings.TrimSpace(definition), ";")
+	return strings.Join(strings.Fields(definition), " ")
+}
+
+func executeMigration(database *sql.DB, migrationName string, migrationSQL []byte) error {
 	// SQLite cannot change foreign_keys inside a transaction, and table-rebuild
 	// migrations (dropping a FK / table) need FK checks off so DROP TABLE does
 	// not cascade-delete child rows. The pool is single-connection

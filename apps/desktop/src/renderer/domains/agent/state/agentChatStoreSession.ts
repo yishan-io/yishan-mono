@@ -1,3 +1,4 @@
+import type { DshDelegationLifecycleState } from "../chat/agentChatDshDelegation";
 import { type RunningSubagentSummary, deriveFinishedSubagents } from "../chat/agentChatSubagents";
 import type {
   AgentCompactionReason,
@@ -43,6 +44,7 @@ export type AgentChatSessionData = {
   pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
   piRunningSubagents: RunningSubagentSummary[];
   dshRunningSubagents: RunningSubagentSummary[];
+  dshDelegationLifecycleByChildSessionId: Record<string, DshDelegationLifecycleState>;
   subagentProgressTargets: AgentSubagentProgressTarget[];
   subagentLiveTranscripts: Record<string, AgentMessage[]>;
   subagentCancelStates: Record<string, AgentSubagentCancelState>;
@@ -81,6 +83,7 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
     pendingUiAutoResponse: null,
     piRunningSubagents: [],
     dshRunningSubagents: [],
+    dshDelegationLifecycleByChildSessionId: {},
     subagentProgressTargets: [],
     subagentLiveTranscripts: {},
     subagentCancelStates: {},

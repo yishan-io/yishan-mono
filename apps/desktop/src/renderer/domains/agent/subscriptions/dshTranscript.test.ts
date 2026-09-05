@@ -51,6 +51,40 @@ describe("DSH transcript", () => {
       { id: "compact", role: "assistant", content: [{ type: "text", text: "answer" }], timestamp: 4 },
     ]);
   });
+  it("projects bounded fixed-delegation metadata without reading result text", () => {
+    const event = {
+      type: "tool/result",
+      seq: 2,
+      time: 3,
+      data: {
+        turn: 0,
+        step: 0,
+        message: {
+          id: "r",
+          role: "user",
+          content: [{ type: "tool-result", toolCallId: "call", content: [{ type: "text", text: "untrusted text" }] }],
+          source: { kind: "tool", callId: "call" },
+        },
+        meta: { delegation: { version: 1, childId: "child" } },
+      },
+      surfaceOp: "append" as const,
+    };
+    expect(projectDSHTranscript([event])[0]).toMatchObject({ details: { dshDelegation: { childSessionId: "child" } } });
+    const malformedPayload = {
+      sessionId: "s",
+      tabId: "t",
+      workspaceId: "w",
+      instanceId: "i",
+      update: {
+        event: {
+          sessionId: "s",
+          seq: 2,
+          event: { ...event, data: { ...event.data, meta: { delegation: { version: 2, childId: "child" } } } },
+        },
+      },
+    };
+    expect(parseDSHFrontendPayload(malformedPayload)).toBeNull();
+  });
   it("rejects a replacement whose provenance omits a replaced surface event", () => {
     expect(() =>
       projectDSHTranscript([
@@ -193,6 +227,55 @@ describe("DSH transcript", () => {
         data: { ...skillCatalogEvent.data, source: { ...skillCatalogEvent.data.source, update: false } },
       }),
     ).toBeNull();
+  });
+  it("accepts only the exact subagent settlement notice source", () => {
+    const parseEvent = (source: unknown) =>
+      parseDSHFrontendPayload({
+        sessionId: "parent",
+        tabId: "tab",
+        workspaceId: "workspace",
+        instanceId: "inc",
+        update: {
+          event: {
+            sessionId: "parent",
+            seq: 0,
+            event: {
+              type: "agent/inbox/spliced",
+              seq: 0,
+              time: 0,
+              data: {
+                target: "next-step",
+                start: 0,
+                inserted: [
+                  {
+                    id: "settlement-notice",
+                    role: "user",
+                    content: [{ type: "text", text: "Background subagent child settled." }],
+                    source,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+    const source = {
+      kind: "subagent-settled",
+      form: "notice",
+      summary: "Background subagent child settled.",
+      senderSessionId: "child",
+    };
+
+    expect(parseEvent(source)).not.toBeNull();
+    expect(parseEvent({ ...source, summary: "s".repeat(120) })).not.toBeNull();
+    expect(parseEvent({ ...source, summary: "s".repeat(121) })).toBeNull();
+    expect(parseEvent({ ...source, senderSessionId: "s".repeat(512) })).not.toBeNull();
+    expect(parseEvent({ ...source, senderSessionId: "s".repeat(513) })).toBeNull();
+    expect(parseEvent({ ...source, senderSessionId: 1 })).toBeNull();
+    expect(parseEvent({ ...source, summary: 1 })).toBeNull();
+    expect(parseEvent({ ...source, form: "relay" })).toBeNull();
+    expect(parseEvent({ kind: source.kind, form: source.form, summary: source.summary })).toBeNull();
+    expect(parseEvent({ ...source, untrusted: "field" })).toBeNull();
   });
   it("accepts exact lifecycle hints only when their parent and instanceId match the envelope", () => {
     const envelope = { sessionId: "parent", tabId: "tab", workspaceId: "workspace", instanceId: "inc" };
@@ -340,6 +423,39 @@ describe("DSH transcript", () => {
           },
         },
       }),
+    ).toBeNull();
+  });
+});
+
+describe("DSH delegation settlement validation", () => {
+  it("accepts exactly one bounded diagnostic reason", () => {
+    const parseEvent = (data: unknown) =>
+      parseDSHFrontendPayload({
+        sessionId: "s",
+        tabId: "t",
+        workspaceId: "w",
+        instanceId: "i",
+        update: {
+          event: { sessionId: "s", seq: 0, event: { type: "yishan/subagent-settled.v1", seq: 0, time: 0, data } },
+        },
+      });
+    expect(
+      parseEvent({ version: 1, childSessionId: "child", state: "aborted", diagnostic: { reason: "aborted" } }),
+    ).not.toBeNull();
+    expect(
+      parseEvent({ version: 1, childSessionId: "child", state: "error", diagnostic: { reason: "max-tokens" } }),
+    ).not.toBeNull();
+    expect(
+      parseEvent({ version: 1, childSessionId: "child", state: "error", diagnostic: { reason: "unknown" } }),
+    ).toBeNull();
+    expect(
+      parseEvent({ version: 1, childSessionId: "child", state: "error", diagnostic: { reason: ["error"] } }),
+    ).toBeNull();
+    expect(
+      parseEvent({ version: 1, childSessionId: "child", state: "error", diagnostic: { reason: { value: "error" } } }),
+    ).toBeNull();
+    expect(
+      parseEvent({ version: 1, childSessionId: "child", state: "error", diagnostic: { reason: "error", extra: true } }),
     ).toBeNull();
   });
 });

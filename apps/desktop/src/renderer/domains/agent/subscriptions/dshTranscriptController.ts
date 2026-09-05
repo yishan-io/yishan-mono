@@ -1,6 +1,7 @@
 import { getErrorMessage } from "../../../../shared/errors/getErrorMessage";
 import type { AgentMessage } from "../chat/agentChatTypes";
 import type { AgentDSHAttachResult, AgentDSHHistory } from "../daemon/daemonAgentTypes";
+import { type DSHDelegationLifecycleActions, projectLifecycle } from "./dshDelegationLifecycleProjection";
 import {
   type DSHEvent,
   type DSHFrontendPayload,
@@ -19,7 +20,7 @@ import {
 const MAX_BUFFERED_UPDATES = 4_096;
 
 /** Store mutations used by the DSH controller; I/O is intentionally injected. */
-export type DSHTranscriptActions = {
+export type DSHTranscriptActions = DSHDelegationLifecycleActions & {
   replaceMessages(tabId: string, messages: AgentMessage[]): void;
   updateStreamingMessage(tabId: string, message: AgentMessage): void;
   clearStreamingMessage(tabId: string): void;
@@ -78,12 +79,6 @@ export class DSHTranscriptController {
       if (hasNewInstanceId) this.replaceAttachState(snapshot.instanceId);
       if (this.instanceId !== snapshot.instanceId) throw new TypeError("DSH attach instance ID mismatch");
       this.reconcileAttachEvents(events);
-      this.projectEvents();
-      if (this.controllerState === "failed" || this.isBlocked) {
-        throw new TypeError("DSH attach event could not be applied");
-      }
-      this.publishReplayState();
-      this.replayBufferedUpdates();
       if (snapshot.durableThroughSeq > this.nextSeq - 1) {
         throw new TypeError("DSH attach durable cursor exceeds transcript");
       }
@@ -95,6 +90,12 @@ export class DSHTranscriptController {
           durableThroughSeq: snapshot.durableThroughSeq,
         });
       }
+      this.projectEvents(true);
+      if (this.controllerState === "failed" || this.isBlocked) {
+        throw new TypeError("DSH attach event could not be applied");
+      }
+      this.publishReplayState();
+      this.replayBufferedUpdates();
     } catch (error) {
       if (this.controllerState !== "recovering") {
         this.markBlocked(`DSH attach snapshot failed: ${getErrorMessage(error)}`);
@@ -323,7 +324,7 @@ export class DSHTranscriptController {
     this.events = this.events.slice(0, this.durableThroughSeq + 1);
     this.nextSeq = this.events.length;
     this.clearActiveTextStream();
-    this.projectEvents();
+    this.projectEvents(true);
   }
 
   private bufferUpdate(instanceId: string, update: DSHUpdate): void {
@@ -351,7 +352,7 @@ export class DSHTranscriptController {
       this.nextSeq = events.length;
       this.durableThroughSeq = snapshot.durableThroughSeq;
       this.rebuildReplayState();
-      this.projectEvents();
+      this.projectEvents(true);
       if (this.isBlocked) throw new TypeError("DSH durable history could not be projected");
       this.publishReplayState();
       const cursor = {
@@ -416,9 +417,10 @@ export class DSHTranscriptController {
     });
   }
 
-  private projectEvents(): void {
+  private projectEvents(shouldReplaceDelegationLifecycle = false): void {
     this.projectionGeneration++;
     try {
+      projectLifecycle(this.actions, this.tabId, this.events, shouldReplaceDelegationLifecycle);
       this.actions.replaceMessages(this.tabId, projectDSHTranscript(this.events));
     } catch (error) {
       this.markBlocked(`DSH transcript projection failed: ${getErrorMessage(error)}`);

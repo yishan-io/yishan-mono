@@ -349,6 +349,8 @@ describe("DSHTranscriptController stream handling", () => {
       clearTurnError: vi.fn(),
       setDSHTranscriptRetryAvailable: vi.fn(),
       setTurnActive: vi.fn(),
+      setDshDelegationLifecycle: vi.fn(),
+      replaceDshDelegationLifecycle: vi.fn(),
     };
     const controller = new DSHTranscriptController("tab", "session", actions, loader, () => {});
     controller.handle(event(0));

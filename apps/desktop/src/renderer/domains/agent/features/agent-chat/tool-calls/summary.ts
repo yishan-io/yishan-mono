@@ -1,11 +1,13 @@
 import type { AgentToolCallLifecycleState } from "../../../chat/agentChatSubagents";
 import type { AgentContentBlock, AgentMessage } from "../../../chat/agentChatTypes";
+import type { AgentRuntime } from "../../../daemon/daemonAgentTypes";
 
 /** Target of one completed subagent open action. */
 export type CompletedSubagentOpenTarget = {
   agentId?: string;
   childSessionId: string;
   title: string;
+  runtime?: AgentRuntime;
 };
 
 /** Shared props for one rendered agent tool-call card. */
@@ -14,6 +16,10 @@ export type AgentToolCallCardProps = {
   result?: AgentMessage | null;
   /** Composer lifecycle state for Agent calls; ignored by non-Agent tool cards. */
   agentLifecycleState?: AgentToolCallLifecycleState;
+  dshDelegationState?: import("../../../chat/agentChatDshDelegation").DshDelegationState;
+  dshDelegationDiagnostic?: import("../../../chat/agentChatDshDelegation").DshDelegationDiagnostic;
+  /** Runtime that produced this tool call; tool names are not runtime-unique. */
+  runtime?: AgentRuntime;
   workspacePath?: string;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };

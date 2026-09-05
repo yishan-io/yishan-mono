@@ -43,11 +43,80 @@ func TestDSHTranscript_ProjectsInternalEventsAcrossRendererBoundaries(t *testing
 	assertLiveHiddenMarker(t, client, 0, 10)
 }
 
-func TestDSHTranscript_ReadHistoryProjectsBoundEvents(t *testing.T) {
-	hidden := json.RawMessage(`{"type":"yishan/session-bound.v1","seq":2,"time":12,"data":{"workspaceId":"secret"}}`)
-	visible := json.RawMessage(`{"type":"turn/end","seq":3,"time":13,"data":{}}`)
+func TestDSHTranscript_ForwardsValidSubagentSettlementLiveAndFromHistory(t *testing.T) {
+	testCases := []struct {
+		name       string
+		settlement json.RawMessage
+	}{
+		{"aborted", json.RawMessage(`{"type":"yishan/subagent-settled.v1","seq":0,"time":10,"data":{"version":1,"childSessionId":"child","state":"aborted","diagnostic":{"reason":"aborted"}}}`)},
+		{"max tokens", json.RawMessage(`{"type":"yishan/subagent-settled.v1","seq":0,"time":10,"data":{"version":1,"childSessionId":"child","state":"error","diagnostic":{"reason":"max-tokens"}}}`)},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			runtime := &executionDSH{subscribeSnapshot: dsh.SessionSubscribeResult{
+				SessionID: "s", InstanceID: "inc", Events: []dsh.SessionEvent{{SessionID: "s", Seq: 0, Event: testCase.settlement}},
+				AsOfSeq: 0, DurableThroughSeq: 0, HeadSeq: 0,
+			}}
+			service := newDSHExecutionService(runtime)
+			connection, client := newTestWSConnState(t)
+			startDSHTranscript(t, service, connection)
+
+			result, err := service.AgentAttach(context.Background(), connection, dshAttachRequest(-1))
+			if err != nil {
+				t.Fatalf("attach: %v", err)
+			}
+			attach := result.(rpc.AgentDSHAttachResult)
+			assertForwardedDSHEvent(t, attach.Events[0], testCase.settlement)
+
+			runtime.mu.Lock()
+			updates := runtime.subscriptions[len(runtime.subscriptions)-1]
+			runtime.mu.Unlock()
+			updates <- dsh.SessionUpdate{Event: &dsh.SessionEvent{SessionID: "s", Seq: 0, Event: testCase.settlement}}
+			assertLiveForwardedDSHEvent(t, client, testCase.settlement)
+
+			runtime.readResult = dsh.SessionReadResult{Session: dsh.SessionHeader{SessionID: "s"}, Events: []json.RawMessage{testCase.settlement}}
+			historyResult, err := service.AgentReadHistory(context.Background(), rpc.AgentReadHistoryParams{
+				Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", TranscriptProtocolVersion: transcriptProtocolVersion,
+			})
+			if err != nil {
+				t.Fatalf("read history: %v", err)
+			}
+			assertForwardedDSHEvent(t, historyResult.(rpc.AgentHistoryResult).DSH.Events[0], testCase.settlement)
+		})
+	}
+}
+
+func TestDSHTranscript_RejectsInvalidSubagentSettlement(t *testing.T) {
+	testCases := []struct {
+		name     string
+		event    json.RawMessage
+		expected int64
+	}{
+		{"extra data field", json.RawMessage(`{"type":"yishan/subagent-settled.v1","seq":0,"time":1,"data":{"version":1,"childSessionId":"child","state":"completed","extra":true}}`), 0},
+		{"malformed sequence", json.RawMessage(`{"type":"yishan/subagent-settled.v1","seq":"0","time":1,"data":{"version":1,"childSessionId":"child","state":"completed"}}`), 0},
+		{"missing sequence", json.RawMessage(`{"type":"yishan/subagent-settled.v1","time":1,"data":{"version":1,"childSessionId":"child","state":"completed"}}`), 0},
+		{"invalid time", json.RawMessage(`{"type":"yishan/subagent-settled.v1","seq":0,"time":-1,"data":{"version":1,"childSessionId":"child","state":"completed"}}`), 0},
+		{"unsupported envelope field", json.RawMessage(`{"type":"yishan/subagent-settled.v1","seq":0,"time":1,"data":{"version":1,"childSessionId":"child","state":"completed"},"ignorable":true}`), 0},
+		{"sequence mismatch", json.RawMessage(`{"type":"yishan/subagent-settled.v1","seq":1,"time":1,"data":{"version":1,"childSessionId":"child","state":"completed"}}`), 0},
+		{"invalid diagnostic reason", json.RawMessage(`{"type":"yishan/subagent-settled.v1","seq":0,"time":1,"data":{"version":1,"childSessionId":"child","state":"completed","diagnostic":{"reason":"unknown"}}}`), 0},
+		{"extra diagnostic field", json.RawMessage(`{"type":"yishan/subagent-settled.v1","seq":0,"time":1,"data":{"version":1,"childSessionId":"child","state":"completed","diagnostic":{"reason":"error","extra":true}}}`), 0},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := projectDSHEventRaw(testCase.event, testCase.expected)
+			if !errors.Is(err, errDSHTranscriptProtocolUnavailable) {
+				t.Fatalf("project invalid settlement: %v", err)
+			}
+		})
+	}
+}
+
+func TestDSHTranscript_ReadHistoryProjectsInternalChildMetadataEvents(t *testing.T) {
+	descriptor := json.RawMessage(`{"type":"subagent/descriptor","seq":0,"time":10,"data":{"parentSessionId":"parent","task":"Inspect the workspace"}}`)
+	visible := json.RawMessage(`{"type":"user/message","seq":1,"time":11,"data":{"id":"child-request"}}`)
+	sandboxMode := json.RawMessage(`{"type":"sandbox/mode","seq":2,"time":12,"data":{"mode":"workspace-write"}}`)
 	runtime := &executionDSH{}
-	runtime.readResult = dsh.SessionReadResult{Session: dsh.SessionHeader{SessionID: "s"}, Events: []json.RawMessage{hidden, visible}}
+	runtime.readResult = dsh.SessionReadResult{Session: dsh.SessionHeader{SessionID: "s"}, Events: []json.RawMessage{descriptor, visible, sandboxMode}}
 	service := newDSHExecutionService(runtime)
 	result, err := service.AgentReadHistory(context.Background(), rpc.AgentReadHistoryParams{
 		Runtime: rpc.AgentRuntimeDSH, SessionID: "s", WorkspaceID: "w", CWD: "/authoritative", TranscriptProtocolVersion: transcriptProtocolVersion,
@@ -56,9 +125,38 @@ func TestDSHTranscript_ReadHistoryProjectsBoundEvents(t *testing.T) {
 		t.Fatalf("read history: %v", err)
 	}
 	history := result.(rpc.AgentHistoryResult).DSH
-	assertHiddenMarker(t, history.Events[0], 2, 12)
+	assertHiddenMarker(t, history.Events[0], 0, 10)
 	if string(history.Events[1]) != string(visible) {
 		t.Fatalf("visible history event = %s", history.Events[1])
+	}
+	assertHiddenMarker(t, history.Events[2], 2, 12)
+}
+
+func TestDSHTranscript_DoesNotHideUnknownDSHEvents(t *testing.T) {
+	raw := json.RawMessage(`{"type":"subagent/unknown","seq":0,"time":1,"data":{"secret":true}}`)
+	projected, err := projectDSHEventRaw(raw, 0)
+	if err != nil {
+		t.Fatalf("project unknown DSH event: %v", err)
+	}
+	assertForwardedDSHEvent(t, projected, raw)
+}
+
+func TestDSHTranscript_RejectsMalformedHiddenInternalEvents(t *testing.T) {
+	testCases := []struct {
+		name  string
+		event json.RawMessage
+	}{
+		{"missing data", json.RawMessage(`{"type":"subagent/descriptor","seq":0,"time":1}`)},
+		{"extra envelope field", json.RawMessage(`{"type":"sandbox/mode","seq":0,"time":1,"data":{},"ignorable":true}`)},
+		{"invalid time", json.RawMessage(`{"type":"sandbox/mode","seq":0,"time":-1,"data":{}}`)},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := projectDSHEventRaw(testCase.event, 0)
+			if !errors.Is(err, errDSHTranscriptProtocolUnavailable) {
+				t.Fatalf("project malformed hidden event: %v", err)
+			}
+		})
 	}
 }
 
@@ -190,6 +288,38 @@ func assertLiveHiddenMarker(t *testing.T, client interface {
 		t.Fatalf("read live notification: %v", err)
 	}
 	assertHiddenMarker(t, notification.Params.Payload.Update.Event.Event, sequence, eventTime)
+}
+
+func assertForwardedDSHEvent(t *testing.T, actual, expected json.RawMessage) {
+	t.Helper()
+	if string(actual) != string(expected) {
+		t.Fatalf("event = %s, want %s", actual, expected)
+	}
+}
+
+func assertLiveForwardedDSHEvent(t *testing.T, client interface {
+	SetReadDeadline(time.Time) error
+	ReadJSON(any) error
+}, expected json.RawMessage) {
+	t.Helper()
+	if err := client.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		t.Fatalf("set deadline: %v", err)
+	}
+	var notification struct {
+		Params struct {
+			Payload struct {
+				Update struct {
+					Event struct {
+						Event json.RawMessage `json:"event"`
+					} `json:"event"`
+				} `json:"update"`
+			} `json:"payload"`
+		} `json:"params"`
+	}
+	if err := client.ReadJSON(&notification); err != nil {
+		t.Fatalf("read live notification: %v", err)
+	}
+	assertForwardedDSHEvent(t, notification.Params.Payload.Update.Event.Event, expected)
 }
 
 func assertTranscriptProtocolUnavailable(t *testing.T, err error) {

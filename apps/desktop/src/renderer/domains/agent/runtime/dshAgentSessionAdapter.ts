@@ -70,6 +70,7 @@ export function registerDSHAgentSessionRouter(
     onEvent: (payload) => state.controller.handle(payload),
     onLifecycleUpdate: (payload) => {
       if (!advanceDshLifecycleWatermark(state, payload)) return;
+      recordDshDelegationLifecycle(tabId, payload);
       refreshLineageForLifecycle(record, state, tabId, payload, isActiveDshParent);
     },
     onMalformedPayload: () => state.controller.handleMalformedPayload(),
@@ -99,6 +100,70 @@ export function applyDSHStartSnapshot(record: AgentRuntimeSessionRecord, result:
 /** Retries a failed DSH durable transcript reload. */
 export async function retryDSHAgentTranscript(record: AgentRuntimeSessionRecord): Promise<void> {
   await requireDSHState(record).controller.retry();
+}
+
+/** Hydrates a DSH transcript according to an explicit ownership mode. */
+type DSHTranscriptHydrationInput = {
+  tabId: string;
+  sessionId: string;
+  workspaceId: string;
+  cwd: string;
+} & (
+  | { mode: "managed" }
+  | {
+      mode: "read-only";
+      expectedParentSessionId: string;
+    }
+);
+
+/** Hydrates a DSH transcript according to its session-ownership mode. */
+export async function hydrateDSHTranscript(input: DSHTranscriptHydrationInput): Promise<void> {
+  if (input.mode === "read-only" && !input.expectedParentSessionId.trim())
+    throw new TypeError("DSH read-only transcript requires an expected parent session ID");
+
+  const history = await readAgentRuntimeHistory({
+    runtime: "dsh",
+    sessionId: input.sessionId,
+    workspaceId: input.workspaceId,
+    cwd: input.cwd,
+  });
+  if (history.runtime !== "dsh") throw new TypeError("DSH transcript history returned another runtime");
+  if (
+    input.mode === "read-only" &&
+    (history.dsh.session.origin !== "subagent" || history.dsh.session.parentSession !== input.expectedParentSessionId)
+  )
+    throw new TypeError("DSH read-only transcript is not the expected subagent child");
+
+  const controller = new DSHTranscriptController(
+    input.tabId,
+    input.sessionId,
+    agentChatStore.getState(),
+    async () => history.dsh,
+    () => {},
+  );
+  agentChatStore.getState().initSession(input.tabId, input.sessionId);
+  controller.applyAttachSnapshot({
+    runtime: "dsh",
+    sessionId: input.sessionId,
+    instanceId: history.dsh.instanceId,
+    events: history.dsh.events,
+    asOfSeq: history.dsh.asOfSeq,
+    durableThroughSeq: history.dsh.durableThroughSeq,
+    headSeq: history.dsh.asOfSeq,
+  });
+  agentChatStore.getState().setAvailableModels(input.tabId, []);
+  agentChatStore.getState().markStateLoaded(input.tabId);
+  agentChatStore.getState().setSessionState(input.tabId, "idle");
+}
+
+function recordDshDelegationLifecycle(tabId: string, payload: DSHFrontendPayload): void {
+  const lifecycle = payload.update.lifecycle;
+  if (!lifecycle || lifecycle.event !== "finished") return;
+  agentChatStore.getState().setDshDelegationLifecycle(tabId, {
+    childSessionId: lifecycle.childSessionId,
+    state:
+      lifecycle.stopReason === "completed" ? "completed" : lifecycle.stopReason === "aborted" ? "aborted" : "error",
+  });
 }
 
 function refreshLineageForLifecycle(

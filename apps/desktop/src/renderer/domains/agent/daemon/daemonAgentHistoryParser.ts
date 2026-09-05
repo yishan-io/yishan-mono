@@ -49,17 +49,20 @@ function parseDSHSession(payload: unknown, requestedSessionId: string): AgentDSH
     "sessionId",
     "createdAt",
     "parentSession",
+    "origin",
     "agentPreset",
   ]);
   const sessionId = requireNonEmptyString(session.sessionId, "sessionId");
   if (sessionId !== requestedSessionId) throw new TypeError("sessionId does not match requested session");
   const createdAt = requireSafeIntegerAtLeast(session.createdAt, "createdAt", 0);
   const parentSession = requireOptionalString(session.parentSession, "parentSession");
+  const origin = requireOptionalSubagentOrigin(session.origin);
   const agentPreset = requireOptionalString(session.agentPreset, "agentPreset");
   return {
     sessionId,
     createdAt,
     ...(parentSession === undefined ? {} : { parentSession }),
+    ...(origin === undefined ? {} : { origin }),
     ...(agentPreset === undefined ? {} : { agentPreset }),
   };
 }
@@ -104,6 +107,12 @@ function requireNonEmptyString(value: unknown, name: string): string {
 function requireOptionalString(value: unknown, name: string): string | undefined {
   if (value === undefined) return undefined;
   return requireNonEmptyString(value, name);
+}
+
+function requireOptionalSubagentOrigin(value: unknown): "subagent" | undefined {
+  if (value === undefined) return undefined;
+  if (value !== "subagent") throw new TypeError("origin must be subagent");
+  return value;
 }
 
 function requireSafeIntegerAtLeast(value: unknown, name: string, minimum: number): number {

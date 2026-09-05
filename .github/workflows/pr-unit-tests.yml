@@ -47,6 +47,7 @@ jobs:
               - 'apps/desktop/scripts/beforePack.mjs'
               - 'apps/desktop/scripts/buildCliBinary.mjs'
               - 'apps/desktop/scripts/buildDshRuntime.mjs'
+              - 'apps/desktop/scripts/buildDshRuntime.test.mjs'
               - 'apps/desktop/scripts/buildDshRuntimeSmoke.mjs'
               - 'apps/desktop/scripts/dshRuntimeSmoke.mjs'
               - 'apps/desktop/scripts/packageApp.mjs'
@@ -165,6 +166,7 @@ jobs:
 
           if (has('DESKTOP_DSH_RUNTIME_CHANGED') || has('DSH_RUNTIME_CHANGED') || has('DSH_DEV_FLOW_CHANGED')) {
             addTarget('dsh-runtime', 'packages/dsh-runtime', 'bun run test && bun run typecheck && bun run lint');
+            addTarget('desktop-dsh-runtime-fixtures', 'apps/desktop', 'bun run dsh:build:test');
           }
 
           if (has('DSH_DEV_FLOW_CHANGED')) {

@@ -53,6 +53,8 @@ export type SessionHeaderResult = {
   sessionId: string;
   createdAt: number;
   parentSession?: string;
+  /** Present only for a durable DSH subagent child session. */
+  origin?: "subagent";
   agentPreset?: string;
 };
 

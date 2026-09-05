@@ -253,6 +253,7 @@ function AgentChatViewComponent({
         isActive={isActive}
         isReadOnlySubagentDetail={isReadOnlySubagentDetail}
         parentSessionId={subagentParentSessionId}
+        runtime={runtime ?? agentChatTab?.data.runtime ?? "pi"}
         emptyHelpLines={isReadOnlySubagentDetail ? undefined : emptyHelpLines}
         emptyHelpPrefix={isReadOnlySubagentDetail ? undefined : emptyHelpPrefix}
       />

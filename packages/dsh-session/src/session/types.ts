@@ -20,7 +20,15 @@ export type CwdTask<T> = {
 
 /** Immutable physical persistence snapshot used for transcript reset recovery. */
 export type DurableSessionSnapshot = {
-  session: { id: string; version: number; createdAt: number; cwd?: string };
+  session: {
+    id: string;
+    version: number;
+    createdAt: number;
+    cwd?: string;
+    parentSession?: string;
+    origin?: "subagent";
+    agentPreset?: string;
+  };
   events: readonly SessionEvent[];
   instanceId: string;
   asOfSeq: number;
