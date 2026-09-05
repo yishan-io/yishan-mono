@@ -6,6 +6,12 @@ const mocks = vi.hoisted(() => ({
   addWorkspace: vi.fn(),
   activateWorkspace: vi.fn(),
   createWorkspace: vi.fn(),
+  createFixedRuntimeLayer: vi.fn(() => ({
+    attach: vi.fn(),
+    detach: vi.fn(),
+    register: vi.fn(),
+    remove: vi.fn(),
+  })),
   enqueueWorkspaceErrorNotice: vi.fn(),
   enqueueWorkspaceLifecycleWarnings: vi.fn(),
   getWorkspaceRpc: vi.fn(),
@@ -15,7 +21,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@renderer/domains/project", () => ({ projectStore: { getState: () => mocks.projectState } }));
-vi.mock("@renderer/domains/workbench", () => ({ activateWorkspace: mocks.activateWorkspace }));
+vi.mock("@renderer/domains/workbench", () => ({
+  activateWorkspace: mocks.activateWorkspace,
+  createFixedRuntimeLayer: mocks.createFixedRuntimeLayer,
+}));
 vi.mock("@renderer/domains/session", () => ({ sessionStore: { getState: () => mocks.sessionState } }));
 vi.mock("../../../domains/workspace/state/workspaceCreateProgressStore", () => ({
   workspaceCreateProgressStore: {
@@ -26,7 +35,10 @@ vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => 
   enqueueWorkspaceErrorNotice: mocks.enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings: mocks.enqueueWorkspaceLifecycleWarnings,
 }));
-vi.mock("../daemon/daemonWorkspaceClient", () => ({ getWorkspaceRpc: mocks.getWorkspaceRpc }));
+vi.mock("../daemon/daemonWorkspaceClient", async (importOriginal) => ({
+  ...(await importOriginal()),
+  getWorkspaceRpc: mocks.getWorkspaceRpc,
+}));
 vi.mock("../state/workspaceSettingsStore", () => ({
   workspaceSettingsStore: { getState: () => ({ isDefaultContextEnabled: true }) },
 }));
