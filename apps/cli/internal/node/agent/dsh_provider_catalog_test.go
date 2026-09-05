@@ -52,7 +52,7 @@ func TestMapDSHProviderCatalog_ExposesOnlyDirectDeepSeekRoute(t *testing.T) {
 
 func TestMapDSHProviderCatalog_ExposesOnlySafeConfigurationMetadata(t *testing.T) {
 	catalog := dsh.ProviderCatalog{Providers: []dsh.ProviderCatalogProvider{
-		{ID: "deepseek-official", Authentication: "api-key", Models: []dsh.ProviderCatalogModel{{ID: "deepseek-v4", Name: "DeepSeek V4"}}},
+		{ID: "deepseek-official", Authentication: "api-key", Models: []dsh.ProviderCatalogModel{{ID: "deepseek-v4", Name: "DeepSeek V4", ContextWindow: int64Pointer(128_000)}}},
 		{ID: "amazon-bedrock", Authentication: "ambient", Models: []dsh.ProviderCatalogModel{{ID: "nova", Name: "Nova"}}},
 	}}
 	mapped := mapDSHProviderCatalog(catalog, map[string]struct{}{"DEEPSEEK_API_KEY": {}})
@@ -60,7 +60,8 @@ func TestMapDSHProviderCatalog_ExposesOnlySafeConfigurationMetadata(t *testing.T
 		t.Fatalf("providers = %#v", mapped.Providers)
 	}
 	apiKey := mapped.Providers[0]
-	if apiKey.DisplayName != "DeepSeek" || apiKey.CredentialRef != "DEEPSEEK_API_KEY" || !apiKey.Configured {
+	if apiKey.DisplayName != "DeepSeek" || apiKey.CredentialRef != "DEEPSEEK_API_KEY" || !apiKey.Configured ||
+		apiKey.Models[0].ContextWindow == nil || *apiKey.Models[0].ContextWindow != 128_000 {
 		t.Fatalf("api-key provider = %#v", apiKey)
 	}
 	ambient := mapped.Providers[1]
@@ -98,3 +99,5 @@ func TestService_DSHListProviders_ReturnsRPCDTO(t *testing.T) {
 		t.Fatalf("result = %#v", result)
 	}
 }
+
+func int64Pointer(value int64) *int64 { return &value }

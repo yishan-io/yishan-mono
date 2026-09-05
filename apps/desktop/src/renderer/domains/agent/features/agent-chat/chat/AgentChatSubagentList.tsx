@@ -48,9 +48,12 @@ export function AgentChatSubagentList({
         Sub-agents
       </Typography>
       {runningSubagents.map((subagent) => {
-        // Interrupted rows (pre-death) get no cancel; live rows cancel via real ids or a unique progress target.
+        // DSH rows come from the authoritative, unsettled child lifecycle snapshot.
+        // Pi history has no equivalent child lifecycle, so retain its parent-end overlay.
         const isInterrupted =
-          subagentSessionEndedAtMs !== null && (subagent.startedAtMs ?? 0) < subagentSessionEndedAtMs;
+          subagent.runtime !== "dsh" &&
+          subagentSessionEndedAtMs !== null &&
+          (subagent.startedAtMs ?? 0) < subagentSessionEndedAtMs;
         const hasUniqueLiveTarget =
           subagentProgressTargets.filter((target) => target.agentName === subagent.agentName).length === 1;
         const canCancel =

@@ -156,6 +156,14 @@ describe("AgentChatUsageSummaryLabel", () => {
     ).toBeTruthy();
   });
 
+  it("renders the context control immediately after a model with a context window is hydrated", () => {
+    seedSession({ currentModelContextWindow: 200_000 });
+
+    render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
+
+    expect(screen.getByRole("button", { name: "Current context: 0 of 200K tokens (0%). Open usage details" })).toBeTruthy();
+  });
+
   it("renders nothing when the current model has no context window", () => {
     seedSession({ currentModelContextWindow: undefined });
 

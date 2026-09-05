@@ -1,5 +1,8 @@
 type JsonRecord = Record<string, unknown>;
 
+const MAX_SUBAGENT_SETTLEMENT_SUMMARY_LENGTH = 120;
+const MAX_SUBAGENT_SETTLEMENT_SESSION_ID_LENGTH = 512;
+
 export function validRecognizedData(type: string, data: JsonRecord): boolean {
   if (type === "turn/start") return exactNumbers(data, ["turn"]);
   if (type === "turn/end")
@@ -24,7 +27,7 @@ export function validRecognizedData(type: string, data: JsonRecord): boolean {
       exactStepData(data, ["message", "error", "meta"]) &&
       validMessage(data.message, "tool") &&
       validOptionalToolError(data.error) &&
-      (data.meta === undefined || isJsonValue(data.meta))
+      (data.meta === undefined || validToolMeta(data.meta))
     );
   if (type === "todo/write") return hasExactKeys(data, ["todos"]) && validTodos(data.todos);
   if (type === "request/header")
@@ -36,6 +39,7 @@ export function validRecognizedData(type: string, data: JsonRecord): boolean {
   if (type === "request/context") return validRequestContext(data);
   if (type === "session/end-seed") return Object.keys(data).length === 0;
   if (type === "session/title") return validSessionTitle(data);
+  if (type === "yishan/subagent-settled.v1") return validSubagentSettlement(data);
   return validInboxSplice(data);
 }
 function exactStepData(data: JsonRecord, optionalKeys: string[]): boolean {
@@ -47,6 +51,24 @@ function exactStepData(data: JsonRecord, optionalKeys: string[]): boolean {
 }
 function exactNumbers(data: JsonRecord, keys: string[]): boolean {
   return hasExactKeys(data, keys) && keys.every((key) => isNonNegativeInteger(data[key]));
+}
+function validSubagentSettlement(data: JsonRecord): boolean {
+  return (
+    hasOnlyKeys(data, ["version", "childSessionId", "state", "diagnostic"]) &&
+    data.version === 1 &&
+    isNonEmptyString(data.childSessionId) &&
+    (data.state === "completed" || data.state === "aborted" || data.state === "error") &&
+    (data.diagnostic === undefined || validSubagentSettlementDiagnostic(data.diagnostic))
+  );
+}
+function validSubagentSettlementDiagnostic(input: unknown): boolean {
+  const diagnostic = asRecord(input);
+  return (
+    !!diagnostic &&
+    hasExactKeys(diagnostic, ["reason"]) &&
+    typeof diagnostic.reason === "string" &&
+    ["aborted", "error", "max-tokens", "refusal"].includes(diagnostic.reason)
+  );
 }
 function validTurnEndReason(input: unknown): boolean {
   const reason = asRecord(input);
@@ -159,12 +181,20 @@ function validUserSource(input: unknown): boolean {
   const source = asRecord(input);
   if (!source) return false;
   if (source.kind === "user") return hasExactKeys(source, ["kind"]);
-  if (source.kind === "skill-catalog") {
+  if (source.kind === "subagent-settled") {
     return (
-      hasExactKeys(source, ["kind", "form", "entries"]) &&
-      typeof source.form === "string" &&
-      isJsonValue(source.entries)
+      hasExactKeys(source, ["kind", "form", "summary", "senderSessionId"]) &&
+      source.form === "notice" &&
+      isStringWithinLength(source.summary, MAX_SUBAGENT_SETTLEMENT_SUMMARY_LENGTH) &&
+      isStringWithinLength(source.senderSessionId, MAX_SUBAGENT_SETTLEMENT_SESSION_ID_LENGTH)
     );
+  }
+  if (source.kind === "skill-catalog") {
+    const hasValidKeys =
+      source.update === undefined
+        ? hasExactKeys(source, ["kind", "form", "entries"])
+        : hasExactKeys(source, ["kind", "form", "update", "entries"]) && source.update === true;
+    return hasValidKeys && typeof source.form === "string" && isJsonValue(source.entries);
   }
   if (source.kind !== "plugin" || typeof source.plugin !== "string") return false;
   if (source.form === undefined) return hasExactKeys(source, ["kind", "plugin"]);
@@ -275,6 +305,20 @@ function validUsage(input: unknown): boolean {
       (value) => value === undefined || isNonNegativeInteger(value),
     )
   );
+}
+function validToolMeta(input: unknown): boolean {
+  const meta = asRecord(input);
+  if (!meta) return false;
+  const delegation = asRecord(meta.delegation);
+  if (delegation) {
+    return (
+      hasExactKeys(meta, ["delegation"]) &&
+      hasExactKeys(delegation, ["version", "childId"]) &&
+      delegation.version === 1 &&
+      isNonEmptyString(delegation.childId)
+    );
+  }
+  return isJsonValue(input);
 }
 function validOptionalToolError(input: unknown): boolean {
   const error = asRecord(input);
@@ -415,6 +459,9 @@ function hasOnlyKeys(record: JsonRecord, keys: string[]): boolean {
 }
 function isNonWhitespaceString(input: unknown): input is string {
   return typeof input === "string" && input.trim().length > 0;
+}
+function isStringWithinLength(input: unknown, maximumLength: number): input is string {
+  return typeof input === "string" && input.length <= maximumLength;
 }
 function isNonEmptyString(input: unknown): input is string {
   return typeof input === "string" && input.length > 0;

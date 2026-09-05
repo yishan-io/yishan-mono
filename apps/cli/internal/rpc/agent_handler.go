@@ -57,6 +57,7 @@ type AgentService interface {
 	AgentListSessionLineage(ctx context.Context, req AgentListSessionLineageParams) (any, error)
 	AgentCancelSubagent(ctx context.Context, req AgentCancelSubagentParams) (any, error)
 	AgentReadHistory(ctx context.Context, req AgentReadHistoryParams) (any, error)
+	AgentGetSessionFilePath(ctx context.Context, req AgentGetSessionFilePathParams) (any, error)
 }
 
 // AgentCatalogService preserves the existing agent catalog routes while the
@@ -189,6 +190,12 @@ func (h *AgentHandler) callAgent(ctx context.Context, connection *Connection, me
 			return nil, err
 		}
 		return h.Agent.AgentCancelSubagent(ctx, req)
+	case MethodAgentGetSessionFilePath:
+		var req AgentGetSessionFilePathParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Agent.AgentGetSessionFilePath(ctx, req)
 	case MethodAgentReadHistory:
 		var req AgentReadHistoryParams
 		if err := DecodeParams(params, &req); err != nil {

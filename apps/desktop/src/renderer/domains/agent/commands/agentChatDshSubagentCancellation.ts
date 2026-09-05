@@ -2,8 +2,9 @@ import { tabStore } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { cancelAgentSubagent } from "../daemon/daemonAgentProcedures";
 import type { AgentSessionLineageResult } from "../daemon/daemonAgentTypes";
+import { isActiveDshParent } from "../runtime/agentSessionRuntime";
+import { refreshLineage as refreshDshLineage } from "../runtime/dshSubagentLifecycle";
 import { agentChatStore } from "../state/agentChatStore";
-import { refreshDshSubagentLineage } from "./agentChatCommands";
 
 const DSH_CANCEL_LINEAGE_RETRY_INTERVAL_MS = 500;
 const DSH_CANCEL_LINEAGE_RETRY_ATTEMPTS = 10;
@@ -16,7 +17,7 @@ export async function cancelDshSubagentRun(opts: {
   childSessionId?: string;
 }): Promise<void> {
   const childSessionId = opts.childSessionId?.trim();
-  if (!isCurrentDshCancellationParent(opts)) return;
+  if (!isActiveDshParent(opts.tabId, opts.sessionId)) return;
   if (!childSessionId) {
     agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, { status: "failed", reason: "missing" });
     return;
@@ -28,7 +29,7 @@ export async function cancelDshSubagentRun(opts: {
   }
 
   const parentTab = tabStore.getState().tabs.find((tab) => tab.id === opts.tabId);
-  if (parentTab?.kind !== "agent-chat" || !isCurrentDshCancellationParent(opts)) return;
+  if (parentTab?.kind !== "agent-chat" || !isActiveDshParent(opts.tabId, opts.sessionId)) return;
 
   // Set this before the RPC yields so a second click cannot dispatch another interrupt.
   agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, { status: "cancelling" });
@@ -41,7 +42,7 @@ export async function cancelDshSubagentRun(opts: {
       childSessionId,
     });
     if (!receipt.interruptRequested) {
-      if (isCurrentDshCancellationParent(opts)) {
+      if (isActiveDshParent(opts.tabId, opts.sessionId)) {
         agentChatStore
           .getState()
           .setSubagentCancelState(opts.tabId, opts.rowKey, { status: "failed", reason: "timeout" });
@@ -49,7 +50,7 @@ export async function cancelDshSubagentRun(opts: {
       return;
     }
   } catch (error) {
-    if (isCurrentDshCancellationParent(opts)) {
+    if (isActiveDshParent(opts.tabId, opts.sessionId)) {
       agentChatStore
         .getState()
         .setSubagentCancelState(opts.tabId, opts.rowKey, { status: "failed", reason: "timeout" });
@@ -83,11 +84,12 @@ async function confirmDshSubagentCancelledFromFallback(opts: {
 
   for (let attempt = 0; attempt < DSH_CANCEL_LINEAGE_RETRY_ATTEMPTS; attempt += 1) {
     if (!isCurrentDshCancellation(opts)) return;
-    const lineage = await refreshDshSubagentLineage({
+    const lineage = await refreshDshLineage({
       tabId: opts.tabId,
       workspaceId: opts.workspaceId,
       cwd: opts.cwd,
       rootSessionId: opts.sessionId,
+      isActiveDshParent,
     });
     if (!isCurrentDshCancellation(opts)) return;
     if (lineage && isDshChildInactiveOrGone(lineage, opts.childSessionId)) {
@@ -102,32 +104,6 @@ async function confirmDshSubagentCancelledFromFallback(opts: {
 
   if (isCurrentDshCancellation(opts)) {
     agentChatStore.getState().setSubagentCancelState(opts.tabId, opts.rowKey, { status: "failed", reason: "timeout" });
-  }
-}
-
-/**
- * Completes a pending cancellation only after the matching finished lifecycle
- * event's authoritative lineage refresh confirms that its direct child is inactive.
- */
-export function confirmDshSubagentCancellationFromLifecycle(opts: {
-  tabId: string;
-  sessionId: string;
-  rowKey: string;
-  childSessionId: string;
-  lifecycle: { parentSessionId: string; childSessionId: string; event: "started" | "finished" };
-  lineage: AgentSessionLineageResult | null;
-}): void {
-  if (
-    opts.lifecycle.event !== "finished" ||
-    opts.lifecycle.parentSessionId !== opts.sessionId ||
-    opts.lifecycle.childSessionId !== opts.childSessionId ||
-    !opts.lineage ||
-    !isCurrentDshCancellation(opts)
-  ) {
-    return;
-  }
-  if (isDshChildInactiveOrGone(opts.lineage, opts.childSessionId)) {
-    agentChatStore.getState().clearSubagentCancelState(opts.tabId, opts.rowKey);
   }
 }
 
@@ -166,18 +142,6 @@ function waitForDshCancellationRetry(
   });
 }
 
-/** Checks that the tab and chat state still own the expected DSH parent session. */
-function isCurrentDshCancellationParent(opts: { tabId: string; sessionId: string }): boolean {
-  const tab = tabStore.getState().tabs.find((candidate) => candidate.id === opts.tabId);
-  const session = agentChatStore.getState().sessionsByTabId[opts.tabId];
-  return (
-    tab?.kind === "agent-chat" &&
-    tab.data.runtime === "dsh" &&
-    tab.data.sessionId === opts.sessionId &&
-    session?.sessionId === opts.sessionId
-  );
-}
-
 /** Checks that the tab and session still own a cancelling DSH direct-child request. */
 function isCurrentDshCancellation(opts: {
   tabId: string;
@@ -186,5 +150,7 @@ function isCurrentDshCancellation(opts: {
   childSessionId: string;
 }): boolean {
   const session = agentChatStore.getState().sessionsByTabId[opts.tabId];
-  return isCurrentDshCancellationParent(opts) && session?.subagentCancelStates[opts.rowKey]?.status === "cancelling";
+  return (
+    isActiveDshParent(opts.tabId, opts.sessionId) && session?.subagentCancelStates[opts.rowKey]?.status === "cancelling"
+  );
 }

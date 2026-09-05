@@ -6,6 +6,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { respondToAgentExtensionUiRequest, retryDSHTranscript } from "../../../commands/agentChatCommands";
 import type { AgentRuntime } from "../../../daemon/daemonAgentTypes";
+import { isHydrated } from "../../../state/agentChatStoreSession";
 import { setAgentChatStreamTabVisible } from "../../../subscriptions/agentChatPiEventShared";
 
 import { AgentChatComposerPane } from "./AgentChatComposerPane";
@@ -45,9 +46,6 @@ function AgentChatViewComponent({
   const hasSession = Boolean(session);
   const sessionState = session?.state ?? (hasSession ? "idle" : "starting");
   const messageCount = session?.messages.length ?? 0;
-  const hasLoadedMessages = session?.hasLoadedMessages ?? false;
-  const hasLoadedModels = session?.hasLoadedModels ?? false;
-  const hasLoadedState = session?.hasLoadedState ?? false;
   const error = session?.error ?? null;
   const dshTranscriptRetryAvailable = session?.dshTranscriptRetryAvailable ?? false;
   const turnError = session?.turnError ?? null;
@@ -56,9 +54,8 @@ function AgentChatViewComponent({
   const liveSessionId = session?.sessionId ?? null;
   const subagentParentSessionId =
     agentChatTab?.data.sessionView === "subagent-detail" ? agentChatTab.data.subagentParentSessionId : undefined;
-  const isInitialHistoryLoadPending =
-    Boolean(sessionId) && (!hasSession || !hasLoadedMessages || !hasLoadedModels || !hasLoadedState);
-  const isReadyForAutoFocus = hasLoadedMessages && hasLoadedModels && hasLoadedState;
+  const isInitialHistoryLoadPending = Boolean(sessionId) && (!hasSession || !isHydrated(session));
+  const isReadyForAutoFocus = isHydrated(session);
 
   const emptyHelpLines = useMemo(() => AGENT_CHAT_TIP_KEYS.map((key) => t(key)), [t]);
   const emptyHelpPrefix = t(AGENT_CHAT_TIP_PREFIX_KEY);
@@ -256,6 +253,7 @@ function AgentChatViewComponent({
         isActive={isActive}
         isReadOnlySubagentDetail={isReadOnlySubagentDetail}
         parentSessionId={subagentParentSessionId}
+        runtime={runtime ?? agentChatTab?.data.runtime ?? "pi"}
         emptyHelpLines={isReadOnlySubagentDetail ? undefined : emptyHelpLines}
         emptyHelpPrefix={isReadOnlySubagentDetail ? undefined : emptyHelpPrefix}
       />

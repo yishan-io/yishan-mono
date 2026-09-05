@@ -4,6 +4,7 @@ import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../
 import { fetchPiAgentMessagesCompatibility } from "../../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
 import { agentChatStore } from "../../../state/agentChatStore";
+import { selectRunningSubagents } from "../../../state/agentChatStoreSession";
 
 type UseAgentChatSubagentActionsOptions = {
   tabId: string;
@@ -25,7 +26,7 @@ export function useAgentChatSubagentActions({
     useShallow((state) => {
       const session = state.sessionsByTabId[tabId];
       return {
-        runningSubagents: session?.runningSubagents ?? [],
+        runningSubagents: selectRunningSubagents(session),
         subagentProgressTargets: session?.subagentProgressTargets ?? [],
         subagentCancelStates: session?.subagentCancelStates ?? {},
       };
@@ -44,7 +45,7 @@ export function useAgentChatSubagentActions({
       let title = subagent.title;
       if (!childSessionId && sessionId) {
         await fetchPiAgentMessagesCompatibility({ tabId, sessionId });
-        const refreshedRunningSubagents = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
+        const refreshedRunningSubagents = selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId]);
         const refreshedSubagent = findMatchingRunningSubagent(refreshedRunningSubagents, subagent);
         childSessionId = refreshedSubagent?.childSessionId;
         title = refreshedSubagent?.title ?? title;

@@ -3,7 +3,7 @@
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
@@ -288,8 +288,8 @@ describe("createTerminalEventHandlers", () => {
     const terminalSessionHarness = createTerminalSessionChangedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
@@ -358,8 +358,8 @@ describe("createTerminalEventHandlers", () => {
     const terminalSessionHarness = createTerminalSessionChangedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
@@ -431,8 +431,8 @@ describe("createTerminalEventHandlers", () => {
     const terminalSessionHarness = createTerminalSessionChangedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
@@ -503,8 +503,8 @@ describe("createTerminalEventHandlers", () => {
     const terminalSessionHarness = createTerminalSessionChangedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const closeTerminalSession = vi.fn(async () => undefined);
@@ -577,8 +577,8 @@ describe("createTerminalEventHandlers", () => {
     const terminalSessionHarness = createTerminalSessionChangedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const closeTerminalSession = vi.fn(async () => undefined);
@@ -661,8 +661,8 @@ describe("createTerminalEventHandlers", () => {
     const terminalSessionHarness = createTerminalSessionChangedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
@@ -747,8 +747,8 @@ describe("createTerminalEventHandlers", () => {
     const createCompletedHarness = createWorkspaceCreateCompletedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
@@ -825,8 +825,8 @@ describe("createTerminalEventHandlers", () => {
     const terminalSessionHarness = createTerminalSessionChangedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 

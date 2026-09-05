@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
@@ -61,7 +61,7 @@ const initialProjectStoreState = projectStore.getState();
 const initialSessionStoreState = sessionStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialWorkspaceCreateProgressStoreState = workspaceCreateProgressStore.getState();
-const initialChatStoreState = chatStore.getState();
+const initialWorkspaceAgentIndicatorStoreState = workspaceAgentIndicatorStore.getState();
 
 afterEach(() => {
   projectStore.setState(initialProjectStoreState, true);
@@ -69,7 +69,7 @@ afterEach(() => {
   sessionStore.setState(initialSessionStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   workspaceCreateProgressStore.setState(initialWorkspaceCreateProgressStoreState, true);
-  chatStore.setState(initialChatStoreState, true);
+  workspaceAgentIndicatorStore.setState(initialWorkspaceAgentIndicatorStoreState, true);
   vi.clearAllMocks();
 });
 
@@ -323,10 +323,7 @@ describe("workspaceCommands", () => {
     const closeWorkspaceAction = vi.fn().mockResolvedValue(undefined);
     const retainWorkspaceTabs = vi.fn().mockReturnValue(["tab-1"]);
     const resolveTabForWorkspace = vi.fn();
-    const removeTabData = vi.fn();
-    const removeWorkspaceTaskCounts = vi.fn();
     tabStore.setState({ retainWorkspaceTabs, resolveTabForWorkspace });
-    chatStore.setState({ removeTabData, removeWorkspaceTaskCounts });
     workspaceStore.setState({
       workspaces: [
         {
@@ -348,8 +345,6 @@ describe("workspaceCommands", () => {
     expect(closeWorkspaceAction).toHaveBeenCalledWith({ repoId: "repo-1", workspaceId: "workspace-1" });
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
     expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
-    expect(removeTabData).toHaveBeenCalledWith(["tab-1"]);
-    expect(removeWorkspaceTaskCounts).not.toHaveBeenCalled();
 
     await vi.waitFor(() => {
       expect(rpcMocks.closeWorkspace).toHaveBeenCalledWith({

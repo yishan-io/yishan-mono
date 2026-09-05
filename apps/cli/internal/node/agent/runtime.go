@@ -199,6 +199,34 @@ func (s *Service) AgentListSessionLineage(ctx context.Context, req rpc.AgentList
 	return mapDSHSessionLineage(lineage), nil
 }
 
+// AgentGetSessionFilePath resolves a materialized runtime session artifact without resuming it.
+func (s *Service) AgentGetSessionFilePath(ctx context.Context, req rpc.AgentGetSessionFilePathParams) (any, error) {
+	workspaceInstance, err := s.resolveAgentSessionWorkspace(req.Runtime, req.SessionID, req.WorkspaceID, req.CWD)
+	if err != nil {
+		return nil, err
+	}
+	if req.Runtime == rpc.AgentRuntimeDSH {
+		runtime, ok := s.deps.DSH.(DSHSessionFilePath)
+		if !ok {
+			return nil, mapDSHExecutionError(dsh.ErrRuntimeUnavailable)
+		}
+		result, err := runtime.GetSessionFilePath(ctx, dsh.SessionReadRequest{CWD: workspaceInstance.Path, SessionID: req.SessionID})
+		if err != nil {
+			return nil, mapDSHExecutionError(err)
+		}
+		return rpc.AgentSessionFilePathResult{FilePath: result.FilePath}, nil
+	}
+	history, err := s.GetSessionFile(ctx, rpc.PiGetSessionFileParams{CWD: workspaceInstance.Path, SessionID: req.SessionID})
+	if err != nil {
+		return nil, err
+	}
+	fileResult, ok := history.(map[string]string)
+	if !ok {
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "unexpected Pi session file result")
+	}
+	return rpc.AgentSessionFilePathResult{FilePath: fileResult["filePath"]}, nil
+}
+
 // AgentReadHistory reads durable runtime history without resuming DSH.
 func (s *Service) AgentReadHistory(ctx context.Context, req rpc.AgentReadHistoryParams) (any, error) {
 	workspaceInstance, err := s.resolveAgentSessionWorkspace(req.Runtime, req.SessionID, req.WorkspaceID, req.CWD)
@@ -218,7 +246,7 @@ func (s *Service) AgentReadHistory(ctx context.Context, req rpc.AgentReadHistory
 			return nil, mapDSHTranscriptProtocolError(err)
 		}
 		return rpc.AgentHistoryResult{Runtime: req.Runtime, DSH: &rpc.AgentDSHHistory{
-			Session: rpc.AgentDSHSessionMetadata{SessionID: history.Session.SessionID, CreatedAt: history.Session.CreatedAt, ParentSession: history.Session.ParentSession, AgentPreset: history.Session.AgentPreset},
+			Session: rpc.AgentDSHSessionMetadata{SessionID: history.Session.SessionID, CreatedAt: history.Session.CreatedAt, ParentSession: history.Session.ParentSession, Origin: history.Session.Origin, AgentPreset: history.Session.AgentPreset},
 			Events:  projectedEvents, InstanceID: history.InstanceID, AsOfSeq: history.AsOfSeq,
 			DurableThroughSeq: history.DurableThroughSeq,
 		}}, nil
@@ -350,7 +378,7 @@ func mapPiSessions(summaries []process.SessionSummary, cwd string) []rpc.AgentSe
 func mapDSHSessions(summaries []dsh.SessionListEntry, cwd string) []rpc.AgentSessionSummary {
 	mapped := make([]rpc.AgentSessionSummary, 0, len(summaries))
 	for _, summary := range summaries {
-		mapped = append(mapped, rpc.AgentSessionSummary{SessionID: summary.SessionID, CWD: cwd, CreatedAt: summary.CreatedAt, ParentSession: summary.ParentSession, AgentPreset: summary.AgentPreset, Live: summary.Live, Persisted: summary.Persisted})
+		mapped = append(mapped, rpc.AgentSessionSummary{SessionID: summary.SessionID, CWD: cwd, CreatedAt: summary.CreatedAt, PreviewText: summary.PreviewText, ParentSession: summary.ParentSession, AgentPreset: summary.AgentPreset, Live: summary.Live, Persisted: summary.Persisted})
 	}
 	return mapped
 }

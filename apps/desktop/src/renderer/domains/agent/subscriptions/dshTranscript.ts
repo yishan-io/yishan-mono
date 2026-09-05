@@ -19,6 +19,7 @@ const KNOWN_TYPES = new Set([
   "session/end-seed",
   "session/title",
   "agent/inbox/spliced",
+  "yishan/subagent-settled.v1",
 ]);
 type JsonRecord = Record<string, unknown>;
 type SurfaceOp = "append" | { op: "replace"; start: number; end: number };
@@ -312,14 +313,23 @@ function projectSurfaceMessage(event: DSHEvent): AgentMessage {
   const source = asRecord(message.source);
   const callId = source && requiredString(source, "callId");
   if (!callId) throw new Error("DSH tool result is missing callId");
+  const delegation = projectDshDelegationMetadata(event.data.meta);
   return {
     id: message.id,
     role: "toolResult",
     content: contentText(message),
     toolCallId: callId,
     isError: event.data.error !== undefined,
+    ...(delegation ? { details: { dshDelegation: delegation } } : {}),
     timestamp: event.time,
   };
+}
+function projectDshDelegationMetadata(input: unknown): { childSessionId: string } | null {
+  const meta = asRecord(input);
+  const delegation = meta && asRecord(meta.delegation);
+  const childId = delegation && requiredString(delegation, "childId");
+  if (!delegation || delegation.version !== 1 || !childId) return null;
+  return { childSessionId: childId };
 }
 function requiredMessage(data: JsonRecord): JsonRecord & { id: string } {
   const message = asRecord(data.message);

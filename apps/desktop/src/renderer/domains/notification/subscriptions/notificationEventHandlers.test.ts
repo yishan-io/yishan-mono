@@ -2,7 +2,6 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import { chatStore } from "../../../domains/agent/state/chatStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
@@ -286,15 +285,15 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
     });
@@ -369,11 +368,11 @@ describe("createNotificationEventHandlers", () => {
       },
     });
 
-    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenNthCalledWith(1, { "workspace-1": "running" });
-    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenNthCalledWith(2, { "workspace-1": "running" });
-    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenNthCalledWith(3, { "workspace-1": "waiting_input" });
-    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenNthCalledWith(4, {});
-    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenNthCalledWith(5, {});
+    expect(setStatuses).toHaveBeenNthCalledWith(1, { "workspace-1": "running" });
+    expect(setStatuses).toHaveBeenNthCalledWith(2, { "workspace-1": "running" });
+    expect(setStatuses).toHaveBeenNthCalledWith(3, { "workspace-1": "waiting_input" });
+    expect(setStatuses).toHaveBeenNthCalledWith(4, {});
+    expect(setStatuses).toHaveBeenNthCalledWith(5, {});
     expect(dispatchSystemNotification).toHaveBeenCalledTimes(2);
     expect(dispatchSystemNotification).toHaveBeenNthCalledWith(1, {
       title: "codex finished",
@@ -399,15 +398,15 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
     });
@@ -446,9 +445,9 @@ describe("createNotificationEventHandlers", () => {
       createdAt: "2026-04-03T10:00:02.000Z",
     });
 
-    expect(recordWorkspaceUnreadNotification).toHaveBeenNthCalledWith(1, "workspace-1", "success");
-    expect(recordWorkspaceUnreadNotification).toHaveBeenNthCalledWith(2, "workspace-2", "error");
-    expect(recordWorkspaceUnreadNotification).toHaveBeenCalledTimes(2);
+    expect(markUnread).toHaveBeenNthCalledWith(1, "workspace-1", "success");
+    expect(markUnread).toHaveBeenNthCalledWith(2, "workspace-2", "error");
+    expect(markUnread).toHaveBeenCalledTimes(2);
     expect(dispatchSystemNotification).not.toHaveBeenCalled();
     expect(playNotificationSound).not.toHaveBeenCalled();
 
@@ -461,8 +460,8 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
@@ -482,8 +481,8 @@ describe("createNotificationEventHandlers", () => {
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
       getNotificationPreferences,
@@ -530,8 +529,8 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
@@ -551,8 +550,8 @@ describe("createNotificationEventHandlers", () => {
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
       getNotificationPreferences,
@@ -584,8 +583,8 @@ describe("createNotificationEventHandlers", () => {
       soundId: "zip",
       volume: 0.4,
     });
-    expect(recordWorkspaceUnreadNotification).toHaveBeenCalledTimes(1);
-    expect(recordWorkspaceUnreadNotification).toHaveBeenCalledWith("workspace-1", "success");
+    expect(markUnread).toHaveBeenCalledTimes(1);
+    expect(markUnread).toHaveBeenCalledWith("workspace-1", "success");
 
     stopBindings();
   });
@@ -596,8 +595,8 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
@@ -617,8 +616,8 @@ describe("createNotificationEventHandlers", () => {
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
       getNotificationPreferences,
@@ -643,7 +642,7 @@ describe("createNotificationEventHandlers", () => {
     expect(getNotificationPreferences).not.toHaveBeenCalled();
     expect(dispatchSystemNotification).not.toHaveBeenCalled();
     expect(playNotificationSound).not.toHaveBeenCalled();
-    expect(recordWorkspaceUnreadNotification).toHaveBeenCalledWith("workspace-1", "success");
+    expect(markUnread).toHaveBeenCalledWith("workspace-1", "success");
 
     stopBindings();
   });
@@ -654,8 +653,8 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
@@ -675,8 +674,8 @@ describe("createNotificationEventHandlers", () => {
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
       getNotificationPreferences,
@@ -702,7 +701,7 @@ describe("createNotificationEventHandlers", () => {
     expect(getNotificationPreferences).not.toHaveBeenCalled();
     expect(dispatchSystemNotification).not.toHaveBeenCalled();
     expect(playNotificationSound).not.toHaveBeenCalled();
-    expect(recordWorkspaceUnreadNotification).toHaveBeenCalledWith("workspace-1", "success");
+    expect(markUnread).toHaveBeenCalledWith("workspace-1", "success");
 
     stopBindings();
   });
@@ -713,8 +712,8 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
@@ -734,8 +733,8 @@ describe("createNotificationEventHandlers", () => {
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
       getNotificationPreferences,
@@ -765,7 +764,7 @@ describe("createNotificationEventHandlers", () => {
       soundId: "ping",
       volume: 0.6,
     });
-    expect(recordWorkspaceUnreadNotification).toHaveBeenCalledWith("workspace-1", "error");
+    expect(markUnread).toHaveBeenCalledWith("workspace-1", "error");
 
     stopBindings();
   });
@@ -776,8 +775,8 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
@@ -797,8 +796,8 @@ describe("createNotificationEventHandlers", () => {
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
       getNotificationPreferences,
@@ -831,15 +830,15 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
       resolveWorkspaceLabel: () => undefined,
@@ -870,15 +869,15 @@ describe("createNotificationEventHandlers", () => {
     const inAppNotificationHarness = createInAppNotificationHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const setStatuses = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
     });

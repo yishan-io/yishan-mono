@@ -26,6 +26,7 @@
     "electron:dev": "cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 wait-on tcp:5173 file:dist/electron/main.cjs file:dist/electron/preload.js file:dist/resources/dsh-runtime.mjs && cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron dist/electron/main.cjs",
     "check": "tsc --noEmit -p tsconfig.json",
     "dsh:build": "node scripts/buildDshRuntime.mjs",
+    "dsh:build:test": "node scripts/buildDshRuntime.test.mjs",
     "dsh:smoke:production": "bun run dsh:build && node scripts/dshRuntimeSmoke.mjs",
     "dsh:smoke": "bun run dsh:smoke:production",
     "dsh:smoke:daemon": "bun run cli:build && bun run dsh:build && node scripts/taskRunDshDaemonSmoke.mjs"
@@ -60,6 +61,7 @@
     "@xterm/xterm": "^6.0.0",
     "@yishan-io/core": "workspace:*",
     "@yishan-io/design-tokens": "workspace:*",
+    "@yishan-io/dsh-runtime": "workspace:*",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^41.3.0",
@@ -114,7 +116,8 @@
         "to": ".",
         "filter": [
           "yishan",
-          "dsh-runtime.mjs"
+          "dsh-runtime.mjs",
+          "dsh-plugins/**/*"
         ]
       },
       {

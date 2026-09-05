@@ -7,6 +7,14 @@ import (
 	"io"
 )
 
+type sessionFilePathWireResult struct {
+	FilePath string `json:"filePath"`
+}
+
+func (response sessionFilePathWireResult) validate() (SessionFilePathResult, error) {
+	return SessionFilePathResult{FilePath: response.FilePath}, nil
+}
+
 type sessionDisposeWireResult struct {
 	SessionID string `json:"sessionId"`
 	Disposed  *bool  `json:"disposed"`
@@ -42,11 +50,18 @@ func (result sessionListWireResult) validate() (SessionListResult, error) {
 			return SessionListResult{}, errors.New("invalid DSH session list entry")
 		}
 		sessions = append(sessions, SessionListEntry{
-			SessionID: entry.SessionID, CreatedAt: *entry.CreatedAt, ParentSession: entry.ParentSession,
-			AgentPreset: entry.AgentPreset, Live: *entry.Live, Persisted: *entry.Persisted,
+			SessionID: entry.SessionID, CreatedAt: *entry.CreatedAt,
+			ParentSession: entry.ParentSession, AgentPreset: entry.AgentPreset, Live: *entry.Live, Persisted: *entry.Persisted,
 		})
 	}
 	return SessionListResult{Sessions: sessions}, nil
+}
+
+func validateSessionResumeRequest(request SessionResumeRequest) error {
+	if request.CWD == "" || request.SessionID == "" || request.WorkspaceID == "" {
+		return errors.New("DSH session resume requires cwd, sessionId, and workspaceId")
+	}
+	return nil
 }
 
 func validateSessionReadRequest(request SessionReadRequest) error {
@@ -61,6 +76,7 @@ type sessionReadWireResult struct {
 		SessionID     string `json:"sessionId"`
 		CreatedAt     *int64 `json:"createdAt"`
 		ParentSession string `json:"parentSession,omitempty"`
+		Origin        string `json:"origin,omitempty"`
 		AgentPreset   string `json:"agentPreset,omitempty"`
 	} `json:"session"`
 	Events            []json.RawMessage `json:"events"`
@@ -84,7 +100,7 @@ func (response sessionReadWireResult) validate(request SessionReadRequest) (Sess
 	return SessionReadResult{
 		Session: SessionHeader{
 			SessionID: response.Session.SessionID, CreatedAt: *response.Session.CreatedAt,
-			ParentSession: response.Session.ParentSession, AgentPreset: response.Session.AgentPreset,
+			ParentSession: response.Session.ParentSession, Origin: response.Session.Origin, AgentPreset: response.Session.AgentPreset,
 		},
 		Events: response.Events, InstanceID: response.InstanceID, AsOfSeq: *response.AsOfSeq, DurableThroughSeq: *response.DurableThroughSeq,
 	}, nil
@@ -175,4 +191,95 @@ func (response providerCatalogWire) validate() (ProviderCatalog, error) {
 		providers = append(providers, ProviderCatalogProvider{ID: provider.ID, Authentication: provider.Authentication, SetupRequired: *provider.SetupRequired, Models: models})
 	}
 	return ProviderCatalog{Providers: providers}, nil
+}
+
+type providerContextWindowWire struct {
+	Provider      string `json:"provider"`
+	Model         string `json:"model"`
+	ContextWindow int64  `json:"contextWindow"`
+}
+
+type providerContextWindowWireResult struct {
+	ContextWindows []providerContextWindowWire `json:"contextWindows"`
+}
+
+func validateProviderContextWindowRequest(request ProviderContextWindowRequest) error {
+	seenRoutes := make(map[string]struct{}, len(request.Routes))
+	for _, route := range request.Routes {
+		if route.Provider == "" || route.Model == "" {
+			return errors.New("invalid DSH provider context window request")
+		}
+		key := route.Provider + "\x00" + route.Model
+		if _, exists := seenRoutes[key]; exists {
+			return errors.New("invalid DSH provider context window request")
+		}
+		seenRoutes[key] = struct{}{}
+	}
+	return nil
+}
+
+func (result providerContextWindowWireResult) validate(request ProviderContextWindowRequest) (ProviderContextWindowResult, error) {
+	if result.ContextWindows == nil {
+		return ProviderContextWindowResult{}, errors.New("invalid DSH provider context window response")
+	}
+	requestedRoutes := make(map[string]struct{}, len(request.Routes))
+	for _, route := range request.Routes {
+		requestedRoutes[route.Provider+"\x00"+route.Model] = struct{}{}
+	}
+	contextWindows := make([]ProviderContextWindow, 0, len(result.ContextWindows))
+	for _, entry := range result.ContextWindows {
+		key := entry.Provider + "\x00" + entry.Model
+		if entry.Provider == "" || entry.Model == "" || entry.ContextWindow <= 0 || entry.ContextWindow > maxSafeInteger {
+			return ProviderContextWindowResult{}, errors.New("invalid DSH provider context window response")
+		}
+		if _, requested := requestedRoutes[key]; !requested {
+			return ProviderContextWindowResult{}, errors.New("invalid DSH provider context window response")
+		}
+		delete(requestedRoutes, key)
+		contextWindows = append(contextWindows, ProviderContextWindow{Provider: entry.Provider, Model: entry.Model, ContextWindow: entry.ContextWindow})
+	}
+	if len(contextWindows) != len(result.ContextWindows) {
+		return ProviderContextWindowResult{}, errors.New("invalid DSH provider context window response")
+	}
+	return ProviderContextWindowResult{ContextWindows: contextWindows}, nil
+}
+
+type sessionTitleSummaryWire struct {
+	SessionID   string  `json:"sessionId"`
+	PreviewText *string `json:"previewText"`
+}
+
+type sessionTitleSummaryWireResult struct {
+	Titles []sessionTitleSummaryWire `json:"titles"`
+}
+
+func (result sessionTitleSummaryWireResult) validate(request SessionTitleSummaryRequest) (SessionTitleSummaryResult, error) {
+	if result.Titles == nil || len(result.Titles) != len(request.SessionIDs) {
+		return SessionTitleSummaryResult{}, errors.New("invalid DSH session title summary response")
+	}
+	requested := make(map[string]struct{}, len(request.SessionIDs))
+	for _, sessionID := range request.SessionIDs {
+		if sessionID == "" {
+			return SessionTitleSummaryResult{}, errors.New("DSH session title summary requires sessionIds")
+		}
+		if _, exists := requested[sessionID]; exists {
+			return SessionTitleSummaryResult{}, errors.New("DSH session title summary sessionIds must be unique")
+		}
+		requested[sessionID] = struct{}{}
+	}
+	titles := make([]SessionTitleSummary, 0, len(result.Titles))
+	for _, title := range result.Titles {
+		if title.SessionID == "" || title.PreviewText == nil {
+			return SessionTitleSummaryResult{}, errors.New("invalid DSH session title summary entry")
+		}
+		if _, exists := requested[title.SessionID]; !exists {
+			return SessionTitleSummaryResult{}, errors.New("invalid DSH session title summary entry")
+		}
+		delete(requested, title.SessionID)
+		titles = append(titles, SessionTitleSummary{SessionID: title.SessionID, PreviewText: *title.PreviewText})
+	}
+	if len(requested) != 0 {
+		return SessionTitleSummaryResult{}, errors.New("invalid DSH session title summary response")
+	}
+	return SessionTitleSummaryResult{Titles: titles}, nil
 }

@@ -10,36 +10,39 @@ import (
 )
 
 const (
-	maxArchiveBytes        = 64 << 20
-	maxDecompressedBytes   = 256 << 20
-	maxTarHeaders          = 10000
-	maxTreeFiles           = 10000
-	adaptationManifestName = "yishan.adaptation.json"
-	cordisPatchName        = "cordis.patch.yml"
+	maxArchiveBytes      = 64 << 20
+	maxDecompressedBytes = 256 << 20
+	maxTarHeaders        = 10000
+	maxTreeFiles         = 10000
 )
 
 var (
 	ErrBundleNotAllowed  = errors.New("npm bundle is not daemon-approved")
 	ErrInvalidArchive    = errors.New("invalid npm bundle archive")
 	ErrInventoryTampered = errors.New("plugin inventory signature is invalid")
-	ErrBundleNotLoadable = errors.New("npm bundle lacks a Yishan-audited adaptation manifest")
+	ErrBundleNotLoadable = errors.New("npm bundle has an invalid Yishan plugin declaration")
 	ErrBundleNotFound    = errors.New("DSH plugin bundle is not installed")
 )
 
 // Request identifies the exact npm package and version to install.
 type Request struct{ Name, Version string }
 
-// AdaptationManifest is a reviewed data-only runtime declaration bound to a release.
-type AdaptationManifest struct {
-	Version string
-	SHA256  string
-	Content []byte
+// PluginEntry is one reviewed data-only Cordis declaration bound to a release.
+type PluginEntry struct {
+	ID         string `json:"id"`
+	Entrypoint string `json:"entrypoint"`
+	Config     any    `json:"config"`
+	Disabled   bool   `json:"disabled"`
+	Inject     any    `json:"inject"`
 }
 
-// ApprovedBundle binds one exact upstream release to its audited adaptation manifest.
+// ApprovedBundle binds one exact upstream release to reviewed Cordis entries.
 type ApprovedBundle struct {
-	Name, Version, Integrity string
-	Adaptation               AdaptationManifest
+	Name          string
+	Version       string
+	Integrity     string
+	SeedIntegrity string
+	Entries       []PluginEntry
 }
 
 // Bundle is the registry metadata for one npm tarball.
@@ -55,7 +58,7 @@ type Downloader interface {
 	Download(context.Context, string) ([]byte, error)
 }
 
-// FileHash is a canonical installed regular file record.
+// FileHash is one internal regular-file record used to calculate a tree hash.
 type FileHash struct {
 	Path   string `json:"path"`
 	SHA256 string `json:"sha256"`
@@ -63,13 +66,11 @@ type FileHash struct {
 
 // Plugin is an installed bundle in the signed inventory.
 type Plugin struct {
-	Name              string     `json:"name"`
-	Version           string     `json:"version"`
-	Enabled           bool       `json:"enabled"`
-	TreeSHA256        string     `json:"treeSha256"`
-	Files             []FileHash `json:"files"`
-	AdaptationVersion string     `json:"adaptationVersion"`
-	AdaptationSHA256  string     `json:"adaptationSha256"`
+	Name       string        `json:"name"`
+	Version    string        `json:"version"`
+	Enabled    bool          `json:"enabled"`
+	TreeSHA256 string        `json:"treeSha256"`
+	Entries    []PluginEntry `json:"entries"`
 }
 
 // Inventory is the deterministic lock data signed by the daemon.
@@ -98,9 +99,6 @@ func NewInstaller(root string, key ed25519.PrivateKey, approved []ApprovedBundle
 	if strings.TrimSpace(root) == "" || !filepath.IsAbs(root) {
 		return nil, errors.New("DSH plugin root must be absolute")
 	}
-	if registry == nil || downloader == nil {
-		return nil, errors.New("DSH plugin registry and downloader are required")
-	}
 	allowlist, err := buildAllowlist(approved)
 	if err != nil {
 		return nil, err
@@ -115,9 +113,14 @@ func NewInstaller(root string, key ed25519.PrivateKey, approved []ApprovedBundle
 func buildAllowlist(bundles []ApprovedBundle) (map[string]ApprovedBundle, error) {
 	allowlist := make(map[string]ApprovedBundle, len(bundles))
 	for _, bundle := range bundles {
-		if err := validateRequest(Request{Name: bundle.Name, Version: bundle.Version}); err != nil || bundle.Integrity == "" || !bundle.Adaptation.isValid() {
+		if err := validateRequest(Request{Name: bundle.Name, Version: bundle.Version}); err != nil || bundle.Integrity == "" {
 			return nil, errors.New("invalid DSH plugin allowlist")
 		}
+		entries, err := validatePluginEntries(bundle.Entries)
+		if err != nil {
+			return nil, errors.New("invalid DSH plugin allowlist")
+		}
+		bundle.Entries = entries
 		key := bundleKey(bundle.Name, bundle.Version)
 		if _, exists := allowlist[key]; exists {
 			return nil, errors.New("duplicate DSH plugin allowlist entry")

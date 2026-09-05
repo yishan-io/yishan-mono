@@ -70,6 +70,7 @@
         "@xterm/xterm": "^6.0.0",
         "@yishan-io/core": "workspace:*",
         "@yishan-io/design-tokens": "workspace:*",
+        "@yishan-io/dsh-runtime": "workspace:*",
         "concurrently": "^9.2.1",
         "cross-env": "^10.1.0",
         "electron": "^41.3.0",
@@ -134,21 +135,110 @@
         "@mui/material": "^9.0.0",
       },
     },
-    "packages/dsh-yishan": {
-      "name": "@yishan-io/dsh-yishan",
+    "packages/dsh-daemon-bridge": {
+      "name": "@yishan-io/dsh-daemon-bridge",
+      "version": "0.1.0",
+      "dependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-sdk-jsonrpc-server": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-sdk-protocol": "0.1.1-rc.2",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/node": "^24.12.4",
+      },
+    },
+    "packages/dsh-dev-flow": {
+      "name": "@yishan-io/dsh-dev-flow",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-skill": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-skill-filesystem": "0.1.1-rc.2",
+        "@types/node": "^24.12.4",
+        "esbuild": "^0.27.4",
+      },
+    },
+    "packages/dsh-memory": {
+      "name": "@yishan-io/dsh-memory",
+      "version": "0.1.0",
+      "dependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+        "@yishan-io/dsh-daemon-bridge": "workspace:*",
+        "@yishan-io/dsh-workspace": "workspace:*",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/node": "^24.12.4",
+      },
+    },
+    "packages/dsh-plugin-loader": {
+      "name": "@yishan-io/dsh-plugin-loader",
       "version": "0.1.0",
       "dependencies": {
         "@deepseek-ai/cordis": "4.0.1",
         "@deepseek-ai/cordis-plugin-loader": "1.0.2",
-        "@deepseek-ai/dsh-agent": "0.1.1-rc.2",
-        "@deepseek-ai/dsh-agent-spine-demo": "0.1.1-rc.2",
-        "@deepseek-ai/dsh-bash-local": "0.1.1-rc.2",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/node": "^24.12.4",
+      },
+    },
+    "packages/dsh-provider": {
+      "name": "@yishan-io/dsh-provider",
+      "version": "0.1.0",
+      "dependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
         "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
         "@deepseek-ai/dsh-llm-deepseek": "0.1.1-rc.2",
         "@deepseek-ai/dsh-llm-pi-ai": "0.1.1-rc.2",
+        "@yishan-io/dsh-daemon-bridge": "workspace:*",
+      },
+      "devDependencies": {
+        "@earendil-works/pi-ai": "0.82.1",
+        "@types/node": "^24.12.4",
+      },
+    },
+    "packages/dsh-runtime": {
+      "name": "@yishan-io/dsh-runtime",
+      "version": "0.1.0",
+      "dependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-agent-spine-demo": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-bash-local": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-bash-sandbox": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-sandbox-local": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-sandbox-policy": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-shell": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-subagent": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-subagent-spawn-in-process": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-subprocess-local": "0.1.1-rc.2",
+        "@yishan-io/dsh-daemon-bridge": "workspace:*",
+        "@yishan-io/dsh-memory": "workspace:*",
+        "@yishan-io/dsh-plugin-loader": "workspace:*",
+        "@yishan-io/dsh-provider": "workspace:*",
+        "@yishan-io/dsh-session": "workspace:*",
+        "@yishan-io/dsh-task": "workspace:*",
+        "@yishan-io/dsh-workspace": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "^24.12.4",
+      },
+      "optionalDependencies": {
+        "@deepseek-ai/node-addon-landlock-run-linux-arm64": "0.1.1",
+        "@deepseek-ai/node-addon-landlock-run-linux-x64": "0.1.1",
+      },
+    },
+    "packages/dsh-session": {
+      "name": "@yishan-io/dsh-session",
+      "version": "0.1.0",
+      "dependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-agent": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
         "@deepseek-ai/dsh-scope": "0.1.1-rc.2",
-        "@deepseek-ai/dsh-sdk-jsonrpc-server": "0.1.1-rc.2",
-        "@deepseek-ai/dsh-sdk-protocol": "0.1.1-rc.2",
         "@deepseek-ai/dsh-session": "0.1.1-rc.2",
         "@deepseek-ai/dsh-session-checkpoint-policy": "0.1.1-rc.2",
         "@deepseek-ai/dsh-session-persistence": "0.1.1-rc.2",
@@ -157,9 +247,40 @@
         "@deepseek-ai/dsh-session-query": "0.1.1-rc.2",
         "@deepseek-ai/dsh-session-query-sqlite": "0.1.1-rc.2",
         "@deepseek-ai/dsh-subagent": "0.1.1-rc.2",
-        "@deepseek-ai/dsh-subprocess-local": "0.1.1-rc.2",
-        "@earendil-works/pi-ai": "0.82.1",
-        "yaml": "2.9.0",
+        "@yishan-io/dsh-daemon-bridge": "workspace:*",
+        "@yishan-io/dsh-provider": "workspace:*",
+        "@yishan-io/dsh-workspace": "workspace:*",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@deepseek-ai/dsh-agent-spine-demo": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-sdk-jsonrpc-server": "0.1.1-rc.2",
+        "@types/node": "^24.12.4",
+      },
+    },
+    "packages/dsh-task": {
+      "name": "@yishan-io/dsh-task",
+      "version": "0.1.0",
+      "dependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+        "@yishan-io/dsh-daemon-bridge": "workspace:*",
+        "@yishan-io/dsh-workspace": "workspace:*",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/node": "^24.12.4",
+      },
+    },
+    "packages/dsh-workspace": {
+      "name": "@yishan-io/dsh-workspace",
+      "version": "0.1.0",
+      "dependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-agent": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+        "@yishan-io/dsh-daemon-bridge": "workspace:*",
+        "zod": "^4.3.6",
       },
       "devDependencies": {
         "@types/node": "^24.12.4",
@@ -480,6 +601,8 @@
 
     "@deepseek-ai/dsh-bash-local": ["@deepseek-ai/dsh-bash-local@0.1.1-rc.2", "", { "dependencies": { "@deepseek-ai/schemastery": "^3.18.1" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-settings": "^0.1.1-rc.2", "@deepseek-ai/dsh-shell": "^0.1.1-rc.2", "@deepseek-ai/dsh-subprocess": "^0.1.1-rc.2", "@deepseek-ai/dsh-timeout": "^0.1.1-rc.2" } }, "sha512-GAjYTVsJKXkAptjO767xqt0otMufZRtj2qvOAvkx5Bfusd5R6+mMUkSbcx2K2A8WMbltyCbjwhZf4Tu4xyJAdw=="],
 
+    "@deepseek-ai/dsh-bash-sandbox": ["@deepseek-ai/dsh-bash-sandbox@0.1.1-rc.2", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-bash-local": "^0.1.1-rc.2", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-sandbox": "^0.1.1-rc.2", "@deepseek-ai/dsh-sandbox-policy": "^0.1.1-rc.2", "@deepseek-ai/dsh-shell": "^0.1.1-rc.2" } }, "sha512-bagZDMZ73C1dVDBjFCn1flNZ8aOEel4dsmDJTfmagqeYPXfIJDFKPhDc3lWjc+o6jMNfmumeUJ62dwhHkjJHKA=="],
+
     "@deepseek-ai/dsh-brand": ["@deepseek-ai/dsh-brand@0.1.1-rc.2", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2" } }, "sha512-8vXsAXoUdzKAgvd/E9DgyT6HKmR6ZM4rtJ3fs/XoJ6n2kBk4tWil8Lv+jxCMWJeMOnTJF55gu2+NWQ3ECFPtJw=="],
 
     "@deepseek-ai/dsh-code-runtime": ["@deepseek-ai/dsh-code-runtime@0.1.1-rc.2", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2" } }, "sha512-SgFresqH5UABzRQZ7tOfqzOLMHF7089VeH+mfcwNQH5peOavgEKrAGOYz/9RnISH0XmMrj/x177t8gfO8Uvo/w=="],
@@ -514,7 +637,11 @@
 
     "@deepseek-ai/dsh-sandbox": ["@deepseek-ai/dsh-sandbox@0.1.1-rc.2", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-llm": "^0.1.1-rc.2", "@deepseek-ai/dsh-session": "^0.1.1-rc.2" } }, "sha512-rnO2RqZ+ycpwrXrXlMcrhWAICdui3ZVTjNQ8eZrOPE18hAbX3tw0nLFq26sBjMSnBfDQHNZ4VaFpt0p8qhkPWQ=="],
 
+    "@deepseek-ai/dsh-sandbox-local": ["@deepseek-ai/dsh-sandbox-local@0.1.1-rc.2", "", { "dependencies": { "@deepseek-ai/dsh-sandbox-windows-acl": "^0.1.1-rc.2", "@deepseek-ai/node-addon-landlock-run": "^0.1.1", "@deepseek-ai/schemastery": "^3.18.1" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-llm": "^0.1.1-rc.2", "@deepseek-ai/dsh-sandbox": "^0.1.1-rc.2", "@deepseek-ai/dsh-session": "^0.1.1-rc.2" } }, "sha512-Sn1RTGRFLA3fB+thcBwyyfDRdpgXJ7/6qBz/piFh+emJ4IfGFlBEUz7H2QfuwOGAmzlOmncxf2brcM5SfAgJ2A=="],
+
     "@deepseek-ai/dsh-sandbox-policy": ["@deepseek-ai/dsh-sandbox-policy@0.1.1-rc.2", "", { "dependencies": { "@deepseek-ai/schemastery": "^3.18.1" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-agent": "^0.1.1-rc.2", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-sandbox": "^0.1.1-rc.2", "@deepseek-ai/dsh-session": "^0.1.1-rc.2", "@deepseek-ai/dsh-system-prompt": "^0.1.1-rc.2" } }, "sha512-cpoIUxCzpZJDTMXVt9gS+qgWEDAWf6rIe715uY1NF0ROoiEXPlmToLsHLF+4pXTW3wWWzpGVswO0bPYEKrQr3g=="],
+
+    "@deepseek-ai/dsh-sandbox-windows-acl": ["@deepseek-ai/dsh-sandbox-windows-acl@0.1.1-rc.2", "", { "dependencies": { "koffi": "^3.1.0" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2" } }, "sha512-DJ5jI8uzJA2VJiIgkUrqNDo1oKMJMaQ1Z8F7kFpxEkI3IMRSfMyqTur740ERBkX3pVc5uDLx6HNeEBx/JR43SQ=="],
 
     "@deepseek-ai/dsh-scope": ["@deepseek-ai/dsh-scope@0.1.1-rc.2", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2" } }, "sha512-Xy3ejL6dwVSluZL7XOWy76ya4pCw1uHwxodDK4O9XiQUiUV4FBXnt0aNJUtMeAFN0c1YujxxCmRniMvuuNn1Nw=="],
 
@@ -550,6 +677,10 @@
 
     "@deepseek-ai/dsh-subagent": ["@deepseek-ai/dsh-subagent@0.1.1-rc.2", "", { "dependencies": { "zod": "^4.4.3" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-agent": "^0.1.1-rc.2", "@deepseek-ai/dsh-agent-presets": "^0.1.1-rc.2", "@deepseek-ai/dsh-brand": "^0.1.1-rc.2", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-jobs": "^0.1.1-rc.2", "@deepseek-ai/dsh-llm": "^0.1.1-rc.2", "@deepseek-ai/dsh-sandbox": "^0.1.1-rc.2", "@deepseek-ai/dsh-sandbox-policy": "^0.1.1-rc.2", "@deepseek-ai/dsh-scope": "^0.1.1-rc.2", "@deepseek-ai/dsh-session": "^0.1.1-rc.2", "@deepseek-ai/dsh-session-persistence": "^0.1.1-rc.2", "@deepseek-ai/dsh-session-projection": "^0.1.1-rc.2", "@deepseek-ai/dsh-session-projection-cache": "^0.1.1-rc.2", "@deepseek-ai/dsh-tools": "^0.1.1-rc.2", "@deepseek-ai/dsh-user-approval": "^0.1.1-rc.2" }, "optionalPeers": ["@deepseek-ai/dsh-agent-presets", "@deepseek-ai/dsh-jobs", "@deepseek-ai/dsh-sandbox", "@deepseek-ai/dsh-sandbox-policy", "@deepseek-ai/dsh-session-persistence", "@deepseek-ai/dsh-session-projection", "@deepseek-ai/dsh-session-projection-cache", "@deepseek-ai/dsh-user-approval"] }, "sha512-CNa0WuFCR69TMnBKYQInz49/olDSaVHiYkDTyTuDh7YW7Y80/f/HjQe5G0fQaqZMLla3IUSXCIPl5EssWmjcQw=="],
 
+    "@deepseek-ai/dsh-subagent-in-process-driver": ["@deepseek-ai/dsh-subagent-in-process-driver@0.1.1-rc.2", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-agent": "^0.1.1-rc.2", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-llm": "^0.1.1-rc.2", "@deepseek-ai/dsh-session": "^0.1.1-rc.2", "@deepseek-ai/dsh-subagent": "^0.1.1-rc.2", "@deepseek-ai/dsh-system-prompt": "^0.1.1-rc.2", "@deepseek-ai/dsh-tools": "^0.1.1-rc.2" } }, "sha512-+GCNjPnRJOB4fv6pc4b9qQZvzoluH9neOLCrKEpJsoNn1c2XCQMaylc8G+WEziIbvzDvHcpKJJWm50XlKuDfMg=="],
+
+    "@deepseek-ai/dsh-subagent-spawn-in-process": ["@deepseek-ai/dsh-subagent-spawn-in-process@0.1.1-rc.2", "", { "dependencies": { "@deepseek-ai/schemastery": "^3.18.1" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-subagent": "^0.1.1-rc.2", "@deepseek-ai/dsh-subagent-in-process-driver": "^0.1.1-rc.2" } }, "sha512-Xxe9GzhOK4gIfNUG/Wgx3vsCx7aGZTt268943aRO0wlKQ7Jcku5rH84KfJ+IP2ZY0954KRm4+GQLOKJc/1SSjw=="],
+
     "@deepseek-ai/dsh-subprocess": ["@deepseek-ai/dsh-subprocess@0.1.1-rc.2", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2" } }, "sha512-YXEBaUfdkCJm4Wj/w08imS+1TMd3K4Rjr/xD5tuJR1I4/EnBCseP6AOlwjcrDP5PPWfOZghrK8H01sk6cqiK8Q=="],
 
     "@deepseek-ai/dsh-subprocess-local": ["@deepseek-ai/dsh-subprocess-local@0.1.1-rc.2", "", { "dependencies": { "koffi": "^3.1.0", "node-pty": "1.2.0-beta.15" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-subprocess": "^0.1.1-rc.2", "@deepseek-ai/dsh-timeout": "^0.1.1-rc.2" } }, "sha512-I4pyzpohZEVRQQbuEpMP0t8oKsf+XIlRo64aJVKGXI2eMcg9f9gbfhKQNYNqRGbegQL1HYpSLU6Rzyibldgwaw=="],
@@ -571,6 +702,12 @@
     "@deepseek-ai/dsh-typert-protocol": ["@deepseek-ai/dsh-typert-protocol@0.1.1-rc.2", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2" } }, "sha512-lxBssDc5Pz1qBE5kuIyaArA7AvIPq9rpaVclylodiSzVJe95e2xruBg73tflyjtd8y00toet+DLgQ6tSSsq6Kw=="],
 
     "@deepseek-ai/dsh-user-approval": ["@deepseek-ai/dsh-user-approval@0.1.1-rc.2", "", { "dependencies": { "@deepseek-ai/schemastery": "^3.18.1" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-agent": "^0.1.1-rc.2", "@deepseek-ai/dsh-brand": "^0.1.1-rc.2", "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2", "@deepseek-ai/dsh-llm": "^0.1.1-rc.2", "@deepseek-ai/dsh-scope": "^0.1.1-rc.2", "@deepseek-ai/dsh-session": "^0.1.1-rc.2", "@deepseek-ai/dsh-system-prompt": "^0.1.1-rc.2" } }, "sha512-SdsO4Rs+NeJFoertkVilXBACREOLfkKPJJznYKqDhJxeRo38RJ56dtj0Xd0/6rERmsQiMck4Bwdrzg1ubUqPNA=="],
+
+    "@deepseek-ai/node-addon-landlock-run": ["@deepseek-ai/node-addon-landlock-run@0.1.1", "", { "optionalDependencies": { "@deepseek-ai/node-addon-landlock-run-linux-arm64": "0.1.1", "@deepseek-ai/node-addon-landlock-run-linux-x64": "0.1.1" } }, "sha512-aHGhlQJEutfobKM/4K59SERbT7RmQdD2oMKzD8Bne/Ps7TeT8AweCN+dpdfuxQhMNbFcJMymrgPnID0WYQ30Tw=="],
+
+    "@deepseek-ai/node-addon-landlock-run-linux-arm64": ["@deepseek-ai/node-addon-landlock-run-linux-arm64@0.1.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-lYY2RbcPW4rGRM5hVJbrXlvLqyBxeJBjBqvt+QTHTU+GtfUVVjTODKa4e3CRwMQoCEpOjoARdQBHbN7HvE72WQ=="],
+
+    "@deepseek-ai/node-addon-landlock-run-linux-x64": ["@deepseek-ai/node-addon-landlock-run-linux-x64@0.1.1", "", { "os": "linux", "cpu": "x64" }, "sha512-OHAzPW2Coe/iYobAJAAA8CeVrBoKV4BnNHsgwvXwOfishxkUVSWSvdyxrZPiwYRXutpIGVrSo9zV3WOQy2euBA=="],
 
     "@deepseek-ai/schemastery": ["@deepseek-ai/schemastery@3.18.1", "", { "dependencies": { "@deepseek-ai/cosmokit": "^1.8.2", "@standard-schema/spec": "^1.1.0" } }, "sha512-Qn0FCSwCQnpnj6SB31I6i2sIKgKWnkbJM8O0EU91Gv2UsYVvtZTl6IA0sCwk2e2MZf5S8w5hpq9QkeVvK9qwxg=="],
 
@@ -1426,7 +1563,23 @@
 
     "@yishan-io/desktop": ["@yishan-io/desktop@workspace:apps/desktop"],
 
-    "@yishan-io/dsh-yishan": ["@yishan-io/dsh-yishan@workspace:packages/dsh-yishan"],
+    "@yishan-io/dsh-daemon-bridge": ["@yishan-io/dsh-daemon-bridge@workspace:packages/dsh-daemon-bridge"],
+
+    "@yishan-io/dsh-dev-flow": ["@yishan-io/dsh-dev-flow@workspace:packages/dsh-dev-flow"],
+
+    "@yishan-io/dsh-memory": ["@yishan-io/dsh-memory@workspace:packages/dsh-memory"],
+
+    "@yishan-io/dsh-plugin-loader": ["@yishan-io/dsh-plugin-loader@workspace:packages/dsh-plugin-loader"],
+
+    "@yishan-io/dsh-provider": ["@yishan-io/dsh-provider@workspace:packages/dsh-provider"],
+
+    "@yishan-io/dsh-runtime": ["@yishan-io/dsh-runtime@workspace:packages/dsh-runtime"],
+
+    "@yishan-io/dsh-session": ["@yishan-io/dsh-session@workspace:packages/dsh-session"],
+
+    "@yishan-io/dsh-task": ["@yishan-io/dsh-task@workspace:packages/dsh-task"],
+
+    "@yishan-io/dsh-workspace": ["@yishan-io/dsh-workspace@workspace:packages/dsh-workspace"],
 
     "@yishan-io/landing": ["@yishan-io/landing@workspace:apps/landing"],
 
@@ -1574,7 +1727,7 @@
 
     "chevrotain-allstar": ["chevrotain-allstar@0.3.1", "", { "dependencies": { "lodash-es": "^4.17.21" }, "peerDependencies": { "chevrotain": "^11.0.0" } }, "sha512-b7g+y9A0v4mxCW1qUhf3BSVPg+/NvGErk/dOkrDaHA0nQIQGAtrOjlX//9OQtRlSCy+x9rfB5N8yC71lH1nvMw=="],
 
-    "chokidar": ["chokidar@3.6.0", "", { "dependencies": { "anymatch": "~3.1.2", "braces": "~3.0.2", "glob-parent": "~5.1.2", "is-binary-path": "~2.1.0", "is-glob": "~4.0.1", "normalize-path": "~3.0.0", "readdirp": "~3.6.0" }, "optionalDependencies": { "fsevents": "~2.3.2" } }, "sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw=="],
+    "chokidar": ["chokidar@5.0.0", "", { "dependencies": { "readdirp": "^5.0.0" } }, "sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw=="],
 
     "chownr": ["chownr@3.0.0", "", {}, "sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g=="],
 
@@ -2614,7 +2767,7 @@
 
     "readable-stream": ["readable-stream@2.3.8", "", { "dependencies": { "core-util-is": "~1.0.0", "inherits": "~2.0.3", "isarray": "~1.0.0", "process-nextick-args": "~2.0.0", "safe-buffer": "~5.1.1", "string_decoder": "~1.1.1", "util-deprecate": "~1.0.1" } }, "sha512-8p0AUk4XODgIewSi0l8Epjs+EVnWiK7NoDIEGU0HhE7+ZyY8D1IMY7odu5lRrFXGg71L15KG8QrPmum45RTtdA=="],
 
-    "readdirp": ["readdirp@3.6.0", "", { "dependencies": { "picomatch": "^2.2.1" } }, "sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA=="],
+    "readdirp": ["readdirp@5.1.1", "", {}, "sha512-Kko+Y5XQ6fM+Ce3dq3m9YGxnacYZYl9cA1wZjaF3Vbry2L3i1qVg8+CAgNPsXRArPMUMCaOR7oa9Nqntc43JKA=="],
 
     "recma-build-jsx": ["recma-build-jsx@1.0.0", "", { "dependencies": { "@types/estree": "^1.0.0", "estree-util-build-jsx": "^3.0.0", "vfile": "^6.0.0" } }, "sha512-8GtdyqaBcDfva+GUKDr3nev3VpKAhup1+RvkMvUxURHpW7QyIvk9F5wz7Vzo06CEMSilw6uArgRqhpiUcWp8ew=="],
 
@@ -3024,8 +3177,6 @@
 
     "@chevrotain/gast/lodash-es": ["lodash-es@4.17.21", "", {}, "sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw=="],
 
-    "@deepseek-ai/dsh-skill-filesystem/chokidar": ["chokidar@5.0.0", "", { "dependencies": { "readdirp": "^5.0.0" } }, "sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw=="],
-
     "@earendil-works/pi-agent-core/@earendil-works/pi-ai": ["@earendil-works/pi-ai@0.80.6", "", { "dependencies": { "@anthropic-ai/sdk": "0.91.1", "@aws-sdk/client-bedrock-runtime": "3.1048.0", "@google/genai": "1.52.0", "@mistralai/mistralai": "2.2.6", "@opentelemetry/api": "1.9.0", "@smithy/node-http-handler": "4.7.3", "http-proxy-agent": "7.0.2", "https-proxy-agent": "7.0.6", "openai": "6.26.0", "partial-json": "0.1.7", "typebox": "1.1.38" }, "bin": { "pi-ai": "dist/cli.js" } }, "sha512-7xfLk8sANBp+bpPEbjoOZTbPxsa+++b1JXAoSJsNa3vbs9AHHEclmvg54XLQcxH+fuwaeti/g2jeIfJ+mVYLpA=="],
 
     "@earendil-works/pi-coding-agent/@earendil-works/pi-ai": ["@earendil-works/pi-ai@0.80.6", "", { "dependencies": { "@anthropic-ai/sdk": "0.91.1", "@aws-sdk/client-bedrock-runtime": "3.1048.0", "@google/genai": "1.52.0", "@mistralai/mistralai": "2.2.6", "@opentelemetry/api": "1.9.0", "@smithy/node-http-handler": "4.7.3", "http-proxy-agent": "7.0.2", "https-proxy-agent": "7.0.6", "openai": "6.26.0", "partial-json": "0.1.7", "typebox": "1.1.38" }, "bin": { "pi-ai": "dist/cli.js" } }, "sha512-7xfLk8sANBp+bpPEbjoOZTbPxsa+++b1JXAoSJsNa3vbs9AHHEclmvg54XLQcxH+fuwaeti/g2jeIfJ+mVYLpA=="],
@@ -3194,7 +3345,25 @@
 
     "@yishan-io/desktop/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
-    "@yishan-io/dsh-yishan/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+    "@yishan-io/dsh-daemon-bridge/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+
+    "@yishan-io/dsh-dev-flow/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild": ["esbuild@0.27.7", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.27.7", "@esbuild/android-arm": "0.27.7", "@esbuild/android-arm64": "0.27.7", "@esbuild/android-x64": "0.27.7", "@esbuild/darwin-arm64": "0.27.7", "@esbuild/darwin-x64": "0.27.7", "@esbuild/freebsd-arm64": "0.27.7", "@esbuild/freebsd-x64": "0.27.7", "@esbuild/linux-arm": "0.27.7", "@esbuild/linux-arm64": "0.27.7", "@esbuild/linux-ia32": "0.27.7", "@esbuild/linux-loong64": "0.27.7", "@esbuild/linux-mips64el": "0.27.7", "@esbuild/linux-ppc64": "0.27.7", "@esbuild/linux-riscv64": "0.27.7", "@esbuild/linux-s390x": "0.27.7", "@esbuild/linux-x64": "0.27.7", "@esbuild/netbsd-arm64": "0.27.7", "@esbuild/netbsd-x64": "0.27.7", "@esbuild/openbsd-arm64": "0.27.7", "@esbuild/openbsd-x64": "0.27.7", "@esbuild/openharmony-arm64": "0.27.7", "@esbuild/sunos-x64": "0.27.7", "@esbuild/win32-arm64": "0.27.7", "@esbuild/win32-ia32": "0.27.7", "@esbuild/win32-x64": "0.27.7" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-IxpibTjyVnmrIQo5aqNpCgoACA/dTKLTlhMHihVHhdkxKyPO1uBBthumT0rdHmcsk9uMonIWS0m4FljWzILh3w=="],
+
+    "@yishan-io/dsh-memory/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+
+    "@yishan-io/dsh-plugin-loader/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+
+    "@yishan-io/dsh-provider/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+
+    "@yishan-io/dsh-runtime/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+
+    "@yishan-io/dsh-session/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+
+    "@yishan-io/dsh-task/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
+
+    "@yishan-io/dsh-workspace/@types/node": ["@types/node@24.13.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA=="],
 
     "@yishan-io/landing/@types/node": ["@types/node@22.20.0", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-QWlFW2wf3nTjC13/DqRnBpR4ZO36VJH/JVBkA/vcnmbTBNQIlnObqyqZE1tUR7+Ni23Lda8R1BxMfbXRpCUx5g=="],
 
@@ -3332,13 +3501,13 @@
 
     "readable-stream/safe-buffer": ["safe-buffer@5.1.2", "", {}, "sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g=="],
 
-    "readdirp/picomatch": ["picomatch@2.3.2", "", {}, "sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA=="],
-
     "rehype-recma/@types/hast": ["@types/hast@3.0.5", "", { "dependencies": { "@types/unist": "*" } }, "sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g=="],
 
     "rimraf/glob": ["glob@7.2.3", "", { "dependencies": { "fs.realpath": "^1.0.0", "inflight": "^1.0.4", "inherits": "2", "minimatch": "^3.1.1", "once": "^1.3.0", "path-is-absolute": "^1.0.0" } }, "sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q=="],
 
     "roughjs/points-on-curve": ["points-on-curve@0.2.0", "", {}, "sha512-0mYKnYYe9ZcqMCWhUjItv/oHjvgEsfKvnUTg8sAtnHr3GVy7rGkXCb6d5cSyqrWqL4k81b9CPg3urd+T7aop3A=="],
+
+    "sass/chokidar": ["chokidar@3.6.0", "", { "dependencies": { "anymatch": "~3.1.2", "braces": "~3.0.2", "glob-parent": "~5.1.2", "is-binary-path": "~2.1.0", "is-glob": "~4.0.1", "normalize-path": "~3.0.0", "readdirp": "~3.6.0" }, "optionalDependencies": { "fsevents": "~2.3.2" } }, "sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw=="],
 
     "set-value/is-extendable": ["is-extendable@0.1.1", "", {}, "sha512-5BMULNob1vgFX6EjQw5izWDxrecWK9AM72rugNr0TFldMOi0fj6Jk+zeKIt0xGj4cEfQIJth4w3OKWOJ4f+AFw=="],
 
@@ -3357,8 +3526,6 @@
     "unzipper/fs-extra": ["fs-extra@11.3.1", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^6.0.1", "universalify": "^2.0.0" } }, "sha512-eXvGGwZ5CL17ZSwHWd3bbgk7UUpF6IFHtP57NYYakPvHOs8GDgDe5KJI36jIJzDkJ6eJjuzRA8eBQb6SkKue0g=="],
 
     "wrangler/esbuild": ["esbuild@0.27.3", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.27.3", "@esbuild/android-arm": "0.27.3", "@esbuild/android-arm64": "0.27.3", "@esbuild/android-x64": "0.27.3", "@esbuild/darwin-arm64": "0.27.3", "@esbuild/darwin-x64": "0.27.3", "@esbuild/freebsd-arm64": "0.27.3", "@esbuild/freebsd-x64": "0.27.3", "@esbuild/linux-arm": "0.27.3", "@esbuild/linux-arm64": "0.27.3", "@esbuild/linux-ia32": "0.27.3", "@esbuild/linux-loong64": "0.27.3", "@esbuild/linux-mips64el": "0.27.3", "@esbuild/linux-ppc64": "0.27.3", "@esbuild/linux-riscv64": "0.27.3", "@esbuild/linux-s390x": "0.27.3", "@esbuild/linux-x64": "0.27.3", "@esbuild/netbsd-arm64": "0.27.3", "@esbuild/netbsd-x64": "0.27.3", "@esbuild/openbsd-arm64": "0.27.3", "@esbuild/openbsd-x64": "0.27.3", "@esbuild/openharmony-arm64": "0.27.3", "@esbuild/sunos-x64": "0.27.3", "@esbuild/win32-arm64": "0.27.3", "@esbuild/win32-ia32": "0.27.3", "@esbuild/win32-x64": "0.27.3" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-8VwMnyGCONIs6cWue2IdpHxHnAjzxnw2Zr7MkVxB2vjmQ2ivqGFb4LEG3SMnv0Gb2F/G/2yA8zUaiL1gywDCCg=="],
-
-    "@deepseek-ai/dsh-skill-filesystem/chokidar/readdirp": ["readdirp@5.1.1", "", {}, "sha512-Kko+Y5XQ6fM+Ce3dq3m9YGxnacYZYl9cA1wZjaF3Vbry2L3i1qVg8+CAgNPsXRArPMUMCaOR7oa9Nqntc43JKA=="],
 
     "@electron/asar/minimatch/brace-expansion": ["brace-expansion@1.1.15", "", { "dependencies": { "balanced-match": "^1.0.0", "concat-map": "0.0.1" } }, "sha512-EwOCDEex4quD37XhqM3omwtMoJjr//isUZz1JopUNWms+4Z2ViyM/k1YIRePpoVNnQhENnxtFjLaxNHrT7xIUg=="],
 
@@ -3444,7 +3611,75 @@
 
     "@shikijs/stream/@shikijs/core/@types/hast": ["@types/hast@3.0.5", "", { "dependencies": { "@types/unist": "*" } }, "sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g=="],
 
-    "@yishan-io/dsh-yishan/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+    "@yishan-io/dsh-daemon-bridge/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@yishan-io/dsh-dev-flow/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.27.7", "", { "os": "aix", "cpu": "ppc64" }, "sha512-EKX3Qwmhz1eMdEJokhALr0YiD0lhQNwDqkPYyPhiSwKrh7/4KRjQc04sZ8db+5DVVnZ1LmbNDI1uAMPEUBnQPg=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/android-arm": ["@esbuild/android-arm@0.27.7", "", { "os": "android", "cpu": "arm" }, "sha512-jbPXvB4Yj2yBV7HUfE2KHe4GJX51QplCN1pGbYjvsyCZbQmies29EoJbkEc+vYuU5o45AfQn37vZlyXy4YJ8RQ=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/android-arm64": ["@esbuild/android-arm64@0.27.7", "", { "os": "android", "cpu": "arm64" }, "sha512-62dPZHpIXzvChfvfLJow3q5dDtiNMkwiRzPylSCfriLvZeq0a1bWChrGx/BbUbPwOrsWKMn8idSllklzBy+dgQ=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/android-x64": ["@esbuild/android-x64@0.27.7", "", { "os": "android", "cpu": "x64" }, "sha512-x5VpMODneVDb70PYV2VQOmIUUiBtY3D3mPBG8NxVk5CogneYhkR7MmM3yR/uMdITLrC1ml/NV1rj4bMJuy9MCg=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/darwin-arm64": ["@esbuild/darwin-arm64@0.27.7", "", { "os": "darwin", "cpu": "arm64" }, "sha512-5lckdqeuBPlKUwvoCXIgI2D9/ABmPq3Rdp7IfL70393YgaASt7tbju3Ac+ePVi3KDH6N2RqePfHnXkaDtY9fkw=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/darwin-x64": ["@esbuild/darwin-x64@0.27.7", "", { "os": "darwin", "cpu": "x64" }, "sha512-rYnXrKcXuT7Z+WL5K980jVFdvVKhCHhUwid+dDYQpH+qu+TefcomiMAJpIiC2EM3Rjtq0sO3StMV/+3w3MyyqQ=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/freebsd-arm64": ["@esbuild/freebsd-arm64@0.27.7", "", { "os": "freebsd", "cpu": "arm64" }, "sha512-B48PqeCsEgOtzME2GbNM2roU29AMTuOIN91dsMO30t+Ydis3z/3Ngoj5hhnsOSSwNzS+6JppqWsuhTp6E82l2w=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/freebsd-x64": ["@esbuild/freebsd-x64@0.27.7", "", { "os": "freebsd", "cpu": "x64" }, "sha512-jOBDK5XEjA4m5IJK3bpAQF9/Lelu/Z9ZcdhTRLf4cajlB+8VEhFFRjWgfy3M1O4rO2GQ/b2dLwCUGpiF/eATNQ=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/linux-arm": ["@esbuild/linux-arm@0.27.7", "", { "os": "linux", "cpu": "arm" }, "sha512-RkT/YXYBTSULo3+af8Ib0ykH8u2MBh57o7q/DAs3lTJlyVQkgQvlrPTnjIzzRPQyavxtPtfg0EopvDyIt0j1rA=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/linux-arm64": ["@esbuild/linux-arm64@0.27.7", "", { "os": "linux", "cpu": "arm64" }, "sha512-RZPHBoxXuNnPQO9rvjh5jdkRmVizktkT7TCDkDmQ0W2SwHInKCAV95GRuvdSvA7w4VMwfCjUiPwDi0ZO6Nfe9A=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/linux-ia32": ["@esbuild/linux-ia32@0.27.7", "", { "os": "linux", "cpu": "ia32" }, "sha512-GA48aKNkyQDbd3KtkplYWT102C5sn/EZTY4XROkxONgruHPU72l+gW+FfF8tf2cFjeHaRbWpOYa/uRBz/Xq1Pg=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/linux-loong64": ["@esbuild/linux-loong64@0.27.7", "", { "os": "linux", "cpu": "none" }, "sha512-a4POruNM2oWsD4WKvBSEKGIiWQF8fZOAsycHOt6JBpZ+JN2n2JH9WAv56SOyu9X5IqAjqSIPTaJkqN8F7XOQ5Q=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/linux-mips64el": ["@esbuild/linux-mips64el@0.27.7", "", { "os": "linux", "cpu": "none" }, "sha512-KabT5I6StirGfIz0FMgl1I+R1H73Gp0ofL9A3nG3i/cYFJzKHhouBV5VWK1CSgKvVaG4q1RNpCTR2LuTVB3fIw=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/linux-ppc64": ["@esbuild/linux-ppc64@0.27.7", "", { "os": "linux", "cpu": "ppc64" }, "sha512-gRsL4x6wsGHGRqhtI+ifpN/vpOFTQtnbsupUF5R5YTAg+y/lKelYR1hXbnBdzDjGbMYjVJLJTd2OFmMewAgwlQ=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/linux-riscv64": ["@esbuild/linux-riscv64@0.27.7", "", { "os": "linux", "cpu": "none" }, "sha512-hL25LbxO1QOngGzu2U5xeXtxXcW+/GvMN3ejANqXkxZ/opySAZMrc+9LY/WyjAan41unrR3YrmtTsUpwT66InQ=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/linux-s390x": ["@esbuild/linux-s390x@0.27.7", "", { "os": "linux", "cpu": "s390x" }, "sha512-2k8go8Ycu1Kb46vEelhu1vqEP+UeRVj2zY1pSuPdgvbd5ykAw82Lrro28vXUrRmzEsUV0NzCf54yARIK8r0fdw=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/linux-x64": ["@esbuild/linux-x64@0.27.7", "", { "os": "linux", "cpu": "x64" }, "sha512-hzznmADPt+OmsYzw1EE33ccA+HPdIqiCRq7cQeL1Jlq2gb1+OyWBkMCrYGBJ+sxVzve2ZJEVeePbLM2iEIZSxA=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/netbsd-arm64": ["@esbuild/netbsd-arm64@0.27.7", "", { "os": "none", "cpu": "arm64" }, "sha512-b6pqtrQdigZBwZxAn1UpazEisvwaIDvdbMbmrly7cDTMFnw/+3lVxxCTGOrkPVnsYIosJJXAsILG9XcQS+Yu6w=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/netbsd-x64": ["@esbuild/netbsd-x64@0.27.7", "", { "os": "none", "cpu": "x64" }, "sha512-OfatkLojr6U+WN5EDYuoQhtM+1xco+/6FSzJJnuWiUw5eVcicbyK3dq5EeV/QHT1uy6GoDhGbFpprUiHUYggrw=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/openbsd-arm64": ["@esbuild/openbsd-arm64@0.27.7", "", { "os": "openbsd", "cpu": "arm64" }, "sha512-AFuojMQTxAz75Fo8idVcqoQWEHIXFRbOc1TrVcFSgCZtQfSdc1RXgB3tjOn/krRHENUB4j00bfGjyl2mJrU37A=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/openbsd-x64": ["@esbuild/openbsd-x64@0.27.7", "", { "os": "openbsd", "cpu": "x64" }, "sha512-+A1NJmfM8WNDv5CLVQYJ5PshuRm/4cI6WMZRg1by1GwPIQPCTs1GLEUHwiiQGT5zDdyLiRM/l1G0Pv54gvtKIg=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/openharmony-arm64": ["@esbuild/openharmony-arm64@0.27.7", "", { "os": "none", "cpu": "arm64" }, "sha512-+KrvYb/C8zA9CU/g0sR6w2RBw7IGc5J2BPnc3dYc5VJxHCSF1yNMxTV5LQ7GuKteQXZtspjFbiuW5/dOj7H4Yw=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/sunos-x64": ["@esbuild/sunos-x64@0.27.7", "", { "os": "sunos", "cpu": "x64" }, "sha512-ikktIhFBzQNt/QDyOL580ti9+5mL/YZeUPKU2ivGtGjdTYoqz6jObj6nOMfhASpS4GU4Q/Clh1QtxWAvcYKamA=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/win32-arm64": ["@esbuild/win32-arm64@0.27.7", "", { "os": "win32", "cpu": "arm64" }, "sha512-7yRhbHvPqSpRUV7Q20VuDwbjW5kIMwTHpptuUzV+AA46kiPze5Z7qgt6CLCK3pWFrHeNfDd1VKgyP4O+ng17CA=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/win32-ia32": ["@esbuild/win32-ia32@0.27.7", "", { "os": "win32", "cpu": "ia32" }, "sha512-SmwKXe6VHIyZYbBLJrhOoCJRB/Z1tckzmgTLfFYOfpMAx63BJEaL9ExI8x7v0oAO3Zh6D/Oi1gVxEYr5oUCFhw=="],
+
+    "@yishan-io/dsh-dev-flow/esbuild/@esbuild/win32-x64": ["@esbuild/win32-x64@0.27.7", "", { "os": "win32", "cpu": "x64" }, "sha512-56hiAJPhwQ1R4i+21FVF7V8kSD5zZTdHcVuRFMW0hn753vVfQN8xlx4uOPT4xoGH0Z/oVATuR82AiqSTDIpaHg=="],
+
+    "@yishan-io/dsh-memory/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@yishan-io/dsh-plugin-loader/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@yishan-io/dsh-provider/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@yishan-io/dsh-runtime/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@yishan-io/dsh-session/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@yishan-io/dsh-task/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@yishan-io/dsh-workspace/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@yishan-io/landing/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
@@ -3588,6 +3823,8 @@
 
     "rimraf/glob/minimatch": ["minimatch@3.1.5", "", { "dependencies": { "brace-expansion": "^1.1.7" } }, "sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w=="],
 
+    "sass/chokidar/readdirp": ["readdirp@3.6.0", "", { "dependencies": { "picomatch": "^2.2.1" } }, "sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA=="],
+
     "wrangler/esbuild/@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.27.3", "", { "os": "aix", "cpu": "ppc64" }, "sha512-9fJMTNFTWZMh5qwrBItuziu834eOCUcEqymSH7pY+zoMVEZg3gcPuBNxH1EvfVYe9h0x/Ptw8KBzv7qxb7l8dg=="],
 
     "wrangler/esbuild/@esbuild/android-arm": ["@esbuild/android-arm@0.27.3", "", { "os": "android", "cpu": "arm" }, "sha512-i5D1hPY7GIQmXlXhs2w8AWHhenb00+GxjxRncS2ZM7YNVGNfaMxgzSGuO8o8SJzRc/oZwU2bcScvVERk03QhzA=="],
@@ -3663,6 +3900,8 @@
     "filelist/minimatch/brace-expansion/balanced-match": ["balanced-match@1.0.2", "", {}, "sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw=="],
 
     "rimraf/glob/minimatch/brace-expansion": ["brace-expansion@1.1.15", "", { "dependencies": { "balanced-match": "^1.0.0", "concat-map": "0.0.1" } }, "sha512-EwOCDEex4quD37XhqM3omwtMoJjr//isUZz1JopUNWms+4Z2ViyM/k1YIRePpoVNnQhENnxtFjLaxNHrT7xIUg=="],
+
+    "sass/chokidar/readdirp/picomatch": ["picomatch@2.3.2", "", {}, "sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA=="],
 
     "rimraf/glob/minimatch/brace-expansion/balanced-match": ["balanced-match@1.0.2", "", {}, "sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw=="],
   }

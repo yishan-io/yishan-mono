@@ -18,7 +18,7 @@ func TestService_AgentStartDispatchesToDSHRuntime(t *testing.T) {
 	runtime := &recordingDSHSessions{}
 	service := NewService(Deps{
 		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-			return workspace.Workspace{ID: workspaceID, ProjectID: "project", OrgID: "organization", Path: "/workspace"}, nil
+			return workspace.Workspace{ID: workspaceID, ProjectID: "project", OrgID: "organization", Path: "/workspace", State: workspace.StateActive}, nil
 		}),
 		DSH:         runtime,
 		OwnerNodeID: "node",
@@ -29,7 +29,7 @@ func TestService_AgentStartDispatchesToDSHRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AgentStart: %v", err)
 	}
-	if got := runtime.startRequest.Binding; got != (dsh.SessionBinding{Version: 1, WorkspaceID: "workspace-1", ProjectID: "project", OrganizationID: "organization", OwnerNodeID: "node", CWD: "/workspace"}) {
+	if got := runtime.startRequest.Binding; got != (dsh.SessionBinding{Version: 1, WorkspaceID: "workspace-1", ProjectID: "project", OrganizationID: "organization", OwnerNodeID: "node", CWD: "/workspace", Policy: dsh.WorkspaceBindingPolicy{Authorization: "daemon-authorized"}}) {
 		t.Fatalf("start binding = %#v", got)
 	}
 }
@@ -37,7 +37,7 @@ func TestService_AgentStartDispatchesToDSHRuntime(t *testing.T) {
 func TestService_DSHSelectionUsesConfiguredDefaultRoute(t *testing.T) {
 	runtime := &recordingDSHSessions{}
 	service := NewService(Deps{Workspace: testWorkspaceResolver(func(id string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: id, Path: "/workspace"}, nil
+		return workspace.Workspace{ID: id, Path: "/workspace", State: workspace.StateActive}, nil
 	}), DSH: runtime, OwnerNodeID: "node", DSHProvider: "configured-provider", DSHModel: "configured-model"})
 	_, err := service.AgentStart(context.Background(), nil, rpc.AgentStartParams{Runtime: rpc.AgentRuntimeDSH, TranscriptProtocolVersion: rpc.DSHTranscriptProtocolVersion, SessionID: "session", TabID: "tab", WorkspaceID: "workspace", CWD: "/workspace"})
 	if err != nil {
@@ -59,7 +59,7 @@ func TestService_AgentInspectionDispatchesToAuthorizedRuntime(t *testing.T) {
 	runtime := &recordingDSHSessions{listResult: dsh.SessionListResult{Sessions: []dsh.SessionListEntry{{SessionID: "dsh-1"}}}}
 	service := NewService(Deps{
 		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-			return workspace.Workspace{ID: workspaceID, Path: "/authorized/workspace"}, nil
+			return workspace.Workspace{ID: workspaceID, Path: "/authorized/workspace", State: workspace.StateActive}, nil
 		}),
 		DSH: runtime,
 	})
@@ -87,9 +87,28 @@ func TestService_AgentInspectionDispatchesToAuthorizedRuntime(t *testing.T) {
 	}
 }
 
+func TestService_AgentGetSessionFilePathDispatchesToAuthorizedRuntime(t *testing.T) {
+	runtime := &recordingDSHSessions{filePathResult: dsh.SessionFilePathResult{FilePath: "/authorized/session.jsonl"}}
+	service := NewService(Deps{
+		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
+			return workspace.Workspace{ID: workspaceID, Path: "/authorized", State: workspace.StateActive}, nil
+		}),
+		DSH: runtime,
+	})
+	result, err := service.AgentGetSessionFilePath(context.Background(), rpc.AgentGetSessionFilePathParams{
+		Runtime: rpc.AgentRuntimeDSH, SessionID: "dsh-1", WorkspaceID: "workspace-1", CWD: "/authorized",
+	})
+	if err != nil {
+		t.Fatalf("AgentGetSessionFilePath: %v", err)
+	}
+	if response := result.(rpc.AgentSessionFilePathResult); response.FilePath != "/authorized/session.jsonl" || runtime.readCWD != "/authorized" {
+		t.Fatalf("response = %#v, runtime cwd = %q", response, runtime.readCWD)
+	}
+}
+
 func TestService_AgentExecutionMethodsRequireDSHRegistryOwnership(t *testing.T) {
 	service := NewService(Deps{Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: workspaceID, Path: "/w"}, nil
+		return workspace.Workspace{ID: workspaceID, Path: "/w", State: workspace.StateActive}, nil
 	})})
 	for _, call := range []struct {
 		name string
@@ -119,7 +138,7 @@ func TestService_AgentExecutionMethodsRequireDSHRegistryOwnership(t *testing.T) 
 func TestService_AgentPiInspectionReturnsRuntimeTag(t *testing.T) {
 	workspacePath := t.TempDir()
 	service := NewService(Deps{Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: workspaceID, Path: workspacePath}, nil
+		return workspace.Workspace{ID: workspaceID, Path: workspacePath, State: workspace.StateActive}, nil
 	})})
 	result, err := service.AgentListSessions(context.Background(), rpc.AgentListSessionsParams{
 		Runtime: rpc.AgentRuntimePi, WorkspaceID: "workspace-1", CWD: workspacePath,
@@ -144,7 +163,7 @@ func TestService_AgentFacadeValidatesRuntimeAndWorkspaceFields(t *testing.T) {
 
 func TestService_AgentOperationsRejectMismatchedWorkspacePath(t *testing.T) {
 	service := NewService(Deps{Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: workspaceID, Path: "/authorized"}, nil
+		return workspace.Workspace{ID: workspaceID, Path: "/authorized", State: workspace.StateActive}, nil
 	})})
 	for _, call := range []func() error{
 		func() error {
@@ -185,7 +204,7 @@ func TestService_AgentAttachRejectsLiveSessionOwnershipMismatch(t *testing.T) {
 	service, originalConnection, cwd := startPiForAttachTest(t)
 	defer stopPiForAttachTest(t, service, originalConnection, "session-attach")
 	service.deps.Workspace = testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: workspaceID, Path: cwd}, nil
+		return workspace.Workspace{ID: workspaceID, Path: cwd, State: workspace.StateActive}, nil
 	})
 
 	_, err := service.AgentAttach(context.Background(), &rpc.Connection{}, rpc.AgentAttachParams{
@@ -205,7 +224,7 @@ func TestService_AgentAbortKeepsSessionLiveAndDisposeStopsIt(t *testing.T) {
 	}
 	service := newTestHandler(t)
 	service.deps.Workspace = testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: workspaceID, Path: cwd}, nil
+		return workspace.Workspace{ID: workspaceID, Path: cwd, State: workspace.StateActive}, nil
 	})
 	_, err := service.Start(context.Background(), &rpc.Connection{}, rpc.PiStartParams{
 		SessionID: "abort-session", TabID: "tab", WorkspaceID: "workspace", CWD: cwd,
@@ -323,9 +342,9 @@ func startReplacementRaceSessions(t *testing.T) (*Service, string, string) {
 	service := newTestHandler(t)
 	service.deps.Workspace = testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
 		if workspaceID == "workspace-a" {
-			return workspace.Workspace{ID: workspaceID, Path: originalPath}, nil
+			return workspace.Workspace{ID: workspaceID, Path: originalPath, State: workspace.StateActive}, nil
 		}
-		return workspace.Workspace{ID: workspaceID, Path: replacementPath}, nil
+		return workspace.Workspace{ID: workspaceID, Path: replacementPath, State: workspace.StateActive}, nil
 	})
 	startReplacementRaceSession(t, service, "same-id", "workspace-a", originalPath)
 	startReplacementRaceSession(t, service, "replacement-id", "workspace-b", replacementPath)
@@ -368,12 +387,14 @@ func TestMapAgentSessions_UsesAuthoritativeWorkspacePath(t *testing.T) {
 	piSessions := mapPiSessions([]process.SessionSummary{{
 		SessionID: "pi-1", CWD: "/untrusted/session", Timestamp: time.UnixMilli(1_700_000_000_000),
 	}}, workspacePath)
-	dshSessions := mapDSHSessions([]dsh.SessionListEntry{{SessionID: "dsh-1", CreatedAt: 1_700_000_001_000}}, workspacePath)
+	dshSessions := mapDSHSessions([]dsh.SessionListEntry{{
+		SessionID: "dsh-1", CreatedAt: 1_700_000_001_000, PreviewText: "Review the migration plan",
+	}}, workspacePath)
 
 	if got := piSessions[0]; got.CWD != workspacePath || got.CreatedAt != 1_700_000_000_000 {
 		t.Fatalf("Pi session = %#v", got)
 	}
-	if got := dshSessions[0]; got.CWD != workspacePath || got.CreatedAt != 1_700_000_001_000 {
+	if got := dshSessions[0]; got.CWD != workspacePath || got.CreatedAt != 1_700_000_001_000 || got.PreviewText != "Review the migration plan" {
 		t.Fatalf("DSH session = %#v", got)
 	}
 }

@@ -7,68 +7,15 @@ import {
   trimSubagentLiveTranscripts,
 } from "../chat/agentChatRetention";
 import { deriveRunningSubagents } from "../chat/agentChatSubagents";
-import type {
-  AgentCompactionReason,
-  AgentMessage,
-  AgentModel,
-  AgentPendingUiAutoResponse,
-  AgentPendingUiRequest,
-  AgentQueueState,
-  AgentSessionState,
-  AgentSessionStats,
-  AgentSubagentCancelState,
-} from "../chat/agentChatTypes";
+import type { AgentMessage } from "../chat/agentChatTypes";
 import {
-  type AgentChatSessionData,
-  type AgentSubagentProgressTarget,
   createAgentChatSession,
-  setFinishedSubagents,
+  setDshRunningSubagentsIfChanged,
   setPiRunningSubagentsIfChanged,
 } from "./agentChatStoreSession";
-import {
-  mergeAgentChatUsageLedgerHistory,
-  reconcileAgentChatUsageLedgerStats,
-  recordAgentChatUsageLedgerLiveMessages,
-  recordAgentChatUsageLedgerStatsRequest,
-} from "./agentChatUsageLedger";
-
-export type AgentChatStoreState = {
-  sessionsByTabId: Record<string, AgentChatSessionData>;
-
-  // Actions
-  initSession: (tabId: string, sessionId: string) => void;
-  setSessionState: (tabId: string, state: AgentSessionState) => void;
-  setTurnActive: (tabId: string, active: boolean) => void;
-  setCompactionReason: (tabId: string, reason: AgentCompactionReason) => void;
-  setSessionError: (tabId: string, error: string) => void;
-  setTurnError: (tabId: string, error: string) => void;
-  clearTurnError: (tabId: string) => void;
-  appendMessage: (tabId: string, message: AgentMessage) => void;
-  replaceMessages: (tabId: string, messages: AgentMessage[]) => void;
-  updateStreamingMessage: (tabId: string, message: AgentMessage) => void;
-  finalizeStreamingMessage: (tabId: string) => void;
-  setActiveCoreTurnAssistantId: (tabId: string, assistantId: string | null) => void;
-  finalizeActiveCoreTurnAssistant: (tabId: string, endedAtMs: number) => void;
-  setAvailableModels: (tabId: string, models: AgentModel[]) => void;
-  setCurrentModel: (tabId: string, model: AgentModel) => void;
-  setThinkingLevel: (tabId: string, level: string) => void;
-  recordSessionStatsRequest: (tabId: string, requestId: string) => void;
-  setSessionStats: (tabId: string, stats: AgentSessionStats | null, requestId?: string) => void;
-  setQueue: (tabId: string, queue: AgentQueueState) => void;
-  setPendingUiRequest: (tabId: string, request: AgentPendingUiRequest) => void;
-  setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
-  setSubagentProgressTargets: (tabId: string, targets: AgentSubagentProgressTarget[]) => void;
-  setSubagentLiveTranscripts: (tabId: string, transcripts: Record<string, AgentMessage[]>) => void;
-  setSubagentCancelState: (tabId: string, rowKey: string, state: AgentSubagentCancelState) => void;
-  clearSubagentCancelState: (tabId: string, rowKey: string) => void;
-  setSubagentSessionEndedAt: (tabId: string, endedAtMs: number | null) => void;
-  clearPendingUiRequest: (tabId: string) => void;
-  clearPendingUiAutoResponse: (tabId: string) => void;
-  markStateLoaded: (tabId: string) => void;
-  removeSession: (tabId: string) => void;
-  removeSessions: (tabIds: string[]) => void;
-};
-
+import type { AgentChatStoreState } from "./agentChatStoreTypes";
+import { mergeUsage, reconcileStats, recordStatsRequest } from "./agentChatUsageLedger";
+export type { AgentChatStoreState } from "./agentChatStoreTypes";
 function omitKeys<T>(record: Record<string, T>, removedIds: Set<string>): Record<string, T> {
   return Object.fromEntries(Object.entries(record).filter(([id]) => !removedIds.has(id)));
 }
@@ -87,8 +34,9 @@ function hasToolCall(message: AgentMessage): boolean {
 }
 
 export const agentChatStore = create<AgentChatStoreState>()(
-  immer((set) => ({
+  immer((set, get) => ({
     sessionsByTabId: {},
+    dshLineageGenerationByTabId: {},
 
     initSession: (tabId, sessionId) => {
       set((state) => {
@@ -133,6 +81,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
       });
     },
 
+    setDSHTranscriptRetryAvailable: (tabId, available) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.dshTranscriptRetryAvailable = available;
+        }
+      });
+    },
+
     setTurnError: (tabId, error) => {
       set((state) => {
         const session = state.sessionsByTabId[tabId];
@@ -155,27 +112,29 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
-        session.usageLedger = recordAgentChatUsageLedgerLiveMessages(session.usageLedger, [message]);
+        session.usageLedger = mergeUsage(session.usageLedger, [message], "live");
         // Deduplicate: skip if message with same id already exists.
         if (session.messages.some((m) => m.id === message.id)) return;
         session.messages.push(message);
         if (message.role === "assistant") {
-          session.rendererFinalAssistantIds[message.id] = true;
+          session.rendererFinalTranscript.assistantIds[message.id] = true;
         }
         if (hasToolCall(message)) {
-          session.rendererFinalToolCallAssistantIds[message.id] = true;
+          session.rendererFinalTranscript.toolCallAssistantIds[message.id] = true;
         }
         session.messages = trimSessionMessages(session.messages);
-        session.rendererFinalAssistantIds = retainMessageIds(session.rendererFinalAssistantIds, session.messages);
-        session.rendererFinalToolCallAssistantIds = retainMessageIds(
-          session.rendererFinalToolCallAssistantIds,
+        session.rendererFinalTranscript.assistantIds = retainMessageIds(
+          session.rendererFinalTranscript.assistantIds,
+          session.messages,
+        );
+        session.rendererFinalTranscript.toolCallAssistantIds = retainMessageIds(
+          session.rendererFinalTranscript.toolCallAssistantIds,
           session.messages,
         );
         setPiRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
-        setFinishedSubagents(session);
       });
     },
 
@@ -188,30 +147,29 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const historyMessages = hasLiveStream
           ? messages.filter((message) => message.id !== session.streamingMessage?.id)
           : messages;
-        session.usageLedger = mergeAgentChatUsageLedgerHistory(
-          session.usageLedger,
-          historyMessages,
-          !session.hasLoadedMessages,
-        );
+        session.usageLedger = mergeUsage(session.usageLedger, historyMessages, "history");
         const retainedToolResultIds = getRetainedToolResultIds(
           historyMessages,
           session.messages,
-          session.rendererFinalAssistantIds,
-          session.rendererFinalToolCallAssistantIds,
+          session.rendererFinalTranscript.assistantIds,
+          session.rendererFinalTranscript.toolCallAssistantIds,
         );
         const nextMessages = mergeActiveTurnHistory(
           historyMessages,
           session.messages,
-          session.rendererFinalAssistantIds,
-          session.rendererFinalToolCallAssistantIds,
+          session.rendererFinalTranscript.assistantIds,
+          session.rendererFinalTranscript.toolCallAssistantIds,
         );
         session.messages = trimSessionMessages(nextMessages, retainedToolResultIds);
-        session.rendererFinalAssistantIds = retainMessageIds(session.rendererFinalAssistantIds, session.messages);
-        session.rendererFinalToolCallAssistantIds = retainMessageIds(
-          session.rendererFinalToolCallAssistantIds,
+        session.rendererFinalTranscript.assistantIds = retainMessageIds(
+          session.rendererFinalTranscript.assistantIds,
           session.messages,
         );
-        session.hasLoadedMessages = true;
+        session.rendererFinalTranscript.toolCallAssistantIds = retainMessageIds(
+          session.rendererFinalTranscript.toolCallAssistantIds,
+          session.messages,
+        );
+        session.hydration.messages = true;
         if (!hasLiveStream) {
           session.streamingMessage = null;
           session.activeCoreTurnAssistantId = null;
@@ -220,7 +178,6 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
-        setFinishedSubagents(session);
       });
     },
 
@@ -236,7 +193,6 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
         );
-        setFinishedSubagents(session);
       });
     },
 
@@ -245,7 +201,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session || !session.streamingMessage) return;
         const msg = session.streamingMessage;
-        session.usageLedger = recordAgentChatUsageLedgerLiveMessages(session.usageLedger, [msg]);
+        session.usageLedger = mergeUsage(session.usageLedger, [msg], "live");
         const existingMessageIndex = session.messages.findIndex((message) => message.id === msg.id);
         if (existingMessageIndex >= 0) {
           session.messages[existingMessageIndex] = msg;
@@ -254,22 +210,33 @@ export const agentChatStore = create<AgentChatStoreState>()(
         }
         session.messages = trimSessionMessages(session.messages);
         if (msg.role === "assistant") {
-          session.rendererFinalAssistantIds[msg.id] = true;
+          session.rendererFinalTranscript.assistantIds[msg.id] = true;
         }
         if (hasToolCall(msg)) {
-          session.rendererFinalToolCallAssistantIds[msg.id] = true;
+          session.rendererFinalTranscript.toolCallAssistantIds[msg.id] = true;
         }
         session.streamingMessage = null;
-        session.rendererFinalAssistantIds = retainMessageIds(session.rendererFinalAssistantIds, session.messages);
-        session.rendererFinalToolCallAssistantIds = retainMessageIds(
-          session.rendererFinalToolCallAssistantIds,
+        session.rendererFinalTranscript.assistantIds = retainMessageIds(
+          session.rendererFinalTranscript.assistantIds,
+          session.messages,
+        );
+        session.rendererFinalTranscript.toolCallAssistantIds = retainMessageIds(
+          session.rendererFinalTranscript.toolCallAssistantIds,
           session.messages,
         );
         setPiRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, undefined, session.subagentSessionEndedAtMs),
         );
-        setFinishedSubagents(session);
+      });
+    },
+
+    clearStreamingMessage: (tabId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.streamingMessage = null;
+        }
       });
     },
 
@@ -300,7 +267,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.availableModels = models;
-        session.hasLoadedModels = true;
+        session.hydration.models = true;
         const firstModel = models[0];
         if (!session.currentModel && firstModel) {
           session.currentModel = firstModel;
@@ -328,7 +295,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (session) {
-          session.usageLedger = recordAgentChatUsageLedgerStatsRequest(session.usageLedger, requestId);
+          session.usageLedger = recordStatsRequest(session.usageLedger, requestId);
         }
       });
     },
@@ -339,8 +306,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session) {
           session.sessionStats = stats;
           if (stats) {
-            session.usageLedger = reconcileAgentChatUsageLedgerStats(session.usageLedger, stats, requestId);
-            session.rendererFinalAssistantIds = { ...session.usageLedger.liveParentAssistantIds };
+            session.usageLedger = reconcileStats(session.usageLedger, stats, requestId);
           }
         }
       });
@@ -367,6 +333,60 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.pendingUiAutoResponse = response;
+      });
+    },
+
+    setPiRunningSubagents: (tabId, rows) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) setPiRunningSubagentsIfChanged(session, rows);
+      });
+    },
+
+    setDshRunningSubagents: (tabId, rows) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) setDshRunningSubagentsIfChanged(session, rows);
+      });
+    },
+    setDshDelegationLifecycle: (tabId, lifecycle) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        const existing = session.dshDelegationLifecycleByChildSessionId[lifecycle.childSessionId];
+        session.dshDelegationLifecycleByChildSessionId[lifecycle.childSessionId] = {
+          ...lifecycle,
+          ...(lifecycle.diagnostic || !existing?.diagnostic ? {} : { diagnostic: existing.diagnostic }),
+        };
+      });
+    },
+    replaceDshDelegationLifecycle: (tabId, lifecycleByChildSessionId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) session.dshDelegationLifecycleByChildSessionId = lifecycleByChildSessionId;
+      });
+    },
+
+    beginDshSubagentLineageRefresh: (tabId, parentSessionId) => {
+      const session = get().sessionsByTabId[tabId];
+      if (session?.sessionId !== parentSessionId) return null;
+
+      let generation: number | null = null;
+      set((state) => {
+        const nextGeneration = (state.dshLineageGenerationByTabId[tabId] ?? 0) + 1;
+        state.dshLineageGenerationByTabId[tabId] = nextGeneration;
+        generation = nextGeneration;
+      });
+      return generation;
+    },
+
+    applyDshSubagentLineageRefresh: ({ tabId, parentSessionId, generation, rows }) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session?.sessionId !== parentSessionId || state.dshLineageGenerationByTabId[tabId] !== generation) {
+          return;
+        }
+        setDshRunningSubagentsIfChanged(session, rows);
       });
     },
 
@@ -434,7 +454,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
-        session.hasLoadedState = true;
+        session.hydration.state = true;
       });
     },
 

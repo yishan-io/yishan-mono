@@ -13,7 +13,7 @@ vi.mock("../../../domains/agent/commands/agentChatCommands", async (importOrigin
   return { ...actual, stopAgentSession: agentMocks.stopAgentSession, stopPiSession: agentMocks.stopPiSession };
 });
 
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
 let syncTabStoreWithWorkspace: typeof import("./workspaceTabSync").syncTabStoreWithWorkspace;
@@ -24,7 +24,7 @@ beforeAll(async () => {
 
 const initialWorkspaceStoreState = workspaceStore.getState();
 const initialTabStoreState = tabStore.getState();
-const initialChatStoreState = chatStore.getState();
+const initialWorkspaceAgentIndicatorStoreState = workspaceAgentIndicatorStore.getState();
 
 const removedWorkspace = {
   id: "workspace-1",
@@ -51,7 +51,7 @@ const retainedWorkspace = {
 afterEach(() => {
   workspaceStore.setState(initialWorkspaceStoreState, true);
   tabStore.setState(initialTabStoreState, true);
-  chatStore.setState(initialChatStoreState, true);
+  workspaceAgentIndicatorStore.setState(initialWorkspaceAgentIndicatorStoreState, true);
   vi.clearAllMocks();
 });
 
@@ -74,15 +74,10 @@ describe("workspaceTabSync", () => {
       selectedTabIdByWorkspaceId: {},
     });
 
-    const removeTabData = vi.fn();
-    const removeWorkspaceTaskCounts = vi.fn();
-    chatStore.setState({ removeTabData, removeWorkspaceTaskCounts });
 
     await syncTabStoreWithWorkspace([removedWorkspace, retainedWorkspace]);
 
     expect(tabStore.getState().tabs).toHaveLength(0);
-    expect(removeTabData).toHaveBeenCalledWith(["tab-removed"]);
-    expect(removeWorkspaceTaskCounts).toHaveBeenCalledWith([removedWorkspace.id]);
   });
 
   it("disposes removed workspace-create DSH Task Runs without restoring their tabs", async () => {

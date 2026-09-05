@@ -51,7 +51,10 @@ describe("runtime-neutral agent daemon procedures", () => {
   });
 
   it("sends start, attach, prompt, abort, and dispose requests to agent RPC methods", async () => {
-    mocks.request.mockResolvedValue({ runtime: "pi", ok: true });
+    mocks.request.mockResolvedValueOnce({ runtime: "pi", sessionId: "session-1" }).mockResolvedValue({
+      runtime: "pi",
+      ok: true,
+    });
 
     await startAgentSession({
       runtime: "pi",
@@ -84,15 +87,18 @@ describe("runtime-neutral agent daemon procedures", () => {
   });
 
   it("adds the negotiated transcript version to DSH transcript requests", async () => {
-    mocks.request.mockResolvedValueOnce({ runtime: "dsh", sessionId: "session-1" }).mockResolvedValueOnce({
-      runtime: "dsh",
+    const dshAttachSnapshot = {
+      runtime: "dsh" as const,
       sessionId: "session-1",
       instanceId: "run-1",
       events: [],
       asOfSeq: -1,
       durableThroughSeq: -1,
       headSeq: -1,
-    });
+    };
+    mocks.request
+      .mockResolvedValueOnce({ runtime: "dsh", sessionId: "session-1", dshAttachSnapshot })
+      .mockResolvedValueOnce(dshAttachSnapshot);
 
     await startAgentSession({
       runtime: "dsh",

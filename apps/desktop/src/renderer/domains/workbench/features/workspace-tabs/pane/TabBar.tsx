@@ -72,7 +72,7 @@ type TabBarProps = {
   /** Called when the user clicks the session history button. */
   onHistoryClick?: (event: React.MouseEvent<HTMLElement>) => void;
   /** Resolves one agent transcript file path for the tab context menu (supplied by the caller). */
-  fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
+  fetchAgentSessionFilePath?: (sessionId: string, cwd: string, runtime?: "pi" | "dsh") => Promise<string>;
 };
 
 /**

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentChatUsageSummary } from "../chat/agentChatUsageSummary";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import { agentChatStore } from "../state/agentChatStore";
-import { getAgentChatUsageLedgerTotal } from "../state/agentChatUsageLedger";
+import { getTotal } from "../state/agentChatUsageLedger";
 import { handleAgentPiEvent } from "./agentChatPiEventHandler";
 import {
   clearAgentChatSessionStatsSequence,
@@ -101,14 +101,14 @@ describe("agent-chat usage reconciliation", () => {
 
       const session = agentChatStore.getState().sessionsByTabId[tabId];
       expect(session?.sessionStats).toEqual(parentStats);
-      expect(session?.usageLedger.parentBaseline).toEqual({
+      expect(session?.usageLedger.baseline).toEqual({
         input: 100,
         output: 20,
         cacheRead: 30,
         cacheWrite: 40,
         cost: 1,
       });
-      expect(session?.usageLedger.fallbackParentTotal).toEqual({
+      expect(session?.usageLedger.fallback).toEqual({
         input: 0,
         output: 0,
         cacheRead: 0,
@@ -119,10 +119,10 @@ describe("agent-chat usage reconciliation", () => {
       deliverCompletedChild();
 
       const ledger = agentChatStore.getState().sessionsByTabId[tabId]?.usageLedger;
-      expect(ledger?.childUsageBySessionId).toEqual({
+      expect(ledger?.childUsageById).toEqual({
         "child-session": { input: 2, output: 3, cacheRead: 4, cacheWrite: 5, cost: 0.05 },
       });
-      expect(ledger && getAgentChatUsageLedgerTotal(ledger)).toEqual({
+      expect(ledger && getTotal(ledger)).toEqual({
         input: 102,
         output: 23,
         cacheRead: 34,
@@ -163,7 +163,7 @@ describe("agent-chat usage reconciliation", () => {
       if (deliveryOrder === "final-after-stats-response") deliverFinal();
 
       const ledger = agentChatStore.getState().sessionsByTabId[tabId]?.usageLedger;
-      expect(ledger && getAgentChatUsageLedgerTotal(ledger)).toEqual({
+      expect(ledger && getTotal(ledger)).toEqual({
         input: 107,
         output: 28,
         cacheRead: 39,
@@ -250,7 +250,7 @@ describe("agent-chat usage reconciliation", () => {
         contextWindow: 1_000,
       }),
     ).toMatchObject({ contextTokens: 300, inputTokens: 7 });
-    expect(finalizedSession && getAgentChatUsageLedgerTotal(finalizedSession.usageLedger)).toEqual({
+    expect(finalizedSession && getTotal(finalizedSession.usageLedger)).toEqual({
       input: 7,
       output: 8,
       cacheRead: 9,
@@ -333,11 +333,11 @@ describe("agent-chat usage reconciliation", () => {
 
     const settledLedger = agentChatStore.getState().sessionsByTabId[tabId]?.usageLedger;
     expect(settledLedger).toMatchObject({
-      parentBaseline: { input: 107, output: 28, cacheRead: 39, cacheWrite: 50, cost: 1.07 },
-      parentPostBaselineDeltas: {},
-      childUsageBySessionId: { "child-session": { input: 2, output: 3, cacheRead: 4, cacheWrite: 5, cost: 0.05 } },
+      baseline: { input: 107, output: 28, cacheRead: 39, cacheWrite: 50, cost: 1.07 },
+      deltas: {},
+      childUsageById: { "child-session": { input: 2, output: 3, cacheRead: 4, cacheWrite: 5, cost: 0.05 } },
     });
-    expect(settledLedger && getAgentChatUsageLedgerTotal(settledLedger)).toEqual({
+    expect(settledLedger && getTotal(settledLedger)).toEqual({
       input: 109,
       output: 31,
       cacheRead: 43,

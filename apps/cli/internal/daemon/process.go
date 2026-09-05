@@ -36,6 +36,7 @@ type RunConfig struct {
 	DSHDeveloperMode      bool
 	DSHNodePath           string
 	DSHRuntimePath        string
+	DSHPluginSeedPath     string
 	DSHProvider           string
 	DSHModel              string
 	// LogFilePath is the initial daemon log file path. Default log output starts

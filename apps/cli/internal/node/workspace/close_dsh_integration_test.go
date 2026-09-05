@@ -187,13 +187,13 @@ func TestCloseDSHIntegrationHelper(t *testing.T) {
 	if !input.Scan() || !isCloseDSHInitialize(input.Bytes()) {
 		os.Exit(2)
 	}
-	writeCloseDSHResponse(1, `{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}`)
+	writeCloseDSHResponse(json.RawMessage("1"), `{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}`)
 	serveCloseDSHRequests(input)
 }
 
 type closeDSHRequest struct {
-	ID     uint64 `json:"id"`
-	Method string `json:"method"`
+	ID     json.RawMessage `json:"id"`
+	Method string          `json:"method"`
 	Params struct {
 		SessionID string `json:"sessionId"`
 	} `json:"params"`
@@ -258,6 +258,6 @@ func closeDSHResult(request closeDSHRequest) string {
 	}
 	return `{"sessionId":"` + request.Params.SessionID + `"}`
 }
-func writeCloseDSHResponse(id uint64, result string) {
-	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%d,"result":%s}`+"\n", id, result)
+func writeCloseDSHResponse(id json.RawMessage, result string) {
+	_, _ = fmt.Fprintf(os.Stdout, `{"jsonrpc":"2.0","id":%s,"result":%s}`+"\n", id, result)
 }

@@ -10,6 +10,7 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const desktopDirectory = resolve(scriptDirectory, "..");
 const runtimePath = resolve(desktopDirectory, "dist", "resources", "dsh-runtime.mjs");
 const daemonPath = resolve(desktopDirectory, "dist", "resources", "yishan");
+const devFlowSeedPath = resolve(desktopDirectory, "dist", "resources", "dsh-plugins", "dsh-dev-flow.tgz");
 const timeoutMilliseconds = 30_000;
 const replayText = "deterministic replay response";
 const require = createRequire(import.meta.url);
@@ -255,8 +256,9 @@ try {
   run("git", ["-C", fixturePath, "commit", "-m", "fixture"]);
   await createRuntimeWrapper(wrapperPath, pidPath);
   await access(daemonPath);
+  await access(devFlowSeedPath);
 
-  daemon = spawn(daemonPath, ["daemon", "run", "--profile", profile, "--host", "127.0.0.1", "--port", "0", "--relay-enabled=false", "--dsh-enabled=true", "--dsh-node-path", wrapperPath, "--dsh-runtime-path", runtimePath, "--dsh-provider", "smoke-replay", "--dsh-model", "smoke-model", "--log-file", daemonLogPath], {
+  daemon = spawn(daemonPath, ["daemon", "run", "--profile", profile, "--host", "127.0.0.1", "--port", "0", "--relay-enabled=false", "--dsh-enabled=true", "--dsh-node-path", wrapperPath, "--dsh-runtime-path", runtimePath, "--dsh-plugin-seed-path", devFlowSeedPath, "--dsh-provider", "smoke-replay", "--dsh-model", "smoke-model", "--log-file", daemonLogPath], {
     env: {
       ...process.env,
       HOME: homeDirectory,
@@ -271,6 +273,9 @@ try {
   await client.connect();
   assert.deepEqual(await client.request("daemon.ping", {}), { status: "ok" });
   assert.deepEqual(await client.request("events.frontendStream", {}), { subscribed: true });
+  assert.deepEqual(await client.request("dsh.listPlugins", {}), {
+    bundles: [{ name: "@yishan-io/dsh-dev-flow", version: "0.1.0", enabled: true }],
+  });
 
   const workspaceId = "taskrun-dsh-smoke";
   const created = await client.request("workspace.create", {
@@ -283,7 +288,8 @@ try {
     sourceBranch: "main",
     taskRun: { runtime: "dsh", agentKind: "pi", prompt: "replay this deterministically" },
   });
-  assert.deepEqual(created, { id: workspaceId, status: "pending" });
+  assert.equal(created.id, workspaceId);
+  assert.equal(created.status, "pending");
 
   const completed = await client.waitForNotification(
     (notification) => notification.method === "events.frontendStream" && ["workspaceCreateCompleted", "workspaceCreateFailed"].includes(notification.params?.topic),
@@ -292,7 +298,7 @@ try {
   const completion = completed.params.payload;
   assert.equal(completed.params.topic, "workspaceCreateCompleted", JSON.stringify(completion));
   assert.equal(completion.workspaceId, workspaceId);
-  assert.equal(completion.taskRunStatus, "started");
+  assert.equal(completion.taskRunStatus, "started", JSON.stringify(completion));
   assert.equal(completion.taskRunRuntime, "dsh");
   const sessionId = completion.taskRunSessionId;
   const worktreePath = completion.worktreePath;
@@ -328,10 +334,33 @@ try {
     });
     return containsReplay(replay.events);
   });
+  const runStartedNotification = await client.waitForNotification(
+    (notification) => {
+      const payload = getEventPayload(notification);
+      return notification.params?.topic === "notificationEvent" && payload?.workspaceId === workspaceId && payload?.observerStatus?.normalizedEventType === "start";
+    },
+    "DSH running product notification",
+  );
+  assert.equal(runStartedNotification.params.payload.agent, "dsh");
+  assert.equal(runStartedNotification.params.payload.silent, true);
+  assert.deepEqual(runStartedNotification.params.payload.observerStatus, {
+    normalizedEventType: "start",
+    sessionKey: `${workspaceId}:${sessionId}:${sessionId}`,
+  });
 
   const firstPid = await waitFor("first DSH runtime PID", async () => (await readPids(pidPath))[0]);
+  const notificationsBeforeRuntimeCrash = new Set(client.notifications);
   process.kill(firstPid, "SIGKILL");
   await waitForProcessExit(firstPid, "first DSH runtime SIGKILL exit");
+  const runtimeUnavailableNotification = await client.waitForNotification(
+    (notification) => {
+      const payload = getEventPayload(notification);
+      return !notificationsBeforeRuntimeCrash.has(notification) && notification.params?.topic === "notificationEvent" && payload?.workspaceId === workspaceId && payload?.observerStatus?.normalizedEventType === "stop";
+    },
+    "DSH unavailable product notification",
+  );
+  assert.equal(runtimeUnavailableNotification.params.payload.silent, true);
+  assert.equal(runtimeUnavailableNotification.params.payload.notificationEventType, undefined);
   assert.deepEqual(await client.request("daemon.ping", {}), { status: "ok" });
   const restartedPid = await waitFor("restarted DSH runtime PID", async () => (await readPids(pidPath)).find((pid) => pid !== firstPid));
   assert.notEqual(restartedPid, firstPid);

@@ -13,7 +13,7 @@ import {
 import { agentChatStore } from "../../../../../domains/agent/state/agentChatStore";
 import {
   type AgentChatUsageLedger,
-  getAgentChatUsageLedgerTotal,
+  getTotal,
 } from "../../../../../domains/agent/state/agentChatUsageLedger";
 import { formatDetailedTokenCount } from "./agentChatUsageFormatting";
 
@@ -49,7 +49,7 @@ export function composeAgentChatUsageSummary(
   usageSummary: AgentChatUsageSummary,
   usageLedger: AgentChatUsageLedger,
 ): AgentChatUsageSummary {
-  const billedUsage = getAgentChatUsageLedgerTotal(usageLedger);
+  const billedUsage = getTotal(usageLedger);
   const cacheableTokens = billedUsage.input + billedUsage.cacheRead;
 
   return {

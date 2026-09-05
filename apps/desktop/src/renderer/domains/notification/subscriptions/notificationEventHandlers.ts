@@ -1,4 +1,4 @@
-import { chatStore } from "@renderer/domains/agent";
+import { workspaceAgentIndicatorStore } from "@renderer/domains/agent";
 
 import { tabStore } from "@renderer/domains/workbench";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -36,8 +36,8 @@ export type SystemNotificationInput = { title: string; body?: string; silent?: b
 
 export type NotificationEventDependencies = {
   subscribeInAppNotification?: (listener: (payload: NotificationEventPayload) => void) => () => void;
-  setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId: Record<string, WorkspaceAgentStatus>) => void;
-  recordWorkspaceUnreadNotification: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
+  setStatuses: (statuses: Record<string, WorkspaceAgentStatus>) => void;
+  markUnread: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
   dispatchSystemNotification: (input: SystemNotificationInput) => Promise<void>;
   playNotificationSound: (input: NotificationSoundPayload) => Promise<void>;
   getNotificationPreferences?: () => Promise<NotificationPreferences>;
@@ -205,7 +205,7 @@ export function handleInAppNotification(
   notificationEffectTimeoutsById: Map<string, ReturnType<typeof setTimeout>>,
 ): void {
   recordAgentObserverStatus(payload, {
-    setWorkspaceAgentStatusByWorkspaceId: dependencies.setWorkspaceAgentStatusByWorkspaceId,
+    setStatuses: dependencies.setStatuses,
   });
 
   const hasRecentlyHandledNotificationId = (): boolean => {
@@ -258,15 +258,15 @@ export function handleInAppNotification(
   }
 
   const tone: WorkspaceUnreadTone = payload.tone === "error" ? "error" : "success";
-  dependencies.recordWorkspaceUnreadNotification(workspaceId, tone);
+  dependencies.markUnread(workspaceId, tone);
 }
 
 export const DEFAULT_NOTIFICATION_EVENT_DEPENDENCIES: NotificationEventDependencies = {
-  setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId) => {
-    chatStore.getState().setWorkspaceAgentStatusByWorkspaceId(statusByWorkspaceId);
+  setStatuses: (statuses) => {
+    workspaceAgentIndicatorStore.getState().setStatuses(statuses);
   },
-  recordWorkspaceUnreadNotification: (workspaceId, tone) => {
-    chatStore.getState().recordWorkspaceUnreadNotification(workspaceId, tone);
+  markUnread: (workspaceId, tone) => {
+    workspaceAgentIndicatorStore.getState().markUnread(workspaceId, tone);
   },
   dispatchSystemNotification: async (input) => {
     await dispatchNotification(input);

@@ -1,0 +1,57 @@
+{
+  "name": "@yishan-io/dsh-runtime",
+  "version": "0.1.0",
+  "description": "Yishan DeepSeek Harness runtime bootstrap and composition.",
+  "type": "module",
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check src"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-agent-spine-demo": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-bash-local": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-bash-sandbox": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-sandbox-local": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-sandbox-policy": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-shell": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subagent": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subagent-spawn-in-process": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subprocess-local": "0.1.1-rc.2",
+    "@yishan-io/dsh-daemon-bridge": "workspace:*",
+    "@yishan-io/dsh-memory": "workspace:*",
+    "@yishan-io/dsh-plugin-loader": "workspace:*",
+    "@yishan-io/dsh-provider": "workspace:*",
+    "@yishan-io/dsh-session": "workspace:*",
+    "@yishan-io/dsh-task": "workspace:*",
+    "@yishan-io/dsh-workspace": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yishan-io/yishan-mono",
+    "directory": "packages/dsh-runtime"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.4.0"
+  },
+  "optionalDependencies": {
+    "@deepseek-ai/node-addon-landlock-run-linux-arm64": "0.1.1",
+    "@deepseek-ai/node-addon-landlock-run-linux-x64": "0.1.1"
+  }
+}

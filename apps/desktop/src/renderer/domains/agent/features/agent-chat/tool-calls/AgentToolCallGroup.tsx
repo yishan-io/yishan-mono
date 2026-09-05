@@ -2,6 +2,7 @@ import { Box, IconButton, Typography } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight, LuLayers } from "react-icons/lu";
+import type { DshDelegationDiagnostic, DshDelegationState } from "../../../chat/agentChatDshDelegation";
 import type { AgentToolCallLifecycleState } from "../../../chat/agentChatSubagents";
 import { ThinkingBlock } from "../transcript/ThinkingBlock";
 import type { TurnWorkingBlock } from "../transcript/turnModel";
@@ -24,6 +25,9 @@ type AgentToolCallGroupProps = {
   showRunningBlocks: boolean;
   /** Composer lifecycle states keyed by Agent tool-call ID. */
   agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>;
+  dshDelegationStates?: ReadonlyMap<string, DshDelegationState>;
+  dshDelegationDiagnostics?: ReadonlyMap<string, DshDelegationDiagnostic>;
+  runtime?: import("../../../daemon/daemonAgentTypes").AgentRuntime;
   workspacePath?: string;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
@@ -40,6 +44,9 @@ export function AgentToolCallGroup({
   blocks,
   showRunningBlocks,
   agentToolCallStates,
+  dshDelegationStates,
+  dshDelegationDiagnostics,
+  runtime,
   workspacePath,
   onOpenCompletedSubagent,
 }: AgentToolCallGroupProps) {
@@ -88,10 +95,17 @@ export function AgentToolCallGroup({
     summarizeToolCalls(toolCalls.map((block) => ({ toolCall: block.toolCall, result: block.result }))),
     t,
   );
-  const collapsedBlocks = blocks.filter((block) => isCollapsedBlock(block, agentToolCallStates));
+  const collapsedBlocks = blocks.filter((block) =>
+    isCollapsedBlock(block, agentToolCallStates, dshDelegationStates, runtime),
+  );
+  const visibleCollapsedBlocks = showRunningBlocks
+    ? collapsedBlocks
+    : collapsedBlocks.filter((block) => isDshDelegationActive(block, dshDelegationStates, runtime));
   // Pending Agent cards remain visible, but only an actively running card makes
   // the header live. Non-Agent calls retain their result-based live behavior.
-  const isLive = showRunningBlocks && blocks.some((block) => isLiveBlock(block, agentToolCallStates));
+  const isLive = showRunningBlocks
+    ? blocks.some((block) => isLiveBlock(block, agentToolCallStates, dshDelegationStates, runtime))
+    : blocks.some((block) => isDshDelegationActive(block, dshDelegationStates, runtime));
 
   return (
     <Box data-testid="agent-tool-call-group" sx={{ mb: 0.5 }}>
@@ -178,13 +192,16 @@ export function AgentToolCallGroup({
                 toolCall={block.toolCall}
                 result={block.result}
                 agentLifecycleState={agentToolCallStates?.get(block.toolCall.id)}
+                dshDelegationState={dshDelegationStates?.get(block.toolCall.id)}
+                dshDelegationDiagnostic={dshDelegationDiagnostics?.get(block.toolCall.id)}
+                runtime={runtime}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
             ),
           )}
         </Box>
-      ) : showRunningBlocks && collapsedBlocks.length > 0 ? (
+      ) : visibleCollapsedBlocks.length > 0 ? (
         <Box
           data-testid="agent-tool-call-group-live"
           sx={{
@@ -197,7 +214,7 @@ export function AgentToolCallGroup({
             borderLeftColor: "divider",
           }}
         >
-          {collapsedBlocks.map((block) =>
+          {visibleCollapsedBlocks.map((block) =>
             block.kind === "thinking" ? (
               <ThinkingBlock
                 key={block.id}
@@ -211,6 +228,9 @@ export function AgentToolCallGroup({
                 toolCall={block.toolCall}
                 result={block.result}
                 agentLifecycleState={agentToolCallStates?.get(block.toolCall.id)}
+                dshDelegationState={dshDelegationStates?.get(block.toolCall.id)}
+                dshDelegationDiagnostic={dshDelegationDiagnostics?.get(block.toolCall.id)}
+                runtime={runtime}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
@@ -225,8 +245,13 @@ export function AgentToolCallGroup({
 function isCollapsedBlock(
   block: TurnWorkingBlock,
   agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>,
+  dshDelegationStates?: ReadonlyMap<string, DshDelegationState>,
+  runtime?: import("../../../daemon/daemonAgentTypes").AgentRuntime,
 ): boolean {
   if (block.kind === "toolCall") {
+    if (isDshDelegationActive(block, dshDelegationStates, runtime)) {
+      return true;
+    }
     if (block.toolCall.name !== "Agent") {
       return block.result === null;
     }
@@ -241,8 +266,13 @@ function isCollapsedBlock(
 function isLiveBlock(
   block: TurnWorkingBlock,
   agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>,
+  dshDelegationStates?: ReadonlyMap<string, DshDelegationState>,
+  runtime?: import("../../../daemon/daemonAgentTypes").AgentRuntime,
 ): boolean {
   if (block.kind === "toolCall") {
+    if (isDshDelegationActive(block, dshDelegationStates, runtime)) {
+      return true;
+    }
     if (block.toolCall.name !== "Agent") {
       return block.result === null;
     }
@@ -252,6 +282,17 @@ function isLiveBlock(
   }
 
   return block.isStreaming;
+}
+
+function isDshDelegationActive(
+  block: TurnWorkingBlock,
+  dshDelegationStates?: ReadonlyMap<string, DshDelegationState>,
+  runtime?: import("../../../daemon/daemonAgentTypes").AgentRuntime,
+): boolean {
+  if (block.kind !== "toolCall" || runtime !== "dsh") return false;
+  if (block.toolCall.name !== "delegate_explore" && block.toolCall.name !== "delegate_builder") return false;
+  const delegationState = dshDelegationStates?.get(block.toolCall.id);
+  return delegationState === "queued" || delegationState === "running";
 }
 
 function formatToolCallSummary(

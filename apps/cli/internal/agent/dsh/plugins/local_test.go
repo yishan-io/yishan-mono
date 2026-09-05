@@ -20,7 +20,11 @@ func TestLocalStore_DeveloperModeGatesExplicitRegistration(t *testing.T) {
 
 func TestLocalStore_RegistersCompleteExplicitLocalInventory(t *testing.T) {
 	root, bundle := t.TempDir(), t.TempDir()
-	if err := os.WriteFile(filepath.Join(bundle, cordisPatchName), []byte("plugins: []\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(bundle, "entry.mjs"), []byte("export default () => undefined\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest := `{"version":1,"entries":[{"id":"main","entrypoint":"entry.mjs","config":{},"disabled":false,"inject":[]}]}`
+	if err := os.WriteFile(filepath.Join(bundle, localPluginManifestName), []byte(manifest), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	store, err := NewLocalStore(root, true)
@@ -31,7 +35,7 @@ func TestLocalStore_RegistersCompleteExplicitLocalInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(bundles) != 1 || bundles[0].ID != "local" || len(bundles[0].Files) != 1 {
+	if len(bundles) != 1 || bundles[0].ID != "local" || len(bundles[0].Entries) != 1 || bundles[0].TreeSHA256 == "" {
 		t.Fatalf("bundles = %#v", bundles)
 	}
 	if _, err := os.Stat(filepath.Join(root, localLockName)); err != nil {

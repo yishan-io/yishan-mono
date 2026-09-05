@@ -77,7 +77,9 @@ func mapDSHProviderCatalog(catalog dsh.ProviderCatalog, credentialRefs map[strin
 		}
 		entry.Models = make([]rpc.DSHProviderCatalogModel, 0, len(provider.Models))
 		for _, model := range provider.Models {
-			entry.Models = append(entry.Models, rpc.DSHProviderCatalogModel{ID: model.ID, Name: model.Name})
+			entry.Models = append(entry.Models, rpc.DSHProviderCatalogModel{
+				ID: model.ID, Name: model.Name, ContextWindow: model.ContextWindow,
+			})
 		}
 		providers = append(providers, entry)
 	}

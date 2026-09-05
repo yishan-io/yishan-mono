@@ -33,20 +33,67 @@ func TestInstallerInstall_IgnoresPublisherMetadata(t *testing.T) {
 	}
 }
 
-func TestInstallerInstall_DoesNotRequireOrExecuteUpstreamCordisPatch(t *testing.T) {
-	archive := makeArchiveWithoutPatch(t, []tarEntry{{name: "package/index.js", body: "export default () => undefined\n"}})
-	installer := newTestInstaller(t, t.TempDir(), approvedBundle(archive), archive)
-	if _, err := installer.Install(context.Background(), Request{Name: "safe-plugin", Version: "1.0.0"}); err != nil {
-		t.Fatalf("install = %v, want audited adaptation-only install", err)
+func TestInstallerInstall_SignsDaemonApprovedEntries(t *testing.T) {
+	archive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "export default () => undefined\n"}})
+	bundle := approvedBundle(archive)
+	_, key, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := []PluginEntry{{ID: "main", Entrypoint: "index.js"}}
+	installer, err := NewInstaller(t.TempDir(), key, []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity, Entries: entries}}, stubRegistry{bundle}, stubDownloader{archive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	inventory, err := installer.Install(context.Background(), Request{Name: bundle.Name, Version: bundle.Version})
+	if err != nil || len(inventory.Plugins) != 1 || len(inventory.Plugins[0].Entries) != 1 {
+		t.Fatalf("Install = %#v, %v", inventory, err)
 	}
 }
 
-func TestInstallerInstall_RejectsUpstreamAdaptationManifest(t *testing.T) {
-	archive := makeArchive(t, []tarEntry{{name: "package/yishan.adaptation.json", body: `{"version":"upstream"}`}})
+func TestInstallerInstall_DoesNotRequirePackageOwnedRuntimeMetadata(t *testing.T) {
+	archive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "export default () => undefined\n"}})
 	installer := newTestInstaller(t, t.TempDir(), approvedBundle(archive), archive)
-	_, err := installer.Install(context.Background(), Request{Name: "safe-plugin", Version: "1.0.0"})
-	if !errors.Is(err, ErrInvalidArchive) {
-		t.Fatalf("error = %v, want reserved-path rejection", err)
+	if _, err := installer.Install(context.Background(), Request{Name: "safe-plugin", Version: "1.0.0"}); err != nil {
+		t.Fatalf("install = %v, want daemon-approved entry install", err)
+	}
+}
+
+func TestInstallerInstall_IgnoresUpstreamPluginMetadata(t *testing.T) {
+	archive := makeArchive(t, []tarEntry{{name: "package/yishan.plugin.json", body: `{"version":"upstream"}`}})
+	installer := newTestInstaller(t, t.TempDir(), approvedBundle(archive), archive)
+	if _, err := installer.Install(context.Background(), Request{Name: "safe-plugin", Version: "1.0.0"}); err != nil {
+		t.Fatalf("install = %v, want daemon-approved entries only", err)
+	}
+}
+
+func TestInstaller_UsesDistinctRegistryAndOfflineSeedIntegrities(t *testing.T) {
+	seedArchive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "ok"}})
+	registryArchive := bytes.Clone(seedArchive)
+	registryArchive[9] ^= 1 // The gzip OS byte does not change the extracted package tree.
+	bundle := approvedBundle(registryArchive)
+	_, key, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	approved := []ApprovedBundle{{
+		Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity,
+		SeedIntegrity: integrity(seedArchive), Entries: testEntries(),
+	}}
+	networkInstaller, err := NewInstaller(t.TempDir(), key, approved, stubRegistry{bundle}, stubDownloader{registryArchive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := Request{Name: bundle.Name, Version: bundle.Version}
+	if _, err := networkInstaller.Install(context.Background(), request); err != nil {
+		t.Fatalf("network install: %v", err)
+	}
+	offlineInstaller, err := NewInstaller(t.TempDir(), key, approved, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := offlineInstaller.InstallArchive(context.Background(), request, seedArchive); err != nil {
+		t.Fatalf("offline install: %v", err)
 	}
 }
 
@@ -115,11 +162,6 @@ type tarEntry struct {
 
 func makeArchive(t *testing.T, entries []tarEntry) []byte {
 	t.Helper()
-	return makeArchiveWithoutPatch(t, append([]tarEntry{{name: "package/cordis.patch.yml", body: "plugins: []\n"}}, entries...))
-}
-
-func makeArchiveWithoutPatch(t *testing.T, entries []tarEntry) []byte {
-	t.Helper()
 	var compressed bytes.Buffer
 	writer := gzip.NewWriter(&compressed)
 	archive := tar.NewWriter(writer)
@@ -155,25 +197,12 @@ func newTestInstaller(t *testing.T, root string, bundle Bundle, archive []byte) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	installer, err := NewInstaller(root, key, []ApprovedBundle{{Name: "safe-plugin", Version: "1.0.0", Integrity: bundle.Integrity, Adaptation: testAdaptation()}}, stubRegistry{bundle}, stubDownloader{archive})
+	installer, err := NewInstaller(root, key, []ApprovedBundle{{Name: "safe-plugin", Version: "1.0.0", Integrity: bundle.Integrity, Entries: testEntries()}}, stubRegistry{bundle}, stubDownloader{archive})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return installer
 }
-func newTestInstallerForBundle(t *testing.T, root string, bundle Bundle, archive []byte) *Installer {
-	t.Helper()
-	_, key, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	installer, err := NewInstaller(root, key, []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity, Adaptation: testAdaptation()}}, stubRegistry{bundle}, stubDownloader{archive})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return installer
-}
-
 func approvedBundle(archive []byte) Bundle {
 	return Bundle{Name: "safe-plugin", Version: "1.0.0", TarballURL: "https://example.test/a", Integrity: integrity(archive)}
 }
@@ -181,10 +210,7 @@ func integrity(archive []byte) string {
 	sum := sha512.Sum512(archive)
 	return "sha512-" + base64.StdEncoding.EncodeToString(sum[:])
 }
-func testAdaptation() AdaptationManifest {
-	content := []byte(`{"version":"1","plugins":[]}`)
-	return AdaptationManifest{Version: "1", SHA256: hashAdaptationManifest(content), Content: content}
-}
+func testEntries() []PluginEntry { return []PluginEntry{} }
 
 func TestInstallerVerifyInstalledInventory_RejectsChangedFile(t *testing.T) {
 	archive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "ok"}})
@@ -212,7 +238,7 @@ func TestInstallerInstall_RejectsBundleOutsideDaemonAllowlist(t *testing.T) {
 	}
 }
 
-func TestInstallerVerifyInstalledInventory_RejectsExtraDirectory(t *testing.T) {
+func TestInstallerVerifyInstalledInventory_IgnoresEmptyDirectory(t *testing.T) {
 	archive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "ok"}})
 	root := t.TempDir()
 	installer := newTestInstaller(t, root, approvedBundle(archive), archive)
@@ -222,8 +248,8 @@ func TestInstallerVerifyInstalledInventory_RejectsExtraDirectory(t *testing.T) {
 	if err := os.Mkdir(currentPluginPath(t, root, "safe-plugin", "extra"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := installer.VerifyInstalledInventory(); !errors.Is(err, ErrInventoryTampered) {
-		t.Fatalf("error = %v, want extra-directory rejection", err)
+	if _, err := installer.VerifyInstalledInventory(); err != nil {
+		t.Fatalf("verify inventory = %v, want file-tree integrity only", err)
 	}
 }
 
@@ -250,7 +276,7 @@ func TestInstallerInstall_SerializesConcurrentCommits(t *testing.T) {
 		t.Fatal(err)
 	}
 	bundle := approvedBundle(archive)
-	approved := []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity, Adaptation: testAdaptation()}}
+	approved := []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity, Entries: testEntries()}}
 	first, err := NewInstaller(root, key, approved, stubRegistry{bundle}, stubDownloader{archive})
 	if err != nil {
 		t.Fatal(err)
@@ -301,7 +327,7 @@ func TestInstallerVerifyInstalledInventory_RejectsExtraFileAndSymlink(t *testing
 	}
 }
 
-func TestExtractBundle_RequiresPackageRootDirectory(t *testing.T) {
+func TestExtractBundle_AcceptsImplicitStandardNpmPackageRoot(t *testing.T) {
 	var compressed bytes.Buffer
 	gzipWriter := gzip.NewWriter(&compressed)
 	tarWriter := tar.NewWriter(gzipWriter)
@@ -317,9 +343,8 @@ func TestExtractBundle_RequiresPackageRootDirectory(t *testing.T) {
 	if err := gzipWriter.Close(); err != nil {
 		t.Fatal(err)
 	}
-	_, err := extractBundle(t.TempDir(), Bundle{Name: "safe-plugin", Version: "1.0.0"}, compressed.Bytes())
-	if !errors.Is(err, ErrInvalidArchive) {
-		t.Fatalf("error = %v, want package-root rejection", err)
+	if _, err := extractBundle(t.TempDir(), Bundle{Name: "safe-plugin", Version: "1.0.0"}, compressed.Bytes()); err != nil {
+		t.Fatalf("extract standard npm archive: %v", err)
 	}
 }
 
@@ -334,7 +359,7 @@ func TestSecureClient_RejectsHTTPRedirect(t *testing.T) {
 func TestLoadOrCreateSigningKey_ConcurrentFreshRootInstallationsVerify(t *testing.T) {
 	archive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "ok"}})
 	bundle := approvedBundle(archive)
-	approved := []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity, Adaptation: testAdaptation()}}
+	approved := []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity, Entries: testEntries()}}
 	root := t.TempDir()
 	start := make(chan struct{})
 	errors := make(chan error, 8)
@@ -413,5 +438,24 @@ func TestInstallerRestoreSnapshot_RemovesInitialFailedMutation(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, currentSnapshotName)); !os.IsNotExist(err) {
 		t.Fatalf("active snapshot stat error = %v, want not exist", err)
+	}
+}
+
+func TestInstallerInstallArchive_UsesAllowlistIntegrityWithoutNetwork(t *testing.T) {
+	archive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "ok"}})
+	bundle := approvedBundle(archive)
+	_, key, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	installer, err := NewInstaller(t.TempDir(), key, []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity}}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := installer.InstallArchive(context.Background(), Request{Name: "safe-plugin", Version: "1.0.0"}, archive); err != nil {
+		t.Fatalf("InstallArchive: %v", err)
+	}
+	if _, err := installer.InstallArchive(context.Background(), Request{Name: "safe-plugin", Version: "1.0.0"}, append(archive, 'x')); !errors.Is(err, ErrInvalidArchive) {
+		t.Fatalf("InstallArchive tampered error = %v", err)
 	}
 }

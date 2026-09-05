@@ -194,6 +194,16 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile --linker hoisted
 
+      - name: Install macOS Koffi runtime targets
+        if: matrix.platform == 'mac'
+        run: |
+          # The arm64 runner also packages x64. Install all Darwin optional
+          # dependencies before beforePack rebuilds each target's DSH runtime.
+          bun install --frozen-lockfile --linker hoisted --os darwin --cpu '*'
+          for package in @koromix/koffi-darwin-arm64 @koromix/koffi-darwin-x64; do
+            test -f "node_modules/${package}/package.json"
+          done
+
       - name: Download CLI binary from release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

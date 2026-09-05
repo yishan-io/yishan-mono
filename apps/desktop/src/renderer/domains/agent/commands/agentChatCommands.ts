@@ -3,16 +3,9 @@ import type { AgentChatSessionView } from "@renderer/domains/workbench";
 import { delay } from "@shared/async/delay";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { generateId } from "@shared/ids/generateId";
-import { projectDshLineageSubagents } from "../chat/agentChatDshLineage";
 import { isAgentSessionBusy } from "../chat/agentChatTypes";
-import {
-  getAgentCapabilities,
-  listAgentSessionLineage,
-  listDSHProviders,
-  renamePiCompatibilitySession,
-  sendPiCompatibilityCommand,
-} from "../daemon/daemonAgentProcedures";
-import type { AgentRuntime, AgentSessionLineageResult } from "../daemon/daemonAgentTypes";
+import { getAgentCapabilities, listDSHProviders, sendPiCompatibilityCommand } from "../daemon/daemonAgentProcedures";
+import type { AgentRuntime } from "../daemon/daemonAgentTypes";
 import { flushAgentChatStreamBuffer } from "../runtime/agentChatStreamBuffer";
 import { normalizeAgentChatRuntime, selectNewAgentChatRuntime } from "../runtime/agentRuntimeSelection";
 import {
@@ -24,6 +17,7 @@ import {
   fetchPiAgentModelsCompatibility,
   fetchPiAgentStateCompatibility,
   findTabWithSession,
+  isActiveDshParent,
   promptAgentSession,
   reattachPiSession,
   recoverAgentSessionAfterReconnect as recoverAgentSessionRuntimeAfterReconnect,
@@ -31,7 +25,10 @@ import {
   stopAgentSession,
   stopPiSession,
 } from "../runtime/agentSessionRuntime";
+import { hydrateDSHTranscript } from "../runtime/dshAgentSessionAdapter";
+import { refreshLineage as refreshDshLineage } from "../runtime/dshSubagentLifecycle";
 import { agentChatStore } from "../state/agentChatStore";
+import { isHydrated, selectFinishedSubagents } from "../state/agentChatStoreSession";
 import { refreshAgentSessionStats as refreshPiAgentSessionStatsCompatibility } from "../subscriptions/agentChatPiEventShared";
 
 // ─── Session lifecycle (delegates to AgentSessionRuntime) ───────────────────
@@ -69,6 +66,32 @@ export async function startAgentChatSession(opts: {
   const { runtime, capabilities: resolvedCapabilities } = await resolveAgentChatRuntime(opts);
   bindAgentChatTabRuntime({ tabId: opts.tabId, runtime });
 
+  if (isReadOnlySubagentDetail && runtime === "dsh") {
+    const sessionId = opts.sessionId?.trim() ?? "";
+    const expectedParentSessionId = opts.subagentParentSessionId?.trim() ?? "";
+    if (!sessionId || !expectedParentSessionId) {
+      agentChatStore.getState().initSession(opts.tabId, sessionId || opts.tabId);
+      agentChatStore
+        .getState()
+        .setSessionError(opts.tabId, "DSH subagent detail requires a session ID and parent session ID");
+      return;
+    }
+    try {
+      await hydrateDSHTranscript({
+        mode: "read-only",
+        tabId: opts.tabId,
+        sessionId,
+        expectedParentSessionId,
+        workspaceId: opts.workspaceId,
+        cwd: opts.cwd,
+      });
+    } catch (error) {
+      agentChatStore.getState().initSession(opts.tabId, sessionId);
+      agentChatStore.getState().setSessionError(opts.tabId, getErrorMessage(error));
+    }
+    return;
+  }
+
   if (isReadOnlySubagentDetail) {
     const childSessionId = opts.sessionId?.trim() || opts.tabId;
     const parentTabId = opts.subagentParentSessionId
@@ -76,7 +99,7 @@ export async function startAgentChatSession(opts: {
       : undefined;
     const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
     const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
-    const isChildFinished = parentSession?.finishedSubagents.some(
+    const isChildFinished = selectFinishedSubagents(parentSession).some(
       (subagent) => subagent.childSessionId === childSessionId,
     );
     const isParentTrackingChild =
@@ -124,11 +147,7 @@ export async function startAgentChatSession(opts: {
     });
 
     const session = agentChatStore.getState().sessionsByTabId[opts.tabId];
-    const isSessionLoaded =
-      session?.sessionId === startedSessionId &&
-      session.hasLoadedState &&
-      session.hasLoadedMessages &&
-      session.hasLoadedModels;
+    const isSessionLoaded = session?.sessionId === startedSessionId && isHydrated(session);
     if (isSessionLoaded) {
       // React remounts reuse the live session handle. Its snapshot is still in
       // the store, so only reconnect recovery should explicitly rehydrate it.
@@ -159,7 +178,7 @@ export async function startAgentChatSession(opts: {
 
     if (runtime === "dsh" && opts.sessionView === "full") {
       // fire-and-forget: lineage is supplementary and must not delay session hydration.
-      void refreshDshSubagentLineage({
+      void refreshLineage({
         tabId: opts.tabId,
         workspaceId: opts.workspaceId,
         cwd: opts.cwd,
@@ -191,6 +210,11 @@ export async function loadDSHSessionModels(
           provider: provider.id,
           providerName: provider.displayName,
           ...(provider.credentialRef ? { credentialRef: provider.credentialRef } : {}),
+          ...(typeof model.contextWindow === "number" &&
+          Number.isSafeInteger(model.contextWindow) &&
+          model.contextWindow > 0
+            ? { contextWindow: model.contextWindow }
+            : {}),
         })),
       );
     const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
@@ -215,10 +239,11 @@ export async function loadDSHSessionModels(
         ? (models.find(
             (model) => model.id === configuredModel && model.provider?.trim().toLowerCase() === configuredProvider,
           ) ?? models[0])
-        : undefined);
+        : undefined) ??
+      null;
 
     agentChatStore.getState().setAvailableModels(tabId, models);
-    agentChatStore.getState().setCurrentModel(tabId, currentModel ?? null);
+    agentChatStore.getState().setCurrentModel(tabId, currentModel);
     if (hasExplicitSelection && !persistedModel) {
       agentChatStore
         .getState()
@@ -230,42 +255,11 @@ export async function loadDSHSessionModels(
   }
 }
 
-export async function refreshDshSubagentLineage(opts: {
-  tabId: string;
-  workspaceId: string;
-  cwd: string;
-  rootSessionId: string;
-}): Promise<AgentSessionLineageResult | null> {
-  if (!isCurrentDshLineageParent(opts.tabId, opts.rootSessionId)) return null;
-  const generation = agentChatStore.getState().beginDshSubagentLineageRefresh(opts.tabId, opts.rootSessionId);
-  if (generation === null) return null;
-
-  try {
-    const lineage = await listAgentSessionLineage({
-      runtime: "dsh",
-      workspaceId: opts.workspaceId,
-      cwd: opts.cwd,
-      rootSessionId: opts.rootSessionId,
-      mode: "children",
-    });
-    if (!isCurrentDshLineageParent(opts.tabId, opts.rootSessionId)) return null;
-    agentChatStore.getState().applyDshSubagentLineageRefresh({
-      tabId: opts.tabId,
-      parentSessionId: opts.rootSessionId,
-      generation,
-      rows: projectDshLineageSubagents(lineage),
-    });
-    return lineage;
-  } catch (error) {
-    console.warn("Failed to refresh DSH subagent lineage", getErrorMessage(error));
-    return null;
-  }
-}
-
-/** Checks that a tab still owns the DSH parent session requested by lineage refresh. */
-function isCurrentDshLineageParent(tabId: string, parentSessionId: string): boolean {
-  const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId);
-  return tab?.kind === "agent-chat" && tab.data.runtime === "dsh" && tab.data.sessionId === parentSessionId;
+/** Refreshes DSH lineage using the runtime coordinator's parent-session guard. */
+export async function refreshLineage(
+  opts: Omit<Parameters<typeof refreshDshLineage>[0], "isActiveDshParent">,
+): ReturnType<typeof refreshDshLineage> {
+  return await refreshDshLineage({ ...opts, isActiveDshParent });
 }
 
 /** Recovers a session and refreshes DSH lineage only after a usable parent recovery. */
@@ -281,7 +275,7 @@ export async function recoverAgentSessionAfterReconnect(
   }
 
   // fire-and-forget: lineage is supplementary and must not delay reconnect recovery.
-  void refreshDshSubagentLineage({
+  void refreshLineage({
     tabId: opts.tabId,
     workspaceId: opts.workspaceId,
     cwd: opts.cwd,
@@ -469,66 +463,4 @@ export {
   readAgentSessionHistory,
 } from "./agentChatSessionHistory";
 
-import { resolveChatFilePath } from "@renderer/domains/files";
-// ─── Chat-to-file tab bridge (desktop6-adjust.md W5) ───────────────────────
-// Opening a file referenced from chat is an Agent workflow: resolve the path
-// through the Files feature, then open a Workbench Tab through the public
-// Workbench API.
-import { openTab, openTabInOppositePane } from "@renderer/domains/workbench";
-import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
-
-/**
- * Opens one file referenced from chat, resolving it to a real workspace file first.
- *
- * When the referenced path does not exist (agents sometimes emit unreal paths),
- * a best-effort search is attempted; if no unique real file is found the user is
- * notified instead of opening a tab with mock content.
- */
-export async function openChatFileTab(input: {
-  workspaceId: string;
-  relativePath: string;
-  oppositePane?: boolean;
-}): Promise<void> {
-  const resolved = await resolveChatFilePath({ workspaceId: input.workspaceId, relativePath: input.relativePath });
-  if (resolved.status === "unavailable") {
-    enqueueWorkspaceErrorNotice({
-      title: "Unable to open file",
-      message: `Could not load ${input.relativePath}. Please try again.`,
-    });
-    return;
-  }
-  if (resolved.status === "not-found") {
-    enqueueWorkspaceErrorNotice({
-      title: "File not found",
-      message: `${input.relativePath} does not exist in this workspace.`,
-    });
-    return;
-  }
-
-  const tabInput = {
-    kind: "file" as const,
-    workspaceId: input.workspaceId,
-    path: resolved.path,
-    content: resolved.content,
-  };
-  if (input.oppositePane) {
-    openTabInOppositePane(tabInput);
-  } else {
-    openTab(tabInput);
-  }
-}
-
-/**
- * Renames the daemon-side pi session that backs one agent-chat tab.
- * Workbench Tab renames stay presentation-only; the session rename side effect
- * belongs to the Agent module (desktop6-adjust.md W6 task 2).
- */
-export async function renameAgentChatSessionByTab(tabId: string, title: string): Promise<void> {
-  const tab = tabStore.getState().tabs.find((tab) => tab.id === tabId);
-  const sessionId = tab?.kind === "agent-chat" ? tab.data.sessionId?.trim() : undefined;
-  const runtime = tab?.kind === "agent-chat" ? (tab.data.runtime ?? "pi") : undefined;
-  if (!sessionId || runtime !== "pi") {
-    return;
-  }
-  await renamePiCompatibilitySession({ sessionId, title });
-}
+export { openChatFileTab, renameAgentChatSessionByTab } from "./agentChatTabCommands";

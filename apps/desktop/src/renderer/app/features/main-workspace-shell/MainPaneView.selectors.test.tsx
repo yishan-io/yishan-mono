@@ -149,21 +149,17 @@ vi.mock("../../../domains/workbench/state/tabStore", () => ({
   tabStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../domains/agent/state/chatStore", () => ({
-  chatStore: (
+vi.mock("../../../domains/agent/state/workspaceAgentIndicatorStore", () => ({
+  workspaceAgentIndicatorStore: (
     selector: (state: {
-      workspaceUnreadToneByWorkspaceId: Record<string, "success" | "error">;
-      workspaceAgentStatusByWorkspaceId: Record<string, "running" | "waiting_input" | "idle">;
+      unreadTones: Record<string, "success" | "error">;
+      statuses: Record<string, "running" | "waiting_input" | "idle">;
     }) => unknown,
   ) =>
     selector({
-      workspaceUnreadToneByWorkspaceId:
-        (mocked.stateRef.current.workspaceUnreadToneByWorkspaceId as Record<string, "success" | "error"> | undefined) ??
-        {},
-      workspaceAgentStatusByWorkspaceId:
-        (mocked.stateRef.current.workspaceAgentStatusByWorkspaceId as
-          | Record<string, "running" | "waiting_input" | "idle">
-          | undefined) ?? {},
+      unreadTones: (mocked.stateRef.current.unreadTones as Record<string, "success" | "error"> | undefined) ?? {},
+      statuses:
+        (mocked.stateRef.current.statuses as Record<string, "running" | "waiting_input" | "idle"> | undefined) ?? {},
     }),
 }));
 
@@ -390,8 +386,8 @@ describe("MainPaneView", () => {
   it("keeps a running workspace notification-tinted in the workspace selector", () => {
     mocked.stateRef.current = {
       ...buildMainPaneStoreState(false),
-      workspaceAgentStatusByWorkspaceId: { "workspace-1": "running" },
-      workspaceUnreadToneByWorkspaceId: { "workspace-1": "success" },
+      statuses: { "workspace-1": "running" },
+      unreadTones: { "workspace-1": "success" },
     };
 
     render(<MainPaneView />);

@@ -6,7 +6,7 @@ import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadWorkspaceSnapshot } from "../../../app/commands/workspaceSnapshotFlow";
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { setDisplayRepoIds } from "../../../domains/workspace/commands/workspaceCommands";
@@ -87,7 +87,7 @@ vi.mock("../../../domains/workspace/daemon/daemonWorkspaceClient", () => ({
 const initialWorkspaceStoreState = workspaceStore.getState();
 const initialProjectStoreState = projectStore.getState();
 const initialTabStoreState = tabStore.getState();
-const initialChatStoreState = chatStore.getState();
+const initialWorkspaceAgentIndicatorStoreState = workspaceAgentIndicatorStore.getState();
 const initialSessionStoreState = sessionStore.getState();
 const initialWorkspaceSettingsStoreState = workspaceSettingsStore.getState();
 
@@ -111,7 +111,7 @@ afterEach(() => {
   projectStore.setState(initialProjectStoreState, true);
   workspaceStore.setState(initialWorkspaceStoreState, true);
   tabStore.setState(initialTabStoreState, true);
-  chatStore.setState(initialChatStoreState, true);
+  workspaceAgentIndicatorStore.setState(initialWorkspaceAgentIndicatorStoreState, true);
   sessionStore.setState(initialSessionStoreState, true);
   workspaceSettingsStore.setState(initialWorkspaceSettingsStoreState, true);
   vi.clearAllMocks();
@@ -1110,11 +1110,8 @@ describe("projectCommands", () => {
     const removeRepo = vi.fn();
     const retainWorkspaceTabs = vi.fn().mockReturnValue(["tab-1"]);
     const resolveTabForWorkspace = vi.fn();
-    const removeTabData = vi.fn();
-    const removeWorkspaceTaskCounts = vi.fn();
 
     tabStore.setState({ retainWorkspaceTabs, resolveTabForWorkspace });
-    chatStore.setState({ removeTabData, removeWorkspaceTaskCounts });
 
     projectStore.setState({ deleteProject: removeRepo });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
@@ -1126,8 +1123,6 @@ describe("projectCommands", () => {
     expect(removeRepo).toHaveBeenCalledWith("repo-1");
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
     expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
-    expect(removeTabData).toHaveBeenCalledWith(["tab-1"]);
-    expect(removeWorkspaceTaskCounts).not.toHaveBeenCalled();
   });
 
   it("persists config and updates local store fields", async () => {

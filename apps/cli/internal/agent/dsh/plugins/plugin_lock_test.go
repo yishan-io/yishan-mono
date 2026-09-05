@@ -98,7 +98,7 @@ func assertSnapshotPromotionWaitsForPluginLock(t *testing.T, root string, key []
 	t.Helper()
 	archive := makeArchive(t, []tarEntry{{name: "package/index.js", body: "ok"}})
 	bundle := approvedBundle(archive)
-	installer, err := NewInstaller(root, key, []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity, Adaptation: testAdaptation()}}, stubRegistry{bundle}, stubDownloader{archive})
+	installer, err := NewInstaller(root, key, []ApprovedBundle{{Name: bundle.Name, Version: bundle.Version, Integrity: bundle.Integrity, Entries: testEntries()}}, stubRegistry{bundle}, stubDownloader{archive})
 	if err != nil {
 		t.Fatal(err)
 	}

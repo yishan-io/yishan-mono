@@ -19,6 +19,23 @@ describe("parseAgentHistoryResult", () => {
     expect(parseAgentHistoryResult(dshHistory, request)).toEqual(dshHistory);
   });
 
+  it("parses durable subagent child metadata", () => {
+    const childHistory = {
+      ...dshHistory,
+      dsh: {
+        ...dshHistory.dsh,
+        session: {
+          sessionId: "session-1",
+          createdAt: 1,
+          origin: "subagent",
+          parentSession: "parent-1",
+        },
+      },
+    };
+
+    expect(parseAgentHistoryResult(childHistory, request)).toEqual(childHistory);
+  });
+
   it("allows persisted user and assistant surface events for controller reload validation", () => {
     const history = {
       ...dshHistory,
@@ -80,6 +97,10 @@ describe("parseAgentHistoryResult", () => {
     ["wrong runtime", { ...dshHistory, runtime: "pi" }],
     ["wrong session", { ...dshHistory, dsh: { ...dshHistory.dsh, session: { sessionId: "other", createdAt: 1 } } }],
     ["empty instanceId", { ...dshHistory, dsh: { ...dshHistory.dsh, instanceId: "" } }],
+    [
+      "invalid child origin",
+      { ...dshHistory, dsh: { ...dshHistory.dsh, session: { sessionId: "session-1", createdAt: 1, origin: "user" } } },
+    ],
     ["unequal cursors", { ...dshHistory, dsh: { ...dshHistory.dsh, durableThroughSeq: -1 } }],
     [
       "non-contiguous events",

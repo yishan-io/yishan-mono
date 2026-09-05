@@ -4,7 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
 import { registerAgentSession } from "../subscriptions/agentChatPiEventShared";
-import { clearPiSessionHandle, ensurePiSession, stopPiSession } from "./agentSessionRuntime";
+import { dshStartResult } from "./agentSessionRuntime.dsh.testSupport";
+import {
+  clearPiSessionHandle,
+  ensureAgentSession,
+  ensurePiSession,
+  stopAgentSession,
+  stopPiSession,
+} from "./agentSessionRuntime";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -232,6 +239,38 @@ describe("agentSessionRuntime.stopPiSession", () => {
     expect(mocks.startAgent).toHaveBeenLastCalledWith(
       expect.objectContaining({ sessionId: "history-close-reopen", tabId: "tab-reopen" }),
     );
+  });
+
+  it("does not make a DSH session wait for a closing Pi session with the same id", async () => {
+    const sessionId = "shared-runtime-close";
+    mocks.startAgent.mockResolvedValue({ runtime: "pi", sessionId });
+    await ensurePiSession({ tabId: "pi-close", workspaceId: "workspace-1", cwd: "/tmp/project", sessionId });
+
+    let resolvePiDispose: (() => void) | undefined;
+    mocks.disposeAgent.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePiDispose = resolve;
+        }),
+    );
+    const piStopPromise = stopPiSession("pi-close");
+    await vi.waitFor(() => expect(mocks.disposeAgent).toHaveBeenCalledTimes(1));
+
+    mocks.startAgent.mockResolvedValue(dshStartResult(sessionId));
+    const dshEnsurePromise = ensureAgentSession({
+      runtime: "dsh",
+      tabId: "dsh-open",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId,
+    });
+
+    await dshEnsurePromise;
+    expect(mocks.startAgent).toHaveBeenLastCalledWith(expect.objectContaining({ runtime: "dsh", sessionId }));
+
+    resolvePiDispose?.();
+    await piStopPromise;
+    await stopAgentSession("dsh-open");
   });
 
   it("closes subagent-detail tabs without stopping the child session", async () => {

@@ -5,15 +5,19 @@ import (
 	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 )
 
-// Install resolves, verifies, stages, and atomically promotes one npm bundle.
+// Install resolves registry metadata, downloads an archive, then uses the offline-safe installer.
 func (i *Installer) Install(ctx context.Context, request Request) (Inventory, error) {
 	if err := validateRequest(request); err != nil {
 		return Inventory{}, err
+	}
+	if i.registry == nil || i.downloader == nil {
+		return Inventory{}, errors.New("DSH plugin network installer is unavailable")
 	}
 	approved, ok := i.approved[bundleKey(request.Name, request.Version)]
 	if !ok {
@@ -30,9 +34,30 @@ func (i *Installer) Install(ctx context.Context, request Request) (Inventory, er
 	if err != nil {
 		return Inventory{}, fmt.Errorf("download DSH plugin bundle: %w", err)
 	}
-	if err := validateArchiveIntegrity(archive, approved.Integrity); err != nil {
+	return i.installArchive(ctx, request, approved, archive, approved.Integrity)
+}
+
+// InstallArchive verifies and atomically installs a daemon-approved offline archive.
+func (i *Installer) InstallArchive(ctx context.Context, request Request, archive []byte) (Inventory, error) {
+	if err := validateRequest(request); err != nil {
 		return Inventory{}, err
 	}
+	approved, ok := i.approved[bundleKey(request.Name, request.Version)]
+	if !ok {
+		return Inventory{}, fmt.Errorf("%w: %s@%s", ErrBundleNotAllowed, request.Name, request.Version)
+	}
+	integrity := approved.SeedIntegrity
+	if integrity == "" {
+		integrity = approved.Integrity
+	}
+	return i.installArchive(ctx, request, approved, archive, integrity)
+}
+
+func (i *Installer) installArchive(ctx context.Context, request Request, approved ApprovedBundle, archive []byte, integrity string) (Inventory, error) {
+	if err := validateArchiveIntegrity(archive, integrity); err != nil {
+		return Inventory{}, err
+	}
+	bundle := Bundle{Name: request.Name, Version: request.Version}
 	plugin, stage, err := i.stageBundle(bundle, approved, archive)
 	if err != nil {
 		return Inventory{}, err
@@ -87,10 +112,12 @@ func (i *Installer) stageBundle(bundle Bundle, approved ApprovedBundle, archive 
 		_ = os.RemoveAll(stage)
 		return Plugin{}, "", err
 	}
-	if err := addAuditedAdaptation(stage, &plugin, approved.Adaptation); err != nil {
+	if err := validatePluginEntrypoints(stage, approved.Entries); err != nil {
 		_ = os.RemoveAll(stage)
 		return Plugin{}, "", err
 	}
+	plugin.Entries = make([]PluginEntry, len(approved.Entries))
+	copy(plugin.Entries, approved.Entries)
 	return plugin, stage, nil
 }
 

@@ -276,7 +276,7 @@ func newTestDSHLocalStore(t *testing.T) (*plugins.LocalStore, string) {
 		t.Fatalf("NewLocalStore: %v", err)
 	}
 	bundle := t.TempDir()
-	if err := os.WriteFile(filepath.Join(bundle, "cordis.patch.yml"), []byte("plugins: []\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(bundle, "yishan.plugin.json"), []byte(`{"version":1,"entries":[]}`), 0o600); err != nil {
 		t.Fatalf("write local bundle: %v", err)
 	}
 	return store, bundle

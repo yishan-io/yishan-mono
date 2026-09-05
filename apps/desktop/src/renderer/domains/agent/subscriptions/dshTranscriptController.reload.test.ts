@@ -46,6 +46,57 @@ describe("DSHTranscriptController durable reload", () => {
     await vi.waitFor(() => expect(controller.getDurableThroughSeq()).toBe(128));
   });
 
+  it("reloads a parent transcript containing a settlement notice and settlement event", async () => {
+    const { actions } = setup();
+    const controller = new DSHTranscriptController(
+      "tab",
+      "session",
+      actions,
+      async () => ({
+        session: { sessionId: "session", createdAt: 0 },
+        events: [
+          {
+            type: "agent/inbox/spliced",
+            seq: 0,
+            time: 0,
+            data: {
+              target: "next-step",
+              start: 0,
+              inserted: [
+                {
+                  id: "settlement-notice",
+                  role: "user",
+                  content: [{ type: "text", text: "Background subagent child settled." }],
+                  source: {
+                    kind: "subagent-settled",
+                    form: "notice",
+                    summary: "Background subagent child settled.",
+                    senderSessionId: "child",
+                  },
+                },
+              ],
+            },
+          },
+          {
+            type: "yishan/subagent-settled.v1",
+            seq: 1,
+            time: 1,
+            data: { version: 1, childSessionId: "child", state: "completed" },
+          },
+        ],
+        instanceId: "inc",
+        asOfSeq: 1,
+        durableThroughSeq: 1,
+      }),
+      () => {},
+    );
+
+    controller.handle({ ...event(0), update: { reset: { sessionId: "session", instanceId: "inc", headSeq: 1 } } });
+
+    await vi.waitFor(() => expect(controller.getDurableThroughSeq()).toBe(1));
+    expect(actions.setSessionError).not.toHaveBeenCalled();
+  });
+
   it("replays one event received during a durable reload", async () => {
     let resolveSnapshot:
       | ((snapshot: {
@@ -66,6 +117,8 @@ describe("DSHTranscriptController durable reload", () => {
       clearTurnError: vi.fn(),
       setDSHTranscriptRetryAvailable: vi.fn(),
       setTurnActive: vi.fn(),
+      setDshDelegationLifecycle: vi.fn(),
+      replaceDshDelegationLifecycle: vi.fn(),
     };
     const controller = new DSHTranscriptController(
       "tab",

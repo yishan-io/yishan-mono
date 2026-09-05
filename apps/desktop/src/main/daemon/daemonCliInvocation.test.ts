@@ -45,6 +45,7 @@ describe("resolveCliInvocation", () => {
       YISHAN_DAEMON_DSH_ENABLED: "true",
       YISHAN_DAEMON_DSH_NODE_PATH: "/app/Yishan",
       YISHAN_DAEMON_DSH_RUNTIME_PATH: "/app/resources/dsh-runtime.mjs",
+      YISHAN_DAEMON_DSH_PLUGIN_SEED_PATH: "/app/resources/dsh-plugins/dsh-dev-flow.tgz",
     });
   });
 
@@ -81,6 +82,7 @@ describe("resolveCliInvocation", () => {
 
     expect(resolveDaemonCliEnvironment()).toMatchObject({
       YISHAN_DAEMON_DSH_RUNTIME_PATH: "/repo/apps/desktop/dist/resources/dsh-runtime.mjs",
+      YISHAN_DAEMON_DSH_PLUGIN_SEED_PATH: "/repo/apps/desktop/dist/resources/dsh-plugins/dsh-dev-flow.tgz",
     });
   });
 

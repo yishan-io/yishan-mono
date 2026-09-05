@@ -208,7 +208,7 @@ export type DSHProviderCatalogEntry = {
   setupStatus: "ready" | "needs-credential" | "ambient";
   /** Safe provider-owned setup text. It excludes credentials and local paths. */
   setupGuidance: string;
-  models: Array<{ id: string; name: string }>;
+  models: Array<{ id: string; name: string; contextWindow?: number }>;
 };
 
 export type DSHProviderCatalogResult = { providers: DSHProviderCatalogEntry[] };
@@ -265,6 +265,19 @@ export type AgentListSessionsRequest = {
   runtime: AgentRuntime;
   workspaceId: string;
   cwd: string;
+};
+
+/** Resolves a materialized runtime session artifact. */
+export type AgentGetSessionFilePathRequest = {
+  runtime: AgentRuntime;
+  sessionId: string;
+  workspaceId: string;
+  cwd: string;
+};
+
+/** Identifies a materialized runtime session artifact. */
+export type AgentSessionFilePathResult = {
+  filePath: string;
 };
 
 /** Reads durable history for one runtime session. */
@@ -327,10 +340,14 @@ export type AgentCancelSubagentResult = {
 };
 
 /** Returns the runtime and session identity after a successful start. */
-export type AgentStartResult = {
-  runtime: AgentRuntime;
-  sessionId: string;
-};
+export type AgentStartResult =
+  | { runtime: "pi"; sessionId: string }
+  | {
+      runtime: "dsh";
+      sessionId: string;
+      /** One-shot transcript seed required by the DSH transcript protocol. */
+      dshAttachSnapshot: AgentDSHAttachResult;
+    };
 
 /** Acknowledges a runtime-neutral session mutation. */
 export type AgentAckResult = {
@@ -385,6 +402,8 @@ export type AgentDSHSessionMetadata = {
   sessionId: string;
   createdAt: number;
   parentSession?: string;
+  /** Present only when the durable session was created as a DSH subagent child. */
+  origin?: "subagent";
   agentPreset?: string;
 };
 

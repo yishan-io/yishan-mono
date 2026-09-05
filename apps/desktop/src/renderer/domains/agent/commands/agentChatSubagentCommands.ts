@@ -16,6 +16,7 @@ import { normalizeAgentChatRuntime } from "../runtime/agentRuntimeSelection";
 import { buildAgentRuntimeSessionKey } from "../runtime/agentSessionIdentity";
 import { promptAgentSession } from "../runtime/agentSessionRuntime";
 import { agentChatStore } from "../state/agentChatStore";
+import { selectRunningSubagents } from "../state/agentChatStoreSession";
 import { findTabWithSession } from "./agentChatCommands";
 import { cancelDshSubagentRun } from "./agentChatDshSubagentCancellation";
 
@@ -316,7 +317,7 @@ function waitForSubagentRowGone(
       resolve(gone);
     };
     const isRowGone = () => {
-      const rows = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
+      const rows = selectRunningSubagents(agentChatStore.getState().sessionsByTabId[tabId]);
       // The original row (or a same-identity replacement, e.g. pending→lifecycle
       // transition mid-cancel) must be gone for the run to count as ended.
       if (rows.some((row) => row.rowId === rowKey)) {

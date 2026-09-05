@@ -107,6 +107,19 @@ type AgentListSessionsParams struct {
 	CWD         string       `json:"cwd"`
 }
 
+// AgentGetSessionFilePathParams resolves one materialized runtime session artifact.
+type AgentGetSessionFilePathParams struct {
+	Runtime     AgentRuntime `json:"runtime"`
+	SessionID   string       `json:"sessionId"`
+	WorkspaceID string       `json:"workspaceId"`
+	CWD         string       `json:"cwd"`
+}
+
+// AgentSessionFilePathResult identifies a materialized runtime session artifact.
+type AgentSessionFilePathResult struct {
+	FilePath string `json:"filePath"`
+}
+
 // AgentReadHistoryParams reads the durable history for one session.
 type AgentReadHistoryParams struct {
 	Runtime                   AgentRuntime `json:"runtime"`
@@ -229,8 +242,9 @@ type AgentSessionLineageResult struct {
 
 // AgentStartResult is the stable start response shared by agent runtimes.
 type AgentStartResult struct {
-	Runtime   AgentRuntime `json:"runtime"`
-	SessionID string       `json:"sessionId"`
+	Runtime           AgentRuntime          `json:"runtime"`
+	SessionID         string                `json:"sessionId"`
+	DSHAttachSnapshot *AgentDSHAttachResult `json:"dshAttachSnapshot,omitempty"`
 }
 
 // AgentAckResult is the stable acknowledgement for session mutations.
@@ -298,6 +312,7 @@ type AgentDSHSessionMetadata struct {
 	SessionID     string `json:"sessionId"`
 	CreatedAt     int64  `json:"createdAt"`
 	ParentSession string `json:"parentSession,omitempty"`
+	Origin        string `json:"origin,omitempty"`
 	AgentPreset   string `json:"agentPreset,omitempty"`
 }
 
@@ -400,8 +415,9 @@ type DSHProviderCatalogEntry struct {
 	Models         []DSHProviderCatalogModel `json:"models"`
 }
 type DSHProviderCatalogModel struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	ContextWindow *int64 `json:"contextWindow,omitempty"`
 }
 
 // ---- dsh credentials ----

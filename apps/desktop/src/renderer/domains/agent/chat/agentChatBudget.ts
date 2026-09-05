@@ -1,4 +1,4 @@
-import type { AgentMessage } from "./agentChatTypes";
+import type { AgentContentBlock, AgentMessage, AgentThinkingSignature } from "./agentChatTypes";
 
 // ─── Budget constants ─────────────────────────────────────────────────────────
 
@@ -35,35 +35,38 @@ const sharedEncoder = new TextEncoder();
  * in an AgentMessage. Used for aggregate per-tab byte-budget enforcement.
  */
 export function countMessageUtf8Bytes(message: AgentMessage): number {
-  let total = 0;
+  const contentBytes =
+    typeof message.content === "string"
+      ? countUtf8Bytes(message.content)
+      : message.content.reduce((total, block) => total + countContentBlockUtf8Bytes(block), 0);
+  const metadataValues = [
+    message.errorMessage,
+    message.stopReason,
+    message.customType,
+    message.toolName,
+    message.toolCallId,
+    message.details ? JSON.stringify(message.details) : undefined,
+  ];
 
-  if (typeof message.content === "string") {
-    total += sharedEncoder.encode(message.content).length;
-  } else {
-    for (const block of message.content) {
-      if (block.type === "text") {
-        total += sharedEncoder.encode(block.text).length;
-      } else if (block.type === "thinking") {
-        total += sharedEncoder.encode(block.thinking).length;
-        if (typeof block.thinkingSignature === "string") {
-          total += sharedEncoder.encode(block.thinkingSignature).length;
-        } else if (block.thinkingSignature?.summary) {
-          for (const s of block.thinkingSignature.summary) {
-            total += sharedEncoder.encode(s.text).length;
-          }
-        }
-      } else if (block.type === "toolCall") {
-        total += sharedEncoder.encode(JSON.stringify(block.arguments)).length;
-      }
-    }
+  return contentBytes + metadataValues.reduce((total, value) => total + countUtf8Bytes(value), 0);
+}
+
+function countContentBlockUtf8Bytes(block: AgentContentBlock): number {
+  switch (block.type) {
+    case "text":
+      return countUtf8Bytes(block.text);
+    case "thinking":
+      return countUtf8Bytes(block.thinking) + countThinkingSignatureUtf8Bytes(block.thinkingSignature);
+    case "toolCall":
+      return countUtf8Bytes(JSON.stringify(block.arguments));
   }
+}
 
-  if (message.errorMessage) total += sharedEncoder.encode(message.errorMessage).length;
-  if (message.stopReason) total += sharedEncoder.encode(message.stopReason).length;
-  if (message.customType) total += sharedEncoder.encode(message.customType).length;
-  if (message.toolName) total += sharedEncoder.encode(message.toolName).length;
-  if (message.toolCallId) total += sharedEncoder.encode(message.toolCallId).length;
-  if (message.details) total += sharedEncoder.encode(JSON.stringify(message.details)).length;
+function countThinkingSignatureUtf8Bytes(signature: string | AgentThinkingSignature | undefined): number {
+  if (typeof signature === "string") return countUtf8Bytes(signature);
+  return signature?.summary?.reduce((total, summary) => total + countUtf8Bytes(summary.text), 0) ?? 0;
+}
 
-  return total;
+function countUtf8Bytes(value: string | undefined): number {
+  return value ? sharedEncoder.encode(value).length : 0;
 }

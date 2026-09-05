@@ -1,6 +1,7 @@
 import { subscribeDesktopRpcEvent as subscribeDesktopRpcEventFromTransport } from "@renderer/events/desktopRpcEventBus";
 import { request } from "@renderer/rpc";
 import { parseAgentAttachResult } from "./daemonAgentAttachParser";
+import { parseAgentStartResult } from "./daemonAgentStartParser";
 import { parseAgentCancelSubagentResult } from "./daemonAgentCancelSubagentParser";
 import { parseAgentHistoryResult } from "./daemonAgentHistoryParser";
 import { parseAgentSessionLineageResult } from "./daemonAgentSessionLineageParser";
@@ -18,6 +19,8 @@ import type {
   AgentDefinitionUpdateInput,
   AgentDisposeRequest,
   AgentHistoryResult,
+  AgentGetSessionFilePathRequest,
+  AgentSessionFilePathResult,
   AgentListSessionLineageRequest,
   AgentListSessionsRequest,
   AgentPromptRequest,
@@ -46,31 +49,6 @@ import type {
  * `daemonAgentTypes` (Domain Infrastructure, desktop7 Phase 26); these
  * wrappers are the only agent code that touches transport.
  */
-
-// ─── chat ────────────────────────────────────────────────────────────────────
-
-export async function ensureWorkspaceChatSession(input: {
-  workspaceId: string;
-  sessionId?: string;
-  title?: string;
-  agentKind?: string;
-}): Promise<unknown> {
-  return request("chat.ensureWorkspaceChatSession", input);
-}
-
-export async function runWorkspaceChatPrompt(input: {
-  workspaceId: string;
-  sessionId: string;
-  prompt: string;
-  agentKind?: string;
-  suppressCompletionNotification?: boolean;
-}): Promise<unknown> {
-  return request("chat.runWorkspaceChatPrompt", input);
-}
-
-export async function closeAgentSession(input: { sessionId: string; deleteRecord?: boolean }): Promise<unknown> {
-  return request("chat.closeAgentSession", input);
-}
 
 // ─── pi ──────────────────────────────────────────────────────────────────────
 
@@ -190,7 +168,7 @@ function parseAgentCapabilities(payload: unknown): AgentCapabilities {
 
 /** Starts one session in the runtime selected by the request. */
 export async function startAgentSession(input: AgentStartRequest): Promise<AgentStartResult> {
-  return (await request("agent.start", withDSHTranscriptProtocol(input))) as AgentStartResult;
+  return parseAgentStartResult(await request("agent.start", withDSHTranscriptProtocol(input)), input);
 }
 
 /** Attaches the current daemon connection to one existing agent session. */
@@ -239,6 +217,11 @@ export async function listAgentSessionLineage(
 /** Requests interruption of one direct DSH subagent. */
 export async function cancelAgentSubagent(input: AgentCancelSubagentRequest): Promise<AgentCancelSubagentResult> {
   return parseAgentCancelSubagentResult(await request("agent.cancelSubagent", input), input);
+}
+
+/** Resolves one materialized runtime session artifact. */
+export async function getAgentSessionFilePath(input: AgentGetSessionFilePathRequest): Promise<AgentSessionFilePathResult> {
+  return (await request("agent.getSessionFilePath", input)) as AgentSessionFilePathResult;
 }
 
 /** Reads durable history without interpreting runtime-specific event payloads. */

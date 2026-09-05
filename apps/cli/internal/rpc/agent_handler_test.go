@@ -50,6 +50,9 @@ func (s *recordingAgentFacade) AgentListSessionLineage(_ context.Context, params
 func (s *recordingAgentFacade) AgentCancelSubagent(context.Context, AgentCancelSubagentParams) (any, error) {
 	return s.called(MethodAgentCancelSubagent)
 }
+func (s *recordingAgentFacade) AgentGetSessionFilePath(context.Context, AgentGetSessionFilePathParams) (any, error) {
+	return s.called(MethodAgentGetSessionFilePath)
+}
 func (s *recordingAgentFacade) AgentReadHistory(context.Context, AgentReadHistoryParams) (any, error) {
 	return s.called(MethodAgentReadHistory)
 }
@@ -65,6 +68,7 @@ func TestAgentHandler_RoutesRuntimeNeutralMethods(t *testing.T) {
 		{MethodAgentListSessionLineage, `{"runtime":"dsh","workspaceId":"w","cwd":"/w","rootSessionId":"s","mode":"children"}`},
 		{MethodAgentCancelSubagent, `{"runtime":"dsh","workspaceId":"w","cwd":"/w","parentSessionId":"parent","childSessionId":"child"}`},
 		{MethodAgentReadHistory, `{"runtime":"pi","sessionId":"s","workspaceId":"w","cwd":"/w"}`},
+		{MethodAgentGetSessionFilePath, `{"runtime":"pi","sessionId":"s","workspaceId":"w","cwd":"/w"}`},
 	}
 	for _, test := range tests {
 		t.Run(test.method, func(t *testing.T) {

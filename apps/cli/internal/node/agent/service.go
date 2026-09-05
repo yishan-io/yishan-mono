@@ -64,12 +64,17 @@ type DSHLocalPluginStore interface {
 	RestoreSnapshot(plugins.LocalSnapshot) error
 }
 
+// DSHSessionTitleSummaries is an optional runtime capability for history previews.
+type DSHSessionTitleSummaries interface {
+	ListSessionTitleSummaries(context.Context, dsh.SessionTitleSummaryRequest) (dsh.SessionTitleSummaryResult, error)
+}
+
 // DSHSessions is the internal DSH runtime boundary used by workspace-scoped
 // session operations. It is intentionally not exposed through the RPC layer.
 type DSHSessions interface {
 	ListSessions(context.Context, dsh.SessionListRequest) (dsh.SessionListResult, error)
 	ReadSession(context.Context, dsh.SessionReadRequest) (dsh.SessionReadResult, error)
-	ResumeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionResumeResult, error)
+	ResumeSession(context.Context, dsh.SessionResumeRequest) (dsh.SessionResumeResult, error)
 	DisposeSession(context.Context, dsh.SessionReadRequest) (dsh.SessionDisposeResult, error)
 	StartSession(context.Context, dsh.SessionStartRequest) (dsh.SessionStartResult, error)
 	SetModelSession(context.Context, dsh.SetModelRequest) error
@@ -78,6 +83,11 @@ type DSHSessions interface {
 	SubscribeSession(context.Context, dsh.SessionSubscribeRequest) (dsh.SessionSubscription, error)
 	FlushSession(context.Context, dsh.SessionFlushRequest) (dsh.DurableCursor, error)
 	Health() dsh.Health
+}
+
+// DSHSessionFilePath exposes optional materialized-artifact lookup.
+type DSHSessionFilePath interface {
+	GetSessionFilePath(context.Context, dsh.SessionReadRequest) (dsh.SessionFilePathResult, error)
 }
 
 // DSHSessionLineage exposes the optional DSH lineage capability.
@@ -144,6 +154,8 @@ type Service struct {
 	piSessions *session.Registry
 	// dshSessions owns ephemeral DSH live-session routing state.
 	dshSessions *dshLiveRegistry
+	// dshNotificationMu serializes DSH route validation, lifecycle state, and publication.
+	dshNotificationMu sync.Mutex
 	// runtimeIdentities owns atomic runtime-scoped session-id reservations.
 	runtimeIdentities *runtimeIdentityRegistry
 	// stopProcess is overridden by focused tests to exercise cleanup failures.

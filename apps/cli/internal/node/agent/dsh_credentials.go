@@ -44,6 +44,6 @@ func (s *Service) DSHRemoveCredential(_ context.Context, req rpc.DSHRemoveCreden
 // dshCredentialStore adapts dsh.CredentialStore to the service dependency interface.
 type dshCredentialStoreAdapter struct{ store *dsh.CredentialStore }
 
-func (a *dshCredentialStoreAdapter) List() ([]string, error)         { return a.store.List() }
-func (a *dshCredentialStoreAdapter) Save(ref, value string) error    { return a.store.Save(ref, value) }
-func (a *dshCredentialStoreAdapter) Remove(ref string) error         { return a.store.Remove(ref) }
+func (a *dshCredentialStoreAdapter) List() ([]string, error)      { return a.store.List() }
+func (a *dshCredentialStoreAdapter) Save(ref, value string) error { return a.store.Save(ref, value) }
+func (a *dshCredentialStoreAdapter) Remove(ref string) error      { return a.store.Remove(ref) }

@@ -4,6 +4,7 @@ import { BashToolCard } from "./BashToolCard";
 import { CodeGraphToolCard } from "./CodeGraphToolCard";
 import { DefaultToolCard } from "./DefaultToolCard";
 import { DiffToolCard } from "./DiffToolCard";
+import { DshSubagentToolCard } from "./DshSubagentToolCard";
 import { GrepToolCard } from "./GrepToolCard";
 import { LspToolCard } from "./LspToolCard";
 import { MemoryReadToolCard } from "./MemoryReadToolCard";
@@ -41,6 +42,9 @@ export function AgentToolCallCard(props: AgentToolCallCardProps) {
       return <CodeGraphToolCard {...props} />;
     case "Agent":
       return <AgentToolCard {...props} />;
+    case "delegate_explore":
+    case "delegate_builder":
+      return props.runtime === "dsh" ? <DshSubagentToolCard {...props} /> : <DefaultToolCard {...props} />;
     case "memory_read":
       return <MemoryReadToolCard {...props} />;
     case "memory_search":

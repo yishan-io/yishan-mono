@@ -20,17 +20,17 @@ type rpcResponse struct {
 
 type rpcEnvelope struct {
 	JSONRPC string          `json:"jsonrpc"`
-	ID      *uint64         `json:"id"`
+	ID      *string         `json:"id"`
 	Method  string          `json:"method"`
 	Result  json.RawMessage `json:"result"`
 	Error   *rpcServerError `json:"error"`
 	Params  json.RawMessage `json:"params"`
 }
 
-func writeRequest(process *runtimeProcess, id uint64, method string, params any) error {
+func writeRequest(process *runtimeProcess, id string, method string, params any) error {
 	frame, err := json.Marshal(struct {
 		JSONRPC string `json:"jsonrpc"`
-		ID      uint64 `json:"id"`
+		ID      string `json:"id"`
 		Method  string `json:"method"`
 		Params  any    `json:"params,omitempty"`
 	}{JSONRPC: "2.0", ID: id, Method: method, Params: params})
@@ -45,7 +45,7 @@ func writeRequest(process *runtimeProcess, id uint64, method string, params any)
 	return nil
 }
 
-func (p *runtimeProcess) registerPending(id uint64) (<-chan rpcResponse, func()) {
+func (p *runtimeProcess) registerPending(id string) (<-chan rpcResponse, func()) {
 	response := make(chan rpcResponse, 1)
 	p.pendingMu.Lock()
 	if p.terminalErr != nil {
@@ -57,7 +57,7 @@ func (p *runtimeProcess) registerPending(id uint64) (<-chan rpcResponse, func())
 	return response, func() { p.removePending(id) }
 }
 
-func (p *runtimeProcess) removePending(id uint64) {
+func (p *runtimeProcess) removePending(id string) {
 	p.pendingMu.Lock()
 	delete(p.pending, id)
 	p.pendingMu.Unlock()
@@ -79,7 +79,7 @@ func (p *runtimeProcess) routeResponse(frame rpcEnvelope) {
 func (p *runtimeProcess) interruptPending(err error) {
 	p.pendingMu.Lock()
 	pending := p.pending
-	p.pending = make(map[uint64]chan rpcResponse)
+	p.pending = make(map[string]chan rpcResponse)
 	p.pendingMu.Unlock()
 	deliverInterrupted(pending, err)
 }
@@ -88,12 +88,12 @@ func (p *runtimeProcess) failPending(err error) {
 	p.pendingMu.Lock()
 	p.terminalErr = err
 	pending := p.pending
-	p.pending = make(map[uint64]chan rpcResponse)
+	p.pending = make(map[string]chan rpcResponse)
 	p.pendingMu.Unlock()
 	deliverInterrupted(pending, err)
 }
 
-func deliverInterrupted(pending map[uint64]chan rpcResponse, err error) {
+func deliverInterrupted(pending map[string]chan rpcResponse, err error) {
 	for _, response := range pending {
 		response <- interruptedResponse(err)
 	}
@@ -105,7 +105,7 @@ func interruptedResponse(err error) rpcResponse {
 
 func (s *Supervisor) drainOutput(process *runtimeProcess) {
 	for process.output.Scan() {
-		s.routeOutput(process, process.output.Bytes())
+		s.routeOutput(process, append([]byte(nil), process.output.Bytes()...))
 	}
 	if err := process.output.Err(); err != nil {
 		s.diagnose(fmt.Sprintf("read DSH stdout: %v", err))
@@ -123,7 +123,7 @@ func (s *Supervisor) routeOutput(process *runtimeProcess, line []byte) {
 		return
 	}
 	if frame.Method != "" {
-		s.diagnose("unsupported DSH runtime request: " + frame.Method)
+		s.submitRuntimeRequest(process, frame)
 		return
 	}
 	process.routeResponse(frame)
@@ -131,11 +131,25 @@ func (s *Supervisor) routeOutput(process *runtimeProcess, line []byte) {
 
 func (s *Supervisor) handleMalformedEnvelope(process *runtimeProcess, line []byte, cause error) {
 	s.diagnose(fmt.Sprintf("decode DSH stdout: %v", cause))
+	if id, _, ok := extractRuntimeRequestIdentity(line); ok {
+		s.writeRuntimeError(process, id, -32600, "invalid request")
+		return
+	}
 	method, ok := extractEnvelopeMethod(line)
 	if !ok || !isKnownNotification(method) {
 		return
 	}
 	s.invalidateProcess(process, fmt.Errorf("malformed DSH notification %s: %w", method, cause))
+}
+
+func extractRuntimeRequestIdentity(line []byte) (string, string, bool) {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(line, &fields) != nil || !rawStringEquals(fields["jsonrpc"], "2.0") {
+		return "", "", false
+	}
+	id, hasID := rawString(fields["id"])
+	method, hasMethod := rawString(fields["method"])
+	return id, method, hasID && id != "" && hasMethod && method != ""
 }
 
 func extractEnvelopeMethod(line []byte) (string, bool) {
@@ -162,23 +176,20 @@ func parseRPCEnvelope(line []byte) (rpcEnvelope, error) {
 }
 
 func parseRPCFrameWithID(fields map[string]json.RawMessage) (rpcEnvelope, error) {
-	var id uint64
-	if string(fields["id"]) == "null" {
-		return rpcEnvelope{}, errors.New("frame has invalid id")
-	}
-	if err := json.Unmarshal(fields["id"], &id); err != nil {
+	var id string
+	if err := json.Unmarshal(fields["id"], &id); err != nil || id == "" {
 		return rpcEnvelope{}, errors.New("frame has invalid id")
 	}
 	if method, ok := rawString(fields["method"]); ok {
 		if !hasExactKeys(fields, "jsonrpc", "id", "method", "params") {
 			return rpcEnvelope{}, errors.New("runtime request has unsupported fields")
 		}
-		return rpcEnvelope{JSONRPC: "2.0", ID: &id, Method: method}, nil
+		return rpcEnvelope{JSONRPC: "2.0", ID: &id, Method: method, Params: fields["params"]}, nil
 	}
 	return parseRPCResponse(fields, id)
 }
 
-func parseRPCResponse(fields map[string]json.RawMessage, id uint64) (rpcEnvelope, error) {
+func parseRPCResponse(fields map[string]json.RawMessage, id string) (rpcEnvelope, error) {
 	_, hasResult := fields["result"]
 	_, hasError := fields["error"]
 	if hasResult == hasError || !hasExactKeys(fields, "jsonrpc", "id", responseKey(hasError)) {
@@ -257,4 +268,119 @@ func (response subagentInterruptWireResult) validate(request SubagentInterruptRe
 		ChildSessionID:     response.ChildSessionID,
 		InterruptRequested: *response.InterruptRequested,
 	}, nil
+}
+
+const yishanWorkspaceBindingResolveMethod = "yishan.v1.workspace.binding.resolve"
+
+func (s *Supervisor) submitRuntimeRequest(process *runtimeProcess, frame rpcEnvelope) {
+	select {
+	case process.reverseRequests <- struct{}{}:
+	case <-s.ctx.Done():
+		s.writeRuntimeError(process, *frame.ID, -32000, "runtime is shutting down")
+		return
+	default:
+		s.writeRuntimeError(process, *frame.ID, -32000, "too many runtime requests")
+		return
+	}
+	go func() {
+		defer func() { <-process.reverseRequests }()
+		s.handleRuntimeRequest(process, frame)
+	}()
+}
+
+func (s *Supervisor) handleRuntimeRequest(process *runtimeProcess, frame rpcEnvelope) {
+	if frame.Method == yishanCapabilityRequestMethod {
+		s.handleCapabilityRequest(process, *frame.ID, frame.Params)
+		return
+	}
+	if frame.Method != yishanWorkspaceBindingResolveMethod {
+		s.diagnose("unsupported DSH runtime request: " + frame.Method)
+		s.writeRuntimeError(process, *frame.ID, -32601, "method not found")
+		return
+	}
+	var request WorkspaceBindingRequest
+	if err := decodeStrictJSON(frame.Params, &request); err != nil || request.SessionID == "" || request.WorkspaceID == "" {
+		s.writeRuntimeError(process, *frame.ID, -32602, "invalid workspace binding request")
+		return
+	}
+	identity, lease, isAuthorized := s.getWorkspaceBindingLease(request.SessionID, request.WorkspaceID)
+	if !isAuthorized {
+		s.writeRuntimeError(process, *frame.ID, -32000, "workspace binding is not authorized for this session")
+		return
+	}
+	result, err := s.resolveWorkspaceBinding(request)
+	if err != nil {
+		s.writeRuntimeError(process, *frame.ID, -32000, err.Error())
+		return
+	}
+	result.Generation = identity.generation
+	if result.WorkspaceID != identity.workspaceID || result.CWD != identity.cwd || result.CWD == "" || result.Generation == 0 || result.Policy.Authorization != "daemon-authorized" {
+		s.writeRuntimeError(process, *frame.ID, -32000, "workspace binding was invalid")
+		return
+	}
+	if s.beforeWorkspaceBindingCommit != nil {
+		s.beforeWorkspaceBindingCommit()
+	}
+	if !s.commitWorkspaceBindingLease(lease, identity) {
+		s.writeRuntimeError(process, *frame.ID, -32000, "workspace binding is no longer authorized for this session")
+		return
+	}
+	s.writeCommittedWorkspaceBindingResponse(process, *frame.ID, lease, result)
+}
+
+func (s *Supervisor) resolveWorkspaceBinding(request WorkspaceBindingRequest) (WorkspaceBindingResult, error) {
+	s.mu.RLock()
+	resolver := s.config.WorkspaceBindingResolver
+	s.mu.RUnlock()
+	if resolver == nil {
+		return WorkspaceBindingResult{}, errors.New("workspace binding is unavailable")
+	}
+	return resolver(s.ctx, request)
+}
+
+func (s *Supervisor) writeCommittedWorkspaceBindingResponse(process *runtimeProcess, id string, lease workspaceBindingLease, result any) {
+	if s.beforeWorkspaceBindingResponseWrite != nil {
+		s.beforeWorkspaceBindingResponseWrite()
+	}
+	if err := s.writeRuntimeResult(process, id, result); err != nil {
+		s.finishWorkspaceBindingResponse(lease, false)
+		s.diagnose(fmt.Sprintf("write committed DSH workspace binding response: %v", err))
+		return
+	}
+	s.finishWorkspaceBindingResponse(lease, true)
+}
+
+func (s *Supervisor) writeRuntimeResult(process *runtimeProcess, id string, result any) error {
+	return s.writeRuntimeFrame(process, struct {
+		JSONRPC string `json:"jsonrpc"`
+		ID      string `json:"id"`
+		Result  any    `json:"result"`
+	}{JSONRPC: "2.0", ID: id, Result: result})
+}
+
+func (s *Supervisor) writeRuntimeError(process *runtimeProcess, id string, code int, message string) {
+	s.writeRuntimeFrame(process, struct {
+		JSONRPC string `json:"jsonrpc"`
+		ID      string `json:"id"`
+		Error   struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}{JSONRPC: "2.0", ID: id, Error: struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}{Code: code, Message: message}})
+}
+
+func (s *Supervisor) writeRuntimeFrame(process *runtimeProcess, frame any) error {
+	encoded, err := json.Marshal(frame)
+	if err != nil {
+		return fmt.Errorf("encode DSH runtime response: %w", err)
+	}
+	process.writeMu.Lock()
+	defer process.writeMu.Unlock()
+	if _, err := process.stdin.Write(append(encoded, '\n')); err != nil {
+		return fmt.Errorf("write DSH runtime response: %w", err)
+	}
+	return nil
 }

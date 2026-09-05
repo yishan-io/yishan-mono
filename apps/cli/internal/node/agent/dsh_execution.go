@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"yishan/apps/cli/internal/agent/dsh"
 	"yishan/apps/cli/internal/agent/session"
@@ -51,6 +52,9 @@ func (s *Service) startDSH(ctx context.Context, connection *rpc.Connection, req 
 	if err != nil {
 		return nil, err
 	}
+	if err := authorizeDSHWorkspace(workspaceInstance); err != nil {
+		return nil, err
+	}
 	return s.startDSHSession(ctx, connection, req, workspaceInstance)
 }
 
@@ -70,41 +74,55 @@ func (s *Service) startDSHSession(ctx context.Context, connection *rpc.Connectio
 		return nil, mapDSHExecutionError(dsh.ErrRuntimeUnavailable)
 	}
 	if req.Resume {
-		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionReadRequest{SessionID: req.SessionID, CWD: cwd}); err != nil {
+		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionResumeRequest{SessionID: req.SessionID, CWD: cwd, WorkspaceID: workspaceInstance.ID}); err != nil {
 			return nil, mapDSHExecutionError(err)
 		}
 	} else if _, err := s.dshRuntime().StartSession(ctx, dsh.SessionStartRequest{
 		SessionID: req.SessionID, CWD: cwd,
-		Binding:      dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd},
+		Binding:      dsh.SessionBinding{Version: 1, WorkspaceID: workspaceInstance.ID, ProjectID: workspaceInstance.ProjectID, OrganizationID: workspaceInstance.OrgID, OwnerNodeID: s.deps.OwnerNodeID, CWD: cwd, Policy: dsh.WorkspaceBindingPolicy{Authorization: "daemon-authorized"}},
 		AgentOptions: dshAgentOptionsPointer(req.ModelID, req.Provider, s.deps.DSHProvider, s.deps.DSHModel),
 	}); err != nil {
 		return nil, mapDSHExecutionError(err)
 	}
 	subscription, err := s.dshRuntime().SubscribeSession(ctx, dsh.SessionSubscribeRequest{SessionID: req.SessionID, CWD: cwd, AfterSeq: -1})
 	if err != nil {
-		cleanupErr, isDisposed := s.cleanupFailedDSHStart(ctx, req.SessionID, cwd, err)
+		cleanupErr, isDisposed := s.cleanupFailedDSHStart(ctx, req.SessionID, cwd, mapDSHTranscriptProtocolError(err))
 		s.runtimeIdentities.completeStart(req.SessionID, rpc.AgentRuntimeDSH, claim, false, !isDisposed)
 		startCompleted = true
 		return nil, cleanupErr
 	}
-	result, err := s.registerStartedDSHSession(connection, req, cwd, claim, subscription)
+	attachSnapshot, err := mapDSHAttachResult(subscription)
+	if err != nil {
+		subscription.Unsubscribe()
+		cleanupErr, isDisposed := s.cleanupFailedDSHStart(ctx, req.SessionID, cwd, mapDSHTranscriptProtocolError(err))
+		s.runtimeIdentities.completeStart(req.SessionID, rpc.AgentRuntimeDSH, claim, false, !isDisposed)
+		startCompleted = true
+		return nil, cleanupErr
+	}
+	result, err := s.registerStartedDSHSession(connection, req, cwd, claim, subscription, attachSnapshot)
 	startCompleted = true
 	return result, err
 }
 
-func (s *Service) registerStartedDSHSession(connection *rpc.Connection, req rpc.AgentStartParams, cwd string, claim runtimeIdentityClaim, subscription dsh.SessionSubscription) (any, error) {
+func (s *Service) registerStartedDSHSession(connection *rpc.Connection, req rpc.AgentStartParams, cwd string, claim runtimeIdentityClaim, subscription dsh.SessionSubscription, attachSnapshot rpc.AgentDSHAttachResult) (any, error) {
 	selection := dshAgentOptionsFrom(req.ModelID, req.Provider, s.deps.DSHProvider, s.deps.DSHModel)
-	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, workspaceID: req.WorkspaceID, cwd: cwd, instanceID: subscription.InstanceID, provider: selection.Provider, model: selection.Model, connection: connection, available: true, subscription: subscription}
-	if !s.dshSessions.register(entry) {
+	paneID := req.PaneID
+	if paneID == "" {
+		paneID = req.SessionID
+	}
+	entry := &dshLiveSession{sessionID: req.SessionID, tabID: req.TabID, paneID: paneID, workspaceID: req.WorkspaceID, cwd: cwd, instanceID: subscription.InstanceID, provider: selection.Provider, model: selection.Model, connection: connection, available: true, subscription: subscription}
+	binding, registered := s.dshSessions.register(entry)
+	if !registered {
 		subscription.Unsubscribe()
 		// The registry winner owns this external session. Never compensate-dispose it.
 		s.runtimeIdentities.completeStart(req.SessionID, rpc.AgentRuntimeDSH, claim, false, true)
 		return nil, dshSessionConflict(req.SessionID)
 	}
 	s.runtimeIdentities.completeStart(req.SessionID, rpc.AgentRuntimeDSH, claim, true, false)
-	s.bindDSHConnection(entry, connection)
-	s.pumpDSHSubscription(entry)
-	return rpc.AgentStartResult{Runtime: rpc.AgentRuntimeDSH, SessionID: req.SessionID}, nil
+	s.bindDSHConnectionGeneration(entry, connection, binding.generation)
+	s.projectDSHSnapshot(entry, binding, subscription.Snapshot.Events)
+	s.pumpDSHSubscription(entry, binding)
+	return rpc.AgentStartResult{Runtime: rpc.AgentRuntimeDSH, SessionID: req.SessionID, DSHAttachSnapshot: &attachSnapshot}, nil
 }
 
 func (s *Service) attachDSH(ctx context.Context, connection *rpc.Connection, req rpc.AgentAttachParams) (any, error) {
@@ -129,7 +147,7 @@ func (s *Service) attachDSHSession(ctx context.Context, connection *rpc.Connecti
 		return nil, mapDSHExecutionError(dsh.ErrRuntimeUnavailable)
 	}
 	if s.dshSessions.requiresResume(entry) {
-		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionReadRequest{SessionID: req.SessionID, CWD: entry.cwd}); err != nil {
+		if _, err := s.dshRuntime().ResumeSession(ctx, dsh.SessionResumeRequest{SessionID: req.SessionID, CWD: entry.cwd, WorkspaceID: entry.workspaceID}); err != nil {
 			return nil, mapDSHExecutionError(err)
 		}
 	}
@@ -145,21 +163,20 @@ func (s *Service) attachDSHSession(ctx context.Context, connection *rpc.Connecti
 }
 
 func (s *Service) rebindDSHSession(connection *rpc.Connection, sessionID string, entry *dshLiveSession, subscription dsh.SessionSubscription) (any, error) {
-	generation, instanceIDChanged, rebound := s.dshSessions.rebind(entry, connection, subscription)
+	binding, instanceIDChanged, rebound := s.rebindDSHNotificationSession(entry, connection, subscription)
+	generation := binding.generation
 	if !rebound {
 		subscription.Unsubscribe()
 		return nil, dshSessionNotFound(sessionID)
 	}
 	s.bindDSHConnectionGeneration(entry, connection, generation)
 	if instanceIDChanged {
-		if route, found := s.dshSessions.route(entry, generation); found {
-			if err := s.publishDSHUpdate(route, dsh.SessionUpdate{Reset: &dsh.TranscriptReset{SessionID: route.sessionID, InstanceID: subscription.InstanceID, HeadSeq: subscription.Baseline}}); err != nil {
-				s.dshSessions.detach(entry, route.generation, route.connection)
-				return nil, rpc.NewRPCError(rpc.CodeServerError, "dsh frontend notification failed")
-			}
+		reset := dsh.SessionUpdate{Reset: &dsh.TranscriptReset{SessionID: sessionID, InstanceID: subscription.InstanceID, HeadSeq: subscription.Baseline}}
+		if _, err := s.deliverDSHFrontendUpdate(entry, generation, reset); err != nil {
+			return nil, rpc.NewRPCError(rpc.CodeServerError, "dsh frontend notification failed")
 		}
 	}
-	s.pumpDSHSubscription(entry)
+	s.pumpDSHSubscription(entry, binding)
 	result, err := mapDSHAttachResult(subscription)
 	if err != nil {
 		subscription.Unsubscribe()
@@ -229,7 +246,10 @@ func (s *Service) disposeDSH(ctx context.Context, req rpc.AgentDisposeParams) (a
 	if err != nil {
 		return nil, mapDSHExecutionError(err)
 	}
-	if !disposed.Disposed || !s.dshSessions.remove(entry) {
+	if !disposed.Disposed {
+		return nil, dshSessionNotFound(req.SessionID)
+	}
+	if !s.removeDSHNotificationSession(entry) {
 		return nil, dshSessionNotFound(req.SessionID)
 	}
 	s.runtimeIdentities.release(entry.sessionID, rpc.AgentRuntimeDSH)
@@ -271,26 +291,18 @@ func (s *Service) cleanupFailedDSHStart(ctx context.Context, sessionID string, c
 	return errors.Join(mapDSHExecutionError(startErr), mapDSHExecutionError(disposeErr)), false
 }
 
-func (s *Service) bindDSHConnection(entry *dshLiveSession, connection *rpc.Connection) {
-	generation, _, found := s.dshSessions.binding(entry)
-	if found {
-		s.bindDSHConnectionGeneration(entry, connection, generation)
-	}
-}
-
 func (s *Service) bindDSHConnectionGeneration(entry *dshLiveSession, connection *rpc.Connection, generation uint64) {
 	if connection == nil {
 		return
 	}
-	connection.AddCloseHook(func() { s.dshSessions.detach(entry, generation, connection) })
+	connection.AddCloseHook(func() { s.detachDSHRoute(entry, generation, connection) })
 }
 
-func (s *Service) pumpDSHSubscription(entry *dshLiveSession) {
-	generation, updates, found := s.dshSessions.binding(entry)
-	if !found {
+func (s *Service) pumpDSHSubscription(entry *dshLiveSession, binding dshSubscriptionBinding) {
+	if binding.updates == nil {
 		return
 	}
-	go s.forwardDSHUpdates(entry, generation, updates)
+	go s.forwardDSHUpdates(entry, binding.generation, binding.updates)
 }
 
 func (s *Service) forwardDSHUpdates(entry *dshLiveSession, generation uint64, updates <-chan dsh.SessionUpdate) {
@@ -298,19 +310,48 @@ func (s *Service) forwardDSHUpdates(entry *dshLiveSession, generation uint64, up
 		var route dshRoute
 		var found bool
 		if update.Reset != nil {
-			route, found = s.dshSessions.resetRoute(entry, generation, update.Reset.InstanceID)
+			route, found = s.resetDSHNotificationRoute(entry, generation, update.Reset.InstanceID)
 		} else {
 			route, found = s.dshSessions.route(entry, generation)
 		}
-		if !found || !route.connection.IsOpen() {
+		if !found {
 			continue
 		}
-		if err := s.publishDSHUpdate(route, update); err != nil {
-			s.dshSessions.detach(entry, route.generation, route.connection)
+		if _, err := s.deliverDSHUpdate(entry, route, update); err != nil {
 			return
 		}
 	}
-	s.dshSessions.markUnavailable(entry, generation)
+	s.markDSHNotificationUnavailable(entry, generation)
+}
+
+func (s *Service) deliverDSHUpdate(entry *dshLiveSession, route dshRoute, update dsh.SessionUpdate) (bool, error) {
+	s.dshNotificationMu.Lock()
+	defer s.dshNotificationMu.Unlock()
+	if !s.projectDSHUpdateLocked(route, update) {
+		return false, nil
+	}
+	return s.publishCurrentDSHUpdate(entry, route, update)
+}
+
+func (s *Service) deliverDSHFrontendUpdate(entry *dshLiveSession, generation uint64, update dsh.SessionUpdate) (bool, error) {
+	s.dshNotificationMu.Lock()
+	defer s.dshNotificationMu.Unlock()
+	route, found := s.dshSessions.route(entry, generation)
+	if !found {
+		return false, nil
+	}
+	return s.publishCurrentDSHUpdate(entry, route, update)
+}
+
+func (s *Service) publishCurrentDSHUpdate(entry *dshLiveSession, route dshRoute, update dsh.SessionUpdate) (bool, error) {
+	if route.connection == nil || !route.connection.IsOpen() {
+		return true, nil
+	}
+	if err := s.publishDSHUpdate(route, update); err != nil {
+		_, _ = s.dshSessions.detach(entry, route.generation, route.connection)
+		return true, err
+	}
+	return true, nil
 }
 
 func (s *Service) publishDSHUpdate(route dshRoute, update dsh.SessionUpdate) error {
@@ -332,6 +373,27 @@ func (s *Service) notifyDSHUpdate(route dshRoute, update dsh.SessionUpdate) erro
 	return route.connection.Notify(rpc.MethodFrontendEventsStream, map[string]any{"topic": dshEventTopic, "payload": payload})
 }
 
+func (s *Service) resolveAuthorizedDSHWorkspace(workspaceID string) (workspace.Workspace, error) {
+	if s.deps.Workspace == nil {
+		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeServerError, "workspace resolver is unavailable")
+	}
+	workspaceInstance, err := s.deps.Workspace.GetWorkspace(workspaceID)
+	if err != nil {
+		return workspace.Workspace{}, err
+	}
+	if err := authorizeDSHWorkspace(workspaceInstance); err != nil {
+		return workspace.Workspace{}, err
+	}
+	return workspaceInstance, nil
+}
+
+func authorizeDSHWorkspace(workspaceInstance workspace.Workspace) error {
+	if workspaceInstance.Path == "" || workspaceInstance.State != workspace.StateActive || workspaceInstance.Health != workspace.HealthOK {
+		return rpc.NewRPCError(rpc.CodeNotFound, "workspace is not active")
+	}
+	return nil
+}
+
 func dshSessionNotFound(sessionID string) error {
 	return rpc.NewRPCError(rpc.CodeNotFound, "dsh session not found: "+sessionID)
 }
@@ -350,12 +412,16 @@ func mapDSHExecutionError(err error) error {
 	}
 	var requestErr *dsh.RequestError
 	if errors.As(err, &requestErr) {
-		switch dshRequestErrorCode(requestErr.Data) {
+		code := dshRequestErrorCode(requestErr.Data)
+		if code == "" {
+			code = dshRequestErrorMessageCode(requestErr.Message)
+		}
+		switch code {
 		case "YISHAN_SESSION_COLLISION", "YISHAN_SESSION_DISPOSING", "YISHAN_SESSION_BINDING_CONFLICT":
 			return rpc.NewRPCError(rpc.CodeSessionExists, "dsh session conflict")
 		case "YISHAN_SESSION_WORKSPACE_MISMATCH", "YISHAN_SESSION_ID_MISMATCH":
 			return rpc.NewRPCError(rpc.CodeInvalidParams, "dsh session workspace mismatch")
-		case "YISHAN_SESSION_NOT_PERSISTED":
+		case "YISHAN_SESSION_NOT_FOUND", "YISHAN_SESSION_NOT_PERSISTED":
 			return rpc.NewRPCError(rpc.CodeNotFound, "dsh session not found")
 		case "YISHAN_DURABILITY_UNAVAILABLE":
 			return rpc.NewRPCErrorWithData(rpc.CodeServerError, "dsh runtime unavailable", map[string]any{
@@ -374,6 +440,14 @@ func dshRequestErrorCode(raw json.RawMessage) string {
 		return ""
 	}
 	return data.Code
+}
+
+func dshRequestErrorMessageCode(message string) string {
+	code, _, found := strings.Cut(message, ":")
+	if !found || !strings.HasPrefix(code, "YISHAN_") {
+		return ""
+	}
+	return code
 }
 
 const defaultDSHProvider = "deepseek-official"
@@ -396,4 +470,11 @@ func dshAgentOptionsFrom(modelID, provider, defaultProvider, defaultModel string
 		modelID = defaultModel
 	}
 	return dsh.SessionAgentOptions{Model: modelID, Provider: provider}
+}
+
+func (s *Service) detachDSHRoute(entry *dshLiveSession, generation uint64, connection *rpc.Connection) {
+	// A frontend detach is transient: retain notification projection for rebind.
+	s.dshNotificationMu.Lock()
+	defer s.dshNotificationMu.Unlock()
+	_, _ = s.dshSessions.detach(entry, generation, connection)
 }

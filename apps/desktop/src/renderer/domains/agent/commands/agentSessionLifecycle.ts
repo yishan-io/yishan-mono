@@ -7,8 +7,8 @@
  * consume this surface instead of importing Agent event internals.
  */
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import type { WorkspaceAgentStatus } from "../../../domains/agent/state/chatStore";
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import type { WorkspaceAgentStatus } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 
 type NotificationEventPayload = RpcFrontendMessagePayload<"notificationEvent">;
 type ObserverStatusPayload = NonNullable<NotificationEventPayload["observerStatus"]>;
@@ -82,7 +82,7 @@ export function parseObserverSessionKey(
  */
 export function recordAgentObserverStatus(
   payload: NotificationEventPayload,
-  dependencies: { setWorkspaceAgentStatusByWorkspaceId: (status: Record<string, WorkspaceAgentStatus>) => void },
+  dependencies: { setStatuses: (statuses: Record<string, WorkspaceAgentStatus>) => void },
 ): void {
   const workspaceId = payload.workspaceId?.trim();
   const observerStatus = payload.observerStatus;
@@ -105,7 +105,7 @@ export function recordAgentObserverStatus(
     });
   }
 
-  dependencies.setWorkspaceAgentStatusByWorkspaceId(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
+  dependencies.setStatuses(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
 }
 
 /**
@@ -130,9 +130,7 @@ export function clearTerminalAgentStatus(tabId: string): void {
   }
 
   if (changed) {
-    chatStore
-      .getState()
-      .setWorkspaceAgentStatusByWorkspaceId(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
+    workspaceAgentIndicatorStore.getState().setStatuses(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
   }
 }
 

@@ -2,8 +2,12 @@ package daemon
 
 import (
 	"net"
+	"path/filepath"
+	"strings"
+
 	"net/url"
 	"testing"
+	"yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 func TestResolveDaemonWSEndpoint_UsesActualListenerAddress(t *testing.T) {
@@ -44,5 +48,15 @@ func TestBindListener_DerivesEndpointFromDynamicPort(t *testing.T) {
 	}
 	if host, _, err := net.SplitHostPort(parsed.Host); err != nil || host != "127.0.0.1" {
 		t.Fatalf("endpoint host = %q, err = %v", parsed.Host, err)
+	}
+}
+
+func TestBuildHandler_DSHSeedFailurePreventsBootstrap(t *testing.T) {
+	statePath := filepath.Join(t.TempDir(), "daemon.json")
+	_, _, err := buildHandler(RunConfig{
+		DSHEnabled: true, DSHPluginSeedPath: filepath.Join(t.TempDir(), "missing.tgz"),
+	}, statePath, &session.Session{}, "node-1", "ws://127.0.0.1:1234/ws")
+	if err == nil || !strings.Contains(err.Error(), "ensure DSH plugin seed") {
+		t.Fatalf("build handler error = %v", err)
 	}
 }

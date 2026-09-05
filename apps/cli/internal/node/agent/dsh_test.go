@@ -13,31 +13,42 @@ import (
 )
 
 type recordingDSHSessions struct {
-	listCWD          string
-	readCWD          string
-	resumeCWD        string
-	disposeCWD       string
-	startRequest     dsh.SessionStartRequest
-	promptRequest    dsh.SessionPromptRequest
-	setModelRequest  dsh.SetModelRequest
-	startErr         error
-	promptErr        error
-	subscribeErr     error
-	disposeCount     int
-	listResult       dsh.SessionListResult
-	listErr          error
-	readErr          error
-	lineageRequest   dsh.SessionLineageRequest
-	lineageResult    dsh.SessionLineageResult
-	lineageErr       error
-	interruptRequest dsh.SubagentInterruptRequest
-	interruptResult  dsh.SubagentInterruptResult
-	interruptErr     error
+	listCWD             string
+	readCWD             string
+	resumeCWD           string
+	resumeWorkspaceID   string
+	disposeCWD          string
+	startRequest        dsh.SessionStartRequest
+	promptRequest       dsh.SessionPromptRequest
+	setModelRequest     dsh.SetModelRequest
+	startErr            error
+	promptErr           error
+	subscribeErr        error
+	disposeCount        int
+	listResult          dsh.SessionListResult
+	listErr             error
+	titleSummaryRequest dsh.SessionTitleSummaryRequest
+	titleSummaryResult  dsh.SessionTitleSummaryResult
+	titleSummaryErr     error
+	readErr             error
+	filePathResult      dsh.SessionFilePathResult
+	filePathErr         error
+	lineageRequest      dsh.SessionLineageRequest
+	lineageResult       dsh.SessionLineageResult
+	lineageErr          error
+	interruptRequest    dsh.SubagentInterruptRequest
+	interruptResult     dsh.SubagentInterruptResult
+	interruptErr        error
 }
 
 func (r *recordingDSHSessions) ListSessions(_ context.Context, request dsh.SessionListRequest) (dsh.SessionListResult, error) {
 	r.listCWD = request.CWD
 	return r.listResult, r.listErr
+}
+
+func (r *recordingDSHSessions) ListSessionTitleSummaries(_ context.Context, request dsh.SessionTitleSummaryRequest) (dsh.SessionTitleSummaryResult, error) {
+	r.titleSummaryRequest = request
+	return r.titleSummaryResult, r.titleSummaryErr
 }
 
 func (r *recordingDSHSessions) ListSessionLineage(_ context.Context, request dsh.SessionLineageRequest) (dsh.SessionLineageResult, error) {
@@ -50,13 +61,19 @@ func (r *recordingDSHSessions) InterruptSubagent(_ context.Context, request dsh.
 	return r.interruptResult, r.interruptErr
 }
 
+func (r *recordingDSHSessions) GetSessionFilePath(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionFilePathResult, error) {
+	r.readCWD = request.CWD
+	return r.filePathResult, r.filePathErr
+}
+
 func (r *recordingDSHSessions) ReadSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionReadResult, error) {
 	r.readCWD = request.CWD
 	return dsh.SessionReadResult{}, r.readErr
 }
 
-func (r *recordingDSHSessions) ResumeSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionResumeResult, error) {
+func (r *recordingDSHSessions) ResumeSession(_ context.Context, request dsh.SessionResumeRequest) (dsh.SessionResumeResult, error) {
 	r.resumeCWD = request.CWD
+	r.resumeWorkspaceID = request.WorkspaceID
 	return dsh.SessionResumeResult{SessionID: request.SessionID}, nil
 }
 
@@ -70,7 +87,7 @@ func TestService_DSHSessionMethodsUseOpenWorkspacePath(t *testing.T) {
 	runtime := &recordingDSHSessions{}
 	service := NewService(Deps{
 		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-			return workspace.Workspace{ID: workspaceID, Path: "/open/workspace"}, nil
+			return workspace.Workspace{ID: workspaceID, Path: "/open/workspace", State: workspace.StateActive}, nil
 		}),
 		DSH: runtime,
 	})
@@ -85,8 +102,8 @@ func TestService_DSHSessionMethodsUseOpenWorkspacePath(t *testing.T) {
 		t.Fatalf("resume session: %v", err)
 	}
 
-	if runtime.listCWD != "/open/workspace" || runtime.readCWD != "/open/workspace" || runtime.resumeCWD != "/open/workspace" {
-		t.Fatalf("DSH calls used cwd list=%q read=%q resume=%q", runtime.listCWD, runtime.readCWD, runtime.resumeCWD)
+	if runtime.listCWD != "/open/workspace" || runtime.readCWD != "/open/workspace" || runtime.resumeCWD != "/open/workspace" || runtime.resumeWorkspaceID != "workspace-1" {
+		t.Fatalf("DSH calls used cwd list=%q read=%q resume=%q workspace=%q", runtime.listCWD, runtime.readCWD, runtime.resumeCWD, runtime.resumeWorkspaceID)
 	}
 }
 
@@ -96,7 +113,7 @@ type blockingResumeDSH struct {
 	release chan struct{}
 }
 
-func (r *blockingResumeDSH) ResumeSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionResumeResult, error) {
+func (r *blockingResumeDSH) ResumeSession(_ context.Context, request dsh.SessionResumeRequest) (dsh.SessionResumeResult, error) {
 	close(r.started)
 	<-r.release
 	return dsh.SessionResumeResult{SessionID: request.SessionID}, nil
@@ -106,7 +123,7 @@ func TestService_DSHResumeAdmissionBlocksWorkspaceCleanup(t *testing.T) {
 	runtime := &blockingResumeDSH{started: make(chan struct{}), release: make(chan struct{})}
 	service := NewService(Deps{
 		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-			return workspace.Workspace{ID: workspaceID, Path: "/open/workspace"}, nil
+			return workspace.Workspace{ID: workspaceID, Path: "/open/workspace", State: workspace.StateActive}, nil
 		}),
 		DSH: runtime,
 	})
@@ -138,6 +155,59 @@ func TestService_DSHResumeAdmissionBlocksWorkspaceCleanup(t *testing.T) {
 	}
 }
 
+func TestService_ListDSHSessionsAddsOptionalTitleSummaries(t *testing.T) {
+	runtime := &recordingDSHSessions{
+		listResult:         dsh.SessionListResult{Sessions: []dsh.SessionListEntry{{SessionID: "session-1"}}},
+		titleSummaryResult: dsh.SessionTitleSummaryResult{Titles: []dsh.SessionTitleSummary{{SessionID: "session-1", PreviewText: "Review migration"}}},
+	}
+	service := NewService(Deps{Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: workspaceID, Path: "/workspace", State: workspace.StateActive}, nil
+	}), DSH: runtime})
+	listed, err := service.ListDSHSessions(context.Background(), "workspace-1")
+	if err != nil {
+		t.Fatalf("ListDSHSessions: %v", err)
+	}
+	if got := listed.Sessions[0].PreviewText; got != "Review migration" {
+		t.Fatalf("preview = %q", got)
+	}
+	if got := runtime.titleSummaryRequest; got.CWD != "/workspace" || len(got.SessionIDs) != 1 || got.SessionIDs[0] != "session-1" {
+		t.Fatalf("title summary request = %#v", got)
+	}
+}
+
+type legacyDSHSessions struct{ DSHSessions }
+
+func TestService_ListDSHSessionsKeepsSessionsWhenRuntimeHasNoTitleSummary(t *testing.T) {
+	runtime := &recordingDSHSessions{listResult: dsh.SessionListResult{Sessions: []dsh.SessionListEntry{{SessionID: "session-1"}}}}
+	service := NewService(Deps{Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: workspaceID, Path: "/workspace", State: workspace.StateActive}, nil
+	}), DSH: legacyDSHSessions{DSHSessions: runtime}})
+	listed, err := service.ListDSHSessions(context.Background(), "workspace-1")
+	if err != nil {
+		t.Fatalf("ListDSHSessions: %v", err)
+	}
+	if len(listed.Sessions) != 1 || listed.Sessions[0].PreviewText != "" {
+		t.Fatalf("listed sessions = %#v", listed.Sessions)
+	}
+}
+
+func TestService_ListDSHSessionsKeepsSessionsWhenOptionalTitleSummaryFails(t *testing.T) {
+	runtime := &recordingDSHSessions{
+		listResult:      dsh.SessionListResult{Sessions: []dsh.SessionListEntry{{SessionID: "session-1"}}},
+		titleSummaryErr: errors.New("unsupported title summary"),
+	}
+	service := NewService(Deps{Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
+		return workspace.Workspace{ID: workspaceID, Path: "/workspace", State: workspace.StateActive}, nil
+	}), DSH: runtime})
+	listed, err := service.ListDSHSessions(context.Background(), "workspace-1")
+	if err != nil {
+		t.Fatalf("ListDSHSessions: %v", err)
+	}
+	if len(listed.Sessions) != 1 || listed.Sessions[0].PreviewText != "" {
+		t.Fatalf("listed sessions = %#v", listed.Sessions)
+	}
+}
+
 type undisposableDSH struct{ recordingDSHSessions }
 
 func (r *undisposableDSH) DisposeSession(_ context.Context, request dsh.SessionReadRequest) (dsh.SessionDisposeResult, error) {
@@ -150,7 +220,7 @@ func TestService_WorkspaceCleanupRejectsUnownedLiveDSHSession(t *testing.T) {
 	}}
 	service := NewService(Deps{
 		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-			return workspace.Workspace{ID: workspaceID, Path: "/open/workspace"}, nil
+			return workspace.Workspace{ID: workspaceID, Path: "/open/workspace", State: workspace.StateActive}, nil
 		}),
 		DSH: runtime,
 	})
@@ -167,7 +237,7 @@ func TestService_WorkspaceCleanupDisposesLiveDSHSessions(t *testing.T) {
 	}}}}
 	service := NewService(Deps{
 		Workspace: testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-			return workspace.Workspace{ID: workspaceID, Path: "/open/workspace"}, nil
+			return workspace.Workspace{ID: workspaceID, Path: "/open/workspace", State: workspace.StateActive}, nil
 		}),
 		DSH: runtime,
 	})
@@ -240,7 +310,7 @@ func TestAgentInspectionRPC_MapsDSHRuntimeErrorsToStableUnavailableCode(t *testi
 		t.Run(operation.name, func(t *testing.T) {
 			service := newTestHandler(t)
 			service.deps.Workspace = testWorkspaceResolver(func(string) (workspace.Workspace, error) {
-				return workspace.Workspace{ID: "workspace", Path: "/workspace"}, nil
+				return workspace.Workspace{ID: "workspace", Path: "/workspace", State: workspace.StateActive}, nil
 			})
 			service.deps.DSH = operation.runtime
 			_, err := service.callAgentRPCForTest(context.Background(), nil, operation.method, mustMarshalJSON(t, operation.params))
@@ -259,7 +329,7 @@ func TestAgentListSessionLineage_UsesResolvedWorkspaceAndMapsResult(t *testing.T
 	}}
 	service := newTestHandler(t)
 	service.deps.Workspace = testWorkspaceResolver(func(workspaceID string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: workspaceID, Path: "/open/workspace"}, nil
+		return workspace.Workspace{ID: workspaceID, Path: "/open/workspace", State: workspace.StateActive}, nil
 	})
 	service.deps.DSH = runtime
 
@@ -290,7 +360,7 @@ func TestAgentListSessionLineage_RejectsInvalidRequestsBeforeDSH(t *testing.T) {
 		{"unknown runtime", rpc.AgentListSessionLineageParams{Runtime: "other", WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: "root", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{}, nil, true},
 		{"blank root session", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: " ", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{}, nil, true},
 		{"invalid mode", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: "root", Mode: "all"}, workspace.Workspace{}, nil, true},
-		{"workspace cwd mismatch", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/untrusted", RootSessionID: "root", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{ID: "workspace", Path: "/workspace"}, nil, true},
+		{"workspace cwd mismatch", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/untrusted", RootSessionID: "root", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{ID: "workspace", Path: "/workspace", State: workspace.StateActive}, nil, true},
 		{"closed workspace", rpc.AgentListSessionLineageParams{Runtime: rpc.AgentRuntimeDSH, WorkspaceID: "workspace", CWD: "/workspace", RootSessionID: "root", Mode: rpc.AgentSessionLineageChildren}, workspace.Workspace{}, errors.New("workspace not found"), false},
 	}
 	for _, test := range tests {
@@ -316,7 +386,7 @@ func TestAgentListSessionLineage_RejectsInvalidRequestsBeforeDSH(t *testing.T) {
 func TestAgentListSessionLineage_MapsRuntimeUnavailable(t *testing.T) {
 	service := newTestHandler(t)
 	service.deps.Workspace = testWorkspaceResolver(func(string) (workspace.Workspace, error) {
-		return workspace.Workspace{ID: "workspace", Path: "/workspace"}, nil
+		return workspace.Workspace{ID: "workspace", Path: "/workspace", State: workspace.StateActive}, nil
 	})
 	service.deps.DSH = &recordingDSHSessions{lineageErr: dsh.ErrRuntimeUnavailable}
 	_, err := service.AgentListSessionLineage(context.Background(), rpc.AgentListSessionLineageParams{

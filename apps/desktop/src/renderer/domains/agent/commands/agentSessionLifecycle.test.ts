@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpcFrontendMessagePayload } from "../../../../shared/contracts/rpcSchema";
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { workspaceCreateProgressStore } from "../../../domains/workspace/state/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../domains/workspace/state/workspaceStore";
@@ -285,22 +285,22 @@ describe("clearTerminalAgentStatus", () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const setStatuses = vi.fn();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
+    const markUnread = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
 
-    const initialChatState = chatStore.getState();
-    chatStore.setState({
-      setWorkspaceAgentStatusByWorkspaceId,
+    const initialChatState = workspaceAgentIndicatorStore.getState();
+    workspaceAgentIndicatorStore.setState({
+      setStatuses,
     });
 
     const startBindings = createNotificationEventHandlers({
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
+      setStatuses,
+      markUnread,
       dispatchSystemNotification,
       playNotificationSound,
     });
@@ -321,13 +321,13 @@ describe("clearTerminalAgentStatus", () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenLastCalledWith({ "workspace-1": "running" });
+    expect(setStatuses).toHaveBeenLastCalledWith({ "workspace-1": "running" });
 
     clearTerminalAgentStatus("tab-agent-1");
 
-    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenLastCalledWith({});
+    expect(setStatuses).toHaveBeenLastCalledWith({});
 
     stopBindings();
-    chatStore.setState(initialChatState, true);
+    workspaceAgentIndicatorStore.setState(initialChatState, true);
   });
 });

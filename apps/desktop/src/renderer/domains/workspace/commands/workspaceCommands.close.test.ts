@@ -2,7 +2,7 @@
 
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 import { sessionStore } from "../../../domains/session/state/sessionStore";
 import { layoutStore } from "../../../domains/workbench/state/layoutStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
@@ -55,7 +55,7 @@ const initialWorkspaceStoreState = workspaceStore.getState();
 const initialProjectStoreState = projectStore.getState();
 const initialLayoutStoreState = layoutStore.getState();
 const initialSessionStoreState = sessionStore.getState();
-const initialChatStoreState = chatStore.getState();
+const initialWorkspaceAgentIndicatorStoreState = workspaceAgentIndicatorStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialWorkbenchNavigationStoreState = workbenchNavigationStore.getState();
 
@@ -64,7 +64,7 @@ afterEach(() => {
   workspaceStore.setState(initialWorkspaceStoreState, true);
   layoutStore.setState(initialLayoutStoreState, true);
   sessionStore.setState(initialSessionStoreState, true);
-  chatStore.setState(initialChatStoreState, true);
+  workspaceAgentIndicatorStore.setState(initialWorkspaceAgentIndicatorStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   workbenchNavigationStore.setState(initialWorkbenchNavigationStoreState, true);
   vi.clearAllMocks();

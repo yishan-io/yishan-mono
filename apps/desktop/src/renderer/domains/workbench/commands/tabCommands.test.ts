@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatStore } from "../../../domains/agent/state/chatStore";
+import { workspaceAgentIndicatorStore } from "../../../domains/agent/state/workspaceAgentIndicatorStore";
 import {
   __resetTabFocusIntentForTests,
   consumeTabFocus,
@@ -53,12 +53,12 @@ vi.mock("../../../views/workspace/terminal/terminalRuntimeRegistry", () => ({
 }));
 
 const initialTabStoreState = tabStore.getState();
-const initialChatStoreState = chatStore.getState();
+const initialWorkspaceAgentIndicatorStoreState = workspaceAgentIndicatorStore.getState();
 const initialSplitPaneStoreState = splitPaneStore.getState();
 
 afterEach(() => {
   tabStore.setState(initialTabStoreState, true);
-  chatStore.setState(initialChatStoreState, true);
+  workspaceAgentIndicatorStore.setState(initialWorkspaceAgentIndicatorStoreState, true);
   splitPaneStore.setState(initialSplitPaneStoreState, true);
   vi.clearAllMocks();
   __resetExplicitlyClosedTerminalTabIdsForTests();
