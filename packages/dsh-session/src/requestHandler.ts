@@ -20,6 +20,8 @@ import type {
   SessionReadResult,
   SessionResumeRequest,
   SessionResumeResult,
+  SessionTitleSummaryRequest,
+  SessionTitleSummaryResult,
 } from "./session/query";
 import {
   RequestPolicyError,
@@ -40,6 +42,7 @@ import {
   parseSessionResumeRequest,
   parseSessionStartRequest,
   parseSessionSubscribeRequest,
+  parseSessionTitleSummaryRequest,
   parseSetModelRequest,
 } from "./session/requestValidation";
 import { SessionRuntime } from "./session/runtime";
@@ -165,6 +168,8 @@ export class SessionRequestHandler {
         return await this.getSessionFilePath(parseSessionFilePathRequest(params));
       case YISHAN_METHODS.list:
         return await this.listSessions(parseSessionListRequest(params));
+      case YISHAN_METHODS.titleSummary:
+        return await this.getSessionTitleSummaries(parseSessionTitleSummaryRequest(params));
       case YISHAN_METHODS.read:
         return await this.readSession(parseSessionReadRequest(params));
       case YISHAN_METHODS.lineage:
@@ -203,11 +208,42 @@ export class SessionRequestHandler {
   }
 
   private async listSessions(request: SessionListRequest): Promise<SessionListResult> {
-    const sessions = await this.ctx.sessionQuery.listSessions();
+    const sessionRecords = (await this.ctx.sessionQuery.listSessions()).filter(
+      ({ header }) => header.cwd === request.cwd && (header.delegationDepth ?? 0) === 0,
+    );
     return {
-      sessions: sessions
-        .filter(({ header }) => header.cwd === request.cwd && (header.delegationDepth ?? 0) === 0)
-        .map(({ header, live, persisted }) => ({ ...this.createSessionHeaderResult(header), live, persisted })),
+      sessions: sessionRecords.map(({ header, live, persisted }) => ({
+        ...this.createSessionHeaderResult(header),
+        live,
+        persisted,
+      })),
+    };
+  }
+
+  private async getSessionTitleSummaries(request: SessionTitleSummaryRequest): Promise<SessionTitleSummaryResult> {
+    const sessionIds = [...new Set(request.sessionIds)].map((sessionId) => sessionId as SessionId);
+    if (sessionIds.length !== request.sessionIds.length) throw new Error("sessionIds must be unique");
+    if (sessionIds.length === 0) return { titles: [] };
+
+    const sessionRecords = await this.ctx.sessionQuery.listSessions();
+    const recordsBySessionId = new Map(sessionRecords.map((record) => [record.header.id, record]));
+    for (const sessionId of sessionIds) {
+      const record = recordsBySessionId.get(sessionId);
+      if (record === undefined) throw new SessionNotFoundError(sessionId);
+      if (record.header.cwd !== request.cwd) throw new SessionWorkspaceMismatchError(sessionId);
+    }
+
+    // One batch observation returns each requested session's latest log-backed title, if one is available.
+    const titleResults = await this.ctx.sessionQuery.readTitleSnapshots(sessionIds);
+    const previewsBySessionId = new Map(
+      titleResults.flatMap((result) =>
+        result.status === "fulfilled" && result.value.session.cwd === request.cwd && result.value.title !== undefined
+          ? [[result.sessionId, result.value.title.title] as const]
+          : [],
+      ),
+    );
+    return {
+      titles: sessionIds.map((sessionId) => ({ sessionId, previewText: previewsBySessionId.get(sessionId) ?? "" })),
     };
   }
 

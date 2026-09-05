@@ -19,7 +19,30 @@ func (s *Service) ListDSHSessions(ctx context.Context, workspaceID string) (dsh.
 	if s.deps.DSH == nil {
 		return dsh.SessionListResult{}, dsh.ErrRuntimeUnavailable
 	}
-	return s.deps.DSH.ListSessions(ctx, dsh.SessionListRequest{CWD: workspacePath})
+	listed, err := s.deps.DSH.ListSessions(ctx, dsh.SessionListRequest{CWD: workspacePath})
+	if err != nil {
+		return dsh.SessionListResult{}, err
+	}
+	titleSummaries, ok := s.deps.DSH.(DSHSessionTitleSummaries)
+	if !ok || len(listed.Sessions) == 0 {
+		return listed, nil
+	}
+	sessionIDs := make([]string, 0, len(listed.Sessions))
+	for _, session := range listed.Sessions {
+		sessionIDs = append(sessionIDs, session.SessionID)
+	}
+	titles, err := titleSummaries.ListSessionTitleSummaries(ctx, dsh.SessionTitleSummaryRequest{CWD: workspacePath, SessionIDs: sessionIDs})
+	if err != nil {
+		return listed, nil
+	}
+	previewsBySessionID := make(map[string]string, len(titles.Titles))
+	for _, title := range titles.Titles {
+		previewsBySessionID[title.SessionID] = title.PreviewText
+	}
+	for index := range listed.Sessions {
+		listed.Sessions[index].PreviewText = previewsBySessionID[listed.Sessions[index].SessionID]
+	}
+	return listed, nil
 }
 
 func (s *Service) listDSHSessionLineage(ctx context.Context, cwd, rootSessionID string, mode rpc.AgentSessionLineageMode) (dsh.SessionLineageResult, error) {

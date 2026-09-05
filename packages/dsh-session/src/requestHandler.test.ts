@@ -28,6 +28,7 @@ type QueryRecord = {
 
 class FakeSessionQuery extends Service {
   static records: QueryRecord[] = [];
+  static titlesBySessionId = new Map<string, string>();
 
   constructor(ctx: Context) {
     super(ctx, "sessionQuery");
@@ -36,10 +37,24 @@ class FakeSessionQuery extends Service {
   async listSessions() {
     return FakeSessionQuery.records;
   }
+
+  async readTitleSnapshots(sessionIds: readonly string[]) {
+    return sessionIds.map((sessionId) => {
+      const record = FakeSessionQuery.records.find(({ header }) => header.id === sessionId);
+      if (record === undefined) return { sessionId, status: "rejected" as const, reason: new Error("missing session") };
+      const title = FakeSessionQuery.titlesBySessionId.get(sessionId);
+      return {
+        sessionId,
+        status: "fulfilled" as const,
+        value: { session: record.header, ...(title === undefined ? {} : { title: { title } }) },
+      };
+    });
+  }
 }
 
 function setSessionRecords(records: QueryRecord[]): void {
   FakeSessionQuery.records = records;
+  FakeSessionQuery.titlesBySessionId.clear();
 }
 
 type Harness = {
@@ -182,6 +197,40 @@ describe("SessionRequestHandler", () => {
       await harness.server.close();
       await harness.ctx.fiber.dispose();
       init.mockRestore();
+    }
+  });
+
+  it("keeps session lists wire-compatible and returns titles from the optional summary operation", async () => {
+    vi.stubEnv("DEEPSEEK_API_KEY", "test-key");
+    const harness = await mountRuntime();
+    FakeSessionQuery.titlesBySessionId.set("session-1", "Review the migration plan");
+    try {
+      harness.input.write(
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id: 31,
+          method: "initialize",
+          params: { cwd: "/workspace", provider: "deepseek-official", model: "test-model" },
+        })}\n`,
+      );
+      await expect(waitForFrame(harness, 31)).resolves.toMatchObject({ result: expect.any(Object) });
+
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 32, method: "yishan.v1.session.list", params: { cwd: "/workspace" } })}\n`,
+      );
+      await expect(waitForFrame(harness, 32)).resolves.toMatchObject({
+        result: { sessions: [{ sessionId: "session-1", live: false, persisted: true }] },
+      });
+      expect((await waitForFrame(harness, 32)).result).not.toHaveProperty("sessions.0.previewText");
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 33, method: "yishan.v1.session.title-summary", params: { cwd: "/workspace", sessionIds: ["session-1"] } })}\n`,
+      );
+      await expect(waitForFrame(harness, 33)).resolves.toMatchObject({
+        result: { titles: [{ sessionId: "session-1", previewText: "Review the migration plan" }] },
+      });
+    } finally {
+      await harness.server.close();
+      await harness.ctx.fiber.dispose();
     }
   });
 

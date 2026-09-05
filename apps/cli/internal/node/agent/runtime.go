@@ -378,7 +378,7 @@ func mapPiSessions(summaries []process.SessionSummary, cwd string) []rpc.AgentSe
 func mapDSHSessions(summaries []dsh.SessionListEntry, cwd string) []rpc.AgentSessionSummary {
 	mapped := make([]rpc.AgentSessionSummary, 0, len(summaries))
 	for _, summary := range summaries {
-		mapped = append(mapped, rpc.AgentSessionSummary{SessionID: summary.SessionID, CWD: cwd, CreatedAt: summary.CreatedAt, ParentSession: summary.ParentSession, AgentPreset: summary.AgentPreset, Live: summary.Live, Persisted: summary.Persisted})
+		mapped = append(mapped, rpc.AgentSessionSummary{SessionID: summary.SessionID, CWD: cwd, CreatedAt: summary.CreatedAt, PreviewText: summary.PreviewText, ParentSession: summary.ParentSession, AgentPreset: summary.AgentPreset, Live: summary.Live, Persisted: summary.Persisted})
 	}
 	return mapped
 }

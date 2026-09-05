@@ -5,9 +5,10 @@ import type {
   SessionLineageRequest,
   SessionListRequest,
   SessionResumeRequest,
+  SessionTitleSummaryRequest,
 } from "./schemas";
 
-export type { SessionLineageRequest, SessionListRequest, SessionResumeRequest };
+export type { SessionLineageRequest, SessionListRequest, SessionResumeRequest, SessionTitleSummaryRequest };
 
 /** One top-level DSH session visible in the current workspace. */
 export type SessionListEntry = {
@@ -22,6 +23,17 @@ export type SessionListEntry = {
 /** Workspace-scoped result of listing top-level persisted DSH sessions. */
 export type SessionListResult = {
   sessions: SessionListEntry[];
+};
+
+/** Latest observed log-backed title for one workspace session. */
+export type SessionTitleSummaryEntry = {
+  sessionId: string;
+  previewText: string;
+};
+
+/** Workspace-scoped title summaries in the requested session order. */
+export type SessionTitleSummaryResult = {
+  titles: SessionTitleSummaryEntry[];
 };
 
 /** One DSH-native subagent below a requested lineage root. */

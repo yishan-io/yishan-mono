@@ -64,6 +64,11 @@ type DSHLocalPluginStore interface {
 	RestoreSnapshot(plugins.LocalSnapshot) error
 }
 
+// DSHSessionTitleSummaries is an optional runtime capability for history previews.
+type DSHSessionTitleSummaries interface {
+	ListSessionTitleSummaries(context.Context, dsh.SessionTitleSummaryRequest) (dsh.SessionTitleSummaryResult, error)
+}
+
 // DSHSessions is the internal DSH runtime boundary used by workspace-scoped
 // session operations. It is intentionally not exposed through the RPC layer.
 type DSHSessions interface {

@@ -25,6 +25,37 @@ func TestRuntimeProcess_RegisterAfterExitFailsImmediately(t *testing.T) {
 	}
 }
 
+func TestSessionListWireResult_RejectsPreviewText(t *testing.T) {
+	var result sessionListWireResult
+	if err := decodeStrictJSON([]byte(`{"sessions":[{"sessionId":"session-1","createdAt":1,"previewText":"not compatible","live":false,"persisted":true}]}`), &result); err == nil {
+		t.Fatal("accepted previewText in the wire-compatible session list response")
+	}
+}
+
+func TestSessionTitleSummaryWireResult_ValidatesRequestedSessions(t *testing.T) {
+	request := SessionTitleSummaryRequest{CWD: "/workspace", SessionIDs: []string{"session-1", "session-2"}}
+	result := sessionTitleSummaryWireResult{Titles: []sessionTitleSummaryWire{
+		{SessionID: "session-1", PreviewText: stringPointer("Review the migration plan")},
+		{SessionID: "session-2", PreviewText: stringPointer("")},
+	}}
+	validated, err := result.validate(request)
+	if err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if got := validated.Titles[0].PreviewText; got != "Review the migration plan" {
+		t.Fatalf("preview text = %q", got)
+	}
+}
+
+func TestSessionTitleSummaryWireResult_RejectsUnrequestedSession(t *testing.T) {
+	_, err := (sessionTitleSummaryWireResult{Titles: []sessionTitleSummaryWire{{SessionID: "other"}}}).validate(
+		SessionTitleSummaryRequest{CWD: "/workspace", SessionIDs: []string{"session-1"}},
+	)
+	if err == nil {
+		t.Fatal("accepted title summary for an unrequested session")
+	}
+}
+
 func TestSessionListWireResult_RejectsMissingCreatedAt(t *testing.T) {
 	live, persisted := false, true
 	result := sessionListWireResult{Sessions: []sessionListWireEntry{{
@@ -425,3 +456,5 @@ func TestProviderCatalogWire_RejectsUnknownModelRoute(t *testing.T) {
 		t.Fatal("accepted a model under the wrong provider route")
 	}
 }
+
+func stringPointer(value string) *string { return &value }

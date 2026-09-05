@@ -11,6 +11,7 @@ export const YISHAN_METHODS = {
   filePath: yishanMethod("session.file-path"),
   flush: yishanMethod("session.flush"),
   list: yishanMethod("session.list"),
+  titleSummary: yishanMethod("session.title-summary"),
   lineage: yishanMethod("session.lineage"),
   read: yishanMethod("session.read"),
   resume: yishanMethod("session.resume"),

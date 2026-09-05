@@ -50,8 +50,8 @@ func (result sessionListWireResult) validate() (SessionListResult, error) {
 			return SessionListResult{}, errors.New("invalid DSH session list entry")
 		}
 		sessions = append(sessions, SessionListEntry{
-			SessionID: entry.SessionID, CreatedAt: *entry.CreatedAt, ParentSession: entry.ParentSession,
-			AgentPreset: entry.AgentPreset, Live: *entry.Live, Persisted: *entry.Persisted,
+			SessionID: entry.SessionID, CreatedAt: *entry.CreatedAt,
+			ParentSession: entry.ParentSession, AgentPreset: entry.AgentPreset, Live: *entry.Live, Persisted: *entry.Persisted,
 		})
 	}
 	return SessionListResult{Sessions: sessions}, nil
@@ -191,4 +191,44 @@ func (response providerCatalogWire) validate() (ProviderCatalog, error) {
 		providers = append(providers, ProviderCatalogProvider{ID: provider.ID, Authentication: provider.Authentication, SetupRequired: *provider.SetupRequired, Models: models})
 	}
 	return ProviderCatalog{Providers: providers}, nil
+}
+
+type sessionTitleSummaryWire struct {
+	SessionID   string  `json:"sessionId"`
+	PreviewText *string `json:"previewText"`
+}
+
+type sessionTitleSummaryWireResult struct {
+	Titles []sessionTitleSummaryWire `json:"titles"`
+}
+
+func (result sessionTitleSummaryWireResult) validate(request SessionTitleSummaryRequest) (SessionTitleSummaryResult, error) {
+	if result.Titles == nil || len(result.Titles) != len(request.SessionIDs) {
+		return SessionTitleSummaryResult{}, errors.New("invalid DSH session title summary response")
+	}
+	requested := make(map[string]struct{}, len(request.SessionIDs))
+	for _, sessionID := range request.SessionIDs {
+		if sessionID == "" {
+			return SessionTitleSummaryResult{}, errors.New("DSH session title summary requires sessionIds")
+		}
+		if _, exists := requested[sessionID]; exists {
+			return SessionTitleSummaryResult{}, errors.New("DSH session title summary sessionIds must be unique")
+		}
+		requested[sessionID] = struct{}{}
+	}
+	titles := make([]SessionTitleSummary, 0, len(result.Titles))
+	for _, title := range result.Titles {
+		if title.SessionID == "" || title.PreviewText == nil {
+			return SessionTitleSummaryResult{}, errors.New("invalid DSH session title summary entry")
+		}
+		if _, exists := requested[title.SessionID]; !exists {
+			return SessionTitleSummaryResult{}, errors.New("invalid DSH session title summary entry")
+		}
+		delete(requested, title.SessionID)
+		titles = append(titles, SessionTitleSummary{SessionID: title.SessionID, PreviewText: *title.PreviewText})
+	}
+	if len(requested) != 0 {
+		return SessionTitleSummaryResult{}, errors.New("invalid DSH session title summary response")
+	}
+	return SessionTitleSummaryResult{Titles: titles}, nil
 }

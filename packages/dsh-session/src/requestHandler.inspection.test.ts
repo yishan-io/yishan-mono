@@ -33,6 +33,14 @@ class FakeSessionQuery extends Service {
   async listSessions() {
     return FakeSessionQuery.records;
   }
+  async readTitleSnapshots(sessionIds: readonly string[]) {
+    return sessionIds.flatMap((sessionId) => {
+      const record = FakeSessionQuery.records.find(({ header }) => header.id === sessionId);
+      return record === undefined
+        ? []
+        : [{ sessionId, status: "fulfilled" as const, value: { session: record.header } }];
+    });
+  }
 }
 
 type Harness = { ctx: Context; input: PassThrough; frames: Record<string, unknown>[]; server: SessionRequestHandler };
@@ -429,6 +437,23 @@ describe("SessionRequestHandler session inspection", () => {
       await harness.ctx.fiber.dispose();
       listChildren.mockRestore();
       listDescendants.mockRestore();
+    }
+  });
+  it("rejects title summaries for sessions outside the requested workspace", async () => {
+    const harness = await mountRuntime();
+    FakeSessionQuery.records = [
+      { header: { version: 0, id: "session-1", createdAt: 1, cwd: "/other" }, live: false, persisted: true },
+    ];
+    try {
+      harness.input.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 21, method: YISHAN_METHODS.titleSummary, params: { cwd: "/workspace", sessionIds: ["session-1"] } })}\n`,
+      );
+      await expect(waitForFrame(harness, 21)).resolves.toMatchObject({
+        error: { message: "session does not belong to the current workspace: session-1" },
+      });
+    } finally {
+      await harness.server.close();
+      await harness.ctx.fiber.dispose();
     }
   });
 });

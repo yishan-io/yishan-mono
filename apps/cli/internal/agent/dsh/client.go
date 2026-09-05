@@ -8,13 +8,14 @@ import (
 )
 
 const (
-	yishanProvidersListMethod     = "yishan.v1.providers.list"
-	yishanSessionDisposeMethod    = "yishan.v1.session.dispose"
-	yishanSessionFilePathMethod   = "yishan.v1.session.file-path"
-	yishanSessionListMethod       = "yishan.v1.session.list"
-	yishanSessionReadMethod       = "yishan.v1.session.read"
-	yishanSessionResumeMethod     = "yishan.v1.session.resume"
-	yishanSubagentInterruptMethod = "yishan.v1.subagent.interrupt"
+	yishanProvidersListMethod       = "yishan.v1.providers.list"
+	yishanSessionDisposeMethod      = "yishan.v1.session.dispose"
+	yishanSessionFilePathMethod     = "yishan.v1.session.file-path"
+	yishanSessionListMethod         = "yishan.v1.session.list"
+	yishanSessionTitleSummaryMethod = "yishan.v1.session.title-summary"
+	yishanSessionReadMethod         = "yishan.v1.session.read"
+	yishanSessionResumeMethod       = "yishan.v1.session.resume"
+	yishanSubagentInterruptMethod   = "yishan.v1.subagent.interrupt"
 )
 
 var (
@@ -75,6 +76,7 @@ type SessionListRequest struct {
 type SessionListEntry struct {
 	SessionID     string `json:"sessionId"`
 	CreatedAt     int64  `json:"createdAt"`
+	PreviewText   string `json:"-"`
 	ParentSession string `json:"parentSession,omitempty"`
 	AgentPreset   string `json:"agentPreset,omitempty"`
 	Live          bool   `json:"live"`
@@ -84,6 +86,23 @@ type SessionListEntry struct {
 // SessionListResult is the response to a session list request.
 type SessionListResult struct {
 	Sessions []SessionListEntry `json:"sessions"`
+}
+
+// SessionTitleSummaryRequest reads titles for sessions already listed in one workspace.
+type SessionTitleSummaryRequest struct {
+	CWD        string   `json:"cwd"`
+	SessionIDs []string `json:"sessionIds"`
+}
+
+// SessionTitleSummary is the latest observed log-backed title for one DSH session.
+type SessionTitleSummary struct {
+	SessionID   string `json:"sessionId"`
+	PreviewText string `json:"previewText"`
+}
+
+// SessionTitleSummaryResult is the response to a title-summary request.
+type SessionTitleSummaryResult struct {
+	Titles []SessionTitleSummary `json:"titles"`
 }
 
 // SessionFilePathResult identifies a materialized DSH session artifact.
@@ -188,6 +207,31 @@ func (s *Supervisor) ListSessions(ctx context.Context, request SessionListReques
 		return SessionListResult{}, err
 	}
 	return response.validate()
+}
+
+// ListSessionTitleSummaries reads optional title previews for sessions already listed in one workspace.
+func (s *Supervisor) ListSessionTitleSummaries(ctx context.Context, request SessionTitleSummaryRequest) (SessionTitleSummaryResult, error) {
+	if request.CWD == "" {
+		return SessionTitleSummaryResult{}, errors.New("DSH session title summary cwd is required")
+	}
+	if len(request.SessionIDs) == 0 {
+		return SessionTitleSummaryResult{Titles: []SessionTitleSummary{}}, nil
+	}
+	seenSessionIDs := make(map[string]struct{}, len(request.SessionIDs))
+	for _, sessionID := range request.SessionIDs {
+		if sessionID == "" {
+			return SessionTitleSummaryResult{}, errors.New("DSH session title summary requires sessionIds")
+		}
+		if _, exists := seenSessionIDs[sessionID]; exists {
+			return SessionTitleSummaryResult{}, errors.New("DSH session title summary sessionIds must be unique")
+		}
+		seenSessionIDs[sessionID] = struct{}{}
+	}
+	var response sessionTitleSummaryWireResult
+	if err := s.call(ctx, yishanSessionTitleSummaryMethod, request, &response); err != nil {
+		return SessionTitleSummaryResult{}, err
+	}
+	return response.validate(request)
 }
 
 // GetSessionFilePath resolves one materialized session artifact without resuming the session.

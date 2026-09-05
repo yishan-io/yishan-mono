@@ -13,6 +13,7 @@ import type {
   SessionListRequest,
   SessionReadRequest,
   SessionResumeRequest,
+  SessionTitleSummaryRequest,
 } from "./query";
 import {
   sessionExecutionRequestSchema,
@@ -22,6 +23,7 @@ import {
   sessionResumeRequestSchema,
   sessionStartRequestSchema,
   sessionSubscribeRequestSchema,
+  sessionTitleSummaryRequestSchema,
   setModelRequestSchema,
 } from "./schemas";
 
@@ -68,6 +70,10 @@ export function parseSessionFilePathRequest(payload: unknown): SessionFilePathRe
 /** Parses a workspace-scoped session-list request. */
 export function parseSessionListRequest(payload: unknown): SessionListRequest {
   return sessionListRequestSchema.parse(payload);
+}
+/** Parses a workspace-scoped session title-summary request. */
+export function parseSessionTitleSummaryRequest(payload: unknown): SessionTitleSummaryRequest {
+  return sessionTitleSummaryRequestSchema.parse(payload);
 }
 /** Parses a session lineage request. */
 export function parseSessionLineageRequest(payload: unknown): SessionLineageRequest {

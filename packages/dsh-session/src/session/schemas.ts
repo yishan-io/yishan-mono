@@ -68,6 +68,12 @@ export const sessionResumeRequestSchema = executionRequestSchema.extend({
 /** Request to list sessions in one workspace directory. */
 export const sessionListRequestSchema = z.object({ cwd: nonEmptyStringSchema });
 
+/** Request title summaries for sessions in one workspace directory. */
+export const sessionTitleSummaryRequestSchema = z.object({
+  cwd: nonEmptyStringSchema,
+  sessionIds: z.array(nonEmptyStringSchema),
+});
+
 /** Request to inspect one session lineage. */
 export const sessionLineageRequestSchema = z.object({
   cwd: nonEmptyStringSchema,
@@ -82,6 +88,7 @@ export type SetModelRequest = z.infer<typeof setModelRequestSchema>;
 export type SessionSubscribeRequest = z.infer<typeof sessionSubscribeRequestSchema>;
 export type SessionResumeRequest = z.infer<typeof sessionResumeRequestSchema>;
 export type SessionListRequest = z.infer<typeof sessionListRequestSchema>;
+export type SessionTitleSummaryRequest = z.infer<typeof sessionTitleSummaryRequestSchema>;
 export type SessionLineageRequest = z.infer<typeof sessionLineageRequestSchema>;
 export type SessionBoundData = z.infer<typeof sessionBoundDataSchema>;
 export type WorkspaceBindingPolicy = z.infer<typeof workspaceBindingPolicySchema>;

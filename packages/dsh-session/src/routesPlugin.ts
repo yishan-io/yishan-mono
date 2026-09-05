@@ -30,6 +30,7 @@ const SESSION_METHODS = [
   YISHAN_METHODS.dispose,
   YISHAN_METHODS.filePath,
   YISHAN_METHODS.list,
+  YISHAN_METHODS.titleSummary,
   YISHAN_METHODS.read,
   YISHAN_METHODS.lineage,
   YISHAN_METHODS.subagentInterrupt,
