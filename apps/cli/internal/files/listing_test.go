@@ -275,6 +275,40 @@ func TestFileServiceMarksIgnoredContextDescendants(t *testing.T) {
 	}
 }
 
+func TestFileServiceListRefreshesContextLinkAfterExternalChange(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	svc := NewFileService()
+
+	contextDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(contextDir, "first.md"), []byte("first"), 0o644); err != nil {
+		t.Fatalf("write initial context file: %v", err)
+	}
+	if err := os.Symlink(contextDir, filepath.Join(root, ContextLinkName)); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	entries, err := svc.List(root, ContextLinkName, false)
+	if err != nil {
+		t.Fatalf("list initial context entries: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Path != ".my-context/first.md" {
+		t.Fatalf("expected initial context entry, got %+v", entries)
+	}
+
+	if err := os.WriteFile(filepath.Join(contextDir, "dropped.md"), []byte("dropped"), 0o644); err != nil {
+		t.Fatalf("write dropped context file: %v", err)
+	}
+
+	entries, err = svc.List(root, ContextLinkName, false)
+	if err != nil {
+		t.Fatalf("refresh context entries: %v", err)
+	}
+	if len(entries) != 2 || entries[0].Path != ".my-context/dropped.md" || entries[1].Path != ".my-context/first.md" {
+		t.Fatalf("expected context list to include externally added file, got %+v", entries)
+	}
+}
+
 func TestFileServiceRecursiveListIgnoredFolderDoesNotInfectSiblings(t *testing.T) {
 	root := t.TempDir()
 	initGitRepo(t, root)

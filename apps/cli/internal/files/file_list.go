@@ -36,9 +36,17 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 		return withContextLinkEntries(root, path, entries)
 	}
 
-	cachedEntries, isCached, cacheGeneration := s.cachedDirectoryEntries(root, path)
-	if isCached {
-		return cachedEntries, nil
+	// .my-context is a symlink to a shared directory outside the workspace.
+	// Files copied there do not reliably produce a workspace watcher event, so
+	// serving a cached listing leaves the tree stale after a drop or refresh.
+	cacheable := !usesContextLinkPath(path)
+	cacheGeneration := uint64(0)
+	if cacheable {
+		cachedEntries, isCached, generation := s.cachedDirectoryEntries(root, path)
+		if isCached {
+			return cachedEntries, nil
+		}
+		cacheGeneration = generation
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -71,7 +79,9 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 	}
 
 	out = markIgnoredEntries(root, path, out)
-	s.storeCachedDirectoryEntries(root, path, out, cacheGeneration)
+	if cacheable {
+		s.storeCachedDirectoryEntries(root, path, out, cacheGeneration)
+	}
 	return out, nil
 }
 
