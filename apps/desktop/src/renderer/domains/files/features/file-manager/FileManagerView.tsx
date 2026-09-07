@@ -42,12 +42,11 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const canOpenInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
   const lastUsedExternalAppId = projectStore((state) => state.lastUsedExternalAppId);
   const selectedWorkspaceId = workbenchNavigationStore((state) => state.activeWorkspaceId);
-  const selectedWorkspaceWorktreePath = workspaceStore(
-    (state) =>
-      state.workspaces
-        .find((workspace) => workspace.id === workbenchNavigationStore.getState().activeWorkspaceId)
-        ?.worktreePath?.trim() ?? "",
+  const selectedWorkspace = workspaceStore((state) =>
+    state.workspaces.find((workspace) => workspace.id === selectedWorkspaceId),
   );
+  const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath?.trim() ?? "";
+  const isSelectedWorkspaceActive = selectedWorkspace?.state === undefined || selectedWorkspace.state === "active";
   const workspaceGitRefreshVersion = gitProjectionStore((state) => {
     if (!selectedWorkspaceWorktreePath) {
       return 0;
@@ -157,6 +156,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
     listGitChanges,
     selectedWorkspaceId,
     selectedWorkspaceWorktreePath,
+    isWorkspaceActive: isSelectedWorkspaceActive,
     workspaceGitRefreshVersion,
   });
 
