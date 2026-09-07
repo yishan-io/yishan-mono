@@ -58,6 +58,7 @@ export function useChangesTabState() {
     ? projects.find((p) => p.id === (selectedWorkspace.projectId ?? selectedWorkspace.repoId))
     : undefined;
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
+  const hasActiveWorkspace = selectedWorkspace?.state === undefined || selectedWorkspace.state === "active";
   const selectedWorkspaceSourceBranch = useMemo(() => {
     // Folder workspaces and non-git projects have no branches: no source
     // branch means the commit comparison path never fires daemon git RPCs
@@ -74,7 +75,7 @@ export function useChangesTabState() {
     }
     return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath ?? ""] ?? 0;
   });
-  const selectedWorkspaceRequestKey = `${selectedWorkspaceId}:${selectedWorkspaceWorktreePath ?? ""}:${selectedWorkspaceSourceBranch}`;
+  const selectedWorkspaceRequestKey = `${selectedWorkspaceId}:${selectedWorkspaceWorktreePath ?? ""}:${selectedWorkspaceSourceBranch}:${hasActiveWorkspace}`;
   const selectedWorkspaceRequestKeyRef = useRef(selectedWorkspaceRequestKey);
   selectedWorkspaceRequestKeyRef.current = selectedWorkspaceRequestKey;
 
@@ -124,7 +125,7 @@ export function useChangesTabState() {
         }
       }
     },
-    [listGitCommitsToTarget, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const refreshChangesRef = useRef<() => Promise<void>>(async () => {});
@@ -144,7 +145,7 @@ export function useChangesTabState() {
       repoChangesLoadRequestIdRef.current === requestId &&
       selectedWorkspaceRequestKeyRef.current === selectedWorkspaceRequestKey;
 
-    if (!selectedWorkspaceWorktreePath) {
+    if (!selectedWorkspaceWorktreePath || !hasActiveWorkspace) {
       setRepoChangesBySection(createEmptyRepoChangesBySection());
       setRepoCommitComparison(createEmptyRepoCommitComparison());
       if (repoChangesLoadRequestIdRef.current === requestId) {
@@ -214,8 +215,8 @@ export function useChangesTabState() {
       }
     }
   }, [
-    listGitChanges,
     loadCommitComparison,
+    hasActiveWorkspace,
     selectedWorkspaceId,
     selectedWorkspaceRequestKey,
     selectedWorkspaceSourceBranch,
@@ -224,7 +225,7 @@ export function useChangesTabState() {
   refreshChangesRef.current = refreshChanges;
 
   useEffect(() => {
-    if (!selectedWorkspaceWorktreePath) {
+    if (!selectedWorkspaceWorktreePath || !hasActiveWorkspace) {
       pendingWorkspaceSwitchLoadPathRef.current = null;
       setIsRepoChangesLoading(false);
       return;
@@ -236,7 +237,7 @@ export function useChangesTabState() {
     pendingWorkspaceSwitchLoadPathRef.current = selectedWorkspaceWorktreePath;
     consecutiveRefreshRetriesRef.current = 0;
     setIsRepoChangesLoading(true);
-  }, [selectedWorkspaceWorktreePath]);
+  }, [hasActiveWorkspace, selectedWorkspaceWorktreePath]);
 
   useEffect(() => {
     void selectedWorkspaceSourceBranch;
@@ -254,7 +255,7 @@ export function useChangesTabState() {
   }, [repoCommitComparison.commits, selectedComparison]);
 
   useEffect(() => {
-    if (!selectedWorkspaceWorktreePath) {
+    if (!selectedWorkspaceWorktreePath || !hasActiveWorkspace) {
       return;
     }
     void workspaceGitRefreshVersion;
@@ -283,7 +284,7 @@ export function useChangesTabState() {
     return () => {
       cancelled = true;
     };
-  }, [refreshChanges, selectedWorkspaceWorktreePath, workspaceGitRefreshVersion]);
+  }, [hasActiveWorkspace, refreshChanges, selectedWorkspaceWorktreePath, workspaceGitRefreshVersion]);
 
   useEffect(() => {
     return () => {

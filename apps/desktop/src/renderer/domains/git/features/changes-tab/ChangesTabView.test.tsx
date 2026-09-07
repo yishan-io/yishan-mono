@@ -10,6 +10,19 @@ type GitChangesResponse = {
   untracked: Array<{ path: string; kind: string; additions: number; deletions: number }>;
 };
 
+type WorkspaceStateFixture = {
+  selectedWorkspaceId: string;
+  workspaces: Array<{
+    id: string;
+    worktreePath: string;
+    sourceBranch: string;
+    projectId?: string;
+    state?: "active" | "closing" | "error";
+  }>;
+  projects?: Array<{ id: string; sourceType: string }>;
+  gitRefreshVersionByWorktreePath: Record<string, number>;
+};
+
 const mocks = vi.hoisted(() => ({
   listGitChanges: vi.fn(),
   readBranchComparisonDiff: vi.fn(),
@@ -33,7 +46,7 @@ const mocks = vi.hoisted(() => ({
       },
     ],
     gitRefreshVersionByWorktreePath: {},
-  },
+  } as WorkspaceStateFixture,
 }));
 
 vi.mock("../../../../domains/git/commands/gitCommands", () => ({
@@ -156,6 +169,76 @@ describe("ChangesTabView", () => {
     cleanup();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("does not load git changes for an error workspace", async () => {
+    mocks.workspaceState = {
+      ...mocks.workspaceState,
+      workspaces: [
+        {
+          id: "workspace-1",
+          worktreePath: "/tmp/missing-worktree",
+          sourceBranch: "main",
+          state: "error",
+        },
+      ],
+    };
+
+    render(<ChangesTabView />);
+
+    await waitFor(() => {
+      expect(mocks.listGitChanges).not.toHaveBeenCalled();
+      expect(mocks.listGitCommitsToTarget).not.toHaveBeenCalled();
+    });
+  });
+
+  it("does not load a commit comparison after the workspace becomes an error workspace", async () => {
+    let resolveListGitChanges: ((value: GitChangesResponse) => void) | undefined;
+    mocks.listGitChanges.mockImplementation(
+      () =>
+        new Promise<GitChangesResponse>((resolve) => {
+          resolveListGitChanges = resolve;
+        }),
+    );
+
+    mocks.workspaceState = {
+      ...mocks.workspaceState,
+      projects: [{ id: "project-1", sourceType: "git" }],
+      workspaces: [
+        {
+          id: "workspace-1",
+          worktreePath: "/tmp/repo",
+          sourceBranch: "main",
+          projectId: "project-1",
+        },
+      ],
+    };
+
+    const rendered = render(<ChangesTabView />);
+    await waitFor(() => {
+      expect(mocks.listGitChanges).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
+    });
+
+    mocks.workspaceState = {
+      ...mocks.workspaceState,
+      workspaces: [
+        {
+          id: "workspace-1",
+          worktreePath: "/tmp/repo",
+          sourceBranch: "main",
+          projectId: "project-1",
+          state: "error",
+        },
+      ],
+    };
+    rendered.rerender(<ChangesTabView />);
+
+    await act(async () => {
+      resolveListGitChanges?.({ unstaged: [], staged: [], untracked: [] });
+      await Promise.resolve();
+    });
+
+    expect(mocks.listGitCommitsToTarget).not.toHaveBeenCalled();
   });
 
   it("shows a progress bar while workspace changes are loading", async () => {

@@ -87,6 +87,7 @@ type UseFileTreeGitChangesInput = {
   listGitChanges: ListGitChanges;
   selectedWorkspaceId: string;
   selectedWorkspaceWorktreePath: string;
+  isWorkspaceActive: boolean;
   workspaceGitRefreshVersion: number;
 };
 
@@ -95,6 +96,7 @@ export function useFileTreeGitChanges({
   listGitChanges,
   selectedWorkspaceId,
   selectedWorkspaceWorktreePath,
+  isWorkspaceActive,
   workspaceGitRefreshVersion,
 }: UseFileTreeGitChangesInput) {
   const [gitChangesByPath, setGitChangesByPath] = useState<Record<string, FileTreeGitChangeKind>>({});
@@ -104,7 +106,7 @@ export function useFileTreeGitChanges({
     const requestId = gitChangeLoadRequestIdRef.current + 1;
     gitChangeLoadRequestIdRef.current = requestId;
 
-    if (!selectedWorkspaceWorktreePath || !selectedWorkspaceId) {
+    if (!selectedWorkspaceWorktreePath || !selectedWorkspaceId || !isWorkspaceActive) {
       setGitChangesByPath((currentMap) => (Object.keys(currentMap).length === 0 ? currentMap : {}));
       return;
     }
@@ -149,7 +151,13 @@ export function useFileTreeGitChanges({
     return () => {
       cancelled = true;
     };
-  }, [listGitChanges, selectedWorkspaceId, selectedWorkspaceWorktreePath, workspaceGitRefreshVersion]);
+  }, [
+    isWorkspaceActive,
+    listGitChanges,
+    selectedWorkspaceId,
+    selectedWorkspaceWorktreePath,
+    workspaceGitRefreshVersion,
+  ]);
 
   return gitChangesByPath;
 }
