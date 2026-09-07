@@ -225,6 +225,30 @@ export async function loadLocalTaskContext(taskId: string): Promise<void> {
   }
 }
 
+/**
+ * Refreshes the cached context for the selected workspace task when its Task Context files change.
+ */
+export async function refreshSelectedWorkspaceTaskContextForFileChanges(
+  workspaceId: string,
+  changedRelativePaths?: string[],
+): Promise<void> {
+  const { selectedWorkspaceId, selectedWorkspaceTaskId, contextByTaskId } = localTaskStore.getState();
+  if (selectedWorkspaceId !== workspaceId || !selectedWorkspaceTaskId || !contextByTaskId[selectedWorkspaceTaskId])
+    return;
+
+  const contextPath = `.my-context/task-context/${selectedWorkspaceTaskId}`;
+  const contextChanged =
+    !changedRelativePaths ||
+    changedRelativePaths.length === 0 ||
+    changedRelativePaths.some((changedPath) => {
+      const normalizedPath = changedPath.replaceAll("\\", "/").replace(/^\.\//, "");
+      return normalizedPath === contextPath || normalizedPath.startsWith(`${contextPath}/`);
+    });
+  if (!contextChanged) return;
+
+  await loadLocalTaskContext(selectedWorkspaceTaskId);
+}
+
 /** Loads one Local Task into the detail entity cache without changing list projections. */
 export function loadLocalTask(taskId: string): Promise<LocalTask> {
   const existingLoad = taskLoadsInFlight.get(taskId);

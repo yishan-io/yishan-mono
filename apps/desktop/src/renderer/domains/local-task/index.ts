@@ -14,6 +14,7 @@ export {
   loadLocalTaskTemplates,
   renameLocalTaskTag,
   refreshProgressingLocalTaskCount,
+  refreshSelectedWorkspaceTaskContextForFileChanges,
   refreshLocalTaskHub,
   refreshSelectedWorkspaceTasks,
   saveLocalTaskTemplates,
