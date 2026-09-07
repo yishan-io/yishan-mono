@@ -74,6 +74,8 @@ export async function createProjectHandler(
     nodeId: body.nodeId,
     localPath: body.localPath,
     contextEnabled: body.contextEnabled,
+    icon: body.icon,
+    color: body.color,
   });
   c.executionCtx.waitUntil(
     c.get("services").relayEvent.publishWorkspaceSnapshotChanged({

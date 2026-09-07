@@ -1,4 +1,3 @@
-import { workspaceStore } from "@renderer/domains/workspace";
 /**
  * Project store — owns project records + project preferences.
  *
@@ -18,8 +17,8 @@ import { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from
  * Random default icon/color assignment for new project records.
  *
  * State-transition machinery: `applyCreatedProjectState` must assign non-empty
- * avatar defaults, and `projectCommands.createProject` pre-assigns random ones
- * (new projects get random avatars). Both callers live in this Domain; the
+ * avatar defaults, and `projectCommands.createProject` requests random ones
+ * during backend creation. Both callers live in this Domain; the
  * policy sits beside the store transition that consumes it.
  */
 export function pickRandomProjectIcon(): string {

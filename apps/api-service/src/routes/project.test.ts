@@ -145,6 +145,23 @@ describe("projectRouter relay invalidation", () => {
     expect(ensureProjectTaskPrefix).not.toHaveBeenCalled();
   });
 
+  it("forwards initial icon and color when creating a project", async () => {
+    createProject.mockResolvedValue({ id: "project-1", name: "Project 1" });
+
+    const response = await app.fetch(
+      new Request("http://localhost/orgs/org-1/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Project 1", taskPrefix: "PROJ", icon: "atom", color: "#123456" }),
+      }),
+      undefined,
+      executionContext,
+    );
+
+    expect(response.status).toBe(201);
+    expect(createProject).toHaveBeenCalledWith(expect.objectContaining({ icon: "atom", color: "#123456" }));
+  });
+
   it("returns a created project without awaiting relay invalidation", async () => {
     createProject.mockResolvedValue({ id: "project-1", name: "Project 1" });
 

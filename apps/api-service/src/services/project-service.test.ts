@@ -179,6 +179,64 @@ describe("ProjectService.createProject", () => {
     expect(result.workspaces).toEqual([{ ...insertedWorkspace, latestPullRequest: null }]);
   });
 
+  it("uses its generated project ID as the repoKey for a git-local project without a remote", async () => {
+    const insertedProject = {
+      ...PROJECT_ROW,
+      id: "project-local",
+      sourceType: "git-local" as const,
+      repoProvider: null,
+      repoUrl: null,
+      repoKey: "project-local",
+    };
+    const { db, txInsertValues } = makeCreateDb({ insertedProject });
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    await service.createProject({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      name: "Local Git Project",
+      taskPrefix: "LOCA",
+      sourceTypeHint: "git-local",
+    });
+
+    const insertedValues = txInsertValues.mock.calls[0]?.[0];
+    expect(insertedValues.id).toBe(insertedValues.repoKey);
+    expect(insertedValues.repoProvider).toBeNull();
+    expect(insertedValues.repoUrl).toBeNull();
+  });
+
+  it("persists supplied initial icon and color in the project insert", async () => {
+    const { db, txInsertValues } = makeCreateDb({ insertedProject: PROJECT_ROW });
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    await service.createProject({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      name: "Project 1",
+      taskPrefix: "PROJ",
+      icon: "atom",
+      color: "#123456",
+    });
+
+    expect(txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({ icon: "atom", color: "#123456" }));
+  });
+
+  it("omits initial icon and color so database defaults apply", async () => {
+    const { db, txInsertValues } = makeCreateDb({ insertedProject: PROJECT_ROW });
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    await service.createProject({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      name: "Project 1",
+      taskPrefix: "PROJ",
+    });
+
+    const insertedValues = txInsertValues.mock.calls[0]?.[0];
+    expect(insertedValues).not.toHaveProperty("icon");
+    expect(insertedValues).not.toHaveProperty("color");
+  });
+
   it("takes the organization prefix lock before inserting a project", async () => {
     const { db, txExecute, txInsert } = makeCreateDb({ insertedProject: PROJECT_ROW });
     const service = new ProjectService(db, makeOrgService("member"));
