@@ -14,6 +14,7 @@ import { incrementGitRefreshVersion } from "@renderer/domains/git";
 import {
   refreshLocalTaskHub,
   refreshProgressingLocalTaskCount,
+  refreshSelectedWorkspaceTaskContextForFileChanges,
   refreshSelectedWorkspaceTasks,
   selectLocalTaskWorkspace,
 } from "@renderer/domains/local-task";
@@ -21,7 +22,7 @@ import { createNotificationEventHandlers } from "@renderer/domains/notification"
 import { createTerminalEventHandlers } from "@renderer/domains/terminal";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { createWorkbenchEventHandlers } from "@renderer/domains/workbench";
-import { createWorkspaceEventHandlers } from "@renderer/domains/workspace";
+import { createWorkspaceEventHandlers, workspaceStore } from "@renderer/domains/workspace";
 import { subscribeBackendEvent } from "@renderer/events";
 import { subscribeDesktopRpcEvent } from "../../events/desktopRpcEventBus";
 import { loadWorkspaceSnapshot } from "../commands/workspaceSnapshotFlow";
@@ -74,6 +75,14 @@ export function startBackendEventHandlers() {
           return;
         }
         listener(event.payload.workspaceId, event.payload.workspaceWorktreePath, event.payload.changedRelativePaths);
+        const workspaceId =
+          event.payload.workspaceId ??
+          workspaceStore
+            .getState()
+            .workspaces.find((workspace) => workspace.worktreePath?.trim() === event.payload.workspaceWorktreePath)?.id;
+        if (workspaceId) {
+          void refreshSelectedWorkspaceTaskContextForFileChanges(workspaceId, event.payload.changedRelativePaths);
+        }
       }),
     subscribeWorkspaceCreateStarted: (listener) =>
       subscribeBackendEvent("workspace.create.started", (event) => {

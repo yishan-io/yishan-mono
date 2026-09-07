@@ -13,6 +13,7 @@ import {
   loadLocalTaskTagSuggestions,
   refreshLocalTaskHub,
   refreshProgressingLocalTaskCount,
+  refreshSelectedWorkspaceTaskContextForFileChanges,
   refreshSelectedWorkspaceTasks,
   setLocalTaskHubFilters,
   setLocalTaskHubSearchQuery,
@@ -225,6 +226,30 @@ describe("localTaskCommands", () => {
     expect(daemon.localTaskClient.list).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
     expect(localTaskStore.getState().workspaceLinks).toEqual([link]);
     expect(localTaskStore.getState().contextLoadStateByTaskId["task-1"]).toBe("loaded");
+  });
+
+  it("refreshes the selected Task Context when its cached document is added", async () => {
+    localTaskStore.setState({
+      selectedWorkspaceId: "workspace-1",
+      selectedWorkspaceTaskId: "task-1",
+      contextByTaskId: {
+        "task-1": { directory: "/context/task-1", files: [{ name: "plan.md", path: "/context/task-1/plan.md" }] },
+      },
+    });
+    vi.mocked(daemon.localTaskClient.getContext).mockResolvedValue({
+      directory: "/context/task-1",
+      files: [
+        { name: "plan.md", path: "/context/task-1/plan.md" },
+        { name: "notes.md", path: "/context/task-1/notes.md" },
+      ],
+    });
+
+    await refreshSelectedWorkspaceTaskContextForFileChanges("workspace-1", [
+      ".my-context/task-context/task-1/notes.md",
+    ]);
+
+    expect(daemon.localTaskClient.getContext).toHaveBeenCalledWith("task-1");
+    expect(localTaskStore.getState().contextByTaskId["task-1"]?.files).toHaveLength(2);
   });
 
   it("orchestrates workspace link mutations and refreshes selected-workspace state", async () => {
