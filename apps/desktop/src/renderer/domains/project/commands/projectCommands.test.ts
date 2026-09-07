@@ -718,6 +718,7 @@ describe("projectCommands", () => {
       remoteUrl: "https://github.com/test/repo-1.git",
       currentBranch: "main",
     });
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
     apiMocks.createProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
@@ -725,24 +726,20 @@ describe("projectCommands", () => {
       repoProvider: null,
       repoUrl: "https://github.com/test/repo-1.git",
       repoKey: "repo-1",
+      icon: "atom",
+      color: "#123456",
       workspaces: [],
     });
-    apiMocks.updateProject.mockResolvedValueOnce({
-      id: "project-1",
-      name: "Repo 1",
-      icon: "folder",
-      color: "#1E66F5",
-      contextEnabled: true,
-      setupScript: "",
-      postScript: "",
-      commands: [],
-    });
 
-    await createProject({
-      name: "Repo 1",
-      taskPrefix: "TEST",
-      path: "/tmp/repo-1",
-    });
+    try {
+      await createProject({
+        name: "Repo 1",
+        taskPrefix: "TEST",
+        path: "/tmp/repo-1",
+      });
+    } finally {
+      randomSpy.mockRestore();
+    }
 
     expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
       name: "Repo 1",
@@ -752,7 +749,15 @@ describe("projectCommands", () => {
       nodeId: undefined,
       localPath: "/tmp/repo-1",
       contextEnabled: true,
+      icon: "folder",
+      color: "#1E66F5",
     });
+    expect(apiMocks.updateProject).not.toHaveBeenCalled();
+    expect(appendRepo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        backendProject: expect.objectContaining({ icon: "atom", color: "#123456" }),
+      }),
+    );
     expect(appendRepo).toHaveBeenCalledTimes(1);
     expect(addWorkspace).not.toHaveBeenCalled();
     expect(rpcMocks.workspaceOpenProject).not.toHaveBeenCalled();
@@ -796,7 +801,7 @@ describe("projectCommands", () => {
       sourceType: "git-local",
       repoProvider: null,
       repoUrl: null,
-      repoKey: null,
+      repoKey: "project-plain",
       contextEnabled: true,
       workspaces: [
         {
@@ -816,16 +821,6 @@ describe("projectCommands", () => {
         },
       ],
     });
-    apiMocks.updateProject.mockResolvedValueOnce({
-      id: "project-plain",
-      name: "Plain Git Repo",
-      icon: "folder",
-      color: "#1E66F5",
-      contextEnabled: true,
-      setupScript: "",
-      postScript: "",
-      commands: [],
-    });
 
     await createProject({
       name: "Plain Git Repo",
@@ -841,6 +836,8 @@ describe("projectCommands", () => {
       nodeId: undefined,
       localPath: "/tmp/plain-folder",
       contextEnabled: true,
+      icon: expect.any(String),
+      color: expect.any(String),
     });
     expect(rpcMocks.workspaceImportLocalPath).toHaveBeenCalledWith({
       path: "/tmp/plain-folder",
@@ -864,6 +861,13 @@ describe("projectCommands", () => {
       worktreePath: "/tmp/plain-folder",
       nodeId: "node-1",
     });
+    expect(rpcMocks.workspaceSyncContextLink).toHaveBeenCalledOnce();
+    expect(rpcMocks.workspaceSyncContextLink).toHaveBeenCalledWith({
+      repoKey: "project-plain",
+      nonGit: false,
+      enabled: true,
+      worktreePaths: ["/tmp/plain-folder"],
+    });
   });
 
   it("adds and opens the primary workspace for a git-local local folder via the backend api", async () => {
@@ -881,8 +885,8 @@ describe("projectCommands", () => {
       sourceType: "git-local",
       repoProvider: null,
       repoUrl: null,
-      repoKey: null,
-      contextEnabled: true,
+      repoKey: "project-plain",
+      contextEnabled: false,
       workspaces: [
         {
           id: "workspace-1",
@@ -900,16 +904,6 @@ describe("projectCommands", () => {
           updatedAt: "2026-01-01T00:00:00.000Z",
         },
       ],
-    });
-    apiMocks.updateProject.mockResolvedValueOnce({
-      id: "project-plain",
-      name: "Plain Git Repo",
-      icon: "folder",
-      color: "#1E66F5",
-      contextEnabled: true,
-      setupScript: "",
-      postScript: "",
-      commands: [],
     });
 
     await createProject({
@@ -949,6 +943,7 @@ describe("projectCommands", () => {
         },
       ],
     });
+    expect(rpcMocks.workspaceSyncContextLink).not.toHaveBeenCalled();
   });
 
   it("opens imported local primary workspace immediately on the daemon", async () => {
@@ -984,16 +979,6 @@ describe("projectCommands", () => {
         },
       ],
     });
-    apiMocks.updateProject.mockResolvedValueOnce({
-      id: "project-1",
-      name: "Repo 1",
-      icon: "folder",
-      color: "#1E66F5",
-      contextEnabled: true,
-      setupScript: "",
-      postScript: "",
-      commands: [],
-    });
 
     await createProject({
       name: "Repo 1",
@@ -1009,6 +994,8 @@ describe("projectCommands", () => {
       nodeId: undefined,
       localPath: "/tmp/repo-1",
       contextEnabled: true,
+      icon: expect.any(String),
+      color: expect.any(String),
     });
   });
 
@@ -1024,16 +1011,6 @@ describe("projectCommands", () => {
       repoKey: "remote-repo",
       contextEnabled: false,
       workspaces: [],
-    });
-    apiMocks.updateProject.mockResolvedValueOnce({
-      id: "project-1",
-      name: "Remote Repo",
-      icon: "folder",
-      color: "#1E66F5",
-      contextEnabled: false,
-      setupScript: "",
-      postScript: "",
-      commands: [],
     });
 
     await createProject({
@@ -1074,16 +1051,6 @@ describe("projectCommands", () => {
           updatedAt: "2026-01-01T00:00:00.000Z",
         },
       ],
-    });
-    apiMocks.updateProject.mockResolvedValueOnce({
-      id: "project-remote-1",
-      name: "Remote Repo",
-      icon: "folder",
-      color: "#1E66F5",
-      contextEnabled: true,
-      setupScript: "",
-      postScript: "",
-      commands: [],
     });
 
     await createProject({

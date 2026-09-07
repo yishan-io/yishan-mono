@@ -4,8 +4,8 @@ import { workbenchNavigationStore } from "@renderer/domains/workbench";
 import { activateProject } from "@renderer/domains/workbench";
 import { resolveTabForWorkspace } from "@renderer/domains/workbench";
 
-import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { writeClipboardText } from "@renderer/platform/clipboard";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import type { ProjectWithWorkspacesRecord } from "../api/types";
 
 import { sessionStore } from "@renderer/domains/session";
@@ -87,6 +87,8 @@ export async function createProject(input: {
       nodeId: inferredNodeId,
       localPath: isLocalSource ? normalizedPath : undefined,
       contextEnabled: workspaceSettingsStore.getState().isDefaultContextEnabled,
+      icon: randomIcon,
+      color: randomColor,
     });
   } catch (error) {
     console.error("Failed to create backend project", error);
@@ -126,8 +128,8 @@ export async function createProject(input: {
       repoUrl: project.repoUrl ?? inferredRemoteUrl,
       contextEnabled: project.contextEnabled,
       taskPrefix: project.taskPrefix,
-      icon: randomIcon,
-      color: randomColor,
+      icon: project.icon,
+      color: project.color,
       setupScript: project.setupScript,
       postScript: project.postScript,
       defaultBranch: resolvedProjectDefaultBranch,

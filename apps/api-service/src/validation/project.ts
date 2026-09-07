@@ -36,6 +36,8 @@ export const createProjectBodySchema = z.object({
   nodeId: nonEmptyStringSchema.optional(),
   localPath: nonEmptyStringSchema.optional(),
   contextEnabled: z.boolean().optional(),
+  icon: nonEmptyStringSchema.optional(),
+  color: nonEmptyStringSchema.optional(),
 });
 
 export const updateProjectBodySchema = z

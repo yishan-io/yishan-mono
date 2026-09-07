@@ -13,6 +13,23 @@ describe("createProjectBodySchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts optional initial icon and color", () => {
+    const result = createProjectBodySchema.safeParse({
+      name: "Project",
+      taskPrefix: "PROJ",
+      icon: "atom",
+      color: "#123456",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({ icon: "atom", color: "#123456" });
+  });
+
+  it("rejects empty initial icon or color", () => {
+    expect(createProjectBodySchema.safeParse({ name: "Project", taskPrefix: "PROJ", icon: "" }).success).toBe(false);
+    expect(createProjectBodySchema.safeParse({ name: "Project", taskPrefix: "PROJ", color: "" }).success).toBe(false);
+  });
+
   it("still accepts git and git-local local paths", () => {
     expect(
       createProjectBodySchema.safeParse({

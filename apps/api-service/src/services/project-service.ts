@@ -69,6 +69,8 @@ type CreateProjectInput = {
   nodeId?: string;
   localPath?: string;
   contextEnabled?: boolean;
+  icon?: string;
+  color?: string;
 };
 
 type UpdateProjectInput = {
@@ -150,8 +152,9 @@ export class ProjectService {
     const repoUrl = input.repoUrl?.trim() ?? null;
     const sourceType: ProjectSourceType = repoUrl ? "git" : (input.sourceTypeHint ?? "unknown");
 
+    const projectId = newId();
     let repoProvider: string | null = null;
-    let repoKey: string | null = null;
+    let repoKey: string | null = sourceType === "git-local" ? projectId : null;
     const nodeId = input.nodeId?.trim() ?? null;
     const localPath = input.localPath?.trim() ?? null;
 
@@ -174,13 +177,15 @@ export class ProjectService {
           insertedRows = await tx
             .insert(projects)
             .values({
-              id: newId(),
+              id: projectId,
               name,
               sourceType,
               repoProvider,
               repoUrl,
               repoKey,
               contextEnabled: input.contextEnabled ?? true,
+              ...(input.icon === undefined ? {} : { icon: input.icon }),
+              ...(input.color === undefined ? {} : { color: input.color }),
               taskPrefix,
               organizationId: input.organizationId,
               createdByUserId: input.actorUserId,
