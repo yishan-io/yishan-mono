@@ -86,6 +86,18 @@ describe("RichComposer", () => {
     expect(textbox.firstChild).toBe(originalTextNode);
   });
 
+  it("does not rewrite plain-text DOM after input", () => {
+    render(<RichComposer placeholder="Type a message…" />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerHTML = "<span>你好 </span>";
+    const nativeCompositionNode = textbox.firstChild;
+
+    fireEvent.input(textbox, { isComposing: false, inputType: "insertText" });
+
+    expect(textbox.firstChild).toBe(nativeCompositionNode);
+  });
+
   it("waits until after the final non-composing input before synchronizing composition DOM", () => {
     const onChange = vi.fn();
 

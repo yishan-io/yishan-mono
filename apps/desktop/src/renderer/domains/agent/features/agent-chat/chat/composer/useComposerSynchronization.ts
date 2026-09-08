@@ -38,7 +38,7 @@ export function useComposerSynchronization({
   const synchronizeComposer = useCallback(
     (editable: HTMLDivElement, nextValue: string, caretOffset: number) => {
       const nextHtml = renderComposerHtml(nextValue, slashCommands);
-      if (editable.innerHTML !== nextHtml) {
+      if (shouldSynchronizeComposerMarkup(editable, nextHtml) && editable.innerHTML !== nextHtml) {
         editable.innerHTML = nextHtml;
         setCaretOffset(editable, caretOffset);
       }
@@ -133,7 +133,9 @@ export function useComposerSynchronization({
     const normalizedCurrentValue = normalizeComposerText(editable.innerText);
     const nextHtml = renderComposerHtml(value, slashCommands);
     const shouldMoveCaretToEndAfterFileDrop = shouldMoveCaretToEndAfterFileDropRef.current;
-    if (normalizedCurrentValue === value && editable.innerHTML === nextHtml) {
+    const shouldSynchronizeDom =
+      normalizedCurrentValue !== value || shouldSynchronizeComposerMarkup(editable, nextHtml);
+    if (!shouldSynchronizeDom || editable.innerHTML === nextHtml) {
       if (shouldMoveCaretToEndAfterFileDrop) {
         editable.focus();
         setCaretOffset(editable, value.length);
@@ -163,4 +165,13 @@ export function useComposerSynchronization({
     handleComposerCompositionEnd,
     handleComposerInput,
   };
+}
+
+function shouldSynchronizeComposerMarkup(editable: HTMLDivElement, nextHtml: string): boolean {
+  return (
+    nextHtml.includes("<a ") ||
+    nextHtml.includes("<span ") ||
+    nextHtml.includes("<br>") ||
+    editable.querySelector("a.composer-link, span.composer-slash, span.composer-mention") !== null
+  );
 }
