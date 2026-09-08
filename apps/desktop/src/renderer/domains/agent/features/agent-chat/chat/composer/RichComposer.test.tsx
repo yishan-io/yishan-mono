@@ -98,7 +98,7 @@ describe("RichComposer", () => {
     expect(textbox.firstChild).toBe(nativeCompositionNode);
   });
 
-  it("waits until after the final non-composing input before synchronizing composition DOM", () => {
+  it("synchronizes a final non-composing input after compositionend", () => {
     const onChange = vi.fn();
 
     render(<RichComposer placeholder="Type a message…" onChange={onChange} slashCommands={SLASH_COMMANDS} />);
@@ -118,11 +118,26 @@ describe("RichComposer", () => {
 
     fireEvent.input(textbox, { isComposing: false });
 
-    expect(textbox.firstChild).toBe(compositionTextNode);
-    expect(screen.getByRole("button", { name: "/brainstorm" })).toBeTruthy();
-
-    fireEvent.input(textbox, { isComposing: false });
+    expect(textbox.firstChild).not.toBe(compositionTextNode);
     expect(textbox.querySelector(".composer-slash")?.textContent).toBe("/brain");
+    expect(screen.getByRole("button", { name: "/brainstorm" })).toBeTruthy();
+  });
+
+  it("inserts a literal space when macOS Pinyin consumes it after compositionend", () => {
+    const insertText = vi.fn();
+    Object.defineProperty(document, "execCommand", { configurable: true, value: insertText });
+    render(<RichComposer placeholder="Type a message…" />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "你好";
+    fireEvent.input(textbox, { isComposing: true, inputType: "insertCompositionText" });
+    fireEvent.compositionEnd(textbox);
+    const spaceKeyDown = createEvent.keyDown(textbox, { key: " " });
+    fireEvent(textbox, spaceKeyDown);
+
+    expect(spaceKeyDown.defaultPrevented).toBe(true);
+    expect(insertText).toHaveBeenCalledWith("insertText", false, " ");
   });
 
   it("does not treat input after compositionend as final when the IME finalized before it", () => {

@@ -29,10 +29,10 @@ export function useComposerSynchronization({
   syncMentionMenu,
   closeSuggestionMenus,
 }: UseComposerSynchronizationOptions) {
-  useComposerImeEventDiagnostics(composerRef);
+  const shouldInsertLiteralSpaceAfterCompositionRef = useRef(false);
+  useComposerLiteralSpaceRecovery(composerRef, shouldInsertLiteralSpaceAfterCompositionRef);
 
   const isAwaitingFinalInputRef = useRef(false);
-  const didReceiveFinalCompositionInputRef = useRef(false);
   const compositionInputValueRef = useRef<string | null>(null);
   const pendingExternalValueRef = useRef<string | null>(null);
   const [isReadyToSynchronizeControlledValue, setIsReadyToSynchronizeControlledValue] = useState(true);
@@ -53,7 +53,7 @@ export function useComposerSynchronization({
   const handleComposerCompositionStart = useCallback(() => {
     isComposingRef.current = true;
     isAwaitingFinalInputRef.current = false;
-    didReceiveFinalCompositionInputRef.current = false;
+    shouldInsertLiteralSpaceAfterCompositionRef.current = false;
     compositionInputValueRef.current = null;
     pendingExternalValueRef.current = null;
     setIsReadyToSynchronizeControlledValue(false);
@@ -62,10 +62,17 @@ export function useComposerSynchronization({
 
   const handleComposerCompositionEnd = useCallback(() => {
     isComposingRef.current = false;
-    // Chromium can dispatch the committed non-composing input before or after
-    // compositionend. Wait only when it has not arrived yet.
-    isAwaitingFinalInputRef.current = !didReceiveFinalCompositionInputRef.current;
-  }, [isComposingRef]);
+    // macOS Pinyin commits through insertCompositionText and emits no later
+    // non-composing input. Treat compositionend as the completed transaction,
+    // unless a controlled external value must still replace the composition.
+    if (pendingExternalValueRef.current !== null) {
+      isAwaitingFinalInputRef.current = true;
+      return;
+    }
+    shouldInsertLiteralSpaceAfterCompositionRef.current = true;
+    isAwaitingFinalInputRef.current = false;
+    setIsReadyToSynchronizeControlledValue(true);
+  }, [isComposingRef, shouldInsertLiteralSpaceAfterCompositionRef]);
 
   const handleComposerInput = useCallback(
     (event: SyntheticEvent<HTMLDivElement>) => {
@@ -81,9 +88,6 @@ export function useComposerSynchronization({
       const caretOffset = getCaretOffset(editable);
       const nextValue = normalizeComposerText(editable.innerText);
       if (isComposingRef.current) {
-        if (nativeEvent.isComposing === false || nativeEvent.inputType === "insertText") {
-          didReceiveFinalCompositionInputRef.current = true;
-        }
         compositionInputValueRef.current = nextValue;
         onChange?.(nextValue);
         return;
@@ -169,44 +173,40 @@ export function useComposerSynchronization({
   };
 }
 
-function useComposerImeEventDiagnostics(composerRef: RefObject<HTMLDivElement | null>): void {
+function useComposerLiteralSpaceRecovery(
+  composerRef: RefObject<HTMLDivElement | null>,
+  shouldInsertLiteralSpaceRef: RefObject<boolean>,
+): void {
   useEffect(() => {
-    if (!import.meta.env.DEV) {
-      return;
-    }
-
     const editable = composerRef.current;
     if (!editable) {
       return;
     }
 
-    const eventTypes = ["keydown", "beforeinput", "input", "compositionstart", "compositionupdate", "compositionend"];
-    const handleEvent = (event: Event) => {
-      queueMicrotask(() => {
-        const inputEvent = event as InputEvent;
-        const keyboardEvent = event as KeyboardEvent;
-        console.info("[RichComposer IME]", {
-          type: event.type,
-          data: "data" in inputEvent ? inputEvent.data : undefined,
-          inputType: "inputType" in inputEvent ? inputEvent.inputType : undefined,
-          isComposing: "isComposing" in inputEvent ? inputEvent.isComposing : undefined,
-          key: "key" in keyboardEvent ? keyboardEvent.key : undefined,
-          defaultPrevented: event.defaultPrevented,
-          text: normalizeComposerText(editable.innerText),
-          html: editable.innerHTML,
-        });
-      });
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!shouldInsertLiteralSpaceRef.current || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+      if (event.key !== " ") {
+        if (event.key.length === 1) {
+          shouldInsertLiteralSpaceRef.current = false;
+        }
+        return;
+      }
+
+      // macOS Pinyin can consume this literal space without dispatching
+      // beforeinput/input after compositionend. Insert it through the browser's
+      // editing command so the regular input handler receives the update.
+      shouldInsertLiteralSpaceRef.current = false;
+      event.preventDefault();
+      document.execCommand("insertText", false, " ");
     };
 
-    for (const eventType of eventTypes) {
-      editable.addEventListener(eventType, handleEvent);
-    }
+    editable.addEventListener("keydown", handleKeyDown);
     return () => {
-      for (const eventType of eventTypes) {
-        editable.removeEventListener(eventType, handleEvent);
-      }
+      editable.removeEventListener("keydown", handleKeyDown);
     };
-  }, [composerRef]);
+  }, [composerRef, shouldInsertLiteralSpaceRef]);
 }
 
 function shouldSynchronizeComposerMarkup(editable: HTMLDivElement, nextHtml: string): boolean {
