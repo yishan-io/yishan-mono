@@ -90,9 +90,18 @@ export function useComposerSynchronization({
         return;
       }
 
+      const isFinalCompositionInput = isAwaitingFinalInputRef.current;
       onChange?.(nextValue);
       isAwaitingFinalInputRef.current = false;
-      synchronizeComposer(editable, nextValue, caretOffset);
+      if (isFinalCompositionInput) {
+        // The browser can still be completing its native IME transaction after
+        // this input. Rewriting contenteditable here can consume the first
+        // subsequent Space key; defer markup normalization to the next input.
+        syncSlashCommandMenu(editable, nextValue, caretOffset);
+        syncMentionMenu(editable, nextValue, caretOffset);
+      } else {
+        synchronizeComposer(editable, nextValue, caretOffset);
+      }
       setIsReadyToSynchronizeControlledValue(true);
     },
     [disabled, isComposingRef, onChange, shouldMoveCaretToEndAfterFileDropRef, synchronizeComposer],

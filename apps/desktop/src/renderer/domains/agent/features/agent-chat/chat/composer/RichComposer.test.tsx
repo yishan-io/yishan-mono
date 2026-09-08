@@ -86,7 +86,7 @@ describe("RichComposer", () => {
     expect(textbox.firstChild).toBe(originalTextNode);
   });
 
-  it("waits for the final non-composing input before synchronizing composition DOM and menus", () => {
+  it("waits until after the final non-composing input before synchronizing composition DOM", () => {
     const onChange = vi.fn();
 
     render(<RichComposer placeholder="Type a message…" onChange={onChange} slashCommands={SLASH_COMMANDS} />);
@@ -106,8 +106,32 @@ describe("RichComposer", () => {
 
     fireEvent.input(textbox, { isComposing: false });
 
-    expect(textbox.querySelector(".composer-slash")?.textContent).toBe("/brain");
+    expect(textbox.firstChild).toBe(compositionTextNode);
     expect(screen.getByRole("button", { name: "/brainstorm" })).toBeTruthy();
+
+    fireEvent.input(textbox, { isComposing: false });
+    expect(textbox.querySelector(".composer-slash")?.textContent).toBe("/brain");
+  });
+
+  it("preserves the first native space after Chinese composition", () => {
+    const onChange = vi.fn();
+    render(<RichComposer placeholder="Type a message…" onChange={onChange} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerHTML = "<span>你好</span>";
+    const compositionTextNode = textbox.firstChild;
+    fireEvent.input(textbox, { isComposing: true });
+    fireEvent.compositionEnd(textbox);
+
+    fireEvent.input(textbox, { isComposing: false });
+    expect(textbox.firstChild).toBe(compositionTextNode);
+
+    textbox.innerText = "你好 ";
+    fireEvent.input(textbox, { isComposing: false });
+
+    expect(textbox.textContent).toBe("你好 ");
+    expect(onChange).toHaveBeenLastCalledWith("你好 ");
   });
 
   it("closes suggestion menus and leaves navigation keys native during composition", async () => {
