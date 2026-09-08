@@ -30,6 +30,7 @@ export function useComposerSynchronization({
   closeSuggestionMenus,
 }: UseComposerSynchronizationOptions) {
   const isAwaitingFinalInputRef = useRef(false);
+  const didReceiveFinalCompositionInputRef = useRef(false);
   const compositionInputValueRef = useRef<string | null>(null);
   const pendingExternalValueRef = useRef<string | null>(null);
   const [isReadyToSynchronizeControlledValue, setIsReadyToSynchronizeControlledValue] = useState(true);
@@ -50,6 +51,7 @@ export function useComposerSynchronization({
   const handleComposerCompositionStart = useCallback(() => {
     isComposingRef.current = true;
     isAwaitingFinalInputRef.current = false;
+    didReceiveFinalCompositionInputRef.current = false;
     compositionInputValueRef.current = null;
     pendingExternalValueRef.current = null;
     setIsReadyToSynchronizeControlledValue(false);
@@ -58,9 +60,9 @@ export function useComposerSynchronization({
 
   const handleComposerCompositionEnd = useCallback(() => {
     isComposingRef.current = false;
-    // Browsers dispatch the committed non-composing input after compositionend.
-    // Do not rewrite innerHTML here: it would interrupt that final input.
-    isAwaitingFinalInputRef.current = true;
+    // Chromium can dispatch the committed non-composing input before or after
+    // compositionend. Wait only when it has not arrived yet.
+    isAwaitingFinalInputRef.current = !didReceiveFinalCompositionInputRef.current;
   }, [isComposingRef]);
 
   const handleComposerInput = useCallback(
@@ -70,12 +72,16 @@ export function useComposerSynchronization({
       }
 
       const editable = event.currentTarget;
-      if ((event.nativeEvent as InputEvent).inputType === "insertFromDrop") {
+      const nativeEvent = event.nativeEvent as InputEvent;
+      if (nativeEvent.inputType === "insertFromDrop") {
         shouldMoveCaretToEndAfterFileDropRef.current = true;
       }
       const caretOffset = getCaretOffset(editable);
       const nextValue = normalizeComposerText(editable.innerText);
       if (isComposingRef.current) {
+        if (nativeEvent.isComposing === false || nativeEvent.inputType === "insertText") {
+          didReceiveFinalCompositionInputRef.current = true;
+        }
         compositionInputValueRef.current = nextValue;
         onChange?.(nextValue);
         return;

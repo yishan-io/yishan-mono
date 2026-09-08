@@ -113,6 +113,38 @@ describe("RichComposer", () => {
     expect(textbox.querySelector(".composer-slash")?.textContent).toBe("/brain");
   });
 
+  it("does not treat input after compositionend as final when the IME finalized before it", () => {
+    render(<RichComposer placeholder="Type a message…" slashCommands={SLASH_COMMANDS} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "/brain";
+    fireEvent.input(textbox, { isComposing: true });
+    fireEvent.input(textbox, { isComposing: false });
+    fireEvent.compositionEnd(textbox);
+
+    textbox.innerText = "/brainx";
+    fireEvent.input(textbox, { isComposing: false });
+
+    expect(textbox.querySelector(".composer-slash")?.textContent).toBe("/brainx");
+  });
+
+  it("recognizes an IME commit input before compositionend even when it is marked composing", () => {
+    render(<RichComposer placeholder="Type a message…" slashCommands={SLASH_COMMANDS} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "/brain";
+    fireEvent.input(textbox, { isComposing: true, inputType: "insertCompositionText" });
+    fireEvent.input(textbox, { isComposing: true, inputType: "insertText" });
+    fireEvent.compositionEnd(textbox);
+
+    textbox.innerText = "/brainx";
+    fireEvent.input(textbox, { isComposing: false, inputType: "insertText" });
+
+    expect(textbox.querySelector(".composer-slash")?.textContent).toBe("/brainx");
+  });
+
   it("preserves the first native space after Chinese composition", () => {
     const onChange = vi.fn();
     render(<RichComposer placeholder="Type a message…" onChange={onChange} />);
