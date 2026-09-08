@@ -172,15 +172,43 @@ describe("RichComposer", () => {
     expect(textbox.textContent).toBe("external value");
   });
 
-  it("clears the draft after a successful Enter submit", async () => {
+  it("clears a controlled draft after a successful Enter submit", async () => {
     const onSubmit = vi.fn(async () => undefined);
-    render(<RichComposer placeholder="Type a message…" onSubmit={onSubmit} />);
+
+    function ControlledComposer() {
+      const [value, setValue] = useState("");
+      return <RichComposer placeholder="Type a message…" value={value} onChange={setValue} onSubmit={onSubmit} />;
+    }
+
+    render(<ControlledComposer />);
 
     const textbox = screen.getByRole("textbox", { name: "Type a message…" });
     textbox.innerText = "hello";
+    fireEvent.input(textbox);
     fireEvent.keyDown(textbox, { key: "Enter" });
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("hello"));
+    await waitFor(() => expect(textbox.textContent).toBe(""));
+  });
+
+  it("clears a controlled draft submitted before a composition final-input event", async () => {
+    const onSubmit = vi.fn(async () => undefined);
+
+    function ControlledComposer() {
+      const [value, setValue] = useState("");
+      return <RichComposer placeholder="Type a message…" value={value} onChange={setValue} onSubmit={onSubmit} />;
+    }
+
+    render(<ControlledComposer />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "你好";
+    fireEvent.input(textbox, { isComposing: true });
+    fireEvent.compositionEnd(textbox);
+    fireEvent.keyDown(textbox, { key: "Enter" });
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("你好"));
     await waitFor(() => expect(textbox.textContent).toBe(""));
   });
 
