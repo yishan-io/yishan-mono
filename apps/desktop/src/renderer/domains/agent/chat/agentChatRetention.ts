@@ -41,10 +41,12 @@ export function mergeActiveTurnHistory(
   const historyMessageIds = new Set(historyWithoutStaleLifecycleMessages.map((message) => message.id));
   const isRendererFinalAssistant = (message: AgentMessage): boolean =>
     rendererFinalAssistantIds === undefined || rendererFinalAssistantIds[message.id] === true;
+  const isRendererFinalToolCallAssistant = (message: AgentMessage): boolean =>
+    rendererFinalToolCallAssistantIds?.[message.id] === true;
   const retainedLifecycleMessages = liveLifecycleMessages.filter((message) => !historyMessageIds.has(message.id));
   const retainedLifecycleMessageIds = new Set(retainedLifecycleMessages.map((message) => message.id));
   const canRetainToolCallOwner = (message: AgentMessage): boolean =>
-    isRendererFinalAssistant(message) || rendererFinalToolCallAssistantIds?.[message.id] === true;
+    isRendererFinalAssistant(message) || isRendererFinalToolCallAssistant(message);
   const retainedToolResults = getRetainedToolResults(historyMessageIds, committedMessages, canRetainToolCallOwner);
   const retainedToolResultIds = new Set(retainedToolResults.map((message) => message.id));
   const retainedToolCallOwners = getRetainedToolCallOwners(
@@ -57,7 +59,10 @@ export function mergeActiveTurnHistory(
   const mergedHistoryMessages = mergeHistoryWithRetainedToolCallOwners(
     historyWithoutStaleLifecycleMessages,
     retainedToolCallOwners,
-    (message) => (isRendererFinalAssistant(message) ? (committedMessagesById.get(message.id) ?? message) : message),
+    (message) =>
+      isRendererFinalAssistant(message) || isRendererFinalToolCallAssistant(message)
+        ? (committedMessagesById.get(message.id) ?? message)
+        : message,
   );
   return getUniqueMessagesById(
     // Keep live metadata before history so transcript trimming drops it before

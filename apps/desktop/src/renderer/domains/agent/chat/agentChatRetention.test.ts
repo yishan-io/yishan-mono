@@ -64,6 +64,29 @@ describe("mergeActiveTurnHistory", () => {
     ]);
   });
 
+  it("keeps a renderer-final tool-call owner when reconnect history has an older same-ID snapshot", () => {
+    const liveToolCallOwner = {
+      id: "assistant-1",
+      role: "assistant" as const,
+      content: [{ type: "toolCall" as const, id: "tool-call-1", name: "read", arguments: { path: "fresh.ts" } }],
+    } satisfies AgentMessage;
+    const staleHistoryOwner = {
+      ...liveToolCallOwner,
+      content: [{ type: "toolCall" as const, id: "tool-call-1", name: "read", arguments: { path: "stale.ts" } }],
+    } satisfies AgentMessage;
+    const liveToolResult = {
+      id: "tool-result-1",
+      role: "toolResult" as const,
+      toolCallId: "tool-call-1",
+      content: "fresh result",
+    } satisfies AgentMessage;
+
+    expect(mergeActiveTurnHistory([staleHistoryOwner], [liveToolCallOwner, liveToolResult], {}, { "assistant-1": true })).toEqual([
+      liveToolCallOwner,
+      liveToolResult,
+    ]);
+  });
+
   it("keeps live subagent lifecycle messages missing from RPC history", () => {
     const liveLifecycle = {
       id: "child-1:started",
