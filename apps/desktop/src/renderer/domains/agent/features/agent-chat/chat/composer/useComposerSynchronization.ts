@@ -29,6 +29,8 @@ export function useComposerSynchronization({
   syncMentionMenu,
   closeSuggestionMenus,
 }: UseComposerSynchronizationOptions) {
+  useComposerImeEventDiagnostics(composerRef);
+
   const isAwaitingFinalInputRef = useRef(false);
   const didReceiveFinalCompositionInputRef = useRef(false);
   const compositionInputValueRef = useRef<string | null>(null);
@@ -165,6 +167,46 @@ export function useComposerSynchronization({
     handleComposerCompositionEnd,
     handleComposerInput,
   };
+}
+
+function useComposerImeEventDiagnostics(composerRef: RefObject<HTMLDivElement | null>): void {
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    const editable = composerRef.current;
+    if (!editable) {
+      return;
+    }
+
+    const eventTypes = ["keydown", "beforeinput", "input", "compositionstart", "compositionupdate", "compositionend"];
+    const handleEvent = (event: Event) => {
+      queueMicrotask(() => {
+        const inputEvent = event as InputEvent;
+        const keyboardEvent = event as KeyboardEvent;
+        console.info("[RichComposer IME]", {
+          type: event.type,
+          data: "data" in inputEvent ? inputEvent.data : undefined,
+          inputType: "inputType" in inputEvent ? inputEvent.inputType : undefined,
+          isComposing: "isComposing" in inputEvent ? inputEvent.isComposing : undefined,
+          key: "key" in keyboardEvent ? keyboardEvent.key : undefined,
+          defaultPrevented: event.defaultPrevented,
+          text: normalizeComposerText(editable.innerText),
+          html: editable.innerHTML,
+        });
+      });
+    };
+
+    for (const eventType of eventTypes) {
+      editable.addEventListener(eventType, handleEvent);
+    }
+    return () => {
+      for (const eventType of eventTypes) {
+        editable.removeEventListener(eventType, handleEvent);
+      }
+    };
+  }, [composerRef]);
 }
 
 function shouldSynchronizeComposerMarkup(editable: HTMLDivElement, nextHtml: string): boolean {
