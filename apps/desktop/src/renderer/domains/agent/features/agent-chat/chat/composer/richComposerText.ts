@@ -4,12 +4,11 @@ const TOKEN_REGEX = /(https?:\/\/[^\s]+|\/[a-zA-Z][\w-]*|@[\w./-]+)/g;
 const MENTION_TOKEN_REGEX = /^@[\w./-]*$/;
 
 export function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return escapeHtml(value).replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
 export function normalizeComposerText(value: string): string {
@@ -20,26 +19,28 @@ export function renderComposerHtml(value: string, slashCommands: RichComposerSla
   const slashCommandCategoryByToken = new Map(
     slashCommands.map((command) => [(command.insertText ?? command.title).trim(), command.category] as const),
   );
-  const escaped = escapeHtml(value);
-  const tokenized = escaped.replaceAll(TOKEN_REGEX, (token) => {
-    if (token.startsWith("http://") || token.startsWith("https://")) {
-      return `<a class="composer-link" href="${token}" target="_blank" rel="noreferrer">${token}</a>`;
-    }
-    if (token.startsWith("/")) {
-      const slashCommandCategory = slashCommandCategoryByToken.get(token);
-      const slashClassName =
-        slashCommandCategory === "skill"
-          ? "composer-slash composer-slash-skill"
-          : slashCommandCategory === "agent"
-            ? "composer-slash composer-slash-agent"
-            : "composer-slash";
-      return `<span class="${slashClassName}">${token}</span>`;
-    }
-    if (token.startsWith("@")) {
-      return `<span class="composer-mention">${token}</span>`;
-    }
-    return token;
-  });
+  const tokenized = value
+    .split(TOKEN_REGEX)
+    .map((segment) => {
+      if (segment.startsWith("http://") || segment.startsWith("https://")) {
+        return `<a class="composer-link" href="${escapeHtmlAttribute(segment)}" target="_blank" rel="noreferrer">${escapeHtml(segment)}</a>`;
+      }
+      if (segment.startsWith("/")) {
+        const slashCommandCategory = slashCommandCategoryByToken.get(segment);
+        const slashClassName =
+          slashCommandCategory === "skill"
+            ? "composer-slash composer-slash-skill"
+            : slashCommandCategory === "agent"
+              ? "composer-slash composer-slash-agent"
+              : "composer-slash";
+        return `<span class="${slashClassName}">${escapeHtml(segment)}</span>`;
+      }
+      if (segment.startsWith("@")) {
+        return `<span class="composer-mention">${escapeHtml(segment)}</span>`;
+      }
+      return escapeHtml(segment);
+    })
+    .join("");
 
   return tokenized.replaceAll("\n", "<br>");
 }

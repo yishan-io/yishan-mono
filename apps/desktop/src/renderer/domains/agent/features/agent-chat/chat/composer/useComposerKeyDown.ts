@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, RefObject } from "react";
 import { useCallback, useRef } from "react";
 import { normalizeComposerText } from "./richComposerText";
 import type { ComposerTokenRange, RichComposerSlashCommand } from "./richComposerTypes";
@@ -9,6 +9,7 @@ type UseComposerKeyDownOptions = {
   onChange?: (value: string) => void;
   onSubmit?: (value: string) => unknown;
   allowEmptySubmit: boolean;
+  isComposingRef: RefObject<boolean>;
   activeSlashCommandRange: ComposerTokenRange | null;
   setActiveSlashCommandRange: (range: ComposerTokenRange | null) => void;
   selectedSlashCommandIndex: number;
@@ -25,6 +26,7 @@ export function useComposerKeyDown({
   onChange,
   onSubmit,
   allowEmptySubmit,
+  isComposingRef,
   activeSlashCommandRange,
   setActiveSlashCommandRange,
   selectedSlashCommandIndex,
@@ -36,7 +38,7 @@ export function useComposerKeyDown({
   const submittingRef = useRef(false);
   return useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
-      if (disabled) {
+      if (disabled || isComposingRef.current) {
         return;
       }
 
@@ -134,6 +136,7 @@ export function useComposerKeyDown({
       filteredSlashCommands,
       handleMentionComposerKeyDown,
       insertSlashCommand,
+      isComposingRef,
       onChange,
       onSubmit,
       selectedSlashCommandIndex,

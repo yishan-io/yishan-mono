@@ -1,15 +1,16 @@
 import { Box, Typography } from "@mui/material";
 import type { FileTreeDragEntry } from "@renderer/domains/files";
 import type { ClipboardEvent, SyntheticEvent } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { RichComposerFileMentionMenu } from "./RichComposerFileMentionMenu";
 import { RichComposerSlashCommandMenu } from "./RichComposerSlashCommandMenu";
-import { getCaretOffset, normalizeComposerText, renderComposerHtml, setCaretOffset } from "./richComposerText";
+import { getCaretOffset, normalizeComposerText } from "./richComposerText";
 import type { FileMentionResult, RichComposerSlashCommand } from "./richComposerTypes";
 import { useComposerFileDrop } from "./useComposerFileDrop";
 import { useComposerFileMentionMenu } from "./useComposerFileMentionMenu";
 import { useComposerKeyDown } from "./useComposerKeyDown";
 import { useComposerSlashCommandMenu } from "./useComposerSlashCommandMenu";
+import { useComposerSynchronization } from "./useComposerSynchronization";
 
 export type { RichComposerSlashCommand } from "./richComposerTypes";
 export type { FileTreeDragEntry as DroppedFileEntry } from "@renderer/domains/files";
@@ -50,6 +51,7 @@ export function RichComposer({
   onMentionFile,
 }: RichComposerProps) {
   const composerRef = useRef<HTMLDivElement | null>(null);
+  const isComposingRef = useRef(false);
   const shouldMoveCaretToEndAfterFileDropRef = useRef(false);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
 
@@ -78,7 +80,32 @@ export function RichComposer({
     syncMentionMenu,
     insertMentionFile,
     handleMentionComposerKeyDown,
-  } = useComposerFileMentionMenu({ disabled, composerRef, onChange, slashCommands, fileMentionSearch, onMentionFile });
+  } = useComposerFileMentionMenu({
+    disabled,
+    composerRef,
+    onChange,
+    slashCommands,
+    fileMentionSearch,
+    onMentionFile,
+    isComposingRef,
+  });
+
+  const { handleComposerCompositionStart, handleComposerCompositionEnd, handleComposerInput } =
+    useComposerSynchronization({
+      composerRef,
+      isComposingRef,
+      disabled,
+      value,
+      onChange,
+      slashCommands,
+      shouldMoveCaretToEndAfterFileDropRef,
+      syncSlashCommandMenu,
+      syncMentionMenu,
+      closeSuggestionMenus: () => {
+        setActiveSlashCommandRange(null);
+        setActiveMentionRange(null);
+      },
+    });
 
   const handleComposerKeyDown = useComposerKeyDown({
     disabled,
@@ -86,6 +113,7 @@ export function RichComposer({
     onChange,
     onSubmit,
     allowEmptySubmit,
+    isComposingRef,
     activeSlashCommandRange,
     setActiveSlashCommandRange,
     selectedSlashCommandIndex,
@@ -95,38 +123,14 @@ export function RichComposer({
     handleMentionComposerKeyDown,
   });
 
-  const handleComposerInput = useCallback(
-    (event: SyntheticEvent<HTMLDivElement>) => {
-      if (disabled) {
-        return;
-      }
-
-      const editable = event.currentTarget;
-      if ((event.nativeEvent as InputEvent).inputType === "insertFromDrop") {
-        shouldMoveCaretToEndAfterFileDropRef.current = true;
-      }
-      const caretOffset = getCaretOffset(editable);
-      const nextValue = normalizeComposerText(editable.innerText);
-      const nextHtml = renderComposerHtml(nextValue, slashCommands);
-
-      onChange?.(nextValue);
-
-      if (editable.innerHTML !== nextHtml) {
-        editable.innerHTML = nextHtml;
-        setCaretOffset(editable, caretOffset);
-      }
-
-      syncSlashCommandMenu(editable, nextValue, caretOffset);
-      syncMentionMenu(editable, nextValue, caretOffset);
-    },
-    [disabled, onChange, slashCommands, syncMentionMenu, syncSlashCommandMenu],
-  );
-
   const handleComposerSelectionChange = useCallback(
     (event: SyntheticEvent<HTMLDivElement>) => {
       // Escape never changes a selection; without this guard the keyup after an Escape
       // keydown reopens the just-dismissed suggestion menu (caret is still in the token).
       if ((event.nativeEvent as KeyboardEventInit).key === "Escape") {
+        return;
+      }
+      if (isComposingRef.current) {
         return;
       }
       const editable = event.currentTarget;
@@ -152,33 +156,6 @@ export function RichComposer({
     },
     [disabled, onPasteBlock],
   );
-
-  useEffect(() => {
-    const editable = composerRef.current;
-    if (!editable || value === undefined) {
-      return;
-    }
-
-    const normalizedCurrentValue = normalizeComposerText(editable.innerText);
-    const nextHtml = renderComposerHtml(value, slashCommands);
-    const shouldMoveCaretToEndAfterFileDrop = shouldMoveCaretToEndAfterFileDropRef.current;
-    if (normalizedCurrentValue === value && editable.innerHTML === nextHtml) {
-      if (shouldMoveCaretToEndAfterFileDrop) {
-        editable.focus();
-        setCaretOffset(editable, value.length);
-        shouldMoveCaretToEndAfterFileDropRef.current = false;
-      }
-      return;
-    }
-
-    const shouldRestoreCaret = document.activeElement === editable;
-    editable.innerHTML = nextHtml;
-    if (shouldRestoreCaret || shouldMoveCaretToEndAfterFileDrop) {
-      editable.focus();
-      setCaretOffset(editable, value.length);
-    }
-    shouldMoveCaretToEndAfterFileDropRef.current = false;
-  }, [slashCommands, value]);
 
   return (
     <>
@@ -211,6 +188,8 @@ export function RichComposer({
           onFocus={() => setIsComposerFocused(true)}
           onBlur={() => setIsComposerFocused(false)}
           onInput={handleComposerInput}
+          onCompositionStart={handleComposerCompositionStart}
+          onCompositionEnd={handleComposerCompositionEnd}
           onPaste={handleComposerPaste}
           onKeyDown={handleComposerKeyDown}
           onClick={handleComposerSelectionChange}

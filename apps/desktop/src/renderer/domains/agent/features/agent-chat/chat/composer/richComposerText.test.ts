@@ -1,5 +1,7 @@
+// @vitest-environment jsdom
+
 import { describe, expect, it } from "vitest";
-import { findMentionRange } from "./richComposerText";
+import { findMentionRange, renderComposerHtml } from "./richComposerText";
 
 describe("findMentionRange", () => {
   it("returns a range for a bare @ token", () => {
@@ -45,5 +47,20 @@ describe("findMentionRange", () => {
   it("returns null when the caret offset is out of bounds", () => {
     expect(findMentionRange("@src", 0)).toBeNull();
     expect(findMentionRange("@src", 10)).toBeNull();
+  });
+});
+
+describe("renderComposerHtml", () => {
+  it("preserves ordinary quotes and escapes URL href attributes independently", () => {
+    const text = `He said "ready" <img src=x onerror=alert(1)> https://example.com/?q="quoted"&next='value'`;
+    const container = document.createElement("div");
+    container.innerHTML = renderComposerHtml(text);
+
+    const link = container.querySelector("a");
+    expect(container.textContent).toBe(text);
+    expect(link?.getAttribute("href")).toBe(`https://example.com/?q="quoted"&next='value'`);
+    expect(link?.getAttribute("onclick")).toBeNull();
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.innerHTML).toContain('He said "ready"');
   });
 });
