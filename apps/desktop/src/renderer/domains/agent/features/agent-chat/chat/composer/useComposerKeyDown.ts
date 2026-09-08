@@ -116,9 +116,9 @@ export function useComposerKeyDown({
           if (result === false) {
             return;
           }
-          if (value === undefined) {
-            editable.innerHTML = "";
-          }
+          // Clear the native DOM immediately. Controlled synchronization can be deferred
+          // until an IME final-input event, but a successfully submitted draft must not remain visible.
+          editable.innerHTML = "";
           onChange?.("");
           setActiveSlashCommandRange(null);
         },
