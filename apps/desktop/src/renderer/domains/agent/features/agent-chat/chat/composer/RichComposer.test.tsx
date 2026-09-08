@@ -125,7 +125,14 @@ describe("RichComposer", () => {
 
   it("inserts a literal space when macOS Pinyin consumes it after compositionend", () => {
     const onChange = vi.fn();
-    render(<RichComposer placeholder="Type a message…" onChange={onChange} />);
+    function ControlledComposer() {
+      const [value, setValue] = useState("");
+      return <RichComposer placeholder="Type a message…" value={value} onChange={(nextValue) => {
+        onChange(nextValue);
+        setValue(nextValue);
+      }} />;
+    }
+    render(<ControlledComposer />);
 
     const textbox = screen.getByRole("textbox", { name: "Type a message…" });
     fireEvent.compositionStart(textbox);

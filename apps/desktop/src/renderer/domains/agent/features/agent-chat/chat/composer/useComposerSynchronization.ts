@@ -54,11 +54,11 @@ export function useComposerSynchronization({
     isComposingRef.current = true;
     isAwaitingFinalInputRef.current = false;
     shouldInsertLiteralSpaceAfterCompositionRef.current = false;
-    compositionInputValueRef.current = null;
+    compositionInputValueRef.current = value ?? null;
     pendingExternalValueRef.current = null;
     setIsReadyToSynchronizeControlledValue(false);
     closeSuggestionMenus();
-  }, [closeSuggestionMenus, isComposingRef]);
+  }, [closeSuggestionMenus, isComposingRef, value]);
 
   const handleComposerCompositionEnd = useCallback(() => {
     isComposingRef.current = false;
@@ -70,9 +70,6 @@ export function useComposerSynchronization({
       return;
     }
     shouldInsertLiteralSpaceAfterCompositionRef.current = true;
-    if (import.meta.env.DEV) {
-      console.info("[Pinyin space recovery] armed");
-    }
     isAwaitingFinalInputRef.current = false;
     setIsReadyToSynchronizeControlledValue(true);
   }, [isComposingRef, shouldInsertLiteralSpaceAfterCompositionRef]);
@@ -187,15 +184,6 @@ function useComposerLiteralSpaceRecovery(
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (import.meta.env.DEV && event.key === " ") {
-        console.info("[Pinyin space recovery] keydown", {
-          armed: shouldInsertLiteralSpaceRef.current,
-          isComposing: event.isComposing,
-          ctrlKey: event.ctrlKey,
-          metaKey: event.metaKey,
-          altKey: event.altKey,
-        });
-      }
       if (!shouldInsertLiteralSpaceRef.current || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) {
         return;
       }
@@ -212,9 +200,6 @@ function useComposerLiteralSpaceRecovery(
       shouldInsertLiteralSpaceRef.current = false;
       event.preventDefault();
       insertLiteralSpace(editable);
-      if (import.meta.env.DEV) {
-        console.info("[Pinyin space recovery] inserted", { text: editable.innerText, html: editable.innerHTML });
-      }
     };
 
     editable.addEventListener("keydown", handleKeyDown);
