@@ -72,6 +72,106 @@ describe("RichComposer", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("does not rewrite equivalent quoted text HTML after input", () => {
+    const onChange = vi.fn();
+    render(<RichComposer placeholder="Type a message…" onChange={onChange} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerHTML = `He said "it's ready"`;
+    const originalTextNode = textbox.firstChild;
+
+    fireEvent.input(textbox);
+
+    expect(onChange).toHaveBeenCalledWith(`He said "it's ready"`);
+    expect(textbox.firstChild).toBe(originalTextNode);
+  });
+
+  it("waits for the final non-composing input before synchronizing composition DOM and menus", () => {
+    const onChange = vi.fn();
+
+    render(<RichComposer placeholder="Type a message…" onChange={onChange} slashCommands={SLASH_COMMANDS} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "/brain";
+    const compositionTextNode = textbox.firstChild;
+    setCaretOffset(textbox, 2);
+    fireEvent.input(textbox, { isComposing: true });
+
+    expect(onChange).toHaveBeenCalledWith("/brain");
+    expect(textbox.firstChild).toBe(compositionTextNode);
+    fireEvent.compositionEnd(textbox);
+    expect(textbox.firstChild).toBe(compositionTextNode);
+    expect(screen.queryByRole("button", { name: "/brainstorm" })).toBeNull();
+
+    fireEvent.input(textbox, { isComposing: false });
+
+    expect(textbox.querySelector(".composer-slash")?.textContent).toBe("/brain");
+    expect(screen.getByRole("button", { name: "/brainstorm" })).toBeTruthy();
+  });
+
+  it("closes suggestion menus and leaves navigation keys native during composition", async () => {
+    const fileMentionSearch = vi.fn(async () => [{ path: "src/main.ts", highlightedPathIndexes: [] }]);
+    render(
+      <RichComposer
+        placeholder="Type a message…"
+        slashCommands={SLASH_COMMANDS}
+        fileMentionSearch={fileMentionSearch}
+        onMentionFile={vi.fn()}
+      />,
+    );
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerText = "/";
+    fireEvent.input(textbox);
+    expect(screen.getByRole("button", { name: "/brainstorm" })).toBeTruthy();
+
+    fireEvent.compositionStart(textbox);
+    expect(screen.queryByRole("button", { name: "/brainstorm" })).toBeNull();
+    for (const key of ["ArrowDown", "Enter", "Tab"]) {
+      const keydown = createEvent.keyDown(textbox, { key });
+      fireEvent(textbox, keydown);
+      expect(keydown.defaultPrevented).toBe(false);
+    }
+
+    textbox.innerText = "@main";
+    setCaretOffset(textbox, 5);
+    fireEvent.compositionEnd(textbox);
+    fireEvent.input(textbox, { isComposing: false });
+    expect(await screen.findByRole("button", { name: "src/main.ts" })).toBeTruthy();
+    fireEvent.compositionStart(textbox);
+    expect(screen.queryByRole("button", { name: "src/main.ts" })).toBeNull();
+  });
+
+  it("applies a controlled value received during composition after the final input", () => {
+    function ControlledComposer() {
+      const [value, setValue] = useState("initial");
+      return (
+        <>
+          <button type="button" onClick={() => setValue("external value")}>
+            Update value
+          </button>
+          <RichComposer placeholder="Type a message…" value={value} onChange={setValue} />
+        </>
+      );
+    }
+
+    render(<ControlledComposer />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "composing";
+    fireEvent.input(textbox, { isComposing: true });
+    fireEvent.click(screen.getByRole("button", { name: "Update value" }));
+    expect(textbox.textContent).toBe("composing");
+
+    fireEvent.compositionEnd(textbox);
+    expect(textbox.textContent).toBe("composing");
+    fireEvent.input(textbox, { isComposing: false });
+
+    expect(textbox.textContent).toBe("external value");
+  });
+
   it("clears the draft after a successful Enter submit", async () => {
     const onSubmit = vi.fn(async () => undefined);
     render(<RichComposer placeholder="Type a message…" onSubmit={onSubmit} />);

@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, RefObject } from "react";
 import { useCallback } from "react";
 import type { ComposerTokenRange, FileMentionResult } from "./richComposerTypes";
 
@@ -12,6 +12,7 @@ type UseComposerFileMentionKeyDownOptions = {
   setActiveMentionRange: (range: ComposerTokenRange | null) => void;
   setSelectedMentionIndex: (updater: number | ((prev: number) => number)) => void;
   insertMentionFile: (result: FileMentionResult) => void;
+  isComposingRef?: RefObject<boolean>;
 };
 
 /**
@@ -29,10 +30,11 @@ export function useComposerFileMentionKeyDown({
   setActiveMentionRange,
   setSelectedMentionIndex,
   insertMentionFile,
+  isComposingRef,
 }: UseComposerFileMentionKeyDownOptions): (event: KeyboardEvent<HTMLDivElement>) => boolean {
   return useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
-      if (disabled || !activeMentionRange) {
+      if (disabled || isComposingRef?.current || !activeMentionRange) {
         return false;
       }
 
@@ -84,6 +86,7 @@ export function useComposerFileMentionKeyDown({
       disabled,
       hasSearchError,
       insertMentionFile,
+      isComposingRef,
       isSearching,
       mentionResults,
       selectedMentionIndex,

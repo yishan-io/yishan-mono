@@ -12,6 +12,7 @@ type UseComposerFileMentionMenuOptions = {
   slashCommands: RichComposerSlashCommand[];
   fileMentionSearch?: (query: string) => Promise<FileMentionResult[]>;
   onMentionFile?: (path: string, isDirectory: boolean) => void;
+  isComposingRef?: RefObject<boolean>;
 };
 
 type UseComposerFileMentionMenuResult = {
@@ -35,6 +36,7 @@ export function useComposerFileMentionMenu({
   slashCommands,
   fileMentionSearch,
   onMentionFile,
+  isComposingRef,
 }: UseComposerFileMentionMenuOptions): UseComposerFileMentionMenuResult {
   const [activeMentionRange, setActiveMentionRange] = useState<ComposerTokenRange | null>(null);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
@@ -86,6 +88,7 @@ export function useComposerFileMentionMenu({
     setActiveMentionRange,
     setSelectedMentionIndex,
     insertMentionFile,
+    isComposingRef,
   });
 
   useEffect(() => {
