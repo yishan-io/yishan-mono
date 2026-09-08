@@ -195,11 +195,11 @@ function useComposerLiteralSpaceRecovery(
       }
 
       // macOS Pinyin can consume this literal space without dispatching
-      // beforeinput/input after compositionend. Insert it through the browser's
-      // editing command so the regular input handler receives the update.
+      // beforeinput/input after compositionend. Insert it directly and emit the
+      // input event so the regular draft synchronization still owns state.
       shouldInsertLiteralSpaceRef.current = false;
       event.preventDefault();
-      document.execCommand("insertText", false, " ");
+      insertLiteralSpace(editable);
     };
 
     editable.addEventListener("keydown", handleKeyDown);
@@ -207,6 +207,25 @@ function useComposerLiteralSpaceRecovery(
       editable.removeEventListener("keydown", handleKeyDown);
     };
   }, [composerRef, shouldInsertLiteralSpaceRef]);
+}
+
+function insertLiteralSpace(editable: HTMLDivElement): void {
+  const selection = window.getSelection();
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  const space = document.createTextNode(" ");
+
+  if (range && editable.contains(range.startContainer)) {
+    range.deleteContents();
+    range.insertNode(space);
+    range.setStartAfter(space);
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  } else {
+    editable.append(space);
+  }
+
+  editable.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function shouldSynchronizeComposerMarkup(editable: HTMLDivElement, nextHtml: string): boolean {

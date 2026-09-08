@@ -124,9 +124,8 @@ describe("RichComposer", () => {
   });
 
   it("inserts a literal space when macOS Pinyin consumes it after compositionend", () => {
-    const insertText = vi.fn();
-    Object.defineProperty(document, "execCommand", { configurable: true, value: insertText });
-    render(<RichComposer placeholder="Type a message…" />);
+    const onChange = vi.fn();
+    render(<RichComposer placeholder="Type a message…" onChange={onChange} />);
 
     const textbox = screen.getByRole("textbox", { name: "Type a message…" });
     fireEvent.compositionStart(textbox);
@@ -137,7 +136,8 @@ describe("RichComposer", () => {
     fireEvent(textbox, spaceKeyDown);
 
     expect(spaceKeyDown.defaultPrevented).toBe(true);
-    expect(insertText).toHaveBeenCalledWith("insertText", false, " ");
+    expect(textbox.textContent).toBe("你好 ");
+    expect(onChange).toHaveBeenLastCalledWith("你好 ");
   });
 
   it("does not treat input after compositionend as final when the IME finalized before it", () => {
