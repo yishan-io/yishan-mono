@@ -167,7 +167,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          # electron-builder 26.15.3 cannot unlock its temporary signing keychain
+          # on the macos-latest 25.6 image; keep macOS release signing on 15.
+          - os: macos-15
             platform: mac
             goos: darwin
           - os: ubuntu-latest
