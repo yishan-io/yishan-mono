@@ -5,12 +5,14 @@ import { markdownService } from "@renderer/domains/files";
 import { useMarkdownStyles } from "@renderer/domains/files";
 import { editorSettingsStore } from "@renderer/domains/settings";
 import { useCodeTheme } from "@renderer/domains/settings";
-import { openTab, openTabInOppositePane } from "@renderer/domains/workbench";
-import { workspaceStore } from "@renderer/domains/workspace";
-import { selectFolderInFileTree } from "@renderer/domains/workspace";
+import { openTabInOppositePane } from "@renderer/domains/workbench";
+import { selectFolderInFileTree, workspaceStore } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useRef, useState } from "react";
-import { openChatFileTab } from "../../../../../domains/agent/commands/agentChatCommands";
+import {
+  notifyChatFileWorkspaceUnavailable,
+  openChatFileTab,
+} from "../../../../../domains/agent/commands/agentChatCommands";
 
 type AgentMarkdownContentProps = {
   content: string;
@@ -56,8 +58,7 @@ function openFileTab(href: string, workspacePath: string): void {
   const resolvedPath = resolveRelativePath(workspacePath, getFilePath(href));
   const workspace = resolveChatWorkspace(workspacePath);
   if (!workspace) {
-    // No known workspace owns this transcript — keep the legacy fallback open.
-    openTab({ kind: "file", path: toWorkspaceRelativePath(resolvedPath, workspacePath) });
+    notifyChatFileWorkspaceUnavailable();
     return;
   }
   const relativePath = toWorkspaceRelativePath(resolvedPath, workspace.workspaceRoot);
@@ -68,7 +69,7 @@ function openFileTabInOppositePane(href: string, workspacePath: string): void {
   const resolvedPath = resolveRelativePath(workspacePath, getFilePath(href));
   const workspace = resolveChatWorkspace(workspacePath);
   if (!workspace) {
-    openTabInOppositePane({ kind: "file", path: toWorkspaceRelativePath(resolvedPath, workspacePath) });
+    notifyChatFileWorkspaceUnavailable();
     return;
   }
   const relativePath = toWorkspaceRelativePath(resolvedPath, workspace.workspaceRoot);
