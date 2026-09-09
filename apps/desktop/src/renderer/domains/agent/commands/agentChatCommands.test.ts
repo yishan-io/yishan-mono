@@ -5,7 +5,12 @@ import { renamePiSession } from "../../../domains/agent/daemon/daemonAgentProced
 import { splitPaneStore } from "../../../domains/workbench/state/splitPaneStore";
 import { tabStore } from "../../../domains/workbench/state/tabStore";
 import { agentChatStore } from "../state/agentChatStore";
-import { openChatFileTab, renameAgentChatSessionByTab, startAgentChatSession } from "./agentChatCommands";
+import {
+  notifyChatFileWorkspaceUnavailable,
+  openChatFileTab,
+  renameAgentChatSessionByTab,
+  startAgentChatSession,
+} from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -73,6 +78,7 @@ const openChatMocks = vi.hoisted(() => ({
   resolveChatFilePath: vi.fn(),
   openTab: vi.fn(),
   openTabInOppositePane: vi.fn(),
+  enqueueWorkspaceErrorNotice: vi.fn(),
 }));
 
 vi.mock("../../files/commands/fileCommands", () => ({
@@ -88,8 +94,8 @@ vi.mock("@renderer/domains/workbench", async (importOriginal) => {
   };
 });
 
-vi.mock("../../workspace/state/workspaceActions", () => ({
-  enqueueWorkspaceErrorNotice: vi.fn(),
+vi.mock("../../workspace/state/workspaceLifecycleNoticeStore", () => ({
+  enqueueWorkspaceErrorNotice: openChatMocks.enqueueWorkspaceErrorNotice,
 }));
 describe("agentChatCommands.startAgentChatSession", () => {
   it("classifies pre-existing history as interrupted after a fresh start", async () => {
@@ -154,6 +160,15 @@ describe("agentChatCommands.startAgentChatSession", () => {
     });
 
     expect(agentChatStore.getState().sessionsByTabId["tab-attach"]?.subagentSessionEndedAtMs).toBeNull();
+  });
+
+  it("notifies when a chat is not associated with an open workspace", () => {
+    notifyChatFileWorkspaceUnavailable();
+
+    expect(openChatMocks.enqueueWorkspaceErrorNotice).toHaveBeenCalledWith({
+      title: "Unable to open file",
+      message: "This chat is not associated with an open workspace.",
+    });
   });
 
   it("openChatFileTab opens the resolved file in the resolved workspace", async () => {

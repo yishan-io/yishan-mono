@@ -275,6 +275,14 @@ import { resolveChatFilePath } from "@renderer/domains/files";
 import { openTab, openTabInOppositePane } from "@renderer/domains/workbench";
 import { enqueueWorkspaceErrorNotice } from "@renderer/domains/workspace";
 
+/** Notifies the user when a chat is not associated with an open workspace. */
+export function notifyChatFileWorkspaceUnavailable(): void {
+  enqueueWorkspaceErrorNotice({
+    title: "Unable to open file",
+    message: "This chat is not associated with an open workspace.",
+  });
+}
+
 /**
  * Opens one file referenced from chat, resolving it to a real workspace file first.
  *
