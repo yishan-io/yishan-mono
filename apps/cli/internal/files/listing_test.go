@@ -275,6 +275,39 @@ func TestFileServiceMarksIgnoredContextDescendants(t *testing.T) {
 	}
 }
 
+func TestFileServiceMarksContextDescendantsIgnoredForChildOnlyPattern(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	svc := NewFileService()
+
+	contextDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(contextDir, "docs"), 0o755); err != nil {
+		t.Fatalf("mkdir context docs: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(contextDir, "docs", "brief.md"), []byte("brief"), 0o644); err != nil {
+		t.Fatalf("write context brief: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".my-context/*\n"), 0o644); err != nil {
+		t.Fatalf("write gitignore: %v", err)
+	}
+	if err := os.Symlink(contextDir, filepath.Join(root, ContextLinkName)); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	entries, err := svc.List(root, "", true)
+	if err != nil {
+		t.Fatalf("recursive list: %v", err)
+	}
+	for _, entry := range entries {
+		if entry.Path != ContextLinkName && !strings.HasPrefix(entry.Path, ContextLinkName+"/") {
+			continue
+		}
+		if !entry.IsIgnored {
+			t.Fatalf("expected child-only pattern to mark %s ignored, got %+v", entry.Path, entries)
+		}
+	}
+}
+
 func TestFileServiceListRefreshesContextLinkAfterExternalChange(t *testing.T) {
 	root := t.TempDir()
 	initGitRepo(t, root)
