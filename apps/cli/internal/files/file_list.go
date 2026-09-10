@@ -137,6 +137,15 @@ func markIgnoredEntries(root string, listedPath string, entries []FileEntry) []F
 		return entries
 	}
 
+	// .my-context is personal workspace state and must never be presented as a
+	// tracked file. Git cannot evaluate child-only ignore patterns through its
+	// symlink, so classify the link and every descendant directly.
+	for index := range entries {
+		if usesContextLinkPath(entries[index].Path) {
+			entries[index].IsIgnored = true
+		}
+	}
+
 	ignoredPathSet, ok := gitIgnoredPathSet(root, entries)
 	ignoredDirectoryPaths := make([]string, 0, len(entries)+1)
 	ignoredListedPath := filepath.ToSlash(strings.TrimSuffix(listedPath, "/"))
