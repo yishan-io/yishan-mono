@@ -19,8 +19,10 @@ vi.mock("./pane/SplitPaneGroup", () => ({
     onCloseTab: (tabId: string) => void;
     onCloseOtherTabs?: (tabId: string) => void;
     onCloseAllTabs?: (tabId: string) => void;
+    getTabIcon?: (tab: { id: string }) => ReactNode;
   }) => (
     <>
+      <output data-testid="tab-icon">{props.getTabIcon?.({ id: "tab-1" })}</output>
       <button type="button" onClick={() => props.onCloseTab("tab-1")}>
         Close
       </button>
@@ -48,6 +50,57 @@ afterEach(() => {
 });
 
 describe("WorkspaceSplitPane close wiring", () => {
+  it("renders the progressing spinner for a running agent-chat tab", () => {
+    splitPaneStore.setState({
+      layoutByWorkspaceId: {
+        "workspace-1": {
+          root: { kind: "leaf", id: "root-pane", tabIds: ["tab-1"], selectedTabId: "tab-1" },
+          activePaneId: "root-pane",
+        },
+      },
+    });
+
+    render(
+      <WorkspaceSplitPane
+        workspaceId="workspace-1"
+        isActive
+        workspaceTabs={[
+          {
+            id: "tab-1",
+            workspaceId: "workspace-1",
+            title: "Pi chat",
+            pinned: false,
+            kind: "agent-chat",
+            data: { cwd: "/tmp/workspace" },
+          },
+        ]}
+        worktreePath="/tmp/workspace"
+        enabledAgentKinds={[]}
+        agentPresetMeta={{}}
+        tabFileCommands={{ createNewWhiteboard: vi.fn(), renameEntry: vi.fn() }}
+        openTabRefreshCommands={{
+          readFile: vi.fn(),
+          readDiff: vi.fn(),
+          readCommitDiff: vi.fn(),
+          readBranchComparisonDiff: vi.fn(),
+          refreshFileTabFromDisk: vi.fn(),
+          refreshDiffTabContent: vi.fn(),
+        }}
+        agentChatTabIsRunningByTabId={{ "tab-1": true }}
+        lastUsedExternalAppId={undefined}
+        findTabWithSession={vi.fn()}
+        formatAgentSessionTitle={(title) => title}
+        renderTabContent={() => null}
+        renderAgentChatSurface={() => null}
+        closeTabWithCleanup={vi.fn()}
+        closeOtherTabsWithCleanup={vi.fn()}
+        closeAllTabsWithCleanup={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("tab-icon").querySelector('[data-testid="cli-spinner"]')).not.toBeNull();
+  });
+
   it("routes tab-bar close actions to the App cleanup commands", () => {
     const closeTabWithCleanup = vi.fn();
     const closeOtherTabsWithCleanup = vi.fn();
@@ -81,6 +134,7 @@ describe("WorkspaceSplitPane close wiring", () => {
           refreshFileTabFromDisk: vi.fn(),
           refreshDiffTabContent: vi.fn(),
         }}
+        agentChatTabIsRunningByTabId={{}}
         lastUsedExternalAppId={undefined}
         findTabWithSession={vi.fn()}
         formatAgentSessionTitle={(title) => title}

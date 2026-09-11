@@ -1,5 +1,10 @@
 import { Box } from "@mui/material";
-import { WorkspaceAgentChatSurface, fetchAgentSessionFilePath, findTabWithSession } from "@renderer/domains/agent";
+import {
+  WorkspaceAgentChatSurface,
+  agentChatStore,
+  fetchAgentSessionFilePath,
+  findTabWithSession,
+} from "@renderer/domains/agent";
 import { AgentIcon, SessionHistoryMenu } from "@renderer/domains/agent";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
@@ -58,6 +63,14 @@ export function MainPaneView() {
   const isErrorWorkspace = selectedWorkspace?.state === "error";
   const tabs = tabStore((state) => state.tabs);
   const selectedTabId = tabStore((state) => state.selectedTabId);
+  const agentChatSessionsByTabId = agentChatStore((state) => state.sessionsByTabId);
+  const agentChatTabIsRunningByTabId = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(agentChatSessionsByTabId).map(([tabId, session]) => [tabId, session.state === "running"]),
+      ),
+    [agentChatSessionsByTabId],
+  );
   const mergedCmd = useMemo(
     () => ({
       openTab: openTabWithContentSeed,
@@ -221,6 +234,7 @@ export function MainPaneView() {
                     workspaceTabs={tabsByWorkspaceId.get(wsId) ?? []}
                     worktreePath={workspaces.find((ws) => ws.id === wsId)?.worktreePath}
                     enabledAgentKinds={enabledAgentKinds}
+                    agentChatTabIsRunningByTabId={agentChatTabIsRunningByTabId}
                     agentPresetMeta={agentPresetMeta}
                     tabFileCommands={{
                       createNewWhiteboard,
