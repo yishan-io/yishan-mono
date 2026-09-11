@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import type { ExternalAppId } from "@renderer/domains/files";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
+import { CliSpinner } from "@renderer/ui/components/CliSpinner";
 import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/split-pane";
 import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";
 import type { WorkbenchTab } from "../../../../domains/workbench/tabs";
@@ -38,6 +39,8 @@ export type WorkspaceSplitPaneProps = {
   worktreePath: string | undefined;
   /** Agent kinds currently in use, resolved by the App composition layer. */
   enabledAgentKinds: string[];
+  /** Agent-chat tabs with an active turn, resolved by the App composition layer. */
+  agentChatTabIsRunningByTabId: Record<string, boolean>;
   /** Agent terminal preset metadata for the tab create menu (App-composed; agent-owned). */
   agentPresetMeta: Record<string, AgentPresetMeta>;
   /** Files tab-file commands used by tab gestures (App-composed; files-owned). */
@@ -104,6 +107,7 @@ export function WorkspaceSplitPane({
   workspaceTabs,
   worktreePath,
   enabledAgentKinds,
+  agentChatTabIsRunningByTabId,
   agentPresetMeta,
   tabFileCommands,
   openTabRefreshCommands,
@@ -275,7 +279,9 @@ export function WorkspaceSplitPane({
         }
         return <LuSquareTerminal size={14} />;
       }
-      if (fullTab?.kind === "agent-chat") return <LuMessageCircle size={14} />;
+      if (fullTab?.kind === "agent-chat") {
+        return agentChatTabIsRunningByTabId[fullTab.id] ? <CliSpinner fontSize={14} /> : <LuMessageCircle size={14} />;
+      }
       if (fullTab?.kind === "browser") return <FaviconIcon url={fullTab.data.faviconUrl} size={14} />;
       if (
         fullTab?.kind === "file" ||
@@ -295,7 +301,7 @@ export function WorkspaceSplitPane({
       }
       return null;
     },
-    [tabById, renderAgentIcon, resolveFileTabIcon],
+    [tabById, agentChatTabIsRunningByTabId, renderAgentIcon, resolveFileTabIcon],
   );
 
   // ─── Tab content renderer ───────────────────────────────────────────────────
