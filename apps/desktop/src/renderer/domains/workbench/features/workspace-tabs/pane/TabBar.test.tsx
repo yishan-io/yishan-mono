@@ -146,15 +146,6 @@ function renderTabBar(overrides: Partial<ComponentProps<typeof TabBar>> = {}) {
     onCreateTab: vi.fn(),
     onPromoteTemporaryTab: vi.fn(),
     fetchAgentSessionFilePath: fetchAgentSessionFilePathMock,
-    agentCreateOptions: [
-      { option: "opencode", label: "Create: OpenCode", icon: <span /> },
-      { option: "codex", label: "Create: Codex", icon: <span /> },
-      { option: "claude", label: "Create: Claude", icon: <span /> },
-      { option: "gemini", label: "Create: Gemini", icon: <span /> },
-      { option: "pi", label: "Create: Pi", icon: <span /> },
-      { option: "copilot", label: "Create: Copilot", icon: <span /> },
-      { option: "cursor", label: "Create: Cursor", icon: <span /> },
-    ],
   };
 
   const props = { ...baseProps, ...overrides };
@@ -246,14 +237,13 @@ describe("TabBar interactions", () => {
     expect(onSelectTab).toHaveBeenCalledWith("b");
   });
 
-  it("creates an agent terminal tab from plus button menu", async () => {
-    const onCreateTab = vi.fn();
-    renderTabBar({ onCreateTab });
+  it("does not show agent CLI presets in the plus menu", async () => {
+    renderTabBar();
 
     fireEvent.click(screen.getByRole("button", { name: "New tab" }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: /Create: Codex/ }));
+    await screen.findByRole("menuitem", { name: /Create: Terminal/ });
 
-    expect(onCreateTab).toHaveBeenCalledWith("codex");
+    expect(screen.queryByRole("menuitem", { name: /Create: Codex/ })).toBeNull();
   });
 
   it("creates a plain terminal tab from plus button menu", async () => {
@@ -302,32 +292,6 @@ describe("TabBar interactions", () => {
     await screen.findByRole("menuitem", { name: /Create: Browser/ });
 
     expect(screen.getByText("⌘+⇧+B")).toBeTruthy();
-  });
-
-  it("hides disabled agents from create menu", async () => {
-    renderTabBar({ enabledAgentKinds: ["opencode", "claude"] });
-
-    fireEvent.click(screen.getByRole("button", { name: "New tab" }));
-    await screen.findByRole("menuitem", { name: /Create: Terminal/ });
-
-    expect(screen.getByRole("menuitem", { name: /Create: OpenCode/ })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: /Create: Claude/ })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: /Create: Codex/ })).toBeNull();
-  });
-
-  it("renders the caller-supplied agent create-menu icons", async () => {
-    renderTabBar({
-      agentCreateOptions: [
-        { option: "codex", label: "Codex", icon: <img src="codex.svg" width={16} height={16} alt="Codex" /> },
-        { option: "claude", label: "Claude", icon: <img src="claude.svg" width={16} height={16} alt="Claude" /> },
-      ],
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "New tab" }));
-    await screen.findByRole("menuitem", { name: /Create: Terminal/ });
-
-    expect(screen.getByRole("img", { name: "Codex" })).toBeTruthy();
-    expect(screen.getByRole("img", { name: "Claude" })).toBeTruthy();
   });
 
   it("closes tab from close icon", () => {

@@ -1,13 +1,11 @@
-import { Alert, Box, Stack, Switch, Typography } from "@mui/material";
+import { Alert, Box, Typography } from "@mui/material";
 import { AgentIcon } from "@renderer/domains/agent";
 import {
   AGENT_KINDS_WITH_DEDICATED_SETTINGS_SECTION,
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   type DesktopAgentKind,
   SUPPORTED_DESKTOP_AGENT_KINDS,
-  isDesktopAgentKind,
 } from "@renderer/domains/agent";
-import { agentSettingsStore } from "@renderer/domains/agent";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CLIToolStatus } from "../../../../domains/settings/commands/cliToolCommands";
@@ -20,10 +18,9 @@ type AgentCLISettingsCardProps = {
   hasLoadError: boolean;
 };
 
-/** Renders the "other agents" section of the CLI page: detected agents with in-use toggles. */
+/** Renders the "other agents" section of the CLI page with detected agent versions. */
 export function AgentCLISettingsCard({ statuses, isLoading, isRefreshing, hasLoadError }: AgentCLISettingsCardProps) {
   const { t } = useTranslation();
-  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
 
   const statusByToolID = useMemo(() => {
     const nextMap = new Map<string, CLIToolStatus>();
@@ -67,39 +64,20 @@ export function AgentCLISettingsCard({ statuses, isLoading, isRefreshing, hasLoa
                         {t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind as DesktopAgentKind])}
                       </Box>
                     </Box>
-                    <Stack sx={{ display: "flex", flexDirection: "row", gap: 1, alignItems: "center" }}>
-                      <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
-                        <Box
-                          sx={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: "50%",
-                            flexShrink: 0,
-                            bgcolor: "success.main",
-                          }}
-                        />
-                        <Box
-                          component="span"
-                          sx={{ typography: "body2", color: "text.secondary", whiteSpace: "nowrap" }}
-                        >
-                          {label}
-                        </Box>
-                      </Box>
-                      <Switch
-                        checked={inUseByAgentKind[agentKind as DesktopAgentKind]}
-                        onChange={(event) => {
-                          if (!isDesktopAgentKind(agentKind)) {
-                            return;
-                          }
-                          agentSettingsStore.getState().setAgentInUse(agentKind, event.target.checked);
-                        }}
-                        slotProps={{
-                          input: {
-                            "aria-label": `${t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind as DesktopAgentKind])} ${t("settings.agents.inUse")}`,
-                          },
+                    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
+                      <Box
+                        sx={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          flexShrink: 0,
+                          bgcolor: "success.main",
                         }}
                       />
-                    </Stack>
+                      <Box component="span" sx={{ typography: "body2", color: "text.secondary", whiteSpace: "nowrap" }}>
+                        {label}
+                      </Box>
+                    </Box>
                   </Box>
                 </Box>
               );

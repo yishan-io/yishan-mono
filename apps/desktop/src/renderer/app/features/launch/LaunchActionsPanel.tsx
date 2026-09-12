@@ -1,6 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import { AgentIcon, RecentAgentSessions } from "@renderer/domains/agent";
-import { AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND, type DesktopAgentKind } from "@renderer/domains/agent";
+import { RecentAgentSessions } from "@renderer/domains/agent";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,18 +14,10 @@ interface LaunchAction {
 interface LaunchActionsPanelProps {
   workspaceId: string;
   workspacePath?: string;
-  enabledAgentKinds: DesktopAgentKind[];
   launchActions: LaunchAction[];
-  onAgentLaunch: (agentKind: DesktopAgentKind) => void;
 }
 
-function LaunchActionsPanel({
-  workspaceId,
-  workspacePath,
-  enabledAgentKinds,
-  launchActions,
-  onAgentLaunch,
-}: LaunchActionsPanelProps) {
+function LaunchActionsPanel({ workspaceId, workspacePath, launchActions }: LaunchActionsPanelProps) {
   const { t } = useTranslation();
 
   return (
@@ -102,66 +93,6 @@ function LaunchActionsPanel({
               </Box>
             ))}
           </Box>
-          {enabledAgentKinds.length > 0 ? (
-            <Box sx={{ width: "min(360px, 100%)", mt: 2 }}>
-              <Typography
-                variant="body2"
-                sx={{ color: "text.secondary", display: "block", mb: 2, textAlign: "center" }}
-              >
-                {t("launch.agents")}
-              </Typography>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: `repeat(${Math.min(enabledAgentKinds.length, 4)}, 80px)`,
-                  justifyContent: "center",
-                  gap: 2,
-                }}
-              >
-                {enabledAgentKinds.map((agentKind) => {
-                  const label = t(AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND[agentKind]);
-                  return (
-                    <Box
-                      key={agentKind}
-                      component="button"
-                      type="button"
-                      disabled={!workspaceId}
-                      onClick={() => onAgentLaunch(agentKind)}
-                      sx={{
-                        border: 1,
-                        borderColor: "divider",
-                        borderRadius: 1,
-                        bgcolor: "background.paper",
-                        color: "text.secondary",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 1.5,
-                        py: 1.25,
-                        px: 0.5,
-                        cursor: workspaceId ? "pointer" : "not-allowed",
-                        minWidth: 0,
-                        transition: "background-color 0.15s, border-color 0.15s",
-                        "&:hover:not(:disabled)": { bgcolor: "action.hover", borderColor: "action.selected" },
-                      }}
-                      aria-label={label}
-                    >
-                      <AgentIcon agentKind={agentKind} context="launchGrid" decorative />
-                      <Typography
-                        variant="caption"
-                        component="span"
-                        noWrap
-                        sx={{ fontSize: "0.7rem", lineHeight: 1, maxWidth: "100%" }}
-                      >
-                        {label}
-                      </Typography>
-                    </Box>
-                  );
-                })}
-              </Box>
-            </Box>
-          ) : null}
         </Box>
         <Box
           sx={{

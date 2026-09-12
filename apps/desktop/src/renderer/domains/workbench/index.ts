@@ -106,7 +106,7 @@ export {
   SplitPaneLayout,
   TabPanel,
 } from "./features/workspace-tabs/pane";
-export { TabBar, type AgentCreateOptionDef, type TabBarCreateOption } from "./features/workspace-tabs/pane/TabBar";
+export { TabBar, type TabBarCreateOption } from "./features/workspace-tabs/pane/TabBar";
 
 export {
   WorkspacePaneVisibilityProvider,

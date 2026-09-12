@@ -44,10 +44,6 @@ export function CreateTabMenu({
   createMenuLabel,
   onCreateTab,
 }: CreateTabMenuProps) {
-  // Agent CLI presets (anything beyond the built-in tab kinds) form their own
-  // group, separated from the rest of the menu by a divider.
-  let agentGroupDividerRendered = false;
-
   return (
     <Menu
       anchorEl={anchorEl}
@@ -55,19 +51,9 @@ export function CreateTabMenu({
       onClose={onClose}
       slotProps={{ paper: { sx: { minWidth: 220 } } }}
     >
-      {options.map((item) => {
-        const isAgentCliOption =
-          item.option !== "terminal" &&
-          item.option !== "browser" &&
-          item.option !== "agent-chat" &&
-          item.option !== "whiteboard";
-        const showGroupDivider = isAgentCliOption && !agentGroupDividerRendered;
-        agentGroupDividerRendered = agentGroupDividerRendered || isAgentCliOption;
-
-        return (
-          <Box key={item.option}>
-            {showGroupDivider ? <Divider sx={{ my: 0.5 }} /> : null}
-            <MenuItem
+      {options.map((item) => (
+        <Box key={item.option}>
+          <MenuItem
               onClick={() => {
                 onCreateTab(item.option);
                 onClose();
@@ -96,10 +82,9 @@ export function CreateTabMenu({
                   </Typography>
                 ) : null}
               </Box>
-            </MenuItem>
-          </Box>
-        );
-      })}
+          </MenuItem>
+        </Box>
+      ))}
     </Menu>
   );
 }

@@ -46,8 +46,6 @@ export type SplitPaneGroupProps = {
   getTabIcon?: (tab: TabDescriptor) => ReactNode;
   /** Called when the user clicks the history button in the tab bar. */
   onHistoryClick?: (event: React.MouseEvent<HTMLElement>) => void;
-  enabledAgentKinds?: string[];
-  agentCreateOptions?: Array<import("./TabBar").AgentCreateOptionDef>;
   fetchAgentSessionFilePath?: (sessionId: string, cwd: string) => Promise<string>;
   disabled?: boolean;
   onContentPlaceholderChange?: (paneId: string, placeholder: HTMLDivElement | null) => void;
@@ -103,8 +101,6 @@ export function SplitPaneGroup({
   onRenameTab,
   getTabIcon,
   onHistoryClick,
-  enabledAgentKinds,
-  agentCreateOptions,
   fetchAgentSessionFilePath,
   disabled,
   onContentPlaceholderChange,
@@ -184,8 +180,6 @@ export function SplitPaneGroup({
           onCreateTab={onCreateTab}
           onPromoteTemporaryTab={onPromoteTemporaryTab}
           getTabIcon={getTabIcon}
-          enabledAgentKinds={enabledAgentKinds}
-          agentCreateOptions={agentCreateOptions}
           fetchAgentSessionFilePath={fetchAgentSessionFilePath}
           disabled={disabled}
           focused={isActive}

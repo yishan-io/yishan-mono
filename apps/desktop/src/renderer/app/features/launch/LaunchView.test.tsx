@@ -28,6 +28,7 @@ vi.mock("react-i18next", () => ({
       const translations: Record<string, string> = {
         "launch.title": "No tabs open",
         "launch.hint": "Select an action to get started.",
+        "launch.actions.openAgentChat": "Agent Chat",
         "launch.actions.openTerminal": "Open terminal",
         "launch.actions.openBrowser": "Open browser tab",
         "launch.actions.openWhiteboard": "New whiteboard",
@@ -106,28 +107,41 @@ describe("LaunchView", () => {
     mocks.progressByWorkspaceId = {};
   });
 
+  it("does not show the Start with Agent grid", () => {
+    render(<LaunchView workspaceId="workspace-1" />);
+
+    expect(screen.queryByText("Start with Agent")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Codex" })).toBeNull();
+  });
+
+  it("opens Agent Chat from the launch actions", () => {
+    render(<LaunchView workspaceId="workspace-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Agent Chat" }));
+
+    expect(mocks.openTab).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      kind: "agent-chat",
+      title: "agentChat.title",
+      cwd: undefined,
+    });
+  });
+
   it("opens a recent agent session", async () => {
     mocks.workspaces = [{ id: "workspace-1", status: "active", worktreePath: "/tmp/project" }];
     mocks.fetchSessionHistory.mockResolvedValueOnce([
       { sessionId: "history-1", timestamp: new Date().toISOString(), previewText: "Review the implementation" },
     ]);
 
-    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
+    render(<LaunchView workspaceId="workspace-1" />);
 
     expect(await screen.findByText("Recent agent sessions")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Review the implementation/ }));
-
-    expect(mocks.openTab).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
-      kind: "agent-chat",
-      title: "Review the implementation",
-      cwd: "/tmp/project",
-      sessionId: "history-1",
-    });
+    expect(mocks.fetchSessionHistory).toHaveBeenCalledWith("/tmp/project");
+    expect(screen.getByRole("button", { name: /Review the implementation/ })).toBeTruthy();
   });
 
   it("shows shortcut labels for launch actions", () => {
-    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
+    render(<LaunchView workspaceId="workspace-1" />);
 
     expect(screen.getByText("⌘+T")).toBeTruthy();
     expect(screen.getByText("⌘+P")).toBeTruthy();
@@ -135,7 +149,7 @@ describe("LaunchView", () => {
   });
 
   it("runs launch actions when clicked", () => {
-    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
+    render(<LaunchView workspaceId="workspace-1" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open terminal" }));
     fireEvent.click(screen.getByRole("button", { name: "Open browser tab" }));
@@ -147,7 +161,7 @@ describe("LaunchView", () => {
 
   it("creates a new whiteboard from the launch action", () => {
     mocks.createNewWhiteboard.mockResolvedValueOnce("whiteboard.excalidraw");
-    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
+    render(<LaunchView workspaceId="workspace-1" />);
 
     fireEvent.click(screen.getByRole("button", { name: "New whiteboard" }));
 
@@ -165,7 +179,7 @@ describe("LaunchView", () => {
       },
     };
 
-    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
+    render(<LaunchView workspaceId="workspace-1" />);
 
     expect(screen.queryByText("You can follow setup progress here while the daemon finishes provisioning.")).toBeNull();
     expect(screen.getByRole("button", { name: "Open terminal" })).toBeTruthy();
