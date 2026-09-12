@@ -62,6 +62,7 @@ export class LocalTaskOperations {
   constructor(
     private readonly client: LocalTaskMetadataClient,
     private readonly projectId: string | undefined = getProjectIdFromEnvironment(),
+    private readonly organizationId: string | undefined = getOrganizationIdFromEnvironment(),
   ) {}
 
   /** Creates a new Local Task in the configured project, or globally when none is configured. */
@@ -74,6 +75,9 @@ export class LocalTaskOperations {
       priority: input.priority,
       tags: input.tags,
       ...(this.projectId === undefined ? {} : { projectId: this.projectId }),
+      ...(this.projectId === undefined || this.organizationId === undefined
+        ? {}
+        : { organizationId: this.organizationId }),
     };
     const task = this.assertInScope(
       options.signal === undefined
@@ -196,8 +200,12 @@ export class LocalTaskOperations {
 }
 
 /** Creates Local Task operations scoped by YISHAN_PROJECT_ID when it is non-empty. */
-export function createLocalTaskOperations(client: LocalTaskMetadataClient, projectId?: string): LocalTaskOperations {
-  return new LocalTaskOperations(client, projectId);
+export function createLocalTaskOperations(
+  client: LocalTaskMetadataClient,
+  projectId?: string,
+  organizationId?: string,
+): LocalTaskOperations {
+  return new LocalTaskOperations(client, projectId, organizationId);
 }
 
 /** Builds the daemon description from exactly one supported task-brief input style. */
@@ -228,6 +236,12 @@ export function buildDescription(
 export function getProjectIdFromEnvironment(): string | undefined {
   const projectId = process.env.YISHAN_PROJECT_ID?.trim();
   return projectId || undefined;
+}
+
+/** Reads the non-empty configured organization ID for project-scoped task creation. */
+export function getOrganizationIdFromEnvironment(): string | undefined {
+  const organizationId = process.env.YISHAN_ORG_ID?.trim();
+  return organizationId || undefined;
 }
 
 function isTaskNotFoundError(error: unknown): error is LocalTaskRPCError {
