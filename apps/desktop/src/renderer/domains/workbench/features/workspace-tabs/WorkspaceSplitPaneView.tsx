@@ -1,8 +1,8 @@
 import { Box } from "@mui/material";
 import type { ExternalAppId } from "@renderer/domains/files";
+import { CliSpinner } from "@renderer/ui/components/CliSpinner";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
-import { CliSpinner } from "@renderer/ui/components/CliSpinner";
 import type { PaneLeaf, SplitPaneNode } from "../../../../domains/workbench/split-pane";
 import { selectPaneForTab } from "../../../../domains/workbench/state/workbenchSelectors";
 import type { WorkbenchTab } from "../../../../domains/workbench/tabs";
@@ -25,7 +25,7 @@ import {
   type RefreshableOpenTab,
   useOpenTabAutoRefresh,
 } from "./useOpenTabAutoRefresh";
-import { type AgentPresetMeta, usePaneTabHandlers } from "./usePaneTabHandlers";
+import { usePaneTabHandlers } from "./usePaneTabHandlers";
 import { useWorkspaceTabPlacements } from "./useWorkspaceTabPlacements";
 import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPane";
 
@@ -37,12 +37,8 @@ export type WorkspaceSplitPaneProps = {
   workspaceTabs: WorkbenchTab[];
   /** Worktree path for the workspace backing this pane (App-composed data). */
   worktreePath: string | undefined;
-  /** Agent kinds currently in use, resolved by the App composition layer. */
-  enabledAgentKinds: string[];
   /** Agent-chat tabs with an active turn, resolved by the App composition layer. */
   agentChatTabIsRunningByTabId: Record<string, boolean>;
-  /** Agent terminal preset metadata for the tab create menu (App-composed; agent-owned). */
-  agentPresetMeta: Record<string, AgentPresetMeta>;
   /** Files tab-file commands used by tab gestures (App-composed; files-owned). */
   tabFileCommands: {
     createNewWhiteboard: (workspaceId: string) => Promise<string | null>;
@@ -106,9 +102,7 @@ export function WorkspaceSplitPane({
   isActive,
   workspaceTabs,
   worktreePath,
-  enabledAgentKinds,
   agentChatTabIsRunningByTabId,
-  agentPresetMeta,
   tabFileCommands,
   openTabRefreshCommands,
   fetchAgentSessionFilePath,
@@ -139,21 +133,6 @@ export function WorkspaceSplitPane({
   );
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const workspace = { worktreePath };
-  const enabledAgentKindSet = useMemo(() => new Set(enabledAgentKinds), [enabledAgentKinds]);
-  const agentCreateOptions = useMemo(
-    () =>
-      enabledAgentKinds.map((agentKind) => ({
-        option: agentKind,
-        label: agentPresetMeta[agentKind]?.labelKey ?? agentKind,
-        icon: renderAgentIcon ? (
-          renderAgentIcon(agentKind, agentPresetMeta[agentKind]?.labelKey ?? agentKind)
-        ) : (
-          <Box component="span" sx={{ width: 14, height: 14 }} />
-        ),
-      })),
-    [enabledAgentKinds, agentPresetMeta, renderAgentIcon],
-  );
-
   const [focusContentRequestKey, setFocusContentRequestKey] = useState(0);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [historyMenuAnchor, setHistoryMenuAnchor] = useState<HTMLElement | null>(null);
@@ -261,8 +240,6 @@ export function WorkspaceSplitPane({
     workspaceId,
     workspaceTabs,
     workspace,
-    enabledAgentKindSet: enabledAgentKindSet,
-    agentPresetMeta: agentPresetMeta,
     cmd,
     setFocusContentRequestKey,
     setIsDraggingSplit,
@@ -345,8 +322,6 @@ export function WorkspaceSplitPane({
           onRenameTab={handleRenameTab}
           onHistoryClick={(event) => setHistoryMenuAnchor(event.currentTarget)}
           getTabIcon={getTabIcon}
-          enabledAgentKinds={enabledAgentKinds}
-          agentCreateOptions={agentCreateOptions}
           fetchAgentSessionFilePath={fetchAgentSessionFilePath}
           disabled={!workspaceId}
           onContentPlaceholderChange={handleContentPlaceholderChange}
@@ -370,8 +345,6 @@ export function WorkspaceSplitPane({
       handleTabDragStart,
       handleTabDragEnd,
       getTabIcon,
-      enabledAgentKinds,
-      agentCreateOptions,
       fetchAgentSessionFilePath,
       workspaceId,
       handleContentPlaceholderChange,

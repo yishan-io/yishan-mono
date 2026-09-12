@@ -1,4 +1,3 @@
-import type { DesktopAgentKind } from "@renderer/domains/agent";
 import type { createNewWhiteboard, renameEntry } from "@renderer/domains/files";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,14 +16,6 @@ import type { TabBarCreateOption } from "./pane/TabBar";
 import { splitPaneStore } from "../../state/splitPaneStore";
 import { selectActivePane, selectPane } from "../../state/workbenchSelectors";
 
-/** Agent terminal preset metadata for the tab create menu (supplied by the caller; agent-owned). */
-export type AgentPresetMeta = {
-  /** i18n key for the preset label. */
-  labelKey: string;
-  /** CLI launch command for the preset. */
-  launchCommand: string;
-};
-
 /** Tab commands supplied to the pane tab handlers (workbench tab commands + files tab-file commands). */
 export type PaneTabHandlersCommands = {
   openTab: typeof openTab;
@@ -40,8 +31,6 @@ export type UsePaneTabHandlersOptions = {
   workspaceId: string;
   workspaceTabs: WorkbenchTab[];
   workspace: { worktreePath?: string } | undefined;
-  enabledAgentKindSet: Set<string>;
-  agentPresetMeta: Record<string, AgentPresetMeta>;
   cmd: PaneTabHandlersCommands;
   setFocusContentRequestKey: React.Dispatch<React.SetStateAction<number>>;
   setIsDraggingSplit: React.Dispatch<React.SetStateAction<boolean>>;
@@ -54,8 +43,6 @@ export function usePaneTabHandlers({
   workspaceId,
   workspaceTabs,
   workspace,
-  enabledAgentKindSet,
-  agentPresetMeta,
   cmd,
   setFocusContentRequestKey,
   setIsDraggingSplit,
@@ -107,21 +94,8 @@ export function usePaneTabHandlers({
         void cmd.createNewWhiteboard(workspaceId);
         return;
       }
-      if (!enabledAgentKindSet.has(option)) return;
-      const presetMeta = agentPresetMeta[option];
-      if (!presetMeta) return;
-      const title = t(presetMeta.labelKey);
-      const launchCommand = presetMeta.launchCommand;
-      cmd.openTab({
-        workspaceId,
-        kind: "terminal",
-        title,
-        launchCommand,
-        agentKind: option as DesktopAgentKind,
-        reuseExisting: false,
-      });
     },
-    [cmd, workspaceId, enabledAgentKindSet, agentPresetMeta, t, workspaceWorktreePath],
+    [cmd, workspaceId, t, workspaceWorktreePath],
   );
 
   const handleRenameTab = useCallback(

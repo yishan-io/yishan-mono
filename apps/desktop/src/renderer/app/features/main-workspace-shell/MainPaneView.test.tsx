@@ -1,7 +1,5 @@
 // @vitest-environment jsdom
 
-import { AGENT_SETTINGS_STORE_STORAGE_KEY } from "@renderer/domains/agent";
-import { agentSettingsStore } from "@renderer/domains/agent/state/agentSettingsStore";
 import { WorkspacePaneVisibilityProvider, layoutStore } from "@renderer/domains/workbench";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -183,21 +181,9 @@ vi.mock("../../../domains/workbench/features/workspace-tabs/pane/TabBar", () => 
   TabBar: ({
     tabs,
     onCreateTab,
-    enabledAgentKinds,
-  }: {
-    tabs: Array<{ id: string; title: string }>;
-    onCreateTab: (
-      option: "terminal" | "opencode" | "codex" | "claude" | "gemini" | "pi" | "copilot" | "cursor",
-    ) => void;
-    enabledAgentKinds?: Array<"opencode" | "codex" | "claude" | "gemini" | "pi" | "copilot" | "cursor">;
-  }) => (
+  }: { tabs: Array<{ id: string; title: string }>; onCreateTab: (option: "terminal") => void }) => (
     <div>
       <div data-testid="tab-bar">{tabs.map((tab) => tab.title).join(",")}</div>
-      {enabledAgentKinds?.includes("codex") ? (
-        <button type="button" onClick={() => onCreateTab("codex")}>
-          create-codex
-        </button>
-      ) : null}
       <button type="button" onClick={() => onCreateTab("terminal")}>
         create-terminal
       </button>
@@ -211,21 +197,14 @@ vi.mock("../../../domains/workbench/features/workspace-tabs/pane/SplitPaneGroup"
     tabs,
     renderContent,
     onCreateTab,
-    enabledAgentKinds,
   }: {
     pane: { id: string; tabIds: string[]; selectedTabId: string };
     tabs: Array<{ id: string; title: string }>;
     renderContent: (pane: { id: string; tabIds: string[]; selectedTabId: string }, _extra: unknown) => React.ReactNode;
-    onCreateTab: (option: string) => void;
-    enabledAgentKinds?: string[];
+    onCreateTab: (option: "terminal") => void;
   }) => (
     <div data-testid={`editor-pane-${pane.id}`}>
       <div data-testid="tab-bar">{tabs.map((tab) => tab.title).join(",")}</div>
-      {enabledAgentKinds?.includes("codex") ? (
-        <button type="button" onClick={() => onCreateTab("codex")}>
-          create-codex
-        </button>
-      ) : null}
       <button type="button" onClick={() => onCreateTab("terminal")}>
         create-terminal
       </button>
@@ -368,19 +347,7 @@ vi.mock("@renderer/domains/terminal", async (importOriginal) => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
-  window.localStorage.removeItem(AGENT_SETTINGS_STORE_STORAGE_KEY);
   layoutStore.setState({ rightPaneTabByWorkspaceId: {} });
-  agentSettingsStore.setState({
-    inUseByAgentKind: {
-      opencode: true,
-      codex: true,
-      claude: true,
-      gemini: true,
-      pi: true,
-      copilot: true,
-      cursor: true,
-    },
-  });
 });
 
 function buildStoreState(isInitializing: boolean) {
@@ -781,55 +748,6 @@ describe("MainPaneView", () => {
     // Empty workspace shows the launch view; workspace-1's terminal stays mounted (hidden)
     expect(screen.getByTestId("launch-view")).toBeTruthy();
     expect(screen.queryAllByTestId("terminal-view")).toHaveLength(1);
-  });
-
-  it("opens an agent terminal tab when tab bar create option is selected", () => {
-    const openTab = vi.fn();
-    mocked.stateRef.current = {
-      ...buildStoreState(false),
-      openTab,
-    };
-
-    render(<MainPaneView />);
-
-    fireEvent.click(screen.getByRole("button", { name: "create-codex" }));
-
-    expect(openTab).toHaveBeenCalledWith(
-      {
-        workspaceId: "workspace-1",
-        kind: "terminal",
-        title: "settings.agents.items.codex",
-        launchCommand: "codex",
-        agentKind: "codex",
-        reuseExisting: false,
-      },
-      { activePaneTabIds: ["tab-1"], workspaceId: "workspace-1" },
-    );
-  });
-
-  it("hides disabled agents from tab creation menu", () => {
-    const openTab = vi.fn();
-    agentSettingsStore.setState({
-      inUseByAgentKind: {
-        opencode: true,
-        codex: false,
-        claude: true,
-        gemini: true,
-        pi: true,
-        copilot: true,
-        cursor: true,
-      },
-    });
-    mocked.stateRef.current = {
-      ...buildStoreState(false),
-      openTab,
-    };
-
-    render(<MainPaneView />);
-
-    expect(screen.queryByRole("button", { name: "create-codex" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "create-terminal" }));
-    expect(openTab).toHaveBeenCalledTimes(1);
   });
 
   it("opens a plain terminal tab when terminal create option is selected", () => {

@@ -23,21 +23,7 @@ type WorkbenchTab = {
   cwd?: string;
 };
 
-export type TabBarCreateOption = "browser" | "terminal" | "agent-chat" | "whiteboard" | string;
-
-type AgentCreateOption = string;
-
-/** Returns true when one create-menu option targets an agent terminal preset. */
-function isAgentCreateOption(option: TabBarCreateOption): option is AgentCreateOption {
-  return option !== "terminal" && option !== "browser" && option !== "agent-chat" && option !== "whiteboard";
-}
-
-/** One agent terminal preset entry in the tab create menu, supplied by the caller. */
-export type AgentCreateOptionDef = {
-  option: string;
-  label: string;
-  icon: ReactNode;
-};
+export type TabBarCreateOption = "browser" | "terminal" | "agent-chat" | "whiteboard";
 
 type TabBarProps = {
   tabs: WorkbenchTab[];
@@ -51,9 +37,6 @@ type TabBarProps = {
   onCreateTab: (option: TabBarCreateOption) => void;
   onPromoteTemporaryTab?: (tabId: string) => void;
   getTabIcon?: (tab: WorkbenchTab) => ReactNode;
-  enabledAgentKinds?: AgentCreateOption[];
-  /** Agent terminal presets shown in the tab create menu (supplied by the caller). */
-  agentCreateOptions?: AgentCreateOptionDef[];
   disabled?: boolean;
   /** Called when a tab drag starts - useful for enabling split drop zones. */
   onTabDragStart?: (tabId: string) => void;
@@ -91,8 +74,6 @@ export function TabBar({
   onCreateTab,
   onPromoteTemporaryTab,
   getTabIcon,
-  enabledAgentKinds,
-  agentCreateOptions,
   disabled,
   onTabDragStart,
   onTabDragEnd,
@@ -115,13 +96,6 @@ export function TabBar({
       : t("browser.title") !== "browser.title"
         ? t("browser.title")
         : "Browser";
-  const createLabelByAgentKind: Record<string, string> = (agentCreateOptions ?? []).reduce<Record<string, string>>(
-    (next, item) => {
-      next[item.option] = item.label;
-      return next;
-    },
-    {},
-  );
   const whiteboardCreateLabel = t("tabs.createMenu.whiteboard");
   const keepOpenActionLabel = t("tabs.actions.keepOpen");
   const pinTabActionLabel = t("tabs.actions.pin");
@@ -233,8 +207,7 @@ export function TabBar({
   // ─── Create menu options ───────────────────────────────────────────────────
 
   const platform = getRendererPlatform();
-  const enabledAgentKindSet = new Set(enabledAgentKinds ?? (agentCreateOptions ?? []).map((item) => item.option));
-  const allCreateOptions: Array<{
+  const createOptions: Array<{
     option: TabBarCreateOption;
     label: string;
     icon: ReactNode;
@@ -264,16 +237,7 @@ export function TabBar({
       icon: <LuGlobe size={14} />,
       shortcutLabel: getShortcutDisplayLabelById("open-browser", platform),
     },
-    ...(agentCreateOptions ?? []).map(({ option, label, icon }) => ({
-      option,
-      label,
-      icon,
-      shortcutLabel: null,
-    })),
   ];
-  const createOptions = allCreateOptions.filter(
-    (item) => !isAgentCreateOption(item.option) || enabledAgentKindSet.has(item.option),
-  );
 
   // ─── Context menu ─────────────────────────────────────────────────────────
 

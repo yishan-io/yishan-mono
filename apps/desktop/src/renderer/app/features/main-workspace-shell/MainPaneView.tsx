@@ -6,13 +6,7 @@ import {
   findTabWithSession,
 } from "@renderer/domains/agent";
 import { AgentIcon, SessionHistoryMenu } from "@renderer/domains/agent";
-import {
-  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
-  DEFAULT_AGENT_COMMANDS,
-  SUPPORTED_DESKTOP_AGENT_KINDS,
-} from "@renderer/domains/agent";
 import { formatAgentSessionTitle } from "@renderer/domains/agent";
-import { agentSettingsStore } from "@renderer/domains/agent";
 import { removeWebviewsForClosedTabs } from "@renderer/domains/browser";
 import { FileSearchOverlay, getFileTreeIcon } from "@renderer/domains/files";
 import {
@@ -128,21 +122,6 @@ export function MainPaneView() {
     },
     [],
   );
-  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
-  const enabledAgentKinds = useMemo(
-    () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),
-    [inUseByAgentKind],
-  );
-  const agentPresetMeta = useMemo(
-    () =>
-      Object.fromEntries(
-        SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => [
-          agentKind,
-          { labelKey: AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind], launchCommand: DEFAULT_AGENT_COMMANDS[agentKind] },
-        ]),
-      ),
-    [],
-  );
   const gitCapable = !isFolderWorkspace(selectedWorkspace) && supportsGitFeatures(selectedProject?.sourceType);
 
   useEffect(() => {
@@ -233,9 +212,7 @@ export function MainPaneView() {
                     isActive={wsId === selectedWorkspaceId}
                     workspaceTabs={tabsByWorkspaceId.get(wsId) ?? []}
                     worktreePath={workspaces.find((ws) => ws.id === wsId)?.worktreePath}
-                    enabledAgentKinds={enabledAgentKinds}
                     agentChatTabIsRunningByTabId={agentChatTabIsRunningByTabId}
-                    agentPresetMeta={agentPresetMeta}
                     tabFileCommands={{
                       createNewWhiteboard,
                       renameEntry,
@@ -274,7 +251,7 @@ export function MainPaneView() {
               ))}
               {!hasSelectedWorkbenchTabs && (
                 <TabPanel active>
-                  <LaunchView workspaceId={selectedWorkspaceId} enabledAgentKinds={enabledAgentKinds} />
+                  <LaunchView workspaceId={selectedWorkspaceId} />
                 </TabPanel>
               )}
             </>

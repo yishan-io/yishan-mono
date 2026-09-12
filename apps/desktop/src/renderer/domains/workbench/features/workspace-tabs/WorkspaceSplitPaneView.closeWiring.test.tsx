@@ -75,8 +75,6 @@ describe("WorkspaceSplitPane close wiring", () => {
           },
         ]}
         worktreePath="/tmp/workspace"
-        enabledAgentKinds={[]}
-        agentPresetMeta={{}}
         tabFileCommands={{ createNewWhiteboard: vi.fn(), renameEntry: vi.fn() }}
         openTabRefreshCommands={{
           readFile: vi.fn(),
@@ -123,8 +121,6 @@ describe("WorkspaceSplitPane close wiring", () => {
           { id: "tab-1", workspaceId: "workspace-1", title: "Tab", pinned: false, kind: "browser", data: { url: "" } },
         ]}
         worktreePath="/tmp/workspace"
-        enabledAgentKinds={[]}
-        agentPresetMeta={{}}
         tabFileCommands={{ createNewWhiteboard: vi.fn(), renameEntry: vi.fn() }}
         openTabRefreshCommands={{
           readFile: vi.fn(),
