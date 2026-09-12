@@ -54,6 +54,7 @@ export type LocalTaskFilters = {
 /** Metadata accepted by localTask.create. */
 export type CreateLocalTaskInput = {
   projectId?: string;
+  organizationId?: string;
   title: string;
   description?: string;
   priority?: LocalTaskPriority;

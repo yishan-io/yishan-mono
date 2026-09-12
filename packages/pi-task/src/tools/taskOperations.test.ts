@@ -13,7 +13,10 @@ const projectTask = createTask({
   status: "new",
 });
 
-beforeEach(() => vi.stubEnv("YISHAN_PROJECT_ID", ""));
+beforeEach(() => {
+  vi.stubEnv("YISHAN_PROJECT_ID", "");
+  vi.stubEnv("YISHAN_ORG_ID", "");
+});
 afterEach(() => vi.unstubAllEnvs());
 
 describe("LocalTaskOperations", () => {
@@ -41,6 +44,38 @@ describe("LocalTaskOperations", () => {
     await expect(operations.start({ title: "Task", description: "Direct", goal: "Ambiguous" })).rejects.toThrow(
       "Provide description or goal/context/acceptanceCriteria",
     );
+  });
+
+  it("includes the environment organization ID when starting a project-scoped task", async () => {
+    vi.stubEnv("YISHAN_PROJECT_ID", "project-a");
+    vi.stubEnv("YISHAN_ORG_ID", "org-a");
+    const client = createClient({ create: projectTask });
+    const operations = createLocalTaskOperations(client);
+
+    await operations.start({ title: "Task" });
+
+    expect(client.create).toHaveBeenCalledWith({
+      title: "Task",
+      description: "",
+      priority: undefined,
+      tags: undefined,
+      projectId: "project-a",
+      organizationId: "org-a",
+    });
+  });
+
+  it("does not include an organization ID when starting a global task", async () => {
+    vi.stubEnv("YISHAN_ORG_ID", "org-a");
+    const client = createClient({ create: globalTask });
+
+    await createLocalTaskOperations(client).start({ title: "Task" });
+
+    expect(client.create).toHaveBeenCalledWith({
+      title: "Task",
+      description: "",
+      priority: undefined,
+      tags: undefined,
+    });
   });
 
   it("links a newly created task to its requested workspace", async () => {
