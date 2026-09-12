@@ -60,19 +60,28 @@ export function useComposerSynchronization({
     closeSuggestionMenus();
   }, [closeSuggestionMenus, isComposingRef, value]);
 
-  const handleComposerCompositionEnd = useCallback(() => {
-    isComposingRef.current = false;
-    // macOS Pinyin commits through insertCompositionText and emits no later
-    // non-composing input. Treat compositionend as the completed transaction,
-    // unless a controlled external value must still replace the composition.
-    if (pendingExternalValueRef.current !== null) {
-      isAwaitingFinalInputRef.current = true;
-      return;
-    }
-    shouldInsertLiteralSpaceAfterCompositionRef.current = true;
-    isAwaitingFinalInputRef.current = false;
-    setIsReadyToSynchronizeControlledValue(true);
-  }, [isComposingRef, shouldInsertLiteralSpaceAfterCompositionRef]);
+  const handleComposerCompositionEnd = useCallback(
+    (event: SyntheticEvent<HTMLDivElement>) => {
+      isComposingRef.current = false;
+      // macOS Pinyin commits through insertCompositionText and emits no later
+      // non-composing input. Treat compositionend as the completed transaction,
+      // unless a controlled external value must still replace the composition.
+      if (pendingExternalValueRef.current !== null) {
+        isAwaitingFinalInputRef.current = true;
+        return;
+      }
+      const committedValue = normalizeComposerText(event.currentTarget.innerText);
+      const compositionInputValue = compositionInputValueRef.current;
+      compositionInputValueRef.current = committedValue;
+      if (!disabled && committedValue !== compositionInputValue) {
+        onChange?.(committedValue);
+      }
+      shouldInsertLiteralSpaceAfterCompositionRef.current = true;
+      isAwaitingFinalInputRef.current = false;
+      setIsReadyToSynchronizeControlledValue(true);
+    },
+    [disabled, isComposingRef, onChange],
+  );
 
   const handleComposerInput = useCallback(
     (event: SyntheticEvent<HTMLDivElement>) => {
@@ -116,7 +125,15 @@ export function useComposerSynchronization({
       }
       setIsReadyToSynchronizeControlledValue(true);
     },
-    [disabled, isComposingRef, onChange, shouldMoveCaretToEndAfterFileDropRef, synchronizeComposer],
+    [
+      disabled,
+      isComposingRef,
+      onChange,
+      shouldMoveCaretToEndAfterFileDropRef,
+      syncMentionMenu,
+      syncSlashCommandMenu,
+      synchronizeComposer,
+    ],
   );
 
   useEffect(() => {
