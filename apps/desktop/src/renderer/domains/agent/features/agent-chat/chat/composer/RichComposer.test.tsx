@@ -123,14 +123,94 @@ describe("RichComposer", () => {
     expect(screen.getByRole("button", { name: "/brainstorm" })).toBeTruthy();
   });
 
+  it("keeps a plain-text IME commit that finalizes at compositionend", () => {
+    const onChange = vi.fn();
+
+    function ControlledComposer() {
+      const [value, setValue] = useState("");
+      return (
+        <RichComposer
+          placeholder="Type a message…"
+          value={value}
+          onChange={(nextValue) => {
+            onChange(nextValue);
+            setValue(nextValue);
+          }}
+        />
+      );
+    }
+
+    render(<ControlledComposer />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "你";
+    fireEvent.input(textbox, { isComposing: true, inputType: "insertCompositionText" });
+
+    textbox.innerText = "你好";
+    fireEvent.compositionEnd(textbox);
+
+    expect(textbox.textContent).toBe("你好");
+    expect(onChange).toHaveBeenLastCalledWith("你好");
+  });
+
+  it("does not emit a duplicate change when compositionend matches the last composing input", () => {
+    const onChange = vi.fn();
+    render(<RichComposer placeholder="Type a message…" onChange={onChange} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "你好";
+    fireEvent.input(textbox, { isComposing: true, inputType: "insertCompositionText" });
+    fireEvent.compositionEnd(textbox);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("你好");
+  });
+
+  it("does not emit a compositionend change after becoming disabled during composition", () => {
+    const onChange = vi.fn();
+
+    function ComposerThatCanBeDisabled() {
+      const [isDisabled, setIsDisabled] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setIsDisabled(true)}>
+            Disable composer
+          </button>
+          <RichComposer placeholder="Type a message…" disabled={isDisabled} onChange={onChange} />
+        </>
+      );
+    }
+
+    render(<ComposerThatCanBeDisabled />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "你好";
+    fireEvent.input(textbox, { isComposing: true, inputType: "insertCompositionText" });
+    fireEvent.click(screen.getByRole("button", { name: "Disable composer" }));
+    textbox.innerText = "你好啊";
+    fireEvent.compositionEnd(textbox);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("你好");
+  });
+
   it("inserts a literal space when macOS Pinyin consumes it after compositionend", () => {
     const onChange = vi.fn();
     function ControlledComposer() {
       const [value, setValue] = useState("");
-      return <RichComposer placeholder="Type a message…" value={value} onChange={(nextValue) => {
-        onChange(nextValue);
-        setValue(nextValue);
-      }} />;
+      return (
+        <RichComposer
+          placeholder="Type a message…"
+          value={value}
+          onChange={(nextValue) => {
+            onChange(nextValue);
+            setValue(nextValue);
+          }}
+        />
+      );
     }
     render(<ControlledComposer />);
 
