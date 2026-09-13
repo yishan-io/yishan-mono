@@ -174,6 +174,166 @@ describe("DaemonRpcClient (desktop8 Phase 31 transport)", () => {
     expect(listener).toHaveBeenCalledWith({ method: "events.frontendStream", payload: { x: 2 } });
   });
 
+  it("replaces an unresponsive OPEN socket after timeout, rejects its other calls, and restores subscriptions", async () => {
+    const first = createFakeSocket();
+    const second = createFakeSocket();
+    let opened = 0;
+    const { client } = createClient(async () => {
+      opened += 1;
+      return opened === 1 ? first.socket : second.socket;
+    });
+
+    client.subscribe("events.frontendStream", undefined, vi.fn());
+    const otherOldSocketCall = client.request("workspace.list", {});
+    const otherOldSocketCallRejection = expect(otherOldSocketCall).rejects.toThrow(
+      'daemon websocket closed while calling method "workspace.list"',
+    );
+    const timedOutCall = client.request("git.listChanges", {}, 5_000);
+    await vi.advanceTimersByTimeAsync(0);
+
+    vi.advanceTimersByTime(5_001);
+    await expect(timedOutCall).rejects.toThrow('daemon RPC request timed out for method "git.listChanges"');
+    await otherOldSocketCallRejection;
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(first.socket.close).toHaveBeenCalledTimes(1);
+    expect(opened).toBe(2);
+    expect(second.socket.send.mock.calls.map((call) => JSON.parse(call[0] as string))).toContainEqual(
+      expect.objectContaining({ method: "events.frontendStream" }),
+    );
+
+    const replacementCall = client.request("git.listChanges", {});
+    await vi.advanceTimersByTimeAsync(0);
+    const replacementRequest = JSON.parse(second.socket.send.mock.calls.at(-1)?.[0] as string);
+    second.handlers.message({
+      data: JSON.stringify({ jsonrpc: "2.0", id: replacementRequest.id, result: { files: [] } }),
+    });
+    await expect(replacementCall).resolves.toEqual({ files: [] });
+  });
+
+  it("replaces the socket after a synchronous send failure", async () => {
+    const first = createFakeSocket();
+    const second = createFakeSocket();
+    first.socket.send.mockImplementation(() => {
+      throw new Error("socket is broken");
+    });
+    let opened = 0;
+    const { client } = createClient(async () => {
+      opened += 1;
+      return opened === 1 ? first.socket : second.socket;
+    });
+
+    const failedCall = client.request("file.list", {});
+    const failedCallRejection = expect(failedCall).rejects.toThrow("socket is broken");
+    await vi.advanceTimersByTimeAsync(0);
+    await failedCallRejection;
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(first.socket.close).toHaveBeenCalledTimes(1);
+    expect(opened).toBe(2);
+
+    const replacementCall = client.request("file.list", {});
+    await vi.advanceTimersByTimeAsync(0);
+    const replacementRequest = JSON.parse(second.socket.send.mock.calls[0]?.[0] as string);
+    second.handlers.message({
+      data: JSON.stringify({ jsonrpc: "2.0", id: replacementRequest.id, result: { entries: [] } }),
+    });
+    await expect(replacementCall).resolves.toEqual({ entries: [] });
+  });
+
+  it("ignores late events from a replaced socket", async () => {
+    const first = createFakeSocket();
+    const second = createFakeSocket();
+    let opened = 0;
+    const { client } = createClient(async () => {
+      opened += 1;
+      return opened === 1 ? first.socket : second.socket;
+    });
+    const statuses: string[] = [];
+    const notificationListener = vi.fn();
+    const binaryListener = vi.fn();
+    client.subscribeConnectionStatus((status) => statuses.push(status));
+    client.subscribe("workspace.changed", undefined, notificationListener, { registerWithDaemon: false });
+    client.subscribeBinary(binaryListener);
+
+    const firstCall = client.request("app.getVersion", {});
+    await vi.advanceTimersByTimeAsync(0);
+    const firstRequest = JSON.parse(first.socket.send.mock.calls[0]?.[0] as string);
+    first.handlers.message({ data: JSON.stringify({ jsonrpc: "2.0", id: firstRequest.id, result: "1.0.0" }) });
+    await expect(firstCall).resolves.toBe("1.0.0");
+
+    first.handlers.close();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(opened).toBe(2);
+
+    const replacementCall = client.request("app.getVersion", {});
+    const replacementOutcome = replacementCall.then(
+      (version) => version,
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    first.handlers.close();
+    first.handlers.error();
+    first.handlers.message({
+      data: JSON.stringify({ jsonrpc: "2.0", method: "workspace.changed", params: { stale: true } }),
+    });
+    first.handlers.message({ data: new ArrayBuffer(1) });
+
+    expect(opened).toBe(2);
+    expect(statuses).toEqual(["connecting", "connecting", "connected", "disconnected", "connecting", "connected"]);
+    expect(notificationListener).not.toHaveBeenCalled();
+    expect(binaryListener).not.toHaveBeenCalled();
+
+    const replacementRequest = JSON.parse(second.socket.send.mock.calls[0]?.[0] as string);
+    second.handlers.message({ data: JSON.stringify({ jsonrpc: "2.0", id: replacementRequest.id, result: "2.0.0" }) });
+    await expect(replacementOutcome).resolves.toBe("2.0.0");
+  });
+
+  it("backs off repeated reconnects when subscription restoration fails synchronously", async () => {
+    const first = createFakeSocket();
+    const firstBrokenReplacement = createFakeSocket();
+    const secondBrokenReplacement = createFakeSocket();
+    const finalReplacement = createFakeSocket();
+    firstBrokenReplacement.socket.send.mockImplementation(() => {
+      throw new Error("first replacement socket is broken");
+    });
+    secondBrokenReplacement.socket.send.mockImplementation(() => {
+      throw new Error("second replacement socket is broken");
+    });
+    const sockets = [first, firstBrokenReplacement, secondBrokenReplacement, finalReplacement];
+    let opened = 0;
+    const { client } = createClient(async () => {
+      const socket = sockets[opened]?.socket ?? finalReplacement.socket;
+      opened += 1;
+      return socket;
+    });
+
+    client.subscribe("events.frontendStream", undefined, vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+    const initialSubscription = JSON.parse(first.socket.send.mock.calls[0]?.[0] as string);
+    first.handlers.message({ data: JSON.stringify({ jsonrpc: "2.0", id: initialSubscription.id, result: {} }) });
+
+    first.handlers.close();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(firstBrokenReplacement.socket.close).toHaveBeenCalledTimes(1);
+    expect(opened).toBe(2);
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(opened).toBe(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(secondBrokenReplacement.socket.close).toHaveBeenCalledTimes(1);
+    expect(opened).toBe(3);
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(opened).toBe(3);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(opened).toBe(4);
+    expect(finalReplacement.socket.send.mock.calls.map((call) => JSON.parse(call[0] as string))).toContainEqual(
+      expect.objectContaining({ method: "events.frontendStream" }),
+    );
+  });
+
   it("emits every connection-status transition once", async () => {
     const first = createFakeSocket();
     const second = createFakeSocket();
@@ -243,6 +403,54 @@ describe("DaemonRpcClient (desktop8 Phase 31 transport)", () => {
     new Uint8Array(received).set([0x02, 0x61, 0x62]);
     handlers.message({ data: received });
     expect(binaryListener).toHaveBeenCalledWith(received);
+  });
+
+  it("does not send when a connected listener disposes the client", async () => {
+    const { socket } = createFakeSocket();
+    const { client } = createClient(async () => socket);
+    client.subscribeConnectionStatus((status) => {
+      if (status === "connected") {
+        client.dispose();
+      }
+    });
+
+    const requestOutcome = client.request("file.list", {}, 5).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(6);
+
+    expect(socket.close).toHaveBeenCalledTimes(1);
+    expect(socket.send).not.toHaveBeenCalled();
+    await expect(requestOutcome).resolves.toEqual(
+      expect.objectContaining({ message: "daemon websocket client is disposed" }),
+    );
+  });
+
+  it("closes a socket that finishes opening after disposal", async () => {
+    const { socket } = createFakeSocket();
+    let resolveOpen: ((socket: FakeSocket) => void) | undefined;
+    const { client } = createClient(
+      () =>
+        new Promise<FakeSocket>((resolvePromise) => {
+          resolveOpen = resolvePromise;
+        }),
+    );
+
+    const requestOutcome = client.request("file.list", {}, 5).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    client.dispose();
+    resolveOpen?.(socket);
+    await vi.advanceTimersByTimeAsync(6);
+
+    expect(socket.close).toHaveBeenCalledTimes(1);
+    expect(socket.send).not.toHaveBeenCalled();
+    await expect(requestOutcome).resolves.toEqual(
+      expect.objectContaining({ message: "daemon websocket client is disposed" }),
+    );
   });
 
   it("stops all resources during disposal", async () => {

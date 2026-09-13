@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { SocketSession, type SocketSessionEvents } from "./socketSession";
 import { type DaemonNotification, buildRequest, parseJsonRpcMessage } from "./wire";
 
@@ -5,6 +6,7 @@ const RPC_REQUEST_TIMEOUT_MS = 30_000;
 
 type PendingRequest = {
   method: string;
+  socket: WebSocket;
   timeout: ReturnType<typeof setTimeout>;
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
@@ -47,7 +49,7 @@ export class DaemonRpcClient {
     const events: SocketSessionEvents = {
       onMessage: (data) => this.handleSocketMessage(data),
       onBinary: (frame) => this.handleBinaryFrame(frame),
-      onDisconnected: () => this.rejectAllPendingRequests("daemon websocket closed"),
+      onDisconnected: (socket) => this.rejectPendingRequestsForSocket(socket, "daemon websocket closed"),
     };
     this.socketSession = new SocketSession({
       openSocket: options.openSocket,
@@ -70,10 +72,12 @@ export class DaemonRpcClient {
 
         this.pendingRequestsById.delete(request.id);
         rejectPromise(new Error(`daemon RPC request timed out for method "${method}"`));
+        this.socketSession.invalidateSocket(socket);
       }, requestTimeoutMs);
 
       this.pendingRequestsById.set(request.id, {
         method,
+        socket,
         timeout,
         resolve: resolvePromise,
         reject: rejectPromise,
@@ -87,7 +91,8 @@ export class DaemonRpcClient {
           clearTimeout(pending.timeout);
           this.pendingRequestsById.delete(request.id);
         }
-        rejectPromise(error instanceof Error ? error : new Error(`failed to send daemon RPC method "${method}"`));
+        rejectPromise(new Error(getErrorMessage(error)));
+        this.socketSession.invalidateSocket(socket);
       }
     });
   }
@@ -181,8 +186,11 @@ export class DaemonRpcClient {
     }
   }
 
-  private rejectAllPendingRequests(reason: string): void {
+  private rejectPendingRequestsForSocket(socket: WebSocket, reason: string): void {
     for (const [requestId, pending] of this.pendingRequestsById.entries()) {
+      if (pending.socket !== socket) {
+        continue;
+      }
       clearTimeout(pending.timeout);
       pending.reject(new Error(`${reason} while calling method "${pending.method}"`));
       this.pendingRequestsById.delete(requestId);

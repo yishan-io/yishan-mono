@@ -1,5 +1,3 @@
-import { delay } from "@shared/async/delay";
-
 /**
  * Daemon WebSocket session (desktop8 Phase 31).
  *
@@ -11,7 +9,7 @@ import { delay } from "@shared/async/delay";
 export type SocketSessionEvents = {
   onMessage: (data: unknown) => void;
   onBinary: (frame: ArrayBuffer) => void;
-  onDisconnected: () => void;
+  onDisconnected: (socket: WebSocket) => void;
 };
 
 export class SocketSession {
@@ -54,13 +52,22 @@ export class SocketSession {
     }
 
     this.onConnectionStatus("connecting");
+    let openedSocket: WebSocket | null = null;
     this.socketOpenPromise = this.openSocket()
       .then((socket) => {
+        openedSocket = socket;
+        if (this.disposed) {
+          socket.close();
+          throw new Error("daemon websocket client is disposed");
+        }
         this.socket = socket;
         // Enable binary frame reception as ArrayBuffer for the raw frame path.
         socket.binaryType = "arraybuffer";
 
         socket.addEventListener("message", (event) => {
+          if (this.socket !== socket) {
+            return;
+          }
           if (event.data instanceof ArrayBuffer) {
             this.events.onBinary(event.data);
             return;
@@ -68,31 +75,29 @@ export class SocketSession {
           this.events.onMessage(event.data);
         });
 
-        socket.addEventListener("close", () => {
-          this.clearSocketReference(socket);
-          this.onConnectionStatus("disconnected");
-          this.events.onDisconnected();
-          this.scheduleReconnect();
-        });
-
-        socket.addEventListener("error", () => {
-          this.onConnectionStatus("disconnected");
-          this.events.onDisconnected();
-          this.scheduleReconnect();
-        });
+        socket.addEventListener("close", () => this.invalidateSocket(socket));
+        socket.addEventListener("error", () => this.invalidateSocket(socket));
 
         // Emit connected only after the socket listeners are installed so a
         // subscription-restore request cannot race its own response.
         this.onConnectionStatus("connected");
+        if (this.socket !== socket) {
+          throw new Error(
+            this.disposed ? "daemon websocket client is disposed" : "daemon websocket invalidated while connecting",
+          );
+        }
 
         return socket;
       })
       .catch((error) => {
-        this.onConnectionStatus("disconnected");
+        if (!this.disposed && (openedSocket === null || this.socket === openedSocket)) {
+          this.onConnectionStatus("disconnected");
+        }
         throw error;
       })
       .finally(() => {
         this.socketOpenPromise = null;
+        this.resumeReconnectIfNeeded();
       });
 
     return await this.socketOpenPromise;
@@ -109,10 +114,17 @@ export class SocketSession {
     this.socket = null;
   }
 
-  private clearSocketReference(socket: WebSocket): void {
-    if (this.socket === socket) {
-      this.socket = null;
+  /** Invalidates the active socket and immediately begins replacing it. */
+  invalidateSocket(socket: WebSocket): void {
+    if (this.socket !== socket) {
+      return;
     }
+
+    this.socket = null;
+    this.onConnectionStatus("disconnected");
+    this.events.onDisconnected(socket);
+    socket.close();
+    this.scheduleReconnect();
   }
 
   private scheduleReconnect(): void {
@@ -123,15 +135,27 @@ export class SocketSession {
     this.reconnectPromise = this.ensureSocket()
       .then(() => undefined)
       .catch(() => {
-        if (!this.disposed && !this.reconnectTimer) {
-          this.reconnectTimer = setTimeout(() => {
-            this.reconnectTimer = null;
-            this.scheduleReconnect();
-          }, 1_000);
-        }
+        this.scheduleReconnectAfterDelay();
       })
       .finally(() => {
         this.reconnectPromise = null;
+        this.resumeReconnectIfNeeded();
       });
+  }
+
+  private resumeReconnectIfNeeded(): void {
+    if (!this.disposed && !this.socket && !this.reconnectTimer) {
+      this.scheduleReconnectAfterDelay();
+    }
+  }
+
+  private scheduleReconnectAfterDelay(): void {
+    if (this.disposed || this.socket || this.reconnectTimer) {
+      return;
+    }
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.scheduleReconnect();
+    }, 1_000);
   }
 }

@@ -11,11 +11,11 @@ type Event = eventbus.Event
 // AttachEventStream forwards frontend events to the client as notifications on
 // the given method until the stream is detached (or the connection closes).
 func (c *Connection) AttachEventStream(events <-chan Event, method string, cancel func()) {
-	c.eventsMu.Lock()
-	previousCancel := c.eventsCancel
-	c.eventsCancel = cancel
-	c.eventsMu.Unlock()
-
+	previousCancel, isAttached := c.registerEventStream(cancel)
+	if !isAttached {
+		cancel()
+		return
+	}
 	if previousCancel != nil {
 		previousCancel()
 	}
@@ -31,6 +31,19 @@ func (c *Connection) AttachEventStream(events <-chan Event, method string, cance
 			}
 		}
 	}()
+}
+
+func (c *Connection) registerEventStream(cancel func()) (func(), bool) {
+	c.closeHooksMu.Lock()
+	defer c.closeHooksMu.Unlock()
+	if c.isClosed {
+		return nil, false
+	}
+	c.eventsMu.Lock()
+	defer c.eventsMu.Unlock()
+	previousCancel := c.eventsCancel
+	c.eventsCancel = cancel
+	return previousCancel, true
 }
 
 // DetachEventStream cancels the active event stream, if any.

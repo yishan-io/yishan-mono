@@ -36,6 +36,7 @@ import { WorkspaceErrorStateView } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { DARK_SURFACE_COLORS } from "@renderer/ui/theme";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../../shared/contracts/externalApps";
 import {
   closeAllTabsWithCleanup,
@@ -57,13 +58,12 @@ export function MainPaneView() {
   const isErrorWorkspace = selectedWorkspace?.state === "error";
   const tabs = tabStore((state) => state.tabs);
   const selectedTabId = tabStore((state) => state.selectedTabId);
-  const agentChatSessionsByTabId = agentChatStore((state) => state.sessionsByTabId);
-  const agentChatTabIsRunningByTabId = useMemo(
-    () =>
+  const agentChatTabIsRunningByTabId = agentChatStore(
+    useShallow((state) =>
       Object.fromEntries(
-        Object.entries(agentChatSessionsByTabId).map(([tabId, session]) => [tabId, session.state === "running"]),
+        Object.entries(state.sessionsByTabId).map(([tabId, session]) => [tabId, session.state === "running"]),
       ),
-    [agentChatSessionsByTabId],
+    ),
   );
   const mergedCmd = useMemo(
     () => ({

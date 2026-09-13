@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -17,6 +18,8 @@ const (
 	websocketWriteTimeout       = 5 * time.Second
 )
 
+var errConnectionClosed = errors.New("connection is closed")
+
 // Connection is the state of one WebSocket connection: write serialization,
 // close hooks, the frontend event stream, and terminal session subscriptions.
 // The zero value is usable (no underlying socket) for tests.
@@ -26,6 +29,7 @@ type Connection struct {
 	closeOnce                       sync.Once
 	closeHooksMu                    sync.Mutex
 	closeHooks                      []func()
+	isClosed                        bool
 	subsMu                          sync.Mutex
 	subscriptions                   map[string]subscriptionHandle
 	eventsMu                        sync.Mutex
@@ -47,7 +51,12 @@ func NewConnection(conn *websocket.Conn) *Connection {
 
 // IsOpen reports whether the connection has an underlying WebSocket socket.
 func (c *Connection) IsOpen() bool {
-	return c != nil && c.conn != nil
+	if c == nil {
+		return false
+	}
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	return c.conn != nil
 }
 
 // TerminalInputSessionID resolves the session id prefix of a binary frame,
@@ -64,25 +73,35 @@ func (c *Connection) TerminalInputSessionID(raw []byte) string {
 
 // WriteJSON writes a JSON message to the connection with a write deadline.
 func (c *Connection) WriteJSON(v any) error {
-	c.writeMu.Lock()
-	defer c.writeMu.Unlock()
-	if err := c.conn.SetWriteDeadline(time.Now().Add(websocketWriteTimeout)); err != nil {
-		return err
-	}
-	defer c.conn.SetWriteDeadline(time.Time{})
-	return c.conn.WriteJSON(v)
+	return c.write(func() error { return c.conn.WriteJSON(v) })
 }
 
 // WriteBinary sends a binary WebSocket frame. Used for terminal I/O fast-path
 // to avoid JSON marshal overhead on every PTY output chunk.
 func (c *Connection) WriteBinary(data []byte) error {
+	return c.write(func() error { return c.conn.WriteMessage(websocket.BinaryMessage, data) })
+}
+
+func (c *Connection) write(write func() error) error {
 	c.writeMu.Lock()
-	defer c.writeMu.Unlock()
+	if c.conn == nil {
+		c.writeMu.Unlock()
+		return errConnectionClosed
+	}
+	err := c.writeWithDeadline(write)
+	c.writeMu.Unlock()
+	if err != nil {
+		c.Close()
+	}
+	return err
+}
+
+func (c *Connection) writeWithDeadline(write func() error) error {
 	if err := c.conn.SetWriteDeadline(time.Now().Add(websocketWriteTimeout)); err != nil {
 		return err
 	}
 	defer c.conn.SetWriteDeadline(time.Time{})
-	return c.conn.WriteMessage(websocket.BinaryMessage, data)
+	return write()
 }
 
 // Notify sends a server-initiated JSON-RPC notification.
@@ -94,54 +113,92 @@ func (c *Connection) Notify(method string, params any) error {
 // then closes the underlying socket. Safe to call multiple times.
 func (c *Connection) Close() {
 	c.closeOnce.Do(func() {
-		c.closeHooksMu.Lock()
-		hooks := append([]func(){}, c.closeHooks...)
-		c.closeHooks = nil
-		c.closeHooksMu.Unlock()
-
-		for _, hook := range hooks {
-			hook()
-		}
-
-		c.subsMu.Lock()
-		handles := make([]subscriptionHandle, 0, len(c.subscriptions))
-		for key, handle := range c.subscriptions {
-			delete(c.subscriptions, key)
-			handles = append(handles, handle)
-		}
-		c.subsMu.Unlock()
-
-		for _, handle := range handles {
-			handle.cancel(handle.sessionID, handle.subscriptionID)
-		}
+		conn := c.detachConnection()
+		c.runCloseHooks()
+		c.cancelSubscriptions()
 		c.DetachEventStream()
-		_ = c.conn.Close()
+		if conn != nil {
+			_ = conn.Close() // best-effort cleanup; error is irrelevant at this point
+		}
 	})
+}
+
+func (c *Connection) detachConnection() *websocket.Conn {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	conn := c.conn
+	c.conn = nil
+	return conn
+}
+
+func (c *Connection) runCloseHooks() {
+	c.closeHooksMu.Lock()
+	c.isClosed = true
+	hooks := c.closeHooks
+	c.closeHooks = nil
+	c.closeHooksMu.Unlock()
+	for _, hook := range hooks {
+		hook()
+	}
+}
+
+func (c *Connection) cancelSubscriptions() {
+	c.subsMu.Lock()
+	handles := make([]subscriptionHandle, 0, len(c.subscriptions))
+	for key, handle := range c.subscriptions {
+		delete(c.subscriptions, key)
+		handles = append(handles, handle)
+	}
+	c.subsMu.Unlock()
+	for _, handle := range handles {
+		handle.cancel(handle.sessionID, handle.subscriptionID)
+	}
 }
 
 // AddCloseHook registers a callback run when the connection closes.
 func (c *Connection) AddCloseHook(hook func()) {
 	c.closeHooksMu.Lock()
-	c.closeHooks = append(c.closeHooks, hook)
+	isClosed := c.isClosed
+	if !isClosed {
+		c.closeHooks = append(c.closeHooks, hook)
+	}
 	c.closeHooksMu.Unlock()
+	if isClosed {
+		hook()
+	}
 }
 
 // AttachSubscription streams terminal events for one session to the client as
 // binary output frames, replacing any prior subscription for the same session.
 func (c *Connection) AttachSubscription(sessionID string, subscriptionID uint64, events <-chan terminal.Event, cancel func(sessionID string, subscriptionID uint64)) {
-	c.subsMu.Lock()
-	if current, ok := c.subscriptions[sessionID]; ok {
-		delete(c.subscriptions, sessionID)
-		current.cancel(current.sessionID, current.subscriptionID)
+	handle := subscriptionHandle{sessionID: sessionID, subscriptionID: subscriptionID, cancel: cancel}
+	previous, hasPrevious, isAttached := c.registerSubscription(handle)
+	if !isAttached {
+		cancel(sessionID, subscriptionID)
+		return
 	}
-	c.subscriptions[sessionID] = subscriptionHandle{sessionID: sessionID, subscriptionID: subscriptionID, cancel: cancel}
-	c.subsMu.Unlock()
+	if hasPrevious {
+		previous.cancel(previous.sessionID, previous.subscriptionID)
+	}
 
 	go func() {
 		if err := c.streamTerminalEvents(sessionID, events); err != nil {
 			c.DetachSubscription(sessionID)
 		}
 	}()
+}
+
+func (c *Connection) registerSubscription(handle subscriptionHandle) (subscriptionHandle, bool, bool) {
+	c.closeHooksMu.Lock()
+	defer c.closeHooksMu.Unlock()
+	if c.isClosed {
+		return subscriptionHandle{}, false, false
+	}
+	c.subsMu.Lock()
+	defer c.subsMu.Unlock()
+	previous, hasPrevious := c.subscriptions[handle.sessionID]
+	c.subscriptions[handle.sessionID] = handle
+	return previous, hasPrevious, true
 }
 
 // DetachSubscription stops streaming terminal events for a session.
