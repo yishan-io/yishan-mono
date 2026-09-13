@@ -45,24 +45,31 @@ export function mergeActiveTurnHistory(
     rendererFinalToolCallAssistantIds?.[message.id] === true;
   const retainedLifecycleMessages = liveLifecycleMessages.filter((message) => !historyMessageIds.has(message.id));
   const retainedLifecycleMessageIds = new Set(retainedLifecycleMessages.map((message) => message.id));
+  const historyToolCallIds = getToolCallIds(historyWithoutStaleLifecycleMessages);
   const canRetainToolCallOwner = (message: AgentMessage): boolean =>
     isRendererFinalAssistant(message) || isRendererFinalToolCallAssistant(message);
-  const retainedToolResults = getRetainedToolResults(historyMessageIds, committedMessages, canRetainToolCallOwner);
-  const retainedToolResultIds = new Set(retainedToolResults.map((message) => message.id));
-  const retainedToolCallOwners = getRetainedToolCallOwners(
-    historyMessages,
-    historyMessageIds,
+  const retainedToolResults = getRetainedToolResults(
+    historyWithoutStaleLifecycleMessages,
     committedMessages,
     canRetainToolCallOwner,
   );
+  const retainedToolResultIds = new Set(retainedToolResults.map((message) => message.id));
+  const retainedToolCallOwners = getRetainedToolCallOwners(historyMessages, historyMessageIds, committedMessages);
   const retainedToolCallOwnerIds = new Set(retainedToolCallOwners.map((message) => message.id));
+  const finalToolCallOwnersByToolCallId = getFinalToolCallOwnersByToolCallId(committedMessages, canRetainToolCallOwner);
+  const replacementToolCallOwnerIds = new Set<string>();
   const mergedHistoryMessages = mergeHistoryWithRetainedToolCallOwners(
     historyWithoutStaleLifecycleMessages,
     retainedToolCallOwners,
-    (message) =>
-      isRendererFinalAssistant(message) || isRendererFinalToolCallAssistant(message)
-        ? (committedMessagesById.get(message.id) ?? message)
-        : message,
+    (message) => {
+      const sameIdReplacement =
+        isRendererFinalAssistant(message) || isRendererFinalToolCallAssistant(message)
+          ? committedMessagesById.get(message.id)
+          : undefined;
+      const replacement = sameIdReplacement ?? getToolCallOwnerReplacement(message, finalToolCallOwnersByToolCallId);
+      if (replacement) replacementToolCallOwnerIds.add(replacement.id);
+      return replacement ?? message;
+    },
   );
   return getUniqueMessagesById(
     // Keep live metadata before history so transcript trimming drops it before
@@ -71,11 +78,13 @@ export function mergeActiveTurnHistory(
     mergedHistoryMessages,
     committedMessages.filter(
       (message) =>
-        isRendererFinalAssistant(message) &&
+        (isRendererFinalAssistant(message) || isRendererFinalToolCallAssistant(message)) &&
         !historyMessageIds.has(message.id) &&
         !retainedLifecycleMessageIds.has(message.id) &&
         !retainedToolCallOwnerIds.has(message.id) &&
-        !retainedToolResultIds.has(message.id),
+        !retainedToolResultIds.has(message.id) &&
+        !replacementToolCallOwnerIds.has(message.id) &&
+        !hasFullyRepresentedToolCalls(message, historyToolCallIds),
     ),
     retainedToolResults,
   );
@@ -111,17 +120,14 @@ export function getRetainedToolResultIds(
     rendererFinalAssistantIds === undefined ||
     rendererFinalAssistantIds[message.id] === true ||
     rendererFinalToolCallAssistantIds?.[message.id] === true;
-  const retainedToolResultIds = getRetainedToolResults(
-    historyMessageIds,
-    committedMessages,
-    canRetainToolCallOwner,
-  ).map((message) => message.id);
+  const retainedToolResultIds = getRetainedToolResults(historyMessages, committedMessages, canRetainToolCallOwner).map(
+    (message) => message.id,
+  );
   const injectedOwnerToolCallIds = new Set(
-    getRetainedToolCallOwners(historyMessages, historyMessageIds, committedMessages, canRetainToolCallOwner).flatMap(
-      (message) =>
-        Array.isArray(message.content)
-          ? message.content.flatMap((block) => (block.type === "toolCall" ? [block.id] : []))
-          : [],
+    getRetainedToolCallOwners(historyMessages, historyMessageIds, committedMessages).flatMap((message) =>
+      Array.isArray(message.content)
+        ? message.content.flatMap((block) => (block.type === "toolCall" ? [block.id] : []))
+        : [],
     ),
   );
   for (const message of historyMessages) {
@@ -133,18 +139,36 @@ export function getRetainedToolResultIds(
 }
 
 function getRetainedToolResults(
-  historyMessageIds: Set<string>,
+  historyMessages: AgentMessage[],
   committedMessages: AgentMessage[],
   isRendererFinalAssistant: (message: AgentMessage) => boolean,
 ): AgentMessage[] {
+  const historyMessageIds = new Set(historyMessages.map((message) => message.id));
   const rendererFinalToolCallIds = getRendererFinalToolCallIds(committedMessages, isRendererFinalAssistant);
-  return committedMessages.filter(
-    (message) =>
-      message.role === "toolResult" &&
-      message.toolCallId !== undefined &&
-      rendererFinalToolCallIds.has(message.toolCallId) &&
-      !historyMessageIds.has(message.id),
+  const historyResultToolCallIds = new Set(
+    historyMessages.flatMap((message) =>
+      message.role === "toolResult" && message.toolCallId ? [message.toolCallId] : [],
+    ),
   );
+  const retainedResults: AgentMessage[] = [];
+  const retainedToolCallIds = new Set<string>();
+  for (let index = committedMessages.length - 1; index >= 0; index--) {
+    const message = committedMessages[index];
+    if (
+      !message ||
+      message.role !== "toolResult" ||
+      message.toolCallId === undefined ||
+      retainedToolCallIds.has(message.toolCallId) ||
+      !rendererFinalToolCallIds.has(message.toolCallId) ||
+      historyMessageIds.has(message.id) ||
+      historyResultToolCallIds.has(message.toolCallId)
+    ) {
+      continue;
+    }
+    retainedResults.unshift(message);
+    retainedToolCallIds.add(message.toolCallId);
+  }
+  return retainedResults;
 }
 
 function mergeHistoryWithRetainedToolCallOwners(
@@ -167,7 +191,11 @@ function mergeHistoryWithRetainedToolCallOwners(
         }
       }
     }
-    mergedHistoryMessages.push(replaceFinalAssistant(historyMessage));
+    const replacement = replaceFinalAssistant(historyMessage);
+    const isDifferentToolCallOwner = replacement.id !== historyMessage.id && hasToolCalls(replacement);
+    if (isDifferentToolCallOwner && emittedOwnerIds.has(replacement.id)) continue;
+    mergedHistoryMessages.push(replacement);
+    if (isDifferentToolCallOwner) emittedOwnerIds.add(replacement.id);
   }
   return mergedHistoryMessages;
 }
@@ -176,23 +204,91 @@ function getRetainedToolCallOwners(
   historyMessages: AgentMessage[],
   historyMessageIds: Set<string>,
   committedMessages: AgentMessage[],
-  isRendererFinalAssistant: (message: AgentMessage) => boolean,
 ): AgentMessage[] {
-  const historyToolCallIds = new Set(
+  const historyResultToolCallIds = new Set(
     historyMessages.flatMap((message) =>
       message.role === "toolResult" && message.toolCallId ? [message.toolCallId] : [],
     ),
   );
-  if (historyToolCallIds.size === 0) return [];
+  if (historyResultToolCallIds.size === 0) return [];
 
-  return committedMessages.filter(
-    (message) =>
-      message.role === "assistant" &&
-      isRendererFinalAssistant(message) &&
-      !historyMessageIds.has(message.id) &&
-      Array.isArray(message.content) &&
-      message.content.some((block) => block.type === "toolCall" && historyToolCallIds.has(block.id)),
+  const historyOwnerToolCallIds = getToolCallIds(historyMessages);
+  const unownedHistoryToolCallIds = new Set(
+    [...historyResultToolCallIds].filter((toolCallId) => !historyOwnerToolCallIds.has(toolCallId)),
   );
+  if (unownedHistoryToolCallIds.size === 0) return [];
+
+  const retainedOwners: AgentMessage[] = [];
+  const retainedToolCallIds = new Set<string>();
+  for (let index = committedMessages.length - 1; index >= 0; index--) {
+    const message = committedMessages[index];
+    if (
+      !message ||
+      message.role !== "assistant" ||
+      historyMessageIds.has(message.id) ||
+      !Array.isArray(message.content)
+    ) {
+      continue;
+    }
+    const newlyOwnedToolCallIds = message.content.flatMap((block) =>
+      block.type === "toolCall" && unownedHistoryToolCallIds.has(block.id) && !retainedToolCallIds.has(block.id)
+        ? [block.id]
+        : [],
+    );
+    if (newlyOwnedToolCallIds.length === 0) continue;
+    const newlyOwnedToolCallIdSet = new Set(newlyOwnedToolCallIds);
+    const retainedContent = message.content.filter(
+      (block) => block.type !== "toolCall" || newlyOwnedToolCallIdSet.has(block.id),
+    );
+    retainedOwners.unshift(
+      retainedContent.length === message.content.length ? message : { ...message, content: retainedContent },
+    );
+    for (const toolCallId of newlyOwnedToolCallIds) retainedToolCallIds.add(toolCallId);
+  }
+  return retainedOwners;
+}
+
+function hasFullyRepresentedToolCalls(message: AgentMessage, historyToolCallIds: ReadonlySet<string>): boolean {
+  if (message.role !== "assistant" || !Array.isArray(message.content)) return false;
+  const toolCallIds = message.content.flatMap((block) => (block.type === "toolCall" ? [block.id] : []));
+  return toolCallIds.length > 0 && toolCallIds.every((toolCallId) => historyToolCallIds.has(toolCallId));
+}
+
+function hasToolCalls(message: AgentMessage): boolean {
+  return (
+    message.role === "assistant" &&
+    Array.isArray(message.content) &&
+    message.content.some((contentBlock) => contentBlock.type === "toolCall")
+  );
+}
+
+function getFinalToolCallOwnersByToolCallId(
+  messages: AgentMessage[],
+  isRendererFinalAssistant: (message: AgentMessage) => boolean,
+): Map<string, AgentMessage> {
+  const ownersByToolCallId = new Map<string, AgentMessage>();
+  for (const message of messages) {
+    if (message.role !== "assistant" || !isRendererFinalAssistant(message) || !Array.isArray(message.content)) continue;
+    for (const contentBlock of message.content) {
+      if (contentBlock.type === "toolCall") ownersByToolCallId.set(contentBlock.id, message);
+    }
+  }
+  return ownersByToolCallId;
+}
+
+function getToolCallOwnerReplacement(
+  message: AgentMessage,
+  ownersByToolCallId: ReadonlyMap<string, AgentMessage>,
+): AgentMessage | undefined {
+  if (message.role !== "assistant" || !Array.isArray(message.content)) return undefined;
+  const toolCallIds = message.content.flatMap((contentBlock) =>
+    contentBlock.type === "toolCall" ? [contentBlock.id] : [],
+  );
+  const replacement = toolCallIds[0] ? ownersByToolCallId.get(toolCallIds[0]) : undefined;
+  if (!replacement) return undefined;
+  return toolCallIds.every((toolCallId) => ownersByToolCallId.get(toolCallId)?.id === replacement.id)
+    ? replacement
+    : undefined;
 }
 
 function getRendererFinalToolCallIds(
