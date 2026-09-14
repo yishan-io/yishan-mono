@@ -1,6 +1,6 @@
 ---
 name: starting-task
-description: Use when new work may need a tracked Local Task before research, planning, or implementation.
+description: Use when outcome-oriented engineering work may need a tracked Local Task before planning or implementation.
 ---
 
 # Starting Task
@@ -11,14 +11,25 @@ The SQLite-backed Local Task daemon owns task metadata and status. Pi uses the m
 
 ## Decision Rule
 
-Create a task when one or more conditions apply:
+Create Local Tasks for independently meaningful, outcome-oriented engineering work:
 
-- The work has multiple steps or files.
-- The work can continue in another session.
-- The work needs notes, a plan, or a completion record.
-- The user asks to track the work.
+- Bug fixes
+- Features
+- Refactors
+- Improvements to reliability, performance, UX, or maintainability
+- Migrations, security work, or investigations with a durable conclusion
 
-Do not create a task for a small one-time edit or a question with no work.
+Before automatically creating a task, confirm all of these:
+
+- The request is not merely an operational action or a question.
+- It has a concrete, independently meaningful outcome that can be stated and verified.
+- It needs durable tracking because it may span sessions or needs a plan, tests, decisions, or acceptance criteria.
+
+Do not create a task merely because work has multiple steps or touches multiple files. Do not create one for operational requests, even when they have several steps: `git rebase`, commit, push, branch switching, checking status, running a known command, or a small one-time edit.
+
+Routine initial reading or investigation is not a task by itself. If it reveals a distinct outcome-oriented work item, create a task then. When uncertain, do not create a task. Reuse a related active task instead of creating a duplicate.
+
+Always create a task when the user explicitly asks to track the work.
 
 ## Start a Task
 

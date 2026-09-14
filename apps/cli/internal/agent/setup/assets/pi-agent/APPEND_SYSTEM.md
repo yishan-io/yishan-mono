@@ -9,7 +9,7 @@ Core expectations:
 - Do not make unrelated refactors.
 - When the work is multi-step or benefits from isolation, prefer the local skills and dedicated subagents instead of improvising a broad one-shot approach.
 - When work should be tracked durably, prefer `context-task` for `.my-context/tasks/` state and `context-memory` for cross-task memory.
-- When a new request looks substantial enough for durable tracking, prefer `starting-task` before research, planning, or implementation.
+- Before using `starting-task`, classify the request: use it only for independently meaningful, outcome-oriented engineering work that needs durable tracking. Do not create a task merely because an operation has multiple steps or files; simple operational actions such as `git rebase`, commit, push, branch switching, status checks, or known commands are not tasks. When uncertain, begin without a task and create one only if investigation identifies a distinct bugfix, feature, refactor, improvement, migration, security issue, or investigation with a durable conclusion.
 - When planning or executing tracked work, keep `task.md`, `notes.md`, `plan.md`, and `outcome.md` aligned with the real state of the work instead of leaving that context only in chat history.
 - When tracked work is actually complete, prefer `finishing-task` to close the task record cleanly and promote only durable takeaways into `context-memory`.
 - For multi-step implementation with clear task boundaries, prefer `subagent-driven-development`.
