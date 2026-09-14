@@ -56,6 +56,7 @@ describe("LocalTaskList", () => {
         unavailableTaskIds={new Set()}
         creatingTaskIds={new Set()}
         onCreateWorkspace={vi.fn()}
+        onStatusChange={vi.fn()}
       />,
     );
 
@@ -80,6 +81,7 @@ describe("LocalTaskList", () => {
         unavailableTaskIds={new Set()}
         creatingTaskIds={new Set()}
         onCreateWorkspace={vi.fn()}
+        onStatusChange={vi.fn()}
       />,
     );
 
@@ -103,5 +105,50 @@ describe("LocalTaskList", () => {
     onSelect.mockClear();
     fireEvent.click(taskButton);
     expect(onSelect).toHaveBeenCalledExactlyOnceWith(task.id);
+  });
+
+  it("disables status changes while another task mutation is pending", () => {
+    render(
+      <LocalTaskList
+        tasks={[task]}
+        onSelect={vi.fn()}
+        projectDisplayById={{}}
+        folderProjectIds={new Set()}
+        tagCatalog={[]}
+        unavailableTaskIds={new Set()}
+        creatingTaskIds={new Set()}
+        isMutationLoading
+        onCreateWorkspace={vi.fn()}
+        onStatusChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "localTask.status.progressing" }).getAttribute("disabled"),
+    ).not.toBeNull();
+  });
+
+  it("opens a status menu and updates the task without selecting its row", () => {
+    const onSelect = vi.fn();
+    const onStatusChange = vi.fn();
+    render(
+      <LocalTaskList
+        tasks={[task]}
+        onSelect={onSelect}
+        projectDisplayById={{}}
+        folderProjectIds={new Set()}
+        tagCatalog={[]}
+        unavailableTaskIds={new Set()}
+        creatingTaskIds={new Set()}
+        onCreateWorkspace={vi.fn()}
+        onStatusChange={onStatusChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.status.progressing" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.done" }));
+
+    expect(onStatusChange).toHaveBeenCalledExactlyOnceWith(task.id, "done");
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

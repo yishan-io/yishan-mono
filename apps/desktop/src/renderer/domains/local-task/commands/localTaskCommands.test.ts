@@ -9,6 +9,7 @@ import {
   linkLocalTaskWorkspace,
   loadLocalTask,
   loadLocalTaskContext,
+  loadLocalTaskDetails,
   loadLocalTaskLinks,
   loadLocalTaskTagSuggestions,
   refreshLocalTaskHub,
@@ -20,6 +21,7 @@ import {
   unlinkLocalTaskWorkspace,
   updateLocalTask,
   updateLocalTaskLinkStatus,
+  updateLocalTaskStatus,
   updateLocalTaskTagColor,
 } from "./localTaskCommands";
 
@@ -511,6 +513,96 @@ describe("localTaskCommands", () => {
       workspaceLoadState: "loaded",
       workspaceError: null,
     });
+  });
+
+  it("reconciles a list status change without reloading task projections", async () => {
+    const updatedTask = { ...task, status: "done" as const };
+    const hubRequestId = localTaskStore.getState().beginHubLoad();
+    localTaskStore.getState().setHubResults(hubRequestId, [task], {}, 1);
+    localTaskStore.setState({ workspaceTasks: [task], workspaceProgressingTaskCount: 1 });
+    vi.mocked(daemon.localTaskClient.update).mockResolvedValue(updatedTask);
+
+    await updateLocalTaskStatus(task.id, "done");
+
+    expect(daemon.localTaskClient.update).toHaveBeenCalledWith(task.id, { status: "done" });
+    expect(daemon.localTaskClient.listProjection).not.toHaveBeenCalled();
+    expect(daemon.localTaskClient.list).not.toHaveBeenCalled();
+    expect(localTaskStore.getState()).toMatchObject({
+      hubTasks: [updatedTask],
+      workspaceTasks: [updatedTask],
+      progressingTaskCount: 0,
+      workspaceProgressingTaskCount: 0,
+      hubLoadState: "loaded",
+    });
+  });
+
+  it("removes a status-filtered task and preserves a status change over a stale detail load", async () => {
+    const updatedTask = { ...task, status: "done" as const };
+    const staleDetails = createDeferred<{ task: LocalTask; project: null; workspaces: [] }>();
+    const hubRequestId = localTaskStore.getState().beginHubLoad();
+    localTaskStore.getState().setHubResults(hubRequestId, [task], {}, 1);
+    localTaskStore.setState({
+      hubFilters: { status: ["progressing"] },
+      linkCandidateTasks: [task],
+      taskById: { [task.id]: task },
+    });
+    vi.mocked(daemon.localTaskClient.getDetails).mockReturnValue(staleDetails.promise);
+    vi.mocked(daemon.localTaskClient.update).mockResolvedValue(updatedTask);
+    const detailLoad = loadLocalTaskDetails(task.id);
+
+    await updateLocalTaskStatus(task.id, "done");
+    staleDetails.resolve({ task, project: null, workspaces: [] });
+    await detailLoad;
+
+    expect(localTaskStore.getState().hubTasks).toEqual([]);
+    expect(localTaskStore.getState().linkCandidateTasks).toEqual([updatedTask]);
+    expect(localTaskStore.getState().taskById[task.id]).toEqual(updatedTask);
+  });
+
+  it("ignores stale list results without leaving loaded projections in a loading state", async () => {
+    const updatedTask = { ...task, status: "done" as const };
+    const initialHubRequestId = localTaskStore.getState().beginHubLoad();
+    localTaskStore.getState().setHubResults(initialHubRequestId, [task], {}, 1);
+    const initialWorkspaceRequestId = localTaskStore.getState().beginWorkspaceLoad("workspace-1");
+    localTaskStore.getState().setWorkspaceData(initialWorkspaceRequestId, "workspace-1", [task], [link]);
+    const initialCandidateRequestId = localTaskStore.getState().beginLinkCandidateLoad("workspace-1");
+    localTaskStore.getState().setLinkCandidates(initialCandidateRequestId, "workspace-1", [task]);
+    const staleHubRequestId = localTaskStore.getState().beginHubLoad();
+    const staleWorkspaceRequestId = localTaskStore.getState().beginWorkspaceLoad("workspace-1");
+    const staleCandidateRequestId = localTaskStore.getState().beginLinkCandidateLoad("workspace-1");
+    vi.mocked(daemon.localTaskClient.update).mockResolvedValue(updatedTask);
+
+    await updateLocalTaskStatus(task.id, "done");
+    localTaskStore.getState().setHubResults(staleHubRequestId, [task], {}, 1);
+    localTaskStore.getState().setWorkspaceData(staleWorkspaceRequestId, "workspace-1", [task], [link]);
+    localTaskStore.getState().setLinkCandidates(staleCandidateRequestId, "workspace-1", [task]);
+
+    expect(localTaskStore.getState()).toMatchObject({
+      hubTasks: [updatedTask],
+      workspaceTasks: [updatedTask],
+      linkCandidateTasks: [updatedTask],
+      hubLoadState: "loaded",
+      workspaceLoadState: "loaded",
+      linkCandidateLoadState: "loaded",
+    });
+  });
+
+  it("restarts empty workspace and link-candidate loads interrupted by a status change", async () => {
+    const updatedTask = { ...task, status: "done" as const };
+    localTaskStore.getState().beginWorkspaceLoad("workspace-1");
+    localTaskStore.getState().beginLinkCandidateLoad("workspace-1");
+    localTaskStore.setState({ taskById: { [task.id]: task } });
+    vi.mocked(daemon.localTaskClient.update).mockResolvedValue(updatedTask);
+    vi.mocked(daemon.localTaskClient.list).mockResolvedValue([]);
+    vi.mocked(daemon.localTaskClient.listWorkspaceLinks).mockResolvedValue([]);
+
+    await updateLocalTaskStatus(task.id, "done");
+
+    expect(localTaskStore.getState()).toMatchObject({
+      workspaceLoadState: "loaded",
+      linkCandidateLoadState: "loaded",
+    });
+    expect(daemon.localTaskClient.listWorkspaceLinks).toHaveBeenCalledTimes(2);
   });
 
   it("does not put created or updated tasks into incompatible projections when refresh fails", async () => {

@@ -21,8 +21,9 @@ import {
   loadLocalTaskTagSuggestions,
   refreshLocalTaskHub,
   setLocalTaskHubSearchQuery,
+  updateLocalTaskStatus,
 } from "../../commands/localTaskCommands";
-import type { LocalTask, LocalTaskProjectDisplay } from "../../localTaskTypes";
+import type { LocalTask, LocalTaskProjectDisplay, LocalTaskStatus } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
 import { LocalTaskHubFilterChips } from "./LocalTaskHubFilterChips";
@@ -157,6 +158,12 @@ export function TaskHubView() {
   const handleOpenCreate = useCallback(() => setIsCreateOpen(true), []);
   const handleCloseCreate = useCallback(() => setIsCreateOpen(false), []);
   const handleSelectTask = useCallback((taskId: string) => setSelectedTaskId(taskId), []);
+  const handleListStatusChange = useCallback((taskId: string, status: LocalTaskStatus) => {
+    // fire-and-forget: Local Task store owns mutation state and error feedback.
+    void updateLocalTaskStatus(taskId, status).catch((statusError) =>
+      console.error("Failed to update Local Task status", statusError),
+    );
+  }, []);
   const { creatingTaskIds, handleCreateWorkspace, unavailableTaskIds } = useTaskHubWorkspaceCreation(tasks, projects);
   const handlePageChange = useCallback((_event: React.ChangeEvent<unknown>, page: number) => setCurrentPage(page), []);
   const getPaginationItemAriaLabel = useCallback<NonNullable<PaginationProps["getItemAriaLabel"]>>(
@@ -300,7 +307,9 @@ export function TaskHubView() {
                 tagCatalog={detailProjection.tagCatalog}
                 unavailableTaskIds={unavailableTaskIds}
                 creatingTaskIds={creatingTaskIds}
+                isMutationLoading={detailProjection.isMutationLoading}
                 onCreateWorkspace={handleCreateWorkspace}
+                onStatusChange={handleListStatusChange}
               />
               {pageCount > 1 ? (
                 <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>

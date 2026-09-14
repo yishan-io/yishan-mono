@@ -97,5 +97,10 @@ export type LocalTaskStoreState = {
   beginMutation: () => void;
   finishMutation: (error?: string) => void;
   upsertTaskEntity: (task: LocalTask) => void;
+  invalidateTaskListProjections: () => {
+    workspaceId: string | null;
+    linkCandidateWorkspaceId: string | null;
+  };
+  reconcileTaskStatus: (task: LocalTask) => void;
   invalidateTaskEntities: (taskIds: string[]) => void;
 };

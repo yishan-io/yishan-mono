@@ -29,6 +29,7 @@ const commands = vi.hoisted(() => ({
   setLocalTaskHubFilters: vi.fn(async () => undefined),
   setLocalTaskHubSearchQuery: vi.fn(async () => undefined),
   updateLocalTask: vi.fn(async () => undefined),
+  updateLocalTaskStatus: vi.fn(async () => undefined),
   updateLocalTaskTagColor: vi.fn(async () => undefined),
 }));
 vi.mock("../../commands/localTaskCommands", () => commands);
@@ -401,6 +402,16 @@ describe("TaskHubView", () => {
     expect(getComputedStyle(taskRow).height).not.toBe("100%");
     expect(getComputedStyle(taskRow).minHeight).not.toBe("0px");
   });
+  it("updates a task from its list status icon without opening the detail view", () => {
+    render(<TaskHubView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "localTask.status.progressing" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "localTask.status.done" }));
+
+    expect(commands.updateLocalTaskStatus).toHaveBeenCalledExactlyOnceWith("task-1", "done");
+    expect(screen.getByRole("textbox", { name: "localTask.search.label" })).toBeTruthy();
+  });
+
   it("opens a task detail view and returns to the task list", () => {
     render(<TaskHubView />);
     expect(screen.getByText("Daemon Project")).toBeTruthy();

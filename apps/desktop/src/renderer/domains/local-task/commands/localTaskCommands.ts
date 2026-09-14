@@ -369,6 +369,21 @@ export async function deleteLocalTaskTag(id: string): Promise<void> {
   });
 }
 
+/** Updates a Local Task status and reconciles loaded lists without a full reload. */
+export async function updateLocalTaskStatus(taskId: string, status: LocalTaskStatus): Promise<LocalTask> {
+  return runMutation(async () => {
+    const task = await localTaskClient.update(taskId, { status });
+    invalidateTaskDetailProjections([taskId]);
+    const { linkCandidateWorkspaceId, workspaceId } = localTaskStore.getState().invalidateTaskListProjections();
+    localTaskStore.getState().reconcileTaskStatus(task);
+    await Promise.all([
+      workspaceId ? refreshSelectedWorkspaceTasks(workspaceId) : Promise.resolve(),
+      linkCandidateWorkspaceId ? loadLocalTaskLinkCandidates(linkCandidateWorkspaceId) : Promise.resolve(),
+    ]);
+    return task;
+  });
+}
+
 /** Updates a Local Task and refreshes authoritative list projections. */
 export async function updateLocalTask(taskId: string, input: UpdateLocalTaskInput): Promise<LocalTask> {
   return runMutation(async () => {

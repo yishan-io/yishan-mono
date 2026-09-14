@@ -7,7 +7,7 @@ export type { LocalTaskStoreState } from "./localTaskStoreState";
 
 /** Stores Local Task entities, projections, context, links, and operation state. */
 export const localTaskStore = create<LocalTaskStoreState>()(
-  immer((set) => {
+  immer((set, get) => {
     let progressingTaskCountRequestGeneration = 0;
     let hubRequestGeneration = 0;
     let workspaceRequestGeneration = 0;
@@ -415,6 +415,60 @@ export const localTaskStore = create<LocalTaskStoreState>()(
       },
       upsertTaskEntity: (task) => {
         set((state) => writeTaskEntity(state, task));
+      },
+      invalidateTaskListProjections: () => {
+        const currentState = get();
+        const workspaceId =
+          currentState.workspaceLoadState === "loading" && currentState.workspaceTasks.length === 0
+            ? currentState.selectedWorkspaceId
+            : null;
+        const linkCandidateWorkspaceId =
+          currentState.linkCandidateLoadState === "loading" && currentState.linkCandidateTasks.length === 0
+            ? currentState.linkCandidateWorkspaceId
+            : null;
+        progressingTaskCountRequestGeneration += 1;
+        hubRequestGeneration += 1;
+        workspaceRequestGeneration += 1;
+        linkCandidateRequestGeneration += 1;
+        set((state) => {
+          if (state.hubLoadState === "loading" && state.hubTasks.length > 0) state.hubLoadState = "loaded";
+          if (state.workspaceLoadState === "loading" && state.workspaceTasks.length > 0)
+            state.workspaceLoadState = "loaded";
+          if (state.linkCandidateLoadState === "loading" && state.linkCandidateTasks.length > 0)
+            state.linkCandidateLoadState = "loaded";
+        });
+        return { workspaceId, linkCandidateWorkspaceId };
+      },
+      reconcileTaskStatus: (task) => {
+        set((state) => {
+          const previousTask = state.taskById[task.id];
+          const statusDelta =
+            previousTask?.status === "progressing" && task.status !== "progressing"
+              ? -1
+              : previousTask?.status !== "progressing" && task.status === "progressing"
+                ? 1
+                : 0;
+          writeTaskEntity(state, task);
+          state.progressingTaskCount = Math.max(0, state.progressingTaskCount + statusDelta);
+
+          const matchesHubStatusFilter =
+            !state.hubFilters.status?.length || state.hubFilters.status.includes(task.status);
+          state.hubTasks = state.hubTasks.flatMap((hubTask) => {
+            if (hubTask.id !== task.id) return [hubTask];
+            return matchesHubStatusFilter ? [task] : [];
+          });
+
+          const hasWorkspaceTask = state.workspaceTasks.some((workspaceTask) => workspaceTask.id === task.id);
+          state.workspaceTasks = state.workspaceTasks.map((workspaceTask) =>
+            workspaceTask.id === task.id ? task : workspaceTask,
+          );
+          if (hasWorkspaceTask) {
+            state.workspaceProgressingTaskCount = Math.max(0, state.workspaceProgressingTaskCount + statusDelta);
+          }
+          state.linkCandidateTasks = state.linkCandidateTasks.map((candidateTask) =>
+            candidateTask.id === task.id ? task : candidateTask,
+          );
+        });
       },
       invalidateTaskEntities: (taskIds) => {
         for (const taskId of taskIds) {

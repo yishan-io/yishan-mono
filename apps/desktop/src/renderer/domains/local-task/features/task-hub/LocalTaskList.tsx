@@ -1,9 +1,9 @@
-import { Box, Button, Chip, Paper, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Chip, IconButton, Menu, MenuItem, Paper, Tooltip, Typography } from "@mui/material";
 import { renderProjectIcon } from "@renderer/domains/project";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { LocalTask, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
+import type { LocalTask, LocalTaskStatus, LocalTaskTagCatalogEntry } from "../../localTaskTypes";
 import { LocalTaskKeyDisplay } from "../../ui/LocalTaskKeyDisplay";
 import { LocalTaskPriorityIcon } from "../../ui/LocalTaskPriorityIcon";
 import { LocalTaskStatusIcon } from "../../ui/LocalTaskStatusIcon";
@@ -12,6 +12,7 @@ import { LocalTaskTagsDisplay } from "../../ui/LocalTaskTagsDisplay";
 const TASK_ROW_ESTIMATE = 44;
 const TASK_LIST_DATA_COLUMNS = "1.75rem minmax(3.25rem, 4.5rem) 1.75rem minmax(0, 1fr)";
 const TASK_LIST_ROW_COLUMNS = `${TASK_LIST_DATA_COLUMNS} auto`;
+const STATUS_OPTIONS = ["new", "progressing", "done", "cancelled"] as const;
 type ProjectDisplay = { name: string; icon: string; color: string };
 
 type LocalTaskListProps = {
@@ -22,7 +23,9 @@ type LocalTaskListProps = {
   tagCatalog: LocalTaskTagCatalogEntry[];
   unavailableTaskIds: ReadonlySet<string>;
   creatingTaskIds: ReadonlySet<string>;
+  isMutationLoading?: boolean;
   onCreateWorkspace: (task: LocalTask) => void;
+  onStatusChange: (taskId: string, status: LocalTaskStatus) => void;
 };
 
 /** Renders a virtualized Local Task result list. */
@@ -34,10 +37,30 @@ export function LocalTaskList({
   tagCatalog,
   unavailableTaskIds,
   creatingTaskIds,
+  isMutationLoading = false,
   onCreateWorkspace,
+  onStatusChange,
 }: LocalTaskListProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLButtonElement | null>(null);
+  const [statusMenuTask, setStatusMenuTask] = useState<LocalTask | null>(null);
+  const handleCloseStatusMenu = useCallback(() => {
+    setStatusMenuAnchor(null);
+    setStatusMenuTask(null);
+  }, []);
+  const handleOpenStatusMenu = useCallback((event: React.MouseEvent<HTMLButtonElement>, task: LocalTask) => {
+    event.stopPropagation();
+    setStatusMenuAnchor(event.currentTarget);
+    setStatusMenuTask(task);
+  }, []);
+  const handleStatusChange = useCallback(
+    (status: LocalTaskStatus) => {
+      if (statusMenuTask) onStatusChange(statusMenuTask.id, status);
+      handleCloseStatusMenu();
+    },
+    [handleCloseStatusMenu, onStatusChange, statusMenuTask],
+  );
   const virtualizer = useVirtualizer({
     count: tasks.length,
     getScrollElement: () => scrollRef.current,
@@ -102,7 +125,18 @@ export function LocalTaskList({
                   <LocalTaskKeyDisplay task={task} />
                 </Box>
                 <Box component="td" sx={{ p: 0 }}>
-                  <LocalTaskStatusIcon status={task.status} label={t(`localTask.status.${task.status}`)} />
+                  <Tooltip describeChild title={t(`localTask.status.${task.status}`)}>
+                    <Box component="span">
+                      <IconButton
+                        size="small"
+                        aria-label={t(`localTask.status.${task.status}`)}
+                        disabled={isMutationLoading}
+                        onClick={(event) => handleOpenStatusMenu(event, task)}
+                      >
+                        <LocalTaskStatusIcon status={task.status} />
+                      </IconButton>
+                    </Box>
+                  </Tooltip>
                 </Box>
                 <Box component="td" sx={{ minWidth: 0, p: 0 }}>
                   <Box
@@ -189,6 +223,16 @@ export function LocalTaskList({
           })}
         </Box>
       </Box>
+      <Menu anchorEl={statusMenuAnchor} open={Boolean(statusMenuAnchor)} onClose={handleCloseStatusMenu}>
+        {STATUS_OPTIONS.map((status) => (
+          <MenuItem key={status} disabled={isMutationLoading} onClick={() => handleStatusChange(status)}>
+            <LocalTaskStatusIcon status={status} />
+            <Box component="span" sx={{ ml: 0.75 }}>
+              {t(`localTask.status.${status}`)}
+            </Box>
+          </MenuItem>
+        ))}
+      </Menu>
     </Box>
   );
 }
