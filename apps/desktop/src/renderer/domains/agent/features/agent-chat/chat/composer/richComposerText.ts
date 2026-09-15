@@ -1,3 +1,4 @@
+import { getComposerCaretOffset, setComposerCaretOffset } from "./composerDom";
 import type { ComposerTokenRange, RichComposerSlashCommand } from "./richComposerTypes";
 
 const TOKEN_REGEX = /(https?:\/\/[^\s]+|\/[a-zA-Z][\w-]*|@[\w./-]+)/g;
@@ -13,6 +14,22 @@ function escapeHtmlAttribute(value: string): string {
 
 export function normalizeComposerText(value: string): string {
   return value.replaceAll("\u00A0", " ").replaceAll("\r\n", "\n");
+}
+
+/**
+ * Gets the caret offset using the legacy richComposerText API.
+ * @deprecated Import getComposerCaretOffset from composerDom instead.
+ */
+export function getCaretOffset(root: HTMLElement): number {
+  return getComposerCaretOffset(root);
+}
+
+/**
+ * Sets the caret offset using the legacy richComposerText API.
+ * @deprecated Import setComposerCaretOffset from composerDom instead.
+ */
+export function setCaretOffset(root: HTMLElement, offset: number): void {
+  setComposerCaretOffset(root, offset);
 }
 
 export function renderComposerHtml(value: string, slashCommands: RichComposerSlashCommand[] = []): string {
@@ -43,54 +60,6 @@ export function renderComposerHtml(value: string, slashCommands: RichComposerSla
     .join("");
 
   return tokenized.replaceAll("\n", "<br>");
-}
-
-export function getCaretOffset(root: HTMLElement): number {
-  const fallbackOffset = normalizeComposerText(root.innerText).length;
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) {
-    return fallbackOffset;
-  }
-  const range = selection.getRangeAt(0);
-  if (!root.contains(range.startContainer)) {
-    return fallbackOffset;
-  }
-  const preCaretRange = range.cloneRange();
-  preCaretRange.selectNodeContents(root);
-  preCaretRange.setEnd(range.startContainer, range.startOffset);
-  return preCaretRange.toString().length;
-}
-
-export function setCaretOffset(root: HTMLElement, offset: number): void {
-  const selection = window.getSelection();
-  if (!selection) {
-    return;
-  }
-
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let traversed = 0;
-  let currentNode = walker.nextNode();
-
-  while (currentNode) {
-    const text = currentNode.textContent ?? "";
-    const end = traversed + text.length;
-    if (offset <= end) {
-      const range = document.createRange();
-      range.setStart(currentNode, Math.max(0, offset - traversed));
-      range.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return;
-    }
-    traversed = end;
-    currentNode = walker.nextNode();
-  }
-
-  const range = document.createRange();
-  range.selectNodeContents(root);
-  range.collapse(false);
-  selection.removeAllRanges();
-  selection.addRange(range);
 }
 
 export function findSlashCommandRange(value: string, caretOffset: number): ComposerTokenRange | null {

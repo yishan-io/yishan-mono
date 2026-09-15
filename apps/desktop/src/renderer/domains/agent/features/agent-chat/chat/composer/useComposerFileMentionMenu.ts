@@ -1,6 +1,7 @@
 import type { KeyboardEvent, RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
-import { findMentionRange, normalizeComposerText, renderComposerHtml, setCaretOffset } from "./richComposerText";
+import { focusComposer, getComposerText, setComposerCaretOffset, setComposerContent } from "./composerDom";
+import { findMentionRange } from "./richComposerText";
 import type { ComposerTokenRange, FileMentionResult, RichComposerSlashCommand } from "./richComposerTypes";
 import { useComposerFileMentionKeyDown } from "./useComposerFileMentionKeyDown";
 import { useFileMentionSearchResults } from "./useFileMentionSearchResults";
@@ -66,11 +67,11 @@ export function useComposerFileMentionMenu({
         return;
       }
 
-      const currentValue = normalizeComposerText(editable.innerText);
+      const currentValue = getComposerText(editable);
       const nextValue = currentValue.slice(0, activeRange.start) + currentValue.slice(activeRange.end);
-      editable.innerHTML = renderComposerHtml(nextValue, slashCommands);
-      setCaretOffset(editable, activeRange.start);
-      editable.focus();
+      setComposerContent(editable, nextValue, slashCommands);
+      setComposerCaretOffset(editable, activeRange.start);
+      focusComposer(editable);
       onChange?.(nextValue);
       setActiveMentionRange(null);
       onMentionFile?.(result.path, result.isDirectory ?? false);

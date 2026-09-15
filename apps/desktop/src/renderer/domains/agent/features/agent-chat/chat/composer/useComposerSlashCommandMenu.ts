@@ -1,13 +1,7 @@
 import type { RefObject } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  findSlashCommandRange,
-  getCaretOffset,
-  matchesSlashCommand,
-  normalizeComposerText,
-  renderComposerHtml,
-  setCaretOffset,
-} from "./richComposerText";
+import { focusComposer, getComposerText, setComposerCaretOffset, setComposerContent } from "./composerDom";
+import { findSlashCommandRange, matchesSlashCommand } from "./richComposerText";
 import type { ComposerTokenRange, RichComposerSlashCommand } from "./richComposerTypes";
 
 type UseComposerSlashCommandMenuOptions = {
@@ -62,12 +56,12 @@ export function useComposerSlashCommandMenu({
       if (!editable || !activeRange) {
         return;
       }
-      const currentValue = normalizeComposerText(editable.innerText);
+      const currentValue = getComposerText(editable);
       const insertedText = `${command.insertText ?? command.title} `;
       const nextValue = currentValue.slice(0, activeRange.start) + insertedText + currentValue.slice(activeRange.end);
-      editable.innerHTML = renderComposerHtml(nextValue, slashCommands);
-      setCaretOffset(editable, activeRange.start + insertedText.length);
-      editable.focus();
+      setComposerContent(editable, nextValue, slashCommands);
+      setComposerCaretOffset(editable, activeRange.start + insertedText.length);
+      focusComposer(editable);
       onChange?.(nextValue);
       setActiveSlashCommandRange(null);
     },

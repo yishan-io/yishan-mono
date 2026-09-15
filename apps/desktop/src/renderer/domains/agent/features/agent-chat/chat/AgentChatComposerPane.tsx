@@ -18,7 +18,7 @@ import { AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX } from "./AgentChatContentLayout"
 import { AgentChatSubagentList } from "./AgentChatSubagentList";
 import { AgentChatVoiceButton } from "./AgentChatVoiceButton";
 import { ComposerAttachmentBlock } from "./composer/ComposerAttachmentBlock";
-import { RichComposer } from "./composer/RichComposer";
+import { RichComposer, type RichComposerHandle } from "./composer/RichComposer";
 import { useAgentChatComposerDraft } from "./useAgentChatComposerDraft";
 import { useAgentChatProviderAdd } from "./useAgentChatProviderAdd";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
@@ -93,7 +93,7 @@ function AgentChatComposerPaneComponent({
   }, [shortcutOverrides, t]);
   const isSessionBusy = isAgentSessionBusy(sessionState);
   const canManuallyCompact = contextPercent >= 50;
-  const composerContainerRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<RichComposerHandle | null>(null);
 
   const {
     draft,
@@ -124,7 +124,7 @@ function AgentChatComposerPaneComponent({
   });
 
   const focusComposer = useCallback(() => {
-    composerContainerRef.current?.querySelector<HTMLElement>('[role="textbox"]')?.focus();
+    composerRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -176,7 +176,6 @@ function AgentChatComposerPaneComponent({
 
   return (
     <Box
-      ref={composerContainerRef}
       sx={{
         border: isFixedWidth ? 1 : 0,
         borderTop: isFixedWidth ? 1 : 0,
@@ -204,6 +203,7 @@ function AgentChatComposerPaneComponent({
         onCancelSubagent={handleCancelSubagent}
       />
       <RichComposer
+        ref={composerRef}
         placeholder="Type a message…"
         value={draft}
         onChange={setDraft}

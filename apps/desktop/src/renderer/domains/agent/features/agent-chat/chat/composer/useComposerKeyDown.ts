@@ -1,6 +1,6 @@
 import type { KeyboardEvent, RefObject } from "react";
 import { useCallback, useRef } from "react";
-import { normalizeComposerText } from "./richComposerText";
+import { getComposerText, setComposerContent } from "./composerDom";
 import type { ComposerTokenRange, RichComposerSlashCommand } from "./richComposerTypes";
 
 type UseComposerKeyDownOptions = {
@@ -101,7 +101,7 @@ export function useComposerKeyDown({
 
       event.preventDefault();
       const editable = event.currentTarget;
-      const nextValue = normalizeComposerText(editable.innerText).trim();
+      const nextValue = getComposerText(editable).trim();
       if (!nextValue && !allowEmptySubmit) {
         return;
       }
@@ -118,7 +118,7 @@ export function useComposerKeyDown({
           }
           // Clear the native DOM immediately. Controlled synchronization can be deferred
           // until an IME final-input event, but a successfully submitted draft must not remain visible.
-          editable.innerHTML = "";
+          setComposerContent(editable, "");
           onChange?.("");
           setActiveSlashCommandRange(null);
         },
@@ -142,7 +142,6 @@ export function useComposerKeyDown({
       selectedSlashCommandIndex,
       setActiveSlashCommandRange,
       setSelectedSlashCommandIndex,
-      value,
     ],
   );
 }

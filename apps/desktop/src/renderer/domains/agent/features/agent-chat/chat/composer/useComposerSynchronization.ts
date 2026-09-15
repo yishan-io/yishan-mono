@@ -1,305 +1,87 @@
 import type { RefObject, SyntheticEvent } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { getCaretOffset, normalizeComposerText, renderComposerHtml, setCaretOffset } from "./richComposerText";
+import { useCallback } from "react";
+import { getComposerCaretOffset, getComposerText } from "./composerDom";
 import type { RichComposerSlashCommand } from "./richComposerTypes";
+import { useComposerComposition } from "./useComposerComposition";
+import { useComposerControlledValueSynchronization } from "./useComposerControlledValueSynchronization";
+
+type SynchronizeSuggestionMenus = (editable: HTMLDivElement, value: string, caretOffset: number) => void;
 
 type UseComposerSynchronizationOptions = {
   composerRef: RefObject<HTMLDivElement | null>;
-  isComposingRef: RefObject<boolean>;
   disabled: boolean;
   value?: string;
   onChange?: (value: string) => void;
   slashCommands: RichComposerSlashCommand[];
   shouldMoveCaretToEndAfterFileDropRef: RefObject<boolean>;
-  syncSlashCommandMenu: (editable: HTMLDivElement, value: string, caretOffset: number) => void;
-  syncMentionMenu: (editable: HTMLDivElement, value: string, caretOffset: number) => void;
-  closeSuggestionMenus: () => void;
+  syncSuggestionMenusRef: RefObject<SynchronizeSuggestionMenus>;
+  closeSuggestionMenusRef: RefObject<() => void>;
 };
 
-/** Coordinates contenteditable DOM updates around IME composition and controlled values. */
+/** Facade retaining RichComposer's event handlers while delegating IME and controlled-value concerns. */
 export function useComposerSynchronization({
   composerRef,
-  isComposingRef,
   disabled,
   value,
   onChange,
   slashCommands,
   shouldMoveCaretToEndAfterFileDropRef,
-  syncSlashCommandMenu,
-  syncMentionMenu,
-  closeSuggestionMenus,
+  syncSuggestionMenusRef,
+  closeSuggestionMenusRef,
 }: UseComposerSynchronizationOptions) {
-  const shouldInsertLiteralSpaceAfterCompositionRef = useRef(false);
-  useComposerLiteralSpaceRecovery(composerRef, shouldInsertLiteralSpaceAfterCompositionRef);
-
-  const isAwaitingFinalInputRef = useRef(false);
-  const compositionEndSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasFinalInputBeforeCompositionEndRef = useRef(false);
-  const compositionEndValueRef = useRef<string | null>(null);
-  const compositionInputValueRef = useRef<string | null>(null);
-  const pendingExternalValueRef = useRef<string | null>(null);
-  const [isReadyToSynchronizeControlledValue, setIsReadyToSynchronizeControlledValue] = useState(true);
-
-  useEffect(() => {
-    return () => {
-      if (compositionEndSyncTimeoutRef.current !== null) {
-        clearTimeout(compositionEndSyncTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const synchronizeComposer = useCallback(
-    (editable: HTMLDivElement, nextValue: string, caretOffset: number) => {
-      const nextHtml = renderComposerHtml(nextValue, slashCommands);
-      if (shouldSynchronizeComposerMarkup(editable, nextHtml) && editable.innerHTML !== nextHtml) {
-        editable.innerHTML = nextHtml;
-        setCaretOffset(editable, caretOffset);
-      }
-      syncSlashCommandMenu(editable, nextValue, caretOffset);
-      syncMentionMenu(editable, nextValue, caretOffset);
-    },
-    [slashCommands, syncMentionMenu, syncSlashCommandMenu],
-  );
-
-  const handleComposerCompositionStart = useCallback(() => {
-    if (compositionEndSyncTimeoutRef.current !== null) {
-      clearTimeout(compositionEndSyncTimeoutRef.current);
-      compositionEndSyncTimeoutRef.current = null;
-    }
-    isComposingRef.current = true;
-    isAwaitingFinalInputRef.current = false;
-    hasFinalInputBeforeCompositionEndRef.current = false;
-    compositionEndValueRef.current = null;
-    shouldInsertLiteralSpaceAfterCompositionRef.current = false;
-    compositionInputValueRef.current = value ?? null;
-    pendingExternalValueRef.current = null;
-    setIsReadyToSynchronizeControlledValue(false);
-    closeSuggestionMenus();
-  }, [closeSuggestionMenus, isComposingRef, value]);
-
-  const handleComposerCompositionEnd = useCallback(
-    (event: SyntheticEvent<HTMLDivElement>) => {
-      isComposingRef.current = false;
-      // macOS Pinyin commits through insertCompositionText and emits no later
-      // non-composing input. Treat compositionend as the completed transaction,
-      // unless a controlled external value must still replace the composition.
-      if (pendingExternalValueRef.current !== null) {
-        isAwaitingFinalInputRef.current = true;
-        // macOS Pinyin may commit at compositionend without a trailing input.
-        // Release the queued external value next tick if that event never comes.
-        compositionEndSyncTimeoutRef.current = setTimeout(() => {
-          isAwaitingFinalInputRef.current = false;
-          compositionEndSyncTimeoutRef.current = null;
-          setIsReadyToSynchronizeControlledValue(true);
-        }, 0);
-        return;
-      }
-      const committedValue = normalizeComposerText(event.currentTarget.innerText);
-      const compositionInputValue = compositionInputValueRef.current;
-      compositionInputValueRef.current = committedValue;
-      if (!disabled) {
-        compositionEndValueRef.current = committedValue;
-        if (committedValue !== compositionInputValue) {
-          onChange?.(committedValue);
-        }
-      }
-      shouldInsertLiteralSpaceAfterCompositionRef.current = true;
-      if (hasFinalInputBeforeCompositionEndRef.current) {
-        setIsReadyToSynchronizeControlledValue(true);
-        return;
-      }
-      // Chromium may emit the final non-composing input after compositionend.
-      // Keep React from normalizing the controlled DOM until that event arrives,
-      // then release it next tick for macOS Pinyin, which may not emit one.
-      isAwaitingFinalInputRef.current = true;
-      compositionEndSyncTimeoutRef.current = setTimeout(() => {
-        isAwaitingFinalInputRef.current = false;
-        compositionEndSyncTimeoutRef.current = null;
-        setIsReadyToSynchronizeControlledValue(true);
-      }, 0);
-    },
-    [disabled, isComposingRef, onChange],
-  );
+  const composition = useComposerComposition({
+    composerRef,
+    disabled,
+    value,
+    onChange,
+    closeSuggestionMenus: () => closeSuggestionMenusRef.current(),
+  });
+  const { synchronizeComposer } = useComposerControlledValueSynchronization({
+    composerRef,
+    value,
+    slashCommands,
+    shouldMoveCaretToEndAfterFileDropRef,
+    isReadyToSynchronizeControlledValue: composition.isReadyToSynchronizeControlledValue,
+    queueExternalValue: composition.queueExternalValue,
+    syncSuggestionMenus: (editable, nextValue, caretOffset) =>
+      syncSuggestionMenusRef.current(editable, nextValue, caretOffset),
+  });
 
   const handleComposerInput = useCallback(
     (event: SyntheticEvent<HTMLDivElement>) => {
-      if (disabled) {
-        return;
-      }
-
+      if (disabled) return;
       const editable = event.currentTarget;
-      if (compositionEndSyncTimeoutRef.current !== null) {
-        clearTimeout(compositionEndSyncTimeoutRef.current);
-        compositionEndSyncTimeoutRef.current = null;
-      }
       const nativeEvent = event.nativeEvent as InputEvent;
-      if (nativeEvent.inputType === "insertFromDrop") {
-        shouldMoveCaretToEndAfterFileDropRef.current = true;
-      }
-      const caretOffset = getCaretOffset(editable);
-      const nextValue = normalizeComposerText(editable.innerText);
-      if (isComposingRef.current) {
-        if (!nativeEvent.isComposing || nativeEvent.inputType === "insertText") {
-          hasFinalInputBeforeCompositionEndRef.current = true;
-        }
-        // The browser owns the transient marked text during composition. Do not
-        // update the controlled draft until it commits: a React render between
-        // Pinyin keystrokes can invalidate that native composition range.
+      if (nativeEvent.inputType === "insertFromDrop") shouldMoveCaretToEndAfterFileDropRef.current = true;
+      const inputResult = composition.handleComposerInput(event);
+      if (inputResult.kind === "composing") return;
+      const caretOffset = getComposerCaretOffset(editable);
+      if (inputResult.kind === "queuedExternalValue") {
+        synchronizeComposer(editable, inputResult.value, inputResult.value.length);
         return;
       }
-
-      const pendingExternalValue = pendingExternalValueRef.current;
-      if (pendingExternalValue !== null) {
-        pendingExternalValueRef.current = null;
-        isAwaitingFinalInputRef.current = false;
-        synchronizeComposer(editable, pendingExternalValue, pendingExternalValue.length);
-        setIsReadyToSynchronizeControlledValue(true);
-        return;
-      }
-
-      const isFinalCompositionInput = isAwaitingFinalInputRef.current;
-      const isDuplicateCompositionEndInput = compositionEndValueRef.current === nextValue;
-      compositionEndValueRef.current = null;
-      if (!isDuplicateCompositionEndInput) {
-        onChange?.(nextValue);
-      }
-      isAwaitingFinalInputRef.current = false;
-      if (isFinalCompositionInput) {
-        // The browser can still be completing its native IME transaction after
-        // this input. Rewriting contenteditable here can consume the first
-        // subsequent Space key; defer markup normalization to the next input.
-        syncSlashCommandMenu(editable, nextValue, caretOffset);
-        syncMentionMenu(editable, nextValue, caretOffset);
+      const nextValue = getComposerText(editable);
+      if (!inputResult.isDuplicateCompositionEndInput) onChange?.(nextValue);
+      if (inputResult.isFinalCompositionInput) {
+        syncSuggestionMenusRef.current(editable, nextValue, caretOffset);
       } else {
         synchronizeComposer(editable, nextValue, caretOffset);
       }
-      setIsReadyToSynchronizeControlledValue(true);
     },
     [
+      composition,
       disabled,
-      isComposingRef,
       onChange,
       shouldMoveCaretToEndAfterFileDropRef,
-      syncMentionMenu,
-      syncSlashCommandMenu,
+      syncSuggestionMenusRef,
       synchronizeComposer,
     ],
   );
 
-  useEffect(() => {
-    const editable = composerRef.current;
-    if (!editable || value === undefined) {
-      return;
-    }
-
-    if (isComposingRef.current) {
-      if (value !== compositionInputValueRef.current) {
-        pendingExternalValueRef.current = value;
-      }
-      return;
-    }
-
-    if (!isReadyToSynchronizeControlledValue || isAwaitingFinalInputRef.current) {
-      return;
-    }
-
-    const normalizedCurrentValue = normalizeComposerText(editable.innerText);
-    const nextHtml = renderComposerHtml(value, slashCommands);
-    const shouldMoveCaretToEndAfterFileDrop = shouldMoveCaretToEndAfterFileDropRef.current;
-    const shouldSynchronizeDom =
-      normalizedCurrentValue !== value || shouldSynchronizeComposerMarkup(editable, nextHtml);
-    if (!shouldSynchronizeDom || editable.innerHTML === nextHtml) {
-      if (shouldMoveCaretToEndAfterFileDrop) {
-        editable.focus();
-        setCaretOffset(editable, value.length);
-        shouldMoveCaretToEndAfterFileDropRef.current = false;
-      }
-      return;
-    }
-
-    const shouldRestoreCaret = document.activeElement === editable;
-    editable.innerHTML = nextHtml;
-    if (shouldRestoreCaret || shouldMoveCaretToEndAfterFileDrop) {
-      editable.focus();
-      setCaretOffset(editable, value.length);
-    }
-    shouldMoveCaretToEndAfterFileDropRef.current = false;
-  }, [
-    composerRef,
-    isComposingRef,
-    isReadyToSynchronizeControlledValue,
-    slashCommands,
-    shouldMoveCaretToEndAfterFileDropRef,
-    value,
-  ]);
-
   return {
-    handleComposerCompositionStart,
-    handleComposerCompositionEnd,
+    isComposingRef: composition.isComposingRef,
+    handleComposerCompositionStart: composition.handleComposerCompositionStart,
+    handleComposerCompositionEnd: composition.handleComposerCompositionEnd,
     handleComposerInput,
   };
-}
-
-function useComposerLiteralSpaceRecovery(
-  composerRef: RefObject<HTMLDivElement | null>,
-  shouldInsertLiteralSpaceRef: RefObject<boolean>,
-): void {
-  useEffect(() => {
-    const editable = composerRef.current;
-    if (!editable) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!shouldInsertLiteralSpaceRef.current || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) {
-        return;
-      }
-      if (event.key !== " ") {
-        if (event.key.length === 1) {
-          shouldInsertLiteralSpaceRef.current = false;
-        }
-        return;
-      }
-
-      // macOS Pinyin can consume this literal space without dispatching
-      // beforeinput/input after compositionend. Insert it directly and emit the
-      // input event so the regular draft synchronization still owns state.
-      shouldInsertLiteralSpaceRef.current = false;
-      event.preventDefault();
-      insertLiteralSpace(editable);
-    };
-
-    editable.addEventListener("keydown", handleKeyDown);
-    return () => {
-      editable.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [composerRef, shouldInsertLiteralSpaceRef]);
-}
-
-function insertLiteralSpace(editable: HTMLDivElement): void {
-  const selection = window.getSelection();
-  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
-  const space = document.createTextNode(" ");
-
-  if (range && editable.contains(range.startContainer)) {
-    range.deleteContents();
-    range.insertNode(space);
-    range.setStartAfter(space);
-    range.collapse(true);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-  } else {
-    editable.append(space);
-  }
-
-  editable.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function shouldSynchronizeComposerMarkup(editable: HTMLDivElement, nextHtml: string): boolean {
-  return (
-    nextHtml.includes("<a ") ||
-    nextHtml.includes("<span ") ||
-    nextHtml.includes("<br>") ||
-    editable.querySelector("a.composer-link, span.composer-slash, span.composer-mention") !== null
-  );
 }

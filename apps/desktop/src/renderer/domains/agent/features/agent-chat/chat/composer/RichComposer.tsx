@@ -1,10 +1,10 @@
 import { Box, Typography } from "@mui/material";
 import type { FileTreeDragEntry } from "@renderer/domains/files";
 import type { ClipboardEvent, SyntheticEvent } from "react";
-import { useCallback, useRef, useState } from "react";
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
 import { RichComposerFileMentionMenu } from "./RichComposerFileMentionMenu";
 import { RichComposerSlashCommandMenu } from "./RichComposerSlashCommandMenu";
-import { getCaretOffset, normalizeComposerText } from "./richComposerText";
+import { focusComposer, getComposerCaretOffset, getComposerText, insertComposerPlainText } from "./composerDom";
 import type { FileMentionResult, RichComposerSlashCommand } from "./richComposerTypes";
 import { useComposerFileDrop } from "./useComposerFileDrop";
 import { useComposerFileMentionMenu } from "./useComposerFileMentionMenu";
@@ -14,6 +14,12 @@ import { useComposerSynchronization } from "./useComposerSynchronization";
 
 export type { RichComposerSlashCommand } from "./richComposerTypes";
 export type { FileTreeDragEntry as DroppedFileEntry } from "@renderer/domains/files";
+
+/** Imperative controls exposed by a rich composer. */
+export type RichComposerHandle = {
+  /** Focuses the composer text input. */
+  focus: () => void;
+};
 
 type RichComposerProps = {
   placeholder: string;
@@ -35,25 +41,55 @@ type RichComposerProps = {
 };
 
 /** Rich text-like contenteditable composer with token highlighting and slash command completion. */
-export function RichComposer({
-  placeholder,
-  value,
-  onChange,
-  onSubmit,
-  minHeight = 84,
-  disabled = false,
-  slashCommands = [],
-  focusShortcutHint,
-  allowEmptySubmit = false,
-  onFilesDrop,
-  onPasteBlock,
-  fileMentionSearch,
-  onMentionFile,
-}: RichComposerProps) {
+export const RichComposer = forwardRef<RichComposerHandle, RichComposerProps>(function RichComposer(
+  {
+    placeholder,
+    value,
+    onChange,
+    onSubmit,
+    minHeight = 84,
+    disabled = false,
+    slashCommands = [],
+    focusShortcutHint,
+    allowEmptySubmit = false,
+    onFilesDrop,
+    onPasteBlock,
+    fileMentionSearch,
+    onMentionFile,
+  },
+  ref,
+) {
   const composerRef = useRef<HTMLDivElement | null>(null);
-  const isComposingRef = useRef(false);
   const shouldMoveCaretToEndAfterFileDropRef = useRef(false);
+  const syncSuggestionMenusRef = useRef<(editable: HTMLDivElement, value: string, caretOffset: number) => void>(
+    () => {},
+  );
+  const closeSuggestionMenusRef = useRef<() => void>(() => {});
   const [isComposerFocused, setIsComposerFocused] = useState(false);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus: () => {
+        if (composerRef.current) {
+          focusComposer(composerRef.current);
+        }
+      },
+    }),
+    [],
+  );
+
+  const { handleComposerCompositionStart, handleComposerCompositionEnd, handleComposerInput, isComposingRef } =
+    useComposerSynchronization({
+      composerRef,
+      disabled,
+      value,
+      onChange,
+      slashCommands,
+      shouldMoveCaretToEndAfterFileDropRef,
+      syncSuggestionMenusRef,
+      closeSuggestionMenusRef,
+    });
 
   const { isDragOver, handleDragEnter, handleDragLeave, handleDragOver, handleDrop } = useComposerFileDrop({
     onFilesDrop,
@@ -73,7 +109,6 @@ export function RichComposer({
     activeMentionRange,
     setActiveMentionRange,
     selectedMentionIndex,
-    setSelectedMentionIndex,
     mentionResults,
     isSearching,
     hasSearchError,
@@ -90,22 +125,14 @@ export function RichComposer({
     isComposingRef,
   });
 
-  const { handleComposerCompositionStart, handleComposerCompositionEnd, handleComposerInput } =
-    useComposerSynchronization({
-      composerRef,
-      isComposingRef,
-      disabled,
-      value,
-      onChange,
-      slashCommands,
-      shouldMoveCaretToEndAfterFileDropRef,
-      syncSlashCommandMenu,
-      syncMentionMenu,
-      closeSuggestionMenus: () => {
-        setActiveSlashCommandRange(null);
-        setActiveMentionRange(null);
-      },
-    });
+  syncSuggestionMenusRef.current = (editable, nextValue, caretOffset) => {
+    syncSlashCommandMenu(editable, nextValue, caretOffset);
+    syncMentionMenu(editable, nextValue, caretOffset);
+  };
+  closeSuggestionMenusRef.current = () => {
+    setActiveSlashCommandRange(null);
+    setActiveMentionRange(null);
+  };
 
   const handleComposerKeyDown = useComposerKeyDown({
     disabled,
@@ -134,11 +161,11 @@ export function RichComposer({
         return;
       }
       const editable = event.currentTarget;
-      const nextValue = normalizeComposerText(editable.innerText);
-      syncSlashCommandMenu(editable, nextValue, getCaretOffset(editable));
-      syncMentionMenu(editable, nextValue, getCaretOffset(editable));
+      const nextValue = getComposerText(editable);
+      syncSlashCommandMenu(editable, nextValue, getComposerCaretOffset(editable));
+      syncMentionMenu(editable, nextValue, getComposerCaretOffset(editable));
     },
-    [syncMentionMenu, syncSlashCommandMenu],
+    [isComposingRef, syncMentionMenu, syncSlashCommandMenu],
   );
 
   const handleComposerPaste = useCallback(
@@ -152,7 +179,7 @@ export function RichComposer({
         onPasteBlock(plainText);
         return;
       }
-      document.execCommand("insertText", false, plainText);
+      insertComposerPlainText(plainText);
     },
     [disabled, onPasteBlock],
   );
@@ -260,4 +287,4 @@ export function RichComposer({
       />
     </>
   );
-}
+});

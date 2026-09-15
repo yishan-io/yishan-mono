@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { findMentionRange, renderComposerHtml } from "./richComposerText";
+import { findMentionRange, getCaretOffset, renderComposerHtml, setCaretOffset } from "./richComposerText";
 
 describe("findMentionRange", () => {
   it("returns a range for a bare @ token", () => {
@@ -62,5 +62,27 @@ describe("renderComposerHtml", () => {
     expect(link?.getAttribute("onclick")).toBeNull();
     expect(container.querySelector("img")).toBeNull();
     expect(container.innerHTML).toContain('He said "ready"');
+  });
+});
+
+describe("caret offset compatibility exports", () => {
+  it("preserves the legacy caret APIs", () => {
+    const composer = document.createElement("div");
+    composer.textContent = "draft";
+    Object.defineProperty(composer, "innerText", {
+      configurable: true,
+      value: "draft",
+      writable: true,
+    });
+    document.body.append(composer);
+
+    try {
+      setCaretOffset(composer, 2);
+
+      expect(getCaretOffset(composer)).toBe(2);
+    } finally {
+      window.getSelection()?.removeAllRanges();
+      composer.remove();
+    }
   });
 });

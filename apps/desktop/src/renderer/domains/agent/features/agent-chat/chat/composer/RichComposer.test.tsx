@@ -2,10 +2,11 @@
 
 import { FILETREE_DRAG_MIME } from "@renderer/domains/files";
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useState } from "react";
+import { createRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RichComposer, type RichComposerSlashCommand } from "./RichComposer";
-import { getCaretOffset, renderComposerHtml, setCaretOffset } from "./richComposerText";
+import { RichComposer, type RichComposerHandle, type RichComposerSlashCommand } from "./RichComposer";
+import { getComposerCaretOffset, setComposerCaretOffset } from "./composerDom";
+import { renderComposerHtml } from "./richComposerText";
 import type { FileMentionResult } from "./richComposerTypes";
 
 const SLASH_COMMANDS: RichComposerSlashCommand[] = [
@@ -47,6 +48,15 @@ afterEach(() => {
 });
 
 describe("RichComposer", () => {
+  it("focuses through its imperative handle", () => {
+    const ref = createRef<RichComposerHandle>();
+    render(<RichComposer ref={ref} placeholder="Type a message…" />);
+
+    ref.current?.focus();
+
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Type a message…" }));
+  });
+
   it("shows the focus shortcut hint only while the composer is unfocused", () => {
     render(<RichComposer placeholder="Type a message…" focusShortcutHint="⌘ + L to focus" />);
 
@@ -122,7 +132,7 @@ describe("RichComposer", () => {
     fireEvent.compositionStart(textbox);
     textbox.innerText = "/brain";
     const compositionTextNode = textbox.firstChild;
-    setCaretOffset(textbox, 2);
+    setComposerCaretOffset(textbox, 2);
     fireEvent.input(textbox, { isComposing: true });
 
     expect(onChange).not.toHaveBeenCalled();
@@ -169,6 +179,34 @@ describe("RichComposer", () => {
 
     expect(textbox.textContent).toBe("你好");
     expect(onChange).toHaveBeenLastCalledWith("你好");
+  });
+
+  it("suppresses Chromium's trailing input after a canceled composition", () => {
+    const onChange = vi.fn();
+    render(<RichComposer placeholder="Type a message…" value="draft" onChange={onChange} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    fireEvent.compositionEnd(textbox);
+    fireEvent.input(textbox, { isComposing: false, inputType: "insertText" });
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("does not emit a change for an uncontrolled canceled composition", () => {
+    const onChange = vi.fn();
+    render(<RichComposer placeholder="Type a message…" onChange={onChange} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerText = "draft";
+    fireEvent.input(textbox, { isComposing: false, inputType: "insertText" });
+    onChange.mockClear();
+
+    fireEvent.compositionStart(textbox);
+    fireEvent.compositionEnd(textbox);
+    fireEvent.input(textbox, { isComposing: false, inputType: "insertText" });
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("does not propagate intermediate composition text to the controlled draft", () => {
@@ -326,7 +364,7 @@ describe("RichComposer", () => {
     }
 
     textbox.innerText = "@main";
-    setCaretOffset(textbox, 5);
+    setComposerCaretOffset(textbox, 5);
     fireEvent.compositionEnd(textbox);
     fireEvent.input(textbox, { isComposing: false });
     expect(await screen.findByRole("button", { name: "src/main.ts" })).toBeTruthy();
@@ -386,6 +424,42 @@ describe("RichComposer", () => {
     fireEvent.compositionEnd(textbox);
 
     await waitFor(() => expect(textbox.textContent).toBe("external value"));
+  });
+
+  it("cancels a pending composition timeout when another composition begins", () => {
+    vi.useFakeTimers();
+    try {
+      const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+      render(<RichComposer placeholder="Type a message…" />);
+
+      const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+      fireEvent.compositionStart(textbox);
+      textbox.innerText = "你";
+      fireEvent.compositionEnd(textbox);
+      fireEvent.compositionStart(textbox);
+
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("cleans up a pending composition timeout on unmount", () => {
+    vi.useFakeTimers();
+    try {
+      const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+      const renderedComposer = render(<RichComposer placeholder="Type a message…" />);
+      const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+
+      fireEvent.compositionStart(textbox);
+      textbox.innerText = "你";
+      fireEvent.compositionEnd(textbox);
+      renderedComposer.unmount();
+
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("clears a controlled draft after a successful Enter submit", async () => {
@@ -489,11 +563,11 @@ describe("RichComposer", () => {
     textbox.innerHTML = renderComposerHtml(composerText);
     Object.defineProperty(textbox, "innerText", { configurable: true, value: composerText, writable: true });
     textbox.focus();
-    setCaretOffset(textbox, 0);
+    setComposerCaretOffset(textbox, 0);
     fireEvent.input(textbox, { inputType: "insertFromDrop" });
 
     expect(document.activeElement).toBe(textbox);
-    expect(getCaretOffset(textbox)).toBe(composerText.length);
+    expect(getComposerCaretOffset(textbox)).toBe(composerText.length);
   });
 
   it("shows slash commands after typing slash", () => {
@@ -910,7 +984,7 @@ describe("RichComposer", () => {
 
       const textbox = screen.getByRole("textbox", { name: "Type a message…" });
       textbox.innerText = "see @main.tsx";
-      setCaretOffset(textbox, 9);
+      setComposerCaretOffset(textbox, 9);
       fireEvent.input(textbox);
       await screen.findByRole("button", { name: "src/renderer/main.tsx" });
 
@@ -1026,7 +1100,7 @@ describe("RichComposer", () => {
       await screen.findByRole("button", { name: "src/renderer/main.tsx" });
 
       textbox.innerText = "@mainx";
-      setCaretOffset(textbox, textbox.innerText.length);
+      setComposerCaretOffset(textbox, textbox.innerText.length);
       fireEvent.input(textbox);
 
       expect(await screen.findByText("Searching files…")).toBeTruthy();
@@ -1075,7 +1149,7 @@ describe("RichComposer", () => {
       fireEvent.keyDown(textbox, { key: "ArrowDown" });
 
       textbox.innerText = "@main";
-      setCaretOffset(textbox, textbox.innerText.length);
+      setComposerCaretOffset(textbox, textbox.innerText.length);
       fireEvent.input(textbox);
       await screen.findByRole("button", { name: "src/renderer/main.tsx" });
 
