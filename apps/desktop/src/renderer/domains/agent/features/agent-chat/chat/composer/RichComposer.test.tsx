@@ -98,10 +98,25 @@ describe("RichComposer", () => {
     expect(textbox.firstChild).toBe(nativeCompositionNode);
   });
 
-  it("synchronizes a final non-composing input after compositionend", () => {
+  it("defers controlled markup synchronization until the final input after compositionend", () => {
     const onChange = vi.fn();
 
-    render(<RichComposer placeholder="Type a message…" onChange={onChange} slashCommands={SLASH_COMMANDS} />);
+    function ControlledComposer() {
+      const [value, setValue] = useState("");
+      return (
+        <RichComposer
+          placeholder="Type a message…"
+          value={value}
+          onChange={(nextValue) => {
+            onChange(nextValue);
+            setValue(nextValue);
+          }}
+          slashCommands={SLASH_COMMANDS}
+        />
+      );
+    }
+
+    render(<ControlledComposer />);
 
     const textbox = screen.getByRole("textbox", { name: "Type a message…" });
     fireEvent.compositionStart(textbox);
@@ -110,7 +125,7 @@ describe("RichComposer", () => {
     setCaretOffset(textbox, 2);
     fireEvent.input(textbox, { isComposing: true });
 
-    expect(onChange).toHaveBeenCalledWith("/brain");
+    expect(onChange).not.toHaveBeenCalled();
     expect(textbox.firstChild).toBe(compositionTextNode);
     fireEvent.compositionEnd(textbox);
     expect(textbox.firstChild).toBe(compositionTextNode);
@@ -118,6 +133,8 @@ describe("RichComposer", () => {
 
     fireEvent.input(textbox, { isComposing: false });
 
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("/brain");
     expect(textbox.firstChild).not.toBe(compositionTextNode);
     expect(textbox.querySelector(".composer-slash")?.textContent).toBe("/brain");
     expect(screen.getByRole("button", { name: "/brainstorm" })).toBeTruthy();
@@ -154,18 +171,23 @@ describe("RichComposer", () => {
     expect(onChange).toHaveBeenLastCalledWith("你好");
   });
 
-  it("does not emit a duplicate change when compositionend matches the last composing input", () => {
+  it("does not propagate intermediate composition text to the controlled draft", () => {
     const onChange = vi.fn();
     render(<RichComposer placeholder="Type a message…" onChange={onChange} />);
 
     const textbox = screen.getByRole("textbox", { name: "Type a message…" });
     fireEvent.compositionStart(textbox);
-    textbox.innerText = "你好";
+    textbox.innerText = "ni";
     fireEvent.input(textbox, { isComposing: true, inputType: "insertCompositionText" });
+    textbox.innerText = "你";
+    fireEvent.input(textbox, { isComposing: true, inputType: "insertCompositionText" });
+
+    expect(onChange).not.toHaveBeenCalled();
+
     fireEvent.compositionEnd(textbox);
 
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith("你好");
+    expect(onChange).toHaveBeenCalledWith("你");
   });
 
   it("does not emit a compositionend change after becoming disabled during composition", () => {
@@ -193,8 +215,7 @@ describe("RichComposer", () => {
     textbox.innerText = "你好啊";
     fireEvent.compositionEnd(textbox);
 
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith("你好");
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("inserts a literal space when macOS Pinyin consumes it after compositionend", () => {
@@ -340,6 +361,31 @@ describe("RichComposer", () => {
     fireEvent.input(textbox, { isComposing: false });
 
     expect(textbox.textContent).toBe("external value");
+  });
+
+  it("applies an external controlled value when macOS Pinyin emits no final input", async () => {
+    function ControlledComposer() {
+      const [value, setValue] = useState("initial");
+      return (
+        <>
+          <button type="button" onClick={() => setValue("external value")}>
+            Update value
+          </button>
+          <RichComposer placeholder="Type a message…" value={value} onChange={setValue} />
+        </>
+      );
+    }
+
+    render(<ControlledComposer />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    fireEvent.compositionStart(textbox);
+    textbox.innerText = "你好";
+    fireEvent.input(textbox, { isComposing: true, inputType: "insertCompositionText" });
+    fireEvent.click(screen.getByRole("button", { name: "Update value" }));
+    fireEvent.compositionEnd(textbox);
+
+    await waitFor(() => expect(textbox.textContent).toBe("external value"));
   });
 
   it("clears a controlled draft after a successful Enter submit", async () => {

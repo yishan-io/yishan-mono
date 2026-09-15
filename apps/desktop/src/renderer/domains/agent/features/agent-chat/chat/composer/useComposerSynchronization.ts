@@ -33,9 +33,20 @@ export function useComposerSynchronization({
   useComposerLiteralSpaceRecovery(composerRef, shouldInsertLiteralSpaceAfterCompositionRef);
 
   const isAwaitingFinalInputRef = useRef(false);
+  const compositionEndSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasFinalInputBeforeCompositionEndRef = useRef(false);
+  const compositionEndValueRef = useRef<string | null>(null);
   const compositionInputValueRef = useRef<string | null>(null);
   const pendingExternalValueRef = useRef<string | null>(null);
   const [isReadyToSynchronizeControlledValue, setIsReadyToSynchronizeControlledValue] = useState(true);
+
+  useEffect(() => {
+    return () => {
+      if (compositionEndSyncTimeoutRef.current !== null) {
+        clearTimeout(compositionEndSyncTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const synchronizeComposer = useCallback(
     (editable: HTMLDivElement, nextValue: string, caretOffset: number) => {
@@ -51,8 +62,14 @@ export function useComposerSynchronization({
   );
 
   const handleComposerCompositionStart = useCallback(() => {
+    if (compositionEndSyncTimeoutRef.current !== null) {
+      clearTimeout(compositionEndSyncTimeoutRef.current);
+      compositionEndSyncTimeoutRef.current = null;
+    }
     isComposingRef.current = true;
     isAwaitingFinalInputRef.current = false;
+    hasFinalInputBeforeCompositionEndRef.current = false;
+    compositionEndValueRef.current = null;
     shouldInsertLiteralSpaceAfterCompositionRef.current = false;
     compositionInputValueRef.current = value ?? null;
     pendingExternalValueRef.current = null;
@@ -68,17 +85,38 @@ export function useComposerSynchronization({
       // unless a controlled external value must still replace the composition.
       if (pendingExternalValueRef.current !== null) {
         isAwaitingFinalInputRef.current = true;
+        // macOS Pinyin may commit at compositionend without a trailing input.
+        // Release the queued external value next tick if that event never comes.
+        compositionEndSyncTimeoutRef.current = setTimeout(() => {
+          isAwaitingFinalInputRef.current = false;
+          compositionEndSyncTimeoutRef.current = null;
+          setIsReadyToSynchronizeControlledValue(true);
+        }, 0);
         return;
       }
       const committedValue = normalizeComposerText(event.currentTarget.innerText);
       const compositionInputValue = compositionInputValueRef.current;
       compositionInputValueRef.current = committedValue;
-      if (!disabled && committedValue !== compositionInputValue) {
-        onChange?.(committedValue);
+      if (!disabled) {
+        compositionEndValueRef.current = committedValue;
+        if (committedValue !== compositionInputValue) {
+          onChange?.(committedValue);
+        }
       }
       shouldInsertLiteralSpaceAfterCompositionRef.current = true;
-      isAwaitingFinalInputRef.current = false;
-      setIsReadyToSynchronizeControlledValue(true);
+      if (hasFinalInputBeforeCompositionEndRef.current) {
+        setIsReadyToSynchronizeControlledValue(true);
+        return;
+      }
+      // Chromium may emit the final non-composing input after compositionend.
+      // Keep React from normalizing the controlled DOM until that event arrives,
+      // then release it next tick for macOS Pinyin, which may not emit one.
+      isAwaitingFinalInputRef.current = true;
+      compositionEndSyncTimeoutRef.current = setTimeout(() => {
+        isAwaitingFinalInputRef.current = false;
+        compositionEndSyncTimeoutRef.current = null;
+        setIsReadyToSynchronizeControlledValue(true);
+      }, 0);
     },
     [disabled, isComposingRef, onChange],
   );
@@ -90,6 +128,10 @@ export function useComposerSynchronization({
       }
 
       const editable = event.currentTarget;
+      if (compositionEndSyncTimeoutRef.current !== null) {
+        clearTimeout(compositionEndSyncTimeoutRef.current);
+        compositionEndSyncTimeoutRef.current = null;
+      }
       const nativeEvent = event.nativeEvent as InputEvent;
       if (nativeEvent.inputType === "insertFromDrop") {
         shouldMoveCaretToEndAfterFileDropRef.current = true;
@@ -97,8 +139,12 @@ export function useComposerSynchronization({
       const caretOffset = getCaretOffset(editable);
       const nextValue = normalizeComposerText(editable.innerText);
       if (isComposingRef.current) {
-        compositionInputValueRef.current = nextValue;
-        onChange?.(nextValue);
+        if (!nativeEvent.isComposing || nativeEvent.inputType === "insertText") {
+          hasFinalInputBeforeCompositionEndRef.current = true;
+        }
+        // The browser owns the transient marked text during composition. Do not
+        // update the controlled draft until it commits: a React render between
+        // Pinyin keystrokes can invalidate that native composition range.
         return;
       }
 
@@ -112,7 +158,11 @@ export function useComposerSynchronization({
       }
 
       const isFinalCompositionInput = isAwaitingFinalInputRef.current;
-      onChange?.(nextValue);
+      const isDuplicateCompositionEndInput = compositionEndValueRef.current === nextValue;
+      compositionEndValueRef.current = null;
+      if (!isDuplicateCompositionEndInput) {
+        onChange?.(nextValue);
+      }
       isAwaitingFinalInputRef.current = false;
       if (isFinalCompositionInput) {
         // The browser can still be completing its native IME transaction after
