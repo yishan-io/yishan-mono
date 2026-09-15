@@ -226,23 +226,34 @@ vi.mock("../../../../workbench/commands/tabCommands", () => ({
   readTabStoreState: () => ({ tabs: mocked.stateRef.current.tabs }),
 }));
 
-vi.mock("./composer/RichComposer", () => ({
-  RichComposer: (props: {
-    value?: string;
-    onChange?: (value: string) => void;
-    onSubmit?: (value: string) => void;
-  }) => {
-    mocked.stateRef.current.richComposerRenderCount += 1;
-    mocked.stateRef.current.latestRichComposerProps = props;
-    return (
-      <div
-        data-testid="rich-composer"
-        role={mocked.stateRef.current.shouldExposeComposerAsTextbox ? "textbox" : undefined}
-        tabIndex={mocked.stateRef.current.shouldExposeComposerAsTextbox ? 0 : undefined}
-      />
-    );
-  },
-}));
+vi.mock("./composer/RichComposer", async () => {
+  const React = await import("react");
+  return {
+    RichComposer: React.forwardRef<
+      { focus: () => void },
+      {
+        value?: string;
+        onChange?: (value: string) => void;
+        onSubmit?: (value: string) => void;
+      }
+    >(function RichComposer(props, ref) {
+      const composerRef = React.useRef<HTMLDivElement | null>(null);
+      React.useImperativeHandle(ref, () => ({
+        focus: () => composerRef.current?.focus(),
+      }));
+      mocked.stateRef.current.richComposerRenderCount += 1;
+      mocked.stateRef.current.latestRichComposerProps = props;
+      return (
+        <div
+          ref={composerRef}
+          data-testid="rich-composer"
+          role={mocked.stateRef.current.shouldExposeComposerAsTextbox ? "textbox" : undefined}
+          tabIndex={mocked.stateRef.current.shouldExposeComposerAsTextbox ? 0 : undefined}
+        />
+      );
+    }),
+  };
+});
 
 vi.mock("@renderer/domains/agent/features/agent-chat/transcript/AgentMessageList", () => ({
   AgentMessageList: mocked.agentMessageList,
