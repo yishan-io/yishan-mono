@@ -15,7 +15,7 @@ import (
 )
 
 const codexAgentKind = agentkind.Codex
-const maxTokenUsageScanLineBytes = 16 * 1024 * 1024
+const maxTokenUsageScanLineBytes = 64 * 1024 * 1024
 
 type codexUsage struct {
 	InputTokens        int64

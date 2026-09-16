@@ -147,6 +147,41 @@ func TestScanPiHourlyUsageIntegration(t *testing.T) {
 	}
 }
 
+func TestScanPiHourlyUsageScansOversizedSessionRecord(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	largeOutput := strings.Repeat("x", 33*1024*1024)
+	session := `{"type":"session","version":3,"id":"session-large","timestamp":"2026-06-29T10:00:00.000Z","cwd":"/tmp/pi-project"}` + "\n" +
+		`{"type":"message","id":"assistant-large","timestamp":"2026-06-29T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"` + largeOutput + `"}],"model":"gpt-5.5","usage":{"input":100,"output":20,"cacheRead":0,"cacheWrite":0,"totalTokens":120,"cost":{"total":0.25}}}}` + "\n"
+	sessionFilePath := filepath.Join(tmpDir, "2026-06-29T10-00-00-000Z_session-large.jsonl")
+	if err := os.WriteFile(sessionFilePath, []byte(session), 0o644); err != nil {
+		t.Fatalf("write oversized session fixture: %v", err)
+	}
+
+	input := ScanInput{
+		RunID:       "test-run",
+		IngestedAt:  time.Now().UnixMilli(),
+		SessionRoot: tmpDir,
+		Catalog:     testPricingCatalog(),
+		Worktrees: []record.WorktreeRef{{
+			ProjectID:     "proj-1",
+			WorkspaceID:   "ws-1",
+			WorkspacePath: "/tmp/pi-project",
+		}},
+	}
+	rows, err := ScanPiHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("scan oversized session record: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(rows))
+	}
+	if rows[0].TotalTokens != 120 || rows[0].TotalCostMicrosUSD != 250_000 {
+		t.Fatalf("expected scanned usage and cost, got %#v", rows[0])
+	}
+}
+
 func TestScanPiHourlyUsageKeepsConcurrentSessionSourcesSeparate(t *testing.T) {
 	t.Parallel()
 
