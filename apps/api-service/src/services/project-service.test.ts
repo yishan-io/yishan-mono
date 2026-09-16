@@ -578,3 +578,89 @@ describe("ProjectService.ensureProjectTaskPrefix", () => {
     expect(update).toHaveBeenCalledOnce();
   });
 });
+
+describe("ProjectService.promoteGitLocalProject", () => {
+  function makePromotionDb(project: unknown, updatedProject: unknown, updateError?: unknown) {
+    const returning = vi
+      .fn()
+      .mockImplementation(() => (updateError ? Promise.reject(updateError) : Promise.resolve([updatedProject])));
+    const whereUpdate = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where: whereUpdate });
+    const update = vi.fn().mockReturnValue({ set });
+    const select = vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ for: vi.fn().mockResolvedValue([project]) }) }),
+    });
+    const transaction = vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback({ select, update }));
+    // biome-ignore lint/suspicious/noExplicitAny: focused Drizzle transaction stub
+    return { db: { transaction } as any, set };
+  }
+
+  it("derives and persists the authoritative Git identity for a git-local project", async () => {
+    const localProject = {
+      ...PROJECT_ROW,
+      sourceType: "git-local" as const,
+      repoProvider: null,
+      repoUrl: null,
+      repoKey: "proj-1",
+    };
+    const promotedProject = { ...PROJECT_ROW, sourceType: "git" as const };
+    const { db, set } = makePromotionDb(localProject, promotedProject);
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    await expect(
+      service.promoteGitLocalProject({
+        organizationId: "org-1",
+        actorUserId: "user-1",
+        projectId: "proj-1",
+        remoteUrl: "https://github.com/acme/project-1.git",
+      }),
+    ).resolves.toEqual(promotedProject);
+
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceType: "git",
+        repoProvider: "github",
+        repoKey: "acme/project-1",
+        repoUrl: "https://github.com/acme/project-1.git",
+      }),
+    );
+  });
+
+  it("rejects promotion when the project is not git-local", async () => {
+    const { db } = makePromotionDb(PROJECT_ROW, PROJECT_ROW);
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    await expect(
+      service.promoteGitLocalProject({
+        organizationId: "org-1",
+        actorUserId: "user-1",
+        projectId: "proj-1",
+        remoteUrl: "https://github.com/acme/project-1.git",
+      }),
+    ).rejects.toMatchObject({ code: "PROJECT_PROMOTION_INVALID_SOURCE_TYPE" });
+  });
+
+  it("preserves the duplicate Git identity conflict", async () => {
+    const localProject = {
+      ...PROJECT_ROW,
+      sourceType: "git-local" as const,
+      repoProvider: null,
+      repoUrl: null,
+      repoKey: "proj-1",
+    };
+    const { db } = makePromotionDb(localProject, PROJECT_ROW, {
+      code: "23505",
+      constraint: "projects_org_repo_provider_key_uq",
+    });
+    const service = new ProjectService(db, makeOrgService("member"));
+
+    await expect(
+      service.promoteGitLocalProject({
+        organizationId: "org-1",
+        actorUserId: "user-1",
+        projectId: "proj-1",
+        remoteUrl: "https://github.com/acme/project-1.git",
+      }),
+    ).rejects.toBeInstanceOf(ProjectAlreadyExistsError);
+  });
+});

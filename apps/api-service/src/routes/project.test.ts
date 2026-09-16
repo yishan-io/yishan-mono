@@ -246,3 +246,44 @@ describe("projectRouter relay invalidation", () => {
     });
   });
 });
+
+describe("projectRouter git-local promotion", () => {
+  it("promotes with the authenticated organization and publishes an updated snapshot", async () => {
+    const promoteGitLocalProject = vi.fn().mockResolvedValue({ id: "project-1", sourceType: "git" });
+    const publishWorkspaceSnapshotChanged = vi.fn().mockResolvedValue(undefined);
+    const app = new Hono<AppEnv>();
+    app.onError(handleAppError);
+    app.use("*", async (c, next) => {
+      c.set("sessionUser", { id: "user-1" });
+      c.set("services", {
+        organization: { getMembershipRole: vi.fn().mockResolvedValue("member") },
+        project: { promoteGitLocalProject },
+        relayEvent: { publishWorkspaceSnapshotChanged },
+      } as never);
+      await next();
+    });
+    app.route("/", projectRouter);
+
+    const response = await app.fetch(
+      new Request("http://localhost/orgs/org-1/projects/project-1/promote-git", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ remoteUrl: "https://github.com/acme/project.git" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(promoteGitLocalProject).toHaveBeenCalledWith({
+      actorUserId: "user-1",
+      organizationId: "org-1",
+      projectId: "project-1",
+      remoteUrl: "https://github.com/acme/project.git",
+    });
+    expect(publishWorkspaceSnapshotChanged).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      resource: "project",
+      change: "updated",
+      projectId: "project-1",
+    });
+  });
+});

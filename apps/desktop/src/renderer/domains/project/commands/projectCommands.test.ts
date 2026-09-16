@@ -17,6 +17,7 @@ import {
   createProject,
   deleteProject,
   ensureProjectTaskPrefix,
+  promoteGitLocalProject,
   updateProjectConfig,
 } from "./projectCommands";
 
@@ -29,6 +30,7 @@ const apiMocks = vi.hoisted(() => ({
   createProject: vi.fn(),
   deleteProject: vi.fn(),
   ensureProjectTaskPrefix: vi.fn(),
+  promoteGitLocalProject: vi.fn(),
   updateProject: vi.fn(),
 }));
 
@@ -58,6 +60,7 @@ vi.mock("../../../domains/project/api/projectApi", () => ({
   createProject: apiMocks.createProject,
   deleteProject: apiMocks.deleteProject,
   ensureProjectTaskPrefix: apiMocks.ensureProjectTaskPrefix,
+  promoteGitLocalProject: apiMocks.promoteGitLocalProject,
   updateProject: apiMocks.updateProject,
 }));
 
@@ -1370,5 +1373,56 @@ describe("projectCommands", () => {
 
     expect(apiMocks.ensureProjectTaskPrefix).toHaveBeenCalledWith("org-1", "repo-1");
     expect(projectStore.getState().projects[0]?.taskPrefix).toBe("REPO");
+  });
+
+  it("applies the authoritative Git record after promoting a git-local project", async () => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    projectStore.setState({
+      projects: [
+        {
+          id: "project-1",
+          name: "Project 1",
+          sourceType: "git-local",
+          repoKey: "project-1",
+          repoUrl: null,
+          gitUrl: "",
+          repoProvider: null,
+        },
+      ],
+    });
+    apiMocks.promoteGitLocalProject.mockResolvedValue({
+      id: "project-1",
+      name: "Project 1",
+      sourceType: "git",
+      repoProvider: "github",
+      repoUrl: "https://github.com/acme/project-1.git",
+      repoKey: "acme/project-1",
+      icon: "folder",
+      color: "#111111",
+      setupScript: "",
+      postScript: "",
+      commands: [],
+      contextEnabled: true,
+      taskPrefix: "PROJ",
+      organizationId: "org-1",
+      createdByUserId: "user-1",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-02T00:00:00.000Z",
+    });
+
+    await promoteGitLocalProject("project-1", "https://github.com/acme/project-1.git");
+
+    expect(apiMocks.promoteGitLocalProject).toHaveBeenCalledWith(
+      "org-1",
+      "project-1",
+      "https://github.com/acme/project-1.git",
+    );
+    expect(projectStore.getState().projects[0]).toMatchObject({
+      sourceType: "git",
+      repoProvider: "github",
+      repoUrl: "https://github.com/acme/project-1.git",
+      gitUrl: "https://github.com/acme/project-1.git",
+      repoKey: "acme/project-1",
+    });
   });
 });

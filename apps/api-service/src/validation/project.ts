@@ -62,6 +62,12 @@ export const updateProjectBodySchema = z
     message: "At least one field must be provided",
   });
 
+export const promoteGitLocalProjectBodySchema = z
+  .object({
+    remoteUrl: nonEmptyStringSchema,
+  })
+  .strict();
+
 export const createWorkspaceBodySchema = z.object({
   id: nonEmptyStringSchema.optional(),
   kind: z.enum(["primary", "worktree"]).optional().default("primary"),
@@ -116,6 +122,7 @@ export type EnsureProjectTaskPrefixBodyInput = z.infer<typeof ensureProjectTaskP
 export type AllocateLocalTaskKeyBodyInput = z.infer<typeof allocateLocalTaskKeyBodySchema>;
 export type CreateProjectBodyInput = z.infer<typeof createProjectBodySchema>;
 export type UpdateProjectBodyInput = z.infer<typeof updateProjectBodySchema>;
+export type PromoteGitLocalProjectBodyInput = z.infer<typeof promoteGitLocalProjectBodySchema>;
 export type CreateWorkspaceBodyInput = z.infer<typeof createWorkspaceBodySchema>;
 export type CloseWorkspaceBodyInput = z.infer<typeof closeWorkspaceBodySchema>;
 export type UpdateWorkspaceParamsInput = z.infer<typeof updateWorkspaceParamsSchema>;

@@ -215,6 +215,31 @@ export class ProjectInvalidGitUrlError extends AppError {
   }
 }
 
+/** Indicates that only a git-local project can be promoted to a remote Git project. */
+export class ProjectPromotionInvalidSourceTypeError extends AppError {
+  constructor(projectId: string, sourceType: string) {
+    super("Only git-local projects can be promoted", StatusCodes.CONFLICT, "PROJECT_PROMOTION_INVALID_SOURCE_TYPE", {
+      projectId,
+      sourceType,
+    });
+    this.name = "ProjectPromotionInvalidSourceTypeError";
+  }
+}
+
+/** Indicates that a git-local project promotion could not be completed. */
+export class ProjectPromotionFailedError extends AppError {
+  constructor(cause?: unknown) {
+    super(
+      "Failed to promote project to Git",
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "PROJECT_PROMOTION_FAILED",
+      undefined,
+      cause === undefined ? undefined : { cause },
+    );
+    this.name = "ProjectPromotionFailedError";
+  }
+}
+
 export class ProjectNotFoundError extends AppError {
   constructor(projectId: string) {
     super("Project not found", StatusCodes.NOT_FOUND, "PROJECT_NOT_FOUND", { projectId });

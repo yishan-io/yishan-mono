@@ -4,7 +4,7 @@ import { openEntryInExternalApp } from "@renderer/domains/files";
 import { gitProjectionStore, refreshWorkspaceGitChanges, useAllWorkspacesGitSync } from "@renderer/domains/git";
 import { TaskHubView, refreshProgressingLocalTaskCount, selectLocalTaskWorkspace } from "@renderer/domains/local-task";
 import { OverviewView } from "@renderer/domains/overview";
-import { CreateProjectDialogView, projectStore } from "@renderer/domains/project";
+import { CreateProjectDialogView, projectStore, useGitLocalProjectPromotion } from "@renderer/domains/project";
 
 import { ScheduledJobView } from "@renderer/domains/scheduled-job";
 import { sessionStore } from "@renderer/domains/session";
@@ -101,6 +101,7 @@ export function WorkspaceView() {
     [],
   );
   useAllWorkspacesGitSync();
+  useGitLocalProjectPromotion();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator(tabStore, workspaceStore));
   const [agentChatRecoveryCoordinator] = useState(() => new AgentChatRecoveryCoordinator(tabStore, workspaceStore));
   const { leftCollapsed, onToggleLeftPane } = paneVisibility;

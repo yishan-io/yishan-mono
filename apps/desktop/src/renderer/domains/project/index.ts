@@ -41,3 +41,5 @@ export { ProjectConfigDialogView } from "./features/project-config/ProjectConfig
 export { ProjectDeleteDialogView } from "./features/project-delete/ProjectDeleteDialogView";
 export { useProjectDeletionFlow } from "./features/project-delete/useProjectDeletionFlow";
 export { renderProjectIcon } from "./ui/projectIcons";
+
+export { useGitLocalProjectPromotion } from "./hooks/useGitLocalProjectPromotion";

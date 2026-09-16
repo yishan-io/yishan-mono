@@ -8,6 +8,8 @@ import {
   ProjectAlreadyExistsError,
   ProjectCreateFailedError,
   ProjectNotFoundError,
+  ProjectPromotionFailedError,
+  ProjectPromotionInvalidSourceTypeError,
   ProjectTaskPrefixAllocationExhaustedError,
   ProjectTaskPrefixAlreadyExistsError,
   ProjectTaskPrefixEnsureFailedError,
@@ -470,6 +472,72 @@ export class ProjectService {
 
     if (deletedRows.length === 0) {
       throw new ProjectNotFoundError(input.projectId);
+    }
+  }
+
+  /** Promotes one git-local project when its local checkout has an origin remote. */
+  async promoteGitLocalProject(input: {
+    organizationId: string;
+    projectId: string;
+    actorUserId: string;
+    remoteUrl: string;
+  }): Promise<ProjectView> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
+
+    const repoUrl = input.remoteUrl.trim();
+    const inferred = inferRepoSource(repoUrl);
+    try {
+      return await this.db.transaction(async (tx) => {
+        const projectRows = await tx
+          .select()
+          .from(projects)
+          .where(and(eq(projects.id, input.projectId), eq(projects.organizationId, input.organizationId)))
+          .for("update");
+        const project = projectRows[0];
+        if (!project) {
+          throw new ProjectNotFoundError(input.projectId);
+        }
+        if (project.sourceType !== "git-local") {
+          throw new ProjectPromotionInvalidSourceTypeError(input.projectId, project.sourceType);
+        }
+
+        try {
+          const updatedRows = await tx
+            .update(projects)
+            .set({
+              sourceType: "git",
+              repoUrl,
+              repoProvider: inferred.repoProvider,
+              repoKey: inferred.repoKey,
+              updatedAt: new Date(),
+            })
+            .where(and(eq(projects.id, input.projectId), eq(projects.organizationId, input.organizationId)))
+            .returning();
+          const updatedProject = updatedRows[0];
+          if (!updatedProject) {
+            throw new ProjectNotFoundError(input.projectId);
+          }
+          return updatedProject;
+        } catch (error) {
+          if (isProjectGitIdentityUniqueViolation(error)) {
+            throw new ProjectAlreadyExistsError({
+              organizationId: input.organizationId,
+              repoProvider: inferred.repoProvider,
+              repoKey: inferred.repoKey,
+            });
+          }
+          throw error;
+        }
+      });
+    } catch (error) {
+      if (
+        error instanceof ProjectNotFoundError ||
+        error instanceof ProjectPromotionInvalidSourceTypeError ||
+        error instanceof ProjectAlreadyExistsError
+      ) {
+        throw error;
+      }
+      throw new ProjectPromotionFailedError(error);
     }
   }
 

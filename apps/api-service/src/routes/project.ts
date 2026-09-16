@@ -7,6 +7,7 @@ import {
   deleteProjectHandler,
   ensureProjectTaskPrefixHandler,
   listProjectsHandler,
+  promoteGitLocalProjectHandler,
   updateProjectHandler,
 } from "@/handlers/project";
 import type { AppEnv } from "@/hono";
@@ -23,6 +24,7 @@ import {
   organizationProjectListQuerySchema,
   organizationProjectParamsSchema,
   projectWorkspaceParamsSchema,
+  promoteGitLocalProjectBodySchema,
   updateProjectBodySchema,
 } from "@/validation/project";
 
@@ -61,6 +63,13 @@ router.post(
 
 router.delete("/:projectId", zValidator("param", projectWorkspaceParamsSchema, validationErrorResponse), (c) =>
   deleteProjectHandler(c, c.req.valid("param")),
+);
+
+router.post(
+  "/:projectId/promote-git",
+  zValidator("param", projectWorkspaceParamsSchema, validationErrorResponse),
+  zValidator("json", promoteGitLocalProjectBodySchema, validationErrorResponse),
+  (c) => promoteGitLocalProjectHandler(c, c.req.valid("param"), c.req.valid("json")),
 );
 
 router.put(

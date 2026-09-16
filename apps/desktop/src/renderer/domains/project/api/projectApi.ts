@@ -49,6 +49,19 @@ export async function ensureProjectTaskPrefix(orgId: string, projectId: string):
   return response.project;
 }
 
+/** Promotes one git-local project after its local checkout gains an origin remote. */
+export async function promoteGitLocalProject(
+  orgId: string,
+  projectId: string,
+  remoteUrl: string,
+): Promise<ProjectRecord> {
+  const response = await requestJson<{ project: ProjectRecord }>(`/orgs/${orgId}/projects/${projectId}/promote-git`, {
+    method: "POST",
+    body: { remoteUrl },
+  });
+  return response.project;
+}
+
 /** Deletes one project from one organization. */
 export async function deleteProject(orgId: string, projectId: string): Promise<void> {
   await requestJson<{ ok?: boolean }>(`/orgs/${orgId}/projects/${projectId}`, {

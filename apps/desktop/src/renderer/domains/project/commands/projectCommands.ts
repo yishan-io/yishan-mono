@@ -24,6 +24,7 @@ import {
   createProject as createProjectFromApi,
   deleteProject as deleteProjectFromApi,
   ensureProjectTaskPrefix as ensureProjectTaskPrefixFromApi,
+  promoteGitLocalProject as promoteGitLocalProjectFromApi,
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
@@ -189,6 +190,26 @@ export async function createProject(input: {
       repoKey: project.repoKey ?? null,
       enabled: true,
     });
+  }
+}
+
+/** Promotes one git-local project and applies the authoritative response to local state. */
+export async function promoteGitLocalProject(projectId: string, remoteUrl: string): Promise<void> {
+  const project = projectStore.getState().projects.find((candidate) => candidate.id === projectId);
+  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
+  if (project?.sourceType !== "git-local" || !selectedOrganizationId || !remoteUrl.trim()) {
+    return;
+  }
+
+  try {
+    const updatedProject = await promoteGitLocalProjectFromApi(selectedOrganizationId, projectId, remoteUrl.trim());
+    if (sessionStore.getState().selectedOrganizationId?.trim() !== selectedOrganizationId) {
+      return;
+    }
+    projectStore.getState().applyProjectRecord(updatedProject);
+  } catch (error) {
+    console.error("Failed to promote git-local project", { projectId, remoteUrl, error });
+    throw new Error(getErrorMessage(error));
   }
 }
 

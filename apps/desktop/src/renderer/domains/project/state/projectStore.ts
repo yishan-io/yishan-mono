@@ -10,6 +10,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
+import type { ProjectRecord } from "../api/types";
 import type { WorkspaceProjectRecord, WorkspaceStoreOrganizationPreference } from "../projectTypes";
 import { DEFAULT_PROJECT_ICON_ID, PROJECT_COLOR_PRESETS, PROJECT_ICON_IDS } from "../ui/projectIconPresets";
 
@@ -57,6 +58,7 @@ export type ProjectStoreState = {
   }) => void;
   deleteProject: (projectId: string) => void;
   updateProjectConfig: (projectId: string, config: RepoConfigUpdate) => void;
+  applyProjectRecord: (project: ProjectRecord) => void;
   setProjectTaskPrefix: (projectId: string, taskPrefix: string) => void;
   setDisplayProjectIds: (projectIds: string[]) => void;
   setOrganizationDisplayProjectIds: (organizationId: string, projectIds: string[]) => void;
@@ -292,6 +294,32 @@ export const projectStore = create<ProjectStoreState>()(
       updateProjectConfig: (projectId, config) => {
         set((state) => {
           applyUpdatedRepoConfigState(state, projectId, config);
+        });
+      },
+      applyProjectRecord: (project) => {
+        set((state) => {
+          const existingProject = state.projects.find((candidate) => candidate.id === project.id);
+          if (!existingProject) {
+            return;
+          }
+          existingProject.name = project.name;
+          existingProject.sourceType = project.sourceType;
+          existingProject.repoProvider = project.repoProvider;
+          existingProject.repoUrl = project.repoUrl;
+          existingProject.gitUrl = project.repoUrl ?? "";
+          existingProject.repoKey = project.repoKey;
+          existingProject.key = project.repoKey ?? existingProject.key;
+          existingProject.icon = project.icon;
+          existingProject.color = project.color;
+          existingProject.setupScript = project.setupScript;
+          existingProject.postScript = project.postScript;
+          existingProject.commands = project.commands ?? [];
+          existingProject.contextEnabled = project.contextEnabled;
+          existingProject.taskPrefix = project.taskPrefix;
+          existingProject.organizationId = project.organizationId;
+          existingProject.createdAt = project.createdAt;
+          existingProject.updatedAt = project.updatedAt;
+          existingProject.createdByUserId = project.createdByUserId;
         });
       },
       setProjectTaskPrefix: (projectId, taskPrefix) => {

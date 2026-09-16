@@ -1,4 +1,8 @@
-import { createProjectBodySchema, updateProjectBodySchema } from "@/validation/project";
+import {
+  createProjectBodySchema,
+  promoteGitLocalProjectBodySchema,
+  updateProjectBodySchema,
+} from "@/validation/project";
 import { describe, expect, it } from "vitest";
 
 describe("createProjectBodySchema", () => {
@@ -76,5 +80,18 @@ describe("allocateLocalTaskKeyBodySchema", () => {
     expect(allocateLocalTaskKeyBodySchema.safeParse({ localTaskId: "task-1" }).success).toBe(true);
     expect(allocateLocalTaskKeyBodySchema.safeParse({ localTaskId: "" }).success).toBe(false);
     expect(allocateLocalTaskKeyBodySchema.safeParse({ localTaskId: "task-1", userId: "user-2" }).success).toBe(false);
+  });
+});
+
+describe("promoteGitLocalProjectBodySchema", () => {
+  it("requires only a non-empty remote URL", () => {
+    expect(promoteGitLocalProjectBodySchema.safeParse({ remoteUrl: "https://github.com/acme/repo.git" }).success).toBe(
+      true,
+    );
+    expect(promoteGitLocalProjectBodySchema.safeParse({ remoteUrl: "" }).success).toBe(false);
+    expect(
+      promoteGitLocalProjectBodySchema.safeParse({ remoteUrl: "https://github.com/acme/repo.git", sourceType: "git" })
+        .success,
+    ).toBe(false);
   });
 });

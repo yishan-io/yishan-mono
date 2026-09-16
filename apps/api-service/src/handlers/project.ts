@@ -7,6 +7,7 @@ import type {
   OrganizationProjectListQueryInput,
   OrganizationProjectParamsInput,
   ProjectWorkspaceParamsInput,
+  PromoteGitLocalProjectBodyInput,
   UpdateProjectBodyInput,
 } from "@/validation/project";
 
@@ -106,6 +107,28 @@ export async function deleteProjectHandler(c: AppContext, params: ProjectWorkspa
   );
 
   return c.json({ ok: true });
+}
+
+export async function promoteGitLocalProjectHandler(
+  c: AppContext,
+  params: ProjectWorkspaceParamsInput,
+  body: PromoteGitLocalProjectBodyInput,
+) {
+  const actorUser = c.get("sessionUser");
+  const project = await c.get("services").project.promoteGitLocalProject({
+    actorUserId: actorUser.id,
+    organizationId: params.orgId,
+    projectId: params.projectId,
+    remoteUrl: body.remoteUrl,
+  });
+  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
+    organizationId: params.orgId,
+    resource: "project",
+    change: "updated",
+    projectId: project.id,
+  });
+
+  return c.json({ project }, StatusCodes.OK);
 }
 
 export async function updateProjectHandler(
