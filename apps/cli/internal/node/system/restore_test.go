@@ -179,7 +179,10 @@ func installFakePiBinary(t *testing.T, markerPath string) {
 	t.Helper()
 	binDir := t.TempDir()
 	scriptPath := filepath.Join(binDir, "pi")
-	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$%s\" > %q\n", config.PiAgentDirEnvKey, markerPath)
+	script := fmt.Sprintf(
+		"#!/bin/sh\nprintf '%%s' \"$%s\" > %q.tmp && mv %q.tmp %q\n",
+		config.PiAgentDirEnvKey, markerPath, markerPath, markerPath,
+	)
 	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake pi binary: %v", err)
 	}
@@ -188,6 +191,9 @@ func installFakePiBinary(t *testing.T, markerPath string) {
 
 func waitForFileContent(t *testing.T, path string) string {
 	t.Helper()
+	// The fake binary writes the marker through a temp file and a rename, so
+	// the file only becomes visible once it is complete; existence is enough
+	// and an empty file is a real empty value.
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		content, err := os.ReadFile(path)
@@ -250,7 +256,10 @@ func TestRunResolvedAgentCommand_DaemonEndpointWinsAfterCommandExtraEnv(t *testi
 		t.Run(test.name, func(t *testing.T) {
 			markerPath := filepath.Join(t.TempDir(), "daemon-endpoint.txt")
 			binaryPath := filepath.Join(t.TempDir(), "pi")
-			script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$YISHAN_DAEMON_WS_URL\" > %q\n", markerPath)
+			script := fmt.Sprintf(
+				"#!/bin/sh\nprintf '%%s' \"$YISHAN_DAEMON_WS_URL\" > %q.tmp && mv %q.tmp %q\n",
+				markerPath, markerPath, markerPath,
+			)
 			if err := os.WriteFile(binaryPath, []byte(script), 0o755); err != nil {
 				t.Fatalf("write fake pi binary: %v", err)
 			}

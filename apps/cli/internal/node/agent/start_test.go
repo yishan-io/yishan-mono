@@ -453,7 +453,10 @@ func TestPiStart_OverridesAndClearsDaemonWSEndpointForStartAndResume(t *testing.
 			markerPath := filepath.Join(homeDir, "daemon-endpoint.txt")
 			fakePiDir := t.TempDir()
 			fakePi := filepath.Join(fakePiDir, "pi")
-			script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$YISHAN_DAEMON_WS_URL\" > %q\n", markerPath)
+			script := fmt.Sprintf(
+				"#!/bin/sh\nprintf '%%s' \"$YISHAN_DAEMON_WS_URL\" > %q.tmp && mv %q.tmp %q\n",
+				markerPath, markerPath, markerPath,
+			)
 			if err := os.WriteFile(fakePi, []byte(script), 0o755); err != nil {
 				t.Fatalf("write fake pi: %v", err)
 			}

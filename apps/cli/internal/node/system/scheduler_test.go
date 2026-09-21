@@ -42,7 +42,7 @@ func installSchedulerPi(t *testing.T) string {
 	markerPath := filepath.Join(t.TempDir(), "daemon-endpoint.txt")
 	binDir := t.TempDir()
 	scriptPath := filepath.Join(binDir, "pi")
-	script := "#!/bin/sh\nprintf '%s' \"$YISHAN_DAEMON_WS_URL\" > " + markerPath + "\n"
+	script := "#!/bin/sh\nprintf '%s' \"$YISHAN_DAEMON_WS_URL\" > " + markerPath + ".tmp && mv " + markerPath + ".tmp " + markerPath + "\n"
 	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake pi binary: %v", err)
 	}

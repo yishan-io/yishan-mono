@@ -84,19 +84,26 @@ func (s *Service) callAgentRPCForTest(ctx context.Context, conn *rpc.Connection,
 }
 
 // installFakePiBinary writes a fake `pi` script that records the managed pi
-// agent dir env value into markerPath, and puts it on PATH.
+// agent dir env value into markerPath, and puts it on PATH. The marker is
+// written through a temp file and renamed, so a poller never observes it
+// between creation and content.
 func installFakePiBinary(t *testing.T, markerPath string) {
 	t.Helper()
 	binDir := t.TempDir()
 	scriptPath := filepath.Join(binDir, "pi")
-	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s' \"$%s\" > %q\n", config.PiAgentDirEnvKey, markerPath)
+	script := fmt.Sprintf(
+		"#!/bin/sh\nprintf '%%s' \"$%s\" > %q.tmp && mv %q.tmp %q\n",
+		config.PiAgentDirEnvKey, markerPath, markerPath, markerPath,
+	)
 	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake pi binary: %v", err)
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
-// waitForFileContent polls path until it has content or the deadline expires.
+// waitForFileContent polls path until the fake binary has written it or the
+// deadline expires. The marker appears only once complete, so existence is
+// enough: an empty file is a real empty value, not a partial write.
 func waitForFileContent(t *testing.T, path string) string {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
