@@ -867,6 +867,7 @@ describe("projectCommands", () => {
     expect(rpcMocks.workspaceSyncContextLink).toHaveBeenCalledOnce();
     expect(rpcMocks.workspaceSyncContextLink).toHaveBeenCalledWith({
       repoKey: "project-plain",
+      projectId: "project-plain",
       nonGit: false,
       enabled: true,
       worktreePaths: ["/tmp/plain-folder"],

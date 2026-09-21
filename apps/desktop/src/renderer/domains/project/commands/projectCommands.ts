@@ -386,6 +386,7 @@ async function syncProjectContextLinks(input: {
   try {
     await syncWorkspaceContextLinks({
       repoKey,
+      projectId: input.projectId,
       nonGit: isNonGit,
       enabled: input.enabled,
       worktreePaths: Array.from(candidatePaths),

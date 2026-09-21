@@ -251,6 +251,7 @@ export class DaemonWorkspaceClient {
     if (!repoKey && !nonGit) {
       throw new Error("repoKey is required");
     }
+    const projectId = readOptionalString(record?.projectId);
     const enabled = readOptionalBoolean(record?.enabled) ?? false;
     const rawPaths = readOptionalStringArray(record?.worktreePaths) ?? [];
     const normalizedPaths = Array.from(
@@ -263,6 +264,7 @@ export class DaemonWorkspaceClient {
 
     const result = (await this.invoke("workspace.syncContextLink", {
       repoKey: repoKey ?? "",
+      projectId,
       nonGit,
       enabled,
       worktreePaths: normalizedPaths,

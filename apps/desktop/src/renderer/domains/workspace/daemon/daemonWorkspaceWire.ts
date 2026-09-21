@@ -97,6 +97,8 @@ export type WorkspaceRefreshPullRequestInput = {
 
 export type WorkspaceSyncContextLinkInput = {
   repoKey: string;
+  /** Project id lets the daemon keep a promoted project's original UUID context directory. */
+  projectId?: string;
   nonGit?: boolean;
   enabled: boolean;
   worktreePaths: string[];

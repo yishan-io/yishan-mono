@@ -304,6 +304,7 @@ export async function refreshWorkspacePullRequest(input: { workspaceId: string }
 /** Syncs project context links across the given worktree paths (project domain consumes this). */
 export async function syncWorkspaceContextLinks(input: {
   repoKey: string;
+  projectId?: string;
   nonGit?: boolean;
   enabled: boolean;
   worktreePaths: string[];

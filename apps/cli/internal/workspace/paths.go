@@ -1,7 +1,6 @@
 package workspace
 
 import (
-	"os"
 	"path/filepath"
 )
 
@@ -9,9 +8,9 @@ import (
 // worktrees of a repo (context links stay a workspace-layer concern; worktree
 // path resolution lives in internal/worktree).
 func DefaultContextPath(repoKey string) (string, error) {
-	home, err := os.UserHomeDir()
+	basePath, err := contextBasePath()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".yishan", "contexts", repoKey), nil
+	return filepath.Join(basePath, repoKey), nil
 }

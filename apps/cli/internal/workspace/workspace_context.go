@@ -20,6 +20,7 @@ import (
 // unrelated symlinks are left alone in both modes.
 type SyncContextLinkRequest struct {
 	RepoKey       string   `json:"repoKey"`
+	ProjectID     string   `json:"projectId,omitempty"`
 	NonGit        bool     `json:"nonGit"`
 	Enabled       bool     `json:"enabled"`
 	WorktreePaths []string `json:"worktreePaths"`
@@ -40,11 +41,15 @@ type syncContextLinkResult struct {
 func SyncContextLink(req SyncContextLinkRequest) (syncContextLinkResult, error) {
 	var contextPath string
 	if !req.NonGit {
-		repoKey, err := worktree.SafeRelativePath(req.RepoKey, "repoKey")
+		identity, err := ResolveContextIdentity(req.RepoKey, req.ProjectID, req.WorktreePaths)
 		if err != nil {
 			return syncContextLinkResult{}, err
 		}
-		contextPath, err = DefaultContextPath(repoKey)
+		contextKey, err := worktree.SafeRelativePath(identity, "contextKey")
+		if err != nil {
+			return syncContextLinkResult{}, err
+		}
+		contextPath, err = DefaultContextPath(contextKey)
 		if err != nil {
 			return syncContextLinkResult{}, err
 		}

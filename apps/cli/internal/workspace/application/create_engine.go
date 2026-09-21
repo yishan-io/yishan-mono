@@ -126,7 +126,15 @@ func makeContextStep(req workspace.CreateRequest, paths worktree.CreatePaths) cr
 				return workspace.CreateProgressSkipped, "Context link disabled", nil
 			}
 
-			contextPath, err := workspace.DefaultContextPath(paths.RepoKey)
+			identity, err := workspace.ResolveContextIdentity(req.RepoKey, req.ProjectID, []string{req.SourcePath})
+			if err != nil {
+				return workspace.CreateProgressFailed, err.Error(), err
+			}
+			contextKey, err := worktree.SafeRelativePath(identity, "contextKey")
+			if err != nil {
+				return workspace.CreateProgressFailed, err.Error(), err
+			}
+			contextPath, err := workspace.DefaultContextPath(contextKey)
 			if err != nil {
 				return workspace.CreateProgressFailed, err.Error(), err
 			}
