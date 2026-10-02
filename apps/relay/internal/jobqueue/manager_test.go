@@ -131,24 +131,6 @@ func TestDispatch_HappyPath(t *testing.T) {
 	}
 }
 
-func TestDispatch_Duplicate(t *testing.T) {
-	tr := newStubTransport("node-1")
-	m := newTestManager(tr)
-
-	dispatchRun(m, "run-1", "job-1", "node-1")
-	result := dispatchRun(m, "run-2", "job-1", "node-1") // same job + same minute → duplicate
-
-	if result.Reason != "duplicate" {
-		t.Errorf("expected duplicate, got reason %q", result.Reason)
-	}
-	if result.ExistingRunID != "run-1" {
-		t.Errorf("expected ExistingRunID 'run-1', got %q", result.ExistingRunID)
-	}
-	if m.GetRun("run-2") != nil {
-		t.Error("duplicate run should not be stored")
-	}
-}
-
 func TestDispatch_NodeOffline(t *testing.T) {
 	tr := newStubTransport() // no nodes online
 	m := newTestManager(tr)

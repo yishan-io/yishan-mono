@@ -3,24 +3,17 @@ import type { CleanupEnv } from "@/scheduled/cleanup";
 import { handleCleanup } from "@/scheduled/cleanup";
 import { type RelayDispatchEnv, handleDispatchMessage } from "@/scheduled/consumer";
 import { type ScheduledDbEnv, runWithScheduledDb } from "@/scheduled/db";
-import type { EvaluatorEnv } from "@/scheduled/evaluator";
-import { handleEvaluateJobs } from "@/scheduled/evaluator";
 import type { DispatchMessage, QueueEnv } from "@/scheduled/queue";
 import { JobEvaluatorService } from "@/services/job-evaluator-service";
 
-type WorkerEnv = ScheduledDbEnv & CleanupEnv & EvaluatorEnv & RelayDispatchEnv & QueueEnv;
+type WorkerEnv = ScheduledDbEnv & CleanupEnv & RelayDispatchEnv & QueueEnv;
+
+const DAILY_CLEANUP_CRON = "0 3 * * *";
 
 export default {
   fetch: app.fetch,
   async scheduled(event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
-    if (event.cron === "*/5 * * * *") {
-      ctx.waitUntil(
-        runWithScheduledDb(env, "evaluator", async (db) => {
-          const jobEvaluatorService = new JobEvaluatorService(db);
-          await handleEvaluateJobs(jobEvaluatorService, env);
-        }),
-      );
-    } else {
+    if (event.cron === DAILY_CLEANUP_CRON) {
       ctx.waitUntil(
         runWithScheduledDb(env, "cleanup", async (db) => {
           await handleCleanup(db, env);

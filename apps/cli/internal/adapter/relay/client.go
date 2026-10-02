@@ -29,6 +29,7 @@ const (
 	MethodPing                     = relayprotocol.MethodPing
 	MethodPong                     = relayprotocol.MethodPong
 	MethodJobRun                   = relayprotocol.MethodJobRun
+	MethodJobScheduleChanged       = relayprotocol.MethodJobScheduleChanged
 	MethodWorkspaceSnapshotChanged = relayprotocol.MethodWorkspaceSnapshotChanged
 	MethodTerminalSessionChanged   = relayprotocol.MethodTerminalSessionChanged
 	MethodTerminalStreamRequest    = relayprotocol.MethodTerminalStreamRequest
@@ -64,6 +65,9 @@ type ClientConfig struct {
 	Server      *rpc.Server
 	Handler     MessageHandler
 	Events      *eventbus.Hub
+	// OnConnected receives a coalesced notification for each successful relay connection.
+	// It must return when ctx is canceled.
+	OnConnected func(ctx context.Context)
 }
 
 // Client is the relay WebSocket client: the reconnect loop, the per-session
@@ -77,6 +81,7 @@ type Client struct {
 	server      *rpc.Server
 	handler     MessageHandler
 	events      *eventbus.Hub
+	onConnected func(context.Context)
 	status      *Status
 
 	connMu sync.RWMutex
@@ -96,6 +101,7 @@ func NewClient(cfg ClientConfig) *Client {
 		server:      cfg.Server,
 		handler:     cfg.Handler,
 		events:      cfg.Events,
+		onConnected: cfg.OnConnected,
 		status:      NewStatus(cfg.URL != "", cfg.URL),
 		pending:     make(map[string]chan dispatchVerdict),
 	}
@@ -125,6 +131,9 @@ func (c *Client) Run(ctx context.Context) {
 		cachedToken = c.staticToken
 		cachedTokenExpiry = time.Now().Add(365 * 24 * time.Hour) // effectively never expires
 	}
+
+	notifier := newConnectionNotifier(ctx, c.onConnected)
+	defer notifier.wait()
 
 	delay := reconnectInitialDelay
 	for {
@@ -209,6 +218,7 @@ func (c *Client) Run(ctx context.Context) {
 		// next reconnect always gets a fresh token.
 		cachedToken = ""
 		c.status.setConnected(time.Now().UTC())
+		notifier.notify()
 
 		c.runSession(ctx, conn)
 		c.status.setDisconnected("session ended")
@@ -318,4 +328,52 @@ func normalizeWSURL(raw string) (string, error) {
 	}
 
 	return parsed.String(), nil
+}
+
+// connectionNotifier serializes successful-connection callbacks and retains at
+// most one pending notification while a callback is in progress.
+type connectionNotifier struct {
+	callback      func(context.Context)
+	notifications chan struct{}
+	done          chan struct{}
+}
+
+func newConnectionNotifier(ctx context.Context, callback func(context.Context)) *connectionNotifier {
+	notifier := &connectionNotifier{
+		callback:      callback,
+		notifications: make(chan struct{}, 1),
+		done:          make(chan struct{}),
+	}
+	if callback == nil {
+		close(notifier.done)
+		return notifier
+	}
+	go notifier.run(ctx)
+	return notifier
+}
+
+func (n *connectionNotifier) notify() {
+	if n.callback == nil {
+		return
+	}
+	select {
+	case n.notifications <- struct{}{}:
+	default:
+	}
+}
+
+func (n *connectionNotifier) run(ctx context.Context) {
+	defer close(n.done)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-n.notifications:
+			n.callback(ctx)
+		}
+	}
+}
+
+func (n *connectionNotifier) wait() {
+	<-n.done
 }

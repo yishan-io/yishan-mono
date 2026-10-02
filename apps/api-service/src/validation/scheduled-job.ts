@@ -60,6 +60,44 @@ export type UpdateScheduledJobBodyInput = z.infer<typeof updateScheduledJobBodyS
 export { nodeParamsSchema as nodeScheduledJobParamsSchema };
 export type NodeScheduledJobParamsInput = z.infer<typeof nodeParamsSchema>;
 
+const utcIsoDateTimeSchema = z
+  .string()
+  .datetime({ offset: true, precision: 3 })
+  .refine((value) => value.endsWith("Z"), { message: "Expected a UTC ISO datetime" });
+
+export const claimScheduledJobRunBodySchema = z.object({
+  jobId: nonEmptyStringSchema,
+  expectedNextRunAt: utcIsoDateTimeSchema,
+});
+
+export const reconcileScheduledJobsBodySchema = z
+  .object({
+    protectedJobs: z
+      .array(
+        z.object({
+          jobId: nonEmptyStringSchema,
+          nextRunAt: utcIsoDateTimeSchema,
+        }),
+      )
+      .max(100),
+  })
+  .superRefine((value, context) => {
+    const protectedJobIds = new Set<string>();
+    for (const [index, protectedJob] of value.protectedJobs.entries()) {
+      if (protectedJobIds.has(protectedJob.jobId)) {
+        context.addIssue({
+          code: "custom",
+          message: "Each protected job may appear only once",
+          path: ["protectedJobs", index, "jobId"],
+        });
+      }
+      protectedJobIds.add(protectedJob.jobId);
+    }
+  });
+
+export type ClaimScheduledJobRunBodyInput = z.infer<typeof claimScheduledJobRunBodySchema>;
+export type ReconcileScheduledJobsBodyInput = z.infer<typeof reconcileScheduledJobsBodySchema>;
+
 export const startScheduledJobRunBodySchema = z.object({
   runId: nonEmptyStringSchema,
   startedAt: z.string().datetime().optional(),

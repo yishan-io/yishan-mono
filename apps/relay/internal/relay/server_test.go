@@ -21,10 +21,14 @@ import (
 
 type testTransport struct {
 	online map[string]bool
+	sent   int
 }
 
-func (t *testTransport) IsOnline(nodeID string) bool                         { return t.online[nodeID] }
-func (t *testTransport) SendNotificationWithError(string, string, any) error { return nil }
+func (t *testTransport) IsOnline(nodeID string) bool { return t.online[nodeID] }
+func (t *testTransport) SendNotificationWithError(string, string, any) error {
+	t.sent++
+	return nil
+}
 
 // ---------------------------------------------------------------------------
 // Server test helpers
@@ -91,6 +95,117 @@ func TestAuthorizeAPIRequest_QueryParam_Accepted(t *testing.T) {
 	srv.HandleMetrics(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200 with token in query param, got %d", w.Code)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// HandlePublishNodeEvent tests
+// ---------------------------------------------------------------------------
+
+func TestHandlePublishNodeEvent_Unauthorized_Returns401(t *testing.T) {
+	srv := newTestServer(t)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/node-events", strings.NewReader(`{"nodeId":"node-1","method":"job.schedule.changed"}`))
+
+	srv.HandlePublishNodeEvent(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestHandlePublishNodeEvent_QueryTokenOnly_Returns401(t *testing.T) {
+	srv := newTestServer(t)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/node-events?token="+testAPIToken, strings.NewReader(`{"nodeId":"node-1","method":"job.schedule.changed"}`))
+
+	srv.HandlePublishNodeEvent(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 for query-token-only request, got %d", w.Code)
+	}
+}
+
+func TestHandlePublishNodeEvent_InvalidRequest_Returns400(t *testing.T) {
+	srv := newTestServer(t)
+	testCases := []struct {
+		name string
+		body string
+	}{
+		{name: "missing node ID", body: `{"method":"job.schedule.changed"}`},
+		{name: "unsupported method", body: `{"nodeId":"node-1","method":"job.run"}`},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			srv.HandlePublishNodeEvent(w, authorizedRequest(t, http.MethodPost, "/api/v1/node-events", []byte(tc.body)))
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("expected 400, got %d", w.Code)
+			}
+		})
+	}
+}
+
+func TestHandlePublishNodeEvent_TargetsOnlyNamedNode(t *testing.T) {
+	srv := newTestServer(t)
+	targetSrv, targetCli, cleanupTarget := pipeWebSocket(t)
+	defer cleanupTarget()
+	otherSrv, otherCli, cleanupOther := pipeWebSocket(t)
+	defer cleanupOther()
+	srv.sessions.Register(targetSrv, auth.NodeIdentity{NodeID: "node-1", UserID: "user-1"})
+	srv.sessions.Register(otherSrv, auth.NodeIdentity{NodeID: "node-2", UserID: "user-1"})
+
+	w := httptest.NewRecorder()
+	srv.HandlePublishNodeEvent(w, authorizedRequest(t, http.MethodPost, "/api/v1/node-events", []byte(`{"nodeId":"node-1","method":"job.schedule.changed"}`)))
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var response map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response["accepted"] != true || response["notified"] != true {
+		t.Fatalf("expected accepted and notified response, got %#v", response)
+	}
+
+	if err := targetCli.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set target deadline: %v", err)
+	}
+	var notification map[string]any
+	if err := targetCli.ReadJSON(&notification); err != nil {
+		t.Fatalf("target should receive notification: %v", err)
+	}
+	if notification["method"] != relayprotocol.MethodJobScheduleChanged {
+		t.Errorf("expected method %s, got %v", relayprotocol.MethodJobScheduleChanged, notification["method"])
+	}
+	if _, hasParams := notification["params"]; hasParams {
+		t.Errorf("schedule-change notification must not include payload: %#v", notification)
+	}
+
+	if err := otherCli.SetReadDeadline(time.Now().Add(200 * time.Millisecond)); err != nil {
+		t.Fatalf("set other deadline: %v", err)
+	}
+	var otherNotification map[string]any
+	if err := otherCli.ReadJSON(&otherNotification); err == nil {
+		t.Errorf("non-target node should not receive notification: %#v", otherNotification)
+	}
+}
+
+func TestHandlePublishNodeEvent_Offline_IsAcceptedWithoutNotification(t *testing.T) {
+	srv := newTestServer(t)
+	w := httptest.NewRecorder()
+	srv.HandlePublishNodeEvent(w, authorizedRequest(t, http.MethodPost, "/api/v1/node-events", []byte(`{"nodeId":"offline-node","method":"job.schedule.changed"}`)))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var response map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response["accepted"] != true || response["notified"] != false {
+		t.Errorf("expected accepted without notification, got %#v", response)
 	}
 }
 
@@ -478,15 +593,13 @@ func TestHandleDispatch_Accepted(t *testing.T) {
 	}
 }
 
-func TestHandleDispatch_Duplicate_ReturnsReasonPayload(t *testing.T) {
+func TestHandleDispatch_ExactRedeliveryReturnsSuccess(t *testing.T) {
 	transport := &testTransport{online: map[string]bool{"node-1": true}}
 	queue := jobqueue.NewManager(transport, jobqueue.Config{
 		AckTimeout: time.Second, ResultTimeout: time.Second, MaxRetries: 3,
 	})
 	srv := &Server{
-		sessions:      NewSessionManager(),
-		queue:         queue,
-		apiToken:      testAPIToken,
+		sessions: NewSessionManager(), queue: queue, apiToken: testAPIToken,
 		clientsByNode: make(map[string]map[*clientConn]struct{}),
 	}
 
@@ -494,17 +607,74 @@ func TestHandleDispatch_Duplicate_ReturnsReasonPayload(t *testing.T) {
 	srv.HandleDispatch(httptest.NewRecorder(), authorizedRequest(t, http.MethodPost, "/api/v1/dispatch", body))
 
 	w := httptest.NewRecorder()
-	body2 := dispatchBody(t, "run-2", "job-1", "node-1") // same job same minute → duplicate
-	srv.HandleDispatch(w, authorizedRequest(t, http.MethodPost, "/api/v1/dispatch", body2))
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-
+	srv.HandleDispatch(w, authorizedRequest(t, http.MethodPost, "/api/v1/dispatch", body))
 	var result map[string]any
 	json.Unmarshal(w.Body.Bytes(), &result)
-	if result["ok"] != false || result["reason"] != "duplicate" {
-		t.Errorf("expected duplicate payload, got %v", result)
+	if w.Code != http.StatusOK || result["ok"] != true || result["runId"] != "run-1" {
+		t.Errorf("expected successful idempotent response, got %d: %v", w.Code, result)
+	}
+}
+
+func TestHandleDispatch_ChangedPayloadForRunIDIsRejected(t *testing.T) {
+	transport := &testTransport{online: map[string]bool{"node-1": true}}
+	queue := jobqueue.NewManager(transport, jobqueue.Config{
+		AckTimeout: time.Second, ResultTimeout: time.Second, MaxRetries: 3,
+	})
+	srv := &Server{
+		sessions: NewSessionManager(), queue: queue, apiToken: testAPIToken,
+		clientsByNode: make(map[string]map[*clientConn]struct{}),
+	}
+
+	srv.HandleDispatch(
+		httptest.NewRecorder(),
+		authorizedRequest(t, http.MethodPost, "/api/v1/dispatch", dispatchBody(t, "run-1", "job-1", "node-1")),
+	)
+	metricsBefore := queue.GetMetrics()
+
+	changedBody, err := json.Marshal(map[string]any{
+		"runId":        "run-1",
+		"jobId":        "job-1",
+		"nodeId":       "node-1",
+		"scheduledFor": "2025-01-15T10:30:00Z",
+		"payload":      map[string]any{"prompt": "changed"},
+	})
+	if err != nil {
+		t.Fatalf("marshal changed dispatch body: %v", err)
+	}
+	w := httptest.NewRecorder()
+	srv.HandleDispatch(w, authorizedRequest(t, http.MethodPost, "/api/v1/dispatch", changedBody))
+
+	var response map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if w.Code != http.StatusOK || response["ok"] != false || response["reason"] != "conflict" {
+		t.Errorf("expected conflicting dispatch response, got %d: %v", w.Code, response)
+	}
+	if metricsAfter := queue.GetMetrics(); metricsAfter != metricsBefore {
+		t.Errorf("rejected dispatch must not change metrics: before=%+v after=%+v", metricsBefore, metricsAfter)
+	}
+}
+
+func TestHandleDispatch_DistinctRunIDsInSameMinuteBothSucceed(t *testing.T) {
+	transport := &testTransport{online: map[string]bool{"node-1": true}}
+	queue := jobqueue.NewManager(transport, jobqueue.Config{
+		AckTimeout: time.Second, ResultTimeout: time.Second, MaxRetries: 3,
+	})
+	srv := &Server{
+		sessions: NewSessionManager(), queue: queue, apiToken: testAPIToken,
+		clientsByNode: make(map[string]map[*clientConn]struct{}),
+	}
+
+	for _, runID := range []string{"run-1", "run-2"} {
+		w := httptest.NewRecorder()
+		body := dispatchBody(t, runID, "job-1", "node-1")
+		srv.HandleDispatch(w, authorizedRequest(t, http.MethodPost, "/api/v1/dispatch", body))
+		var result map[string]any
+		json.Unmarshal(w.Body.Bytes(), &result)
+		if w.Code != http.StatusOK || result["ok"] != true {
+			t.Errorf("run %s: expected accepted response, got %d: %v", runID, w.Code, result)
+		}
 	}
 }
 
@@ -541,6 +711,33 @@ func TestHandleDispatch_MissingFields_Returns400(t *testing.T) {
 	srv.HandleDispatch(w, authorizedRequest(t, http.MethodPost, "/api/v1/dispatch", body))
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandleDispatch_InvalidPayload_Returns400WithoutQueueEffects(t *testing.T) {
+	transport := &testTransport{online: map[string]bool{"node-1": true}}
+	queue := jobqueue.NewManager(transport, jobqueue.Config{
+		AckTimeout: time.Second, ResultTimeout: time.Second, MaxRetries: 3,
+	})
+	srv := &Server{
+		sessions: NewSessionManager(), queue: queue, apiToken: testAPIToken,
+		clientsByNode: make(map[string]map[*clientConn]struct{}),
+	}
+
+	w := httptest.NewRecorder()
+	srv.HandleDispatch(w, authorizedRequest(t, http.MethodPost, "/api/v1/dispatch", []byte(`{
+		"runId":"run-1", "jobId":"job-1", "nodeId":"node-1", "scheduledFor":"2025-01-15T10:30:00Z",
+		"payload":{"value":1e1000}
+	}`)))
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+	if queue.GetRun("run-1") != nil || transport.sent != 0 {
+		t.Error("invalid payload must not create a run or send a notification")
+	}
+	if metrics := queue.GetMetrics(); metrics != (jobqueue.Metrics{}) {
+		t.Errorf("invalid payload must not change metrics, got %+v", metrics)
 	}
 }
 

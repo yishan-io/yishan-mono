@@ -14,6 +14,22 @@ describe("RelayEventService", () => {
     vi.unstubAllGlobals();
   });
 
+  it("publishes targeted scheduled-job changes without payload contents", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new RelayEventService(config);
+
+    await service.publishScheduledJobScheduleChanged("node-1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL("/api/v1/node-events", config.relayUrl),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer relay-token" }),
+        body: JSON.stringify({ nodeId: "node-1", method: "job.schedule.changed" }),
+      }),
+    );
+  });
+
   it("uses the injected timeout signal and handles an aborted relay request", async () => {
     const abortController = new AbortController();
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);

@@ -20,7 +20,7 @@ const QUEUE_SEND_CONCURRENCY = 20;
 export async function publishViaQueue(env: QueueEnv, messages: DispatchMessage[]): Promise<number> {
   const queue = env.SCHEDULED_JOB_QUEUE;
   if (!queue) {
-    console.warn("[evaluator] SCHEDULED_JOB_QUEUE not configured, skipping dispatch");
+    console.warn("[queue] SCHEDULED_JOB_QUEUE not configured, skipping dispatch");
     return 0;
   }
 
@@ -32,7 +32,7 @@ export async function publishViaQueue(env: QueueEnv, messages: DispatchMessage[]
           await queue.send(msg);
           return true;
         } catch (error) {
-          console.error(`[evaluator] Queue publish failed for run ${msg.runId}:`, error);
+          console.error(`[queue] Queue publish failed for run ${msg.runId}:`, error);
           return false;
         }
       }),

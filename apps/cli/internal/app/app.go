@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
@@ -45,8 +44,6 @@ import (
 	"yishan/apps/cli/internal/workspace/instance"
 	workspaceprtracker "yishan/apps/cli/internal/workspace/pr"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
-
-	"github.com/rs/zerolog/log"
 )
 
 // Config carries the daemon-side inputs Bootstrap needs to build the service
@@ -134,6 +131,8 @@ type App struct {
 	rpcServer *rpc.Server
 	// relay is the relay client (connection state owned by internal/relay).
 	relay *relay.Client
+	// scheduledJobs owns recovery-gated scheduled runtime composition.
+	scheduledJobs *scheduledJobsRuntime
 
 	cleanupCtx            context.Context
 	cancelCleanup         context.CancelFunc
@@ -387,64 +386,33 @@ func Bootstrap(cfg Config) (*App, error) {
 	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
 	app.rpcServer = rpc.NewServer(appHandler{router: app.router, agent: agentSvc})
 	app.rpcServer.BinaryFrameHandler = terminalSvc
+	requestScheduledJobsRefresh := func(ctx context.Context) {
+		if app.scheduledJobs != nil {
+			app.scheduledJobs.RequestRefresh(ctx)
+		}
+	}
 	app.relay = relay.NewClient(relay.ClientConfig{
-		Session:     cfg.Session,
-		NodeID:      cfg.NodeID,
-		URL:         cfg.RelayURL,
-		StaticToken: cfg.RelayToken,
-		Server:      app.rpcServer,
-		Handler:     relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Session, daemonWSEndpoint: cfg.DaemonWSEndpoint},
-		Events:      events,
+		Session: cfg.Session, NodeID: cfg.NodeID, URL: cfg.RelayURL, StaticToken: cfg.RelayToken, Server: app.rpcServer,
+		Handler: relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Session,
+			daemonWSEndpoint: cfg.DaemonWSEndpoint, refreshScheduledJobs: requestScheduledJobsRefresh,
+			scheduleRefreshState: &scheduleRefreshState{}},
+		Events: events, OnConnected: requestScheduledJobsRefresh,
 	})
 	terminalSvc.SetRelayClient(app.relay)
 	workspaceSvc.SetRelayClient(app.relay)
 
+	// Constructing LocalScheduler starts its internal workers. Defer that until
+	// the relay and every relay callback consumer are fully wired.
+	var scheduledJobsErr error
+	app.scheduledJobs, scheduledJobsErr = newScheduledJobs(cfg.Database, cfg.Session, cfg.NodeID, cfg.DaemonWSEndpoint)
+	if scheduledJobsErr != nil {
+		return nil, fmt.Errorf("compose scheduled jobs: %w", scheduledJobsErr)
+	}
+	if err := app.scheduledJobs.Start(); err != nil {
+		return nil, fmt.Errorf("start scheduled jobs: %w", err)
+	}
+
 	return app, nil
-}
-
-// Start creates the agent/cleanup lifecycle contexts and starts the
-// background tasks owned by the app: file-cache consumer, token-usage startup
-// scan, pending-cleanup retry, and the workspace health monitor.
-func (a *App) Start() {
-	a.StartFileCacheConsumer()
-	if a.tokenUsage != nil {
-		a.tokenUsage.StartStartupScan()
-	}
-	a.StartCleanupRetry()
-	a.StartHealthMonitor()
-	a.StartLocalTaskKeyBackfill()
-}
-
-// StartLocalTaskKeyBackfill periodically retries legacy key reservations until the app closes.
-func (a *App) StartLocalTaskKeyBackfill() {
-	if a.localTaskSvc == nil {
-		return
-	}
-	a.localTaskBackfillOnce.Do(func() {
-		a.localTaskBackfillWG.Add(1)
-		go a.runLocalTaskKeyBackfill()
-	})
-}
-
-func (a *App) runLocalTaskKeyBackfill() {
-	defer a.localTaskBackfillWG.Done()
-	a.backfillLocalTaskKeys()
-	ticker := time.NewTicker(localTaskKeyBackfillInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-a.cleanupCtx.Done():
-			return
-		case <-ticker.C:
-			a.backfillLocalTaskKeys()
-		}
-	}
-}
-
-func (a *App) backfillLocalTaskKeys() {
-	if err := a.localTaskSvc.BackfillTaskKeys(a.cleanupCtx); err != nil && a.cleanupCtx.Err() == nil {
-		log.Debug().Err(err).Msg("Local Task key backfill deferred")
-	}
 }
 
 // applyComputerSettings loads the computer-use feature config from
@@ -469,41 +437,6 @@ func (a *App) applyComputerSettings() error {
 		ClipboardWrite:     cfg.ComputerUse.ClipboardWrite,
 		ApplicationControl: cfg.ComputerUse.ApplicationControl,
 	})
-	return nil
-}
-
-// Close stops the service graph in the daemon's historical shutdown order:
-// event hub subscription → PR tracker → token usage → memory → agent
-// lifecycle → agent manager → model list shell → cleanup/health background
-// tasks → local database.
-func (a *App) Close() error {
-	if a.events != nil {
-		a.events.Unsubscribe(a.fileCacheSubID)
-	}
-	if a.prTracker != nil {
-		a.prTracker.Stop()
-	}
-	if a.tokenUsage != nil {
-		a.tokenUsage.Close()
-	}
-	if a.memory != nil {
-		if err := a.memory.Close(); err != nil {
-			log.Warn().Err(err).Msg("failed to close memory service")
-		}
-	}
-	if a.agentSvc != nil {
-		a.agentSvc.Shutdown()
-	}
-	modellist.ShutdownShell()
-	if a.cancelCleanup != nil {
-		a.cancelCleanup()
-	}
-	a.localTaskBackfillWG.Wait()
-	if a.database != nil {
-		if err := a.database.Close(); err != nil {
-			log.Warn().Err(err).Msg("failed to close local database")
-		}
-	}
 	return nil
 }
 

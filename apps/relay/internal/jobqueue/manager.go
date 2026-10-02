@@ -1,11 +1,12 @@
 // Package jobqueue implements scheduled-job dispatch over relay connections.
 //
 // The manager tracks pending runs through a dispatch -> ack -> result lifecycle,
-// enforces idempotency via (jobId, scheduledFor) minute-bucketed keys, and handles
-// retries on timeout or node disconnect.
+// uses run IDs as idempotency identities, and handles retries on timeout or node
+// disconnect.
 package jobqueue
 
 import (
+	"crypto/sha256"
 	"sync"
 	"time"
 
@@ -48,19 +49,21 @@ const (
 
 // PendingRun represents a single dispatched job run.
 type PendingRun struct {
-	RunID          string         `json:"runId"`
-	JobID          string         `json:"jobId"`
-	NodeID         string         `json:"nodeId"`
-	ScheduledFor   string         `json:"scheduledFor"`
-	IdempotencyKey string         `json:"idempotencyKey"`
-	Payload        map[string]any `json:"payload"`
-	Status         RunStatus      `json:"status"`
-	DispatchedAt   *time.Time     `json:"dispatchedAt,omitempty"`
-	AckedAt        *time.Time     `json:"ackedAt,omitempty"`
-	CompletedAt    *time.Time     `json:"completedAt,omitempty"`
-	Attempts       int            `json:"attempts"`
-	LastError      string         `json:"lastError,omitempty"`
-	Result         *ResultParams  `json:"result,omitempty"`
+	RunID             string         `json:"runId"`
+	JobID             string         `json:"jobId"`
+	NodeID            string         `json:"nodeId"`
+	ScheduledFor      string         `json:"scheduledFor"`
+	IdempotencyKey    string         `json:"idempotencyKey"`
+	Payload           map[string]any `json:"payload"`
+	payloadHash       [sha256.Size]byte
+	attemptGeneration uint64
+	Status            RunStatus     `json:"status"`
+	DispatchedAt      *time.Time    `json:"dispatchedAt,omitempty"`
+	AckedAt           *time.Time    `json:"ackedAt,omitempty"`
+	CompletedAt       *time.Time    `json:"completedAt,omitempty"`
+	Attempts          int           `json:"attempts"`
+	LastError         string        `json:"lastError,omitempty"`
+	Result            *ResultParams `json:"result,omitempty"`
 }
 
 // DispatchParams are the inputs for dispatching a job run.
@@ -76,8 +79,8 @@ type DispatchParams struct {
 type DispatchResult struct {
 	OK            bool
 	RunID         string
-	Reason        string // "duplicate", "node_offline", "dispatch_failed"
-	ExistingRunID string // set when Reason == "duplicate"
+	Reason        string // "conflict", "invalid_payload", "node_offline", "dispatch_failed"
+	ExistingRunID string // reserved for duplicate-dispatch responses
 	ErrorDetail   string
 }
 
@@ -120,9 +123,8 @@ type Manager struct {
 
 	// mu protects all mutable fields. Read-only methods (GetRun, GetMetrics,
 	// GetRunsForNode, IsOnline) use RLock so concurrent reads don't serialise.
-	mu               sync.RWMutex
-	runs             map[string]*PendingRun // keyed by runId
-	idempotencyIndex map[string]string      // idempotencyKey -> runId
+	mu   sync.RWMutex
+	runs map[string]*PendingRun // keyed by runId
 	// runsByNode is a secondary index for O(1) node → run lookups.
 	// Updated on dispatch and completion to avoid O(n) scans.
 	runsByNode   map[string]map[string]struct{} // nodeId -> set of runIds
@@ -134,13 +136,12 @@ type Manager struct {
 // NewManager creates a new job queue manager.
 func NewManager(transport NodeTransport, config Config) *Manager {
 	return &Manager{
-		transport:        transport,
-		config:           config,
-		runs:             make(map[string]*PendingRun),
-		idempotencyIndex: make(map[string]string),
-		runsByNode:       make(map[string]map[string]struct{}),
-		ackTimers:        make(map[string]*time.Timer),
-		resultTimers:     make(map[string]*time.Timer),
+		transport:    transport,
+		config:       config,
+		runs:         make(map[string]*PendingRun),
+		runsByNode:   make(map[string]map[string]struct{}),
+		ackTimers:    make(map[string]*time.Timer),
+		resultTimers: make(map[string]*time.Timer),
 	}
 }
 
@@ -160,56 +161,60 @@ func (m *Manager) PruneLoop(maxAge time.Duration) {
 
 // Dispatch enqueues and sends a job.run to the target node.
 func (m *Manager) Dispatch(params DispatchParams) DispatchResult {
-	idempotencyKey := buildIdempotencyKey(params.JobID, params.ScheduledFor)
+	payloadHash, payload, err := snapshotPayload(params.Payload)
+	if err != nil {
+		return DispatchResult{Reason: "invalid_payload", ErrorDetail: err.Error()}
+	}
 
 	m.mu.Lock()
-
-	// Idempotency check.
-	if existingRunID, ok := m.idempotencyIndex[idempotencyKey]; ok {
+	if existing, ok := m.runs[params.RunID]; ok {
+		result := redeliveryResult(existing, params, payloadHash)
 		m.mu.Unlock()
-		log.Info().
-			Str("jobId", params.JobID).
-			Str("idempotencyKey", idempotencyKey).
-			Str("existingRunId", existingRunID).
-			Msg("duplicate dispatch blocked")
-		return DispatchResult{Reason: "duplicate", ExistingRunID: existingRunID}
+		return result
 	}
 
-	run := &PendingRun{
-		RunID:          params.RunID,
-		JobID:          params.JobID,
-		NodeID:         params.NodeID,
-		ScheduledFor:   params.ScheduledFor,
-		IdempotencyKey: idempotencyKey,
-		Payload:        params.Payload,
-		Status:         StatusDispatching,
-	}
-
-	m.runs[params.RunID] = run
-	m.idempotencyIndex[idempotencyKey] = params.RunID
-	m.addToNodeIndex(params.NodeID, params.RunID)
-	m.metrics.PendingDepth++
-
-	// Check node online before releasing lock.
+	run := m.createRunLocked(params, payloadHash, payload)
 	online := m.transport.IsOnline(params.NodeID)
 	m.mu.Unlock()
 
-	if !online {
-		m.mu.Lock()
-		now := time.Now()
-		run.Status = StatusSkippedOffline
-		run.CompletedAt = &now
-		m.metrics.PendingDepth--
-		m.metrics.TotalSkippedOffline++
-		m.mu.Unlock()
-		log.Warn().
-			Str("runId", params.RunID).
-			Str("nodeId", params.NodeID).
-			Msg("node offline, run skipped")
-		return DispatchResult{Reason: "node_offline", RunID: params.RunID}
-	}
+	return m.dispatchInitial(run, online)
+}
 
-	return m.attemptDispatch(run)
+func (m *Manager) createRunLocked(params DispatchParams, payloadHash [sha256.Size]byte, payload map[string]any) *PendingRun {
+	run := &PendingRun{
+		RunID: params.RunID, JobID: params.JobID, NodeID: params.NodeID,
+		ScheduledFor: params.ScheduledFor, IdempotencyKey: params.RunID,
+		Payload: payload, payloadHash: payloadHash, Status: StatusDispatching,
+	}
+	m.runs[params.RunID] = run
+	m.addToNodeIndex(params.NodeID, params.RunID)
+	m.metrics.PendingDepth++
+	return run
+}
+
+// dispatchInitial completes the initial attempt after Dispatch releases the manager lock.
+// A disconnect can claim the run for retry before this executes.
+func (m *Manager) dispatchInitial(run *PendingRun, online bool) DispatchResult {
+	if !online {
+		return m.skipOffline(run)
+	}
+	return m.attemptInitialDispatch(run)
+}
+
+func (m *Manager) skipOffline(run *PendingRun) DispatchResult {
+	m.mu.Lock()
+	if run.Status != StatusDispatching {
+		m.mu.Unlock()
+		return DispatchResult{OK: true, RunID: run.RunID}
+	}
+	now := time.Now()
+	run.Status = StatusSkippedOffline
+	run.CompletedAt = &now
+	m.metrics.PendingDepth--
+	m.metrics.TotalSkippedOffline++
+	m.mu.Unlock()
+	log.Warn().Str("runId", run.RunID).Str("nodeId", run.NodeID).Msg("node offline, run skipped")
+	return DispatchResult{Reason: "node_offline", RunID: run.RunID}
 }
 
 // HandleAck processes a job.ack from a node.
@@ -226,17 +231,26 @@ func (m *Manager) HandleAck(nodeID string, ack AckParams) {
 		log.Warn().Str("runId", ack.RunID).Str("expected", run.NodeID).Str("got", nodeID).Msg("ack from wrong node")
 		return
 	}
-
-	// Guard against double-decrement: the timer callback may have already
-	// fired if t.Stop() returned false. Only process ack if still awaiting.
-	if run.Status != StatusAwaitingAck {
-		m.mu.Unlock()
-		log.Debug().Str("runId", ack.RunID).Str("status", string(run.Status)).Msg("ack arrived after status already advanced; ignoring")
+	accepted, handled := m.processAckLocked(run, ack)
+	status := run.Status
+	m.mu.Unlock()
+	if !handled {
+		log.Debug().Str("runId", ack.RunID).Str("status", string(status)).Msg("ack arrived after status already advanced; ignoring")
 		return
 	}
+	if !accepted {
+		log.Info().Str("runId", ack.RunID).Str("nodeId", nodeID).Str("reason", ack.Reason).Msg("run rejected")
+		return
+	}
+	m.startResultTimer(run)
+	log.Info().Str("runId", ack.RunID).Str("nodeId", nodeID).Msg("run accepted")
+}
 
+func (m *Manager) processAckLocked(run *PendingRun, ack AckParams) (accepted, handled bool) {
+	if run.Status != StatusAwaitingAck {
+		return false, false
+	}
 	m.clearAckTimer(ack.RunID)
-
 	if ack.Status == "rejected" {
 		now := time.Now()
 		run.Status = StatusRejected
@@ -248,21 +262,14 @@ func (m *Manager) HandleAck(nodeID string, ack AckParams) {
 		m.metrics.PendingDepth--
 		m.metrics.AwaitingAck--
 		m.metrics.TotalFailed++
-		m.mu.Unlock()
-		log.Info().Str("runId", ack.RunID).Str("nodeId", nodeID).Str("reason", ack.Reason).Msg("run rejected")
-		return
+		return false, true
 	}
-
-	// Accepted.
 	now := time.Now()
 	run.Status = StatusAwaitingResult
 	run.AckedAt = &now
 	m.metrics.AwaitingAck--
 	m.metrics.AwaitingResult++
-	m.mu.Unlock()
-
-	m.startResultTimer(run)
-	log.Info().Str("runId", ack.RunID).Str("nodeId", nodeID).Msg("run accepted")
+	return true, true
 }
 
 // HandleResult processes a job.result from a node.
@@ -279,76 +286,55 @@ func (m *Manager) HandleResult(nodeID string, result ResultParams) {
 		log.Warn().Str("runId", result.RunID).Str("expected", run.NodeID).Str("got", nodeID).Msg("result from wrong node")
 		return
 	}
-
-	m.clearResultTimer(result.RunID)
-
-	now := time.Now()
-	run.Result = &result
-	run.CompletedAt = &now
-
-	if result.Status == "completed" {
-		run.Status = StatusCompleted
-		m.metrics.TotalCompleted++
-	} else {
-		run.Status = StatusFailed
-		if result.Error != nil {
-			run.LastError = result.Error.Message
-		} else {
-			run.LastError = "job " + result.Status
-		}
-		m.metrics.TotalFailed++
+	if run.Status != StatusAwaitingResult {
+		status := run.Status
+		m.mu.Unlock()
+		log.Debug().Str("runId", result.RunID).Str("status", string(status)).Msg("result arrived outside awaiting-result state; ignoring")
+		return
 	}
-
-	m.metrics.PendingDepth--
-	m.metrics.AwaitingResult--
+	m.clearResultTimer(result.RunID)
+	m.completeResultLocked(run, result)
 	m.mu.Unlock()
 
-	log.Info().
-		Str("runId", result.RunID).
-		Str("nodeId", nodeID).
-		Str("status", result.Status).
-		Int64("durationMs", result.DurationMs).
-		Msg("run completed")
+	log.Info().Str("runId", result.RunID).Str("nodeId", nodeID).Str("status", result.Status).Int64("durationMs", result.DurationMs).Msg("run completed")
 }
 
 // HandleNodeDisconnect handles all in-flight runs for a disconnected node.
 func (m *Manager) HandleNodeDisconnect(nodeID string) {
 	m.mu.Lock()
-	// Use the secondary index for O(1) lookup instead of iterating all runs.
 	runIDs := m.nodeRunIDs(nodeID)
-	var retryRuns []*PendingRun
+	var retryRuns []retryRun
 	for runID := range runIDs {
 		run, ok := m.runs[runID]
 		if !ok {
 			continue
 		}
-		switch run.Status {
-		case StatusAwaitingAck, StatusDispatching:
-			m.clearAckTimer(run.RunID)
-			// Decrement AwaitingAck here; scheduleRetry will re-increment it
-			// if the run is immediately re-dispatched via attemptDispatch.
-			if run.Status == StatusAwaitingAck {
-				m.metrics.AwaitingAck--
-			}
-			retryRuns = append(retryRuns, run)
-		case StatusAwaitingResult:
-			m.clearResultTimer(run.RunID)
-			now := time.Now()
-			run.Status = StatusFailed
-			run.CompletedAt = &now
-			run.LastError = "node disconnected during execution"
-			m.metrics.PendingDepth--
-			m.metrics.AwaitingResult--
-			m.metrics.TotalFailed++
-			log.Warn().Str("runId", run.RunID).Str("nodeId", nodeID).Msg("run failed: node disconnected during execution")
+		if retryRun, ok := m.handleDisconnectedRunLocked(run); ok {
+			retryRuns = append(retryRuns, retryRun)
 		}
 	}
 	m.mu.Unlock()
-
-	// Schedule retries outside lock.
-	for _, run := range retryRuns {
-		m.scheduleRetry(run, "node disconnected before ack")
+	for _, retryRun := range retryRuns {
+		m.dispatchRetry(retryRun)
 	}
+}
+
+func (m *Manager) handleDisconnectedRunLocked(run *PendingRun) (retryRun, bool) {
+	switch run.Status {
+	case StatusAwaitingAck, StatusDispatching:
+		return m.claimRetryLocked(run, "node disconnected before ack")
+	case StatusAwaitingResult:
+		m.clearResultTimer(run.RunID)
+		now := time.Now()
+		run.Status = StatusFailed
+		run.CompletedAt = &now
+		run.LastError = "node disconnected during execution"
+		m.metrics.PendingDepth--
+		m.metrics.AwaitingResult--
+		m.metrics.TotalFailed++
+		log.Warn().Str("runId", run.RunID).Str("nodeId", run.NodeID).Msg("run failed: node disconnected during execution")
+	}
+	return retryRun{}, false
 }
 
 // HandleNodeReconnect retries any runs queued for retry on the reconnected node.
@@ -366,7 +352,7 @@ func (m *Manager) HandleNodeReconnect(nodeID string) {
 
 	for _, run := range retryRuns {
 		log.Info().Str("runId", run.RunID).Str("nodeId", nodeID).Msg("retrying run on reconnect")
-		m.attemptDispatch(run)
+		m.attemptRetryDispatch(run)
 	}
 }
 
@@ -374,7 +360,7 @@ func (m *Manager) HandleNodeReconnect(nodeID string) {
 func (m *Manager) GetRun(runID string) *PendingRun {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.runs[runID]
+	return cloneRun(m.runs[runID])
 }
 
 // GetRunsForNode returns all runs targeting a specific node.
@@ -385,7 +371,7 @@ func (m *Manager) GetRunsForNode(nodeID string) []*PendingRun {
 	result := make([]*PendingRun, 0, len(runIDs))
 	for runID := range runIDs {
 		if run, ok := m.runs[runID]; ok {
-			result = append(result, run)
+			result = append(result, cloneRun(run))
 		}
 	}
 	return result
@@ -408,7 +394,6 @@ func (m *Manager) PruneCompleted(maxAge time.Duration) int {
 	for runID, run := range m.runs {
 		if run.CompletedAt != nil && run.CompletedAt.Before(cutoff) {
 			delete(m.runs, runID)
-			delete(m.idempotencyIndex, run.IdempotencyKey)
 			m.removeFromNodeIndex(run.NodeID, runID)
 			pruned++
 		}
@@ -449,158 +434,57 @@ func (m *Manager) nodeRunIDs(nodeID string) map[string]struct{} {
 	return map[string]struct{}{}
 }
 
-func (m *Manager) attemptDispatch(run *PendingRun) DispatchResult {
-	m.mu.Lock()
-	run.Attempts++
-	now := time.Now()
-	run.DispatchedAt = &now
-	run.Status = StatusAwaitingAck
-	m.metrics.TotalDispatched++
-	m.metrics.AwaitingAck++
-	m.mu.Unlock()
-
-	// Use a typed struct to avoid a heap map[string]any allocation per dispatch.
-	err := m.transport.SendNotificationWithError(run.NodeID, relayprotocol.MethodJobRun, relayprotocol.JobRunParams{
-		RunID:          run.RunID,
-		JobID:          run.JobID,
-		ScheduledFor:   run.ScheduledFor,
-		IdempotencyKey: run.IdempotencyKey,
-		Payload:        run.Payload,
-	})
-
-	if err != nil {
-		m.mu.Lock()
-		now := time.Now()
-		run.Status = StatusSkippedOffline
-		run.CompletedAt = &now
-		m.metrics.PendingDepth--
-		m.metrics.AwaitingAck--
-		m.metrics.TotalSkippedOffline++
-		m.mu.Unlock()
-		log.Warn().Err(err).Str("runId", run.RunID).Str("nodeId", run.NodeID).Msg("dispatch failed: node unreachable")
-		return DispatchResult{Reason: "node_offline", RunID: run.RunID, ErrorDetail: err.Error()}
+func cloneRun(run *PendingRun) *PendingRun {
+	if run == nil {
+		return nil
 	}
-
-	m.startAckTimer(run)
-
-	log.Info().
-		Str("runId", run.RunID).
-		Str("jobId", run.JobID).
-		Str("nodeId", run.NodeID).
-		Int("attempt", run.Attempts).
-		Msg("job dispatched")
-
-	return DispatchResult{OK: true, RunID: run.RunID}
+	copy := *run
+	copy.Payload = cloneMap(run.Payload)
+	copy.DispatchedAt = cloneTime(run.DispatchedAt)
+	copy.AckedAt = cloneTime(run.AckedAt)
+	copy.CompletedAt = cloneTime(run.CompletedAt)
+	if run.Result != nil {
+		result := *run.Result
+		result.Output = cloneMap(run.Result.Output)
+		if run.Result.Error != nil {
+			err := *run.Result.Error
+			result.Error = &err
+		}
+		copy.Result = &result
+	}
+	return &copy
 }
 
-func (m *Manager) startAckTimer(run *PendingRun) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	timer := time.AfterFunc(m.config.AckTimeout, func() {
-		m.handleAckTimeout(run)
-	})
-	m.ackTimers[run.RunID] = timer
+func cloneTime(value *time.Time) *time.Time {
+	if value == nil {
+		return nil
+	}
+	copy := *value
+	return &copy
 }
 
-func (m *Manager) clearAckTimer(runID string) {
-	if t, ok := m.ackTimers[runID]; ok {
-		t.Stop()
-		delete(m.ackTimers, runID)
+func cloneMap(source map[string]any) map[string]any {
+	if source == nil {
+		return nil
+	}
+	copy := make(map[string]any, len(source))
+	for key, value := range source {
+		copy[key] = cloneValue(value)
+	}
+	return copy
+}
+
+func cloneValue(source any) any {
+	switch value := source.(type) {
+	case map[string]any:
+		return cloneMap(value)
+	case []any:
+		copy := make([]any, len(value))
+		for index, item := range value {
+			copy[index] = cloneValue(item)
+		}
+		return copy
+	default:
+		return value
 	}
 }
-
-func (m *Manager) startResultTimer(run *PendingRun) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	timer := time.AfterFunc(m.config.ResultTimeout, func() {
-		m.handleResultTimeout(run)
-	})
-	m.resultTimers[run.RunID] = timer
-}
-
-func (m *Manager) clearResultTimer(runID string) {
-	if t, ok := m.resultTimers[runID]; ok {
-		t.Stop()
-		delete(m.resultTimers, runID)
-	}
-}
-
-func (m *Manager) handleAckTimeout(run *PendingRun) {
-	m.mu.Lock()
-	// Guard against double-decrement: check that the run is still in the
-	// awaiting-ack state. If HandleAck already ran concurrently (e.g. t.Stop()
-	// returned false but the callback was already dispatched), the status will
-	// have advanced and we must not decrement AwaitingAck again.
-	if run.Status != StatusAwaitingAck {
-		m.mu.Unlock()
-		return
-	}
-	delete(m.ackTimers, run.RunID)
-	m.metrics.AwaitingAck--
-	// Capture the values needed for logging before releasing the lock.
-	runID := run.RunID
-	nodeID := run.NodeID
-	attempts := run.Attempts
-	m.mu.Unlock()
-
-	log.Warn().Str("runId", runID).Str("nodeId", nodeID).Int("attempts", attempts).Msg("ack timeout")
-	m.scheduleRetry(run, "ack timeout")
-}
-
-func (m *Manager) handleResultTimeout(run *PendingRun) {
-	m.mu.Lock()
-	delete(m.resultTimers, run.RunID)
-	now := time.Now()
-	run.Status = StatusFailed
-	run.CompletedAt = &now
-	run.LastError = "result timeout"
-	m.metrics.AwaitingResult--
-	m.metrics.PendingDepth--
-	m.metrics.TotalFailed++
-	m.mu.Unlock()
-
-	log.Warn().Str("runId", run.RunID).Str("nodeId", run.NodeID).Msg("result timeout")
-}
-
-func (m *Manager) scheduleRetry(run *PendingRun, reason string) {
-	m.mu.Lock()
-	if run.Attempts >= m.config.MaxRetries {
-		now := time.Now()
-		run.Status = StatusFailed
-		run.CompletedAt = &now
-		run.LastError = reason + " (max retries exceeded)"
-		m.metrics.PendingDepth--
-		m.metrics.TotalFailed++
-		// AwaitingAck was already decremented by handleAckTimeout before
-		// scheduleRetry is called, so do not decrement it here.
-		m.mu.Unlock()
-		log.Error().Str("runId", run.RunID).Str("nodeId", run.NodeID).Int("attempts", run.Attempts).Msg("run failed: max retries exceeded")
-		return
-	}
-
-	run.Status = StatusRetrying
-	run.LastError = reason
-	m.metrics.TotalRetries++
-	online := m.transport.IsOnline(run.NodeID)
-	m.mu.Unlock()
-
-	if online {
-		log.Info().Str("runId", run.RunID).Int("attempt", run.Attempts+1).Msg("retrying immediately")
-		m.attemptDispatch(run)
-	} else {
-		log.Info().Str("runId", run.RunID).Str("nodeId", run.NodeID).Msg("queued for retry on reconnect")
-	}
-}
-
-// buildIdempotencyKey creates a minute-bucketed key from jobId and scheduledFor.
-func buildIdempotencyKey(jobID, scheduledFor string) string {
-	t, err := time.Parse(time.RFC3339, scheduledFor)
-	if err != nil {
-		// Fall back to raw string if not parseable.
-		return jobID + ":" + scheduledFor
-	}
-	return jobID + ":" + t.UTC().Format(minuteBucketFormat)
-}
-
-// minuteBucketFormat is the time format used in idempotency keys.
-const minuteBucketFormat = "2006-01-02T15:04"

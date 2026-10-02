@@ -24,6 +24,7 @@ export type WorkspacePullRequestState = "open" | "closed" | "merged";
 export type ScheduledJobStatus = "active" | "paused" | "disabled" | "deleted";
 export type ScheduledAgentKind = AgentKind;
 export type ScheduledJobRunStatus = "pending" | "running" | "succeeded" | "failed" | "skipped_offline";
+export type ScheduledJobRunTrigger = "manual" | "schedule";
 export type TokenUsageAttributionConfidence = "exact" | "prefix_match" | "fallback_unknown";
 export type TokenUsageCostSource = "unknown" | "estimated" | "direct";
 
@@ -386,6 +387,7 @@ export const scheduledJobRuns = pgTable(
       .notNull()
       .references(() => nodes.id, { onDelete: "cascade" }),
     scheduledFor: timestamp("scheduled_for", { withTimezone: true }).notNull(),
+    trigger: text("trigger").$type<ScheduledJobRunTrigger>().notNull().default("manual"),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     status: text("status").$type<ScheduledJobRunStatus>().notNull().default("pending"),
@@ -396,7 +398,9 @@ export const scheduledJobRuns = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("scheduled_job_runs_job_id_scheduled_for_uq").on(table.jobId, table.scheduledFor),
+    uniqueIndex("scheduled_job_runs_job_id_scheduled_for_uq")
+      .on(table.jobId, table.scheduledFor)
+      .where(sql`${table.trigger} = 'schedule'`),
     index("scheduled_job_runs_job_id_idx").on(table.jobId),
     index("scheduled_job_runs_project_id_idx").on(table.projectId),
     index("scheduled_job_runs_node_id_idx").on(table.nodeId),

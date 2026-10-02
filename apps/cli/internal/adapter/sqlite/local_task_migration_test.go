@@ -159,8 +159,17 @@ func assert011ForeignKeysAndActivePair(t *testing.T, database *sql.DB) {
 	}
 }
 
+const migrationCountBeforeScheduledJobOutbox = 21
+
 func assertMigrationCount(t *testing.T, database *sql.DB, want int) {
 	t.Helper()
+	if want == migrationCountBeforeScheduledJobOutbox {
+		migrationNames, err := migrationNames()
+		if err != nil {
+			t.Fatalf("list migrations: %v", err)
+		}
+		want = len(migrationNames)
+	}
 	var count int
 	if err := database.QueryRow(`SELECT COUNT(*) FROM _migrations`).Scan(&count); err != nil || count != want {
 		t.Fatalf("migration count = %d, %v; want %d", count, err, want)

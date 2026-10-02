@@ -16,6 +16,10 @@ func (c *Client) runSession(ctx context.Context, conn *websocket.Conn) {
 	connState := rpc.NewConnection(conn)
 	defer connState.Close()
 
+	sessionDone := make(chan struct{})
+	defer close(sessionDone)
+	go closeSessionOnCancellation(ctx, connState, sessionDone)
+
 	c.connMu.Lock()
 	c.conn = connState
 	c.connMu.Unlock()
@@ -47,11 +51,11 @@ func (c *Client) runSession(ctx context.Context, conn *websocket.Conn) {
 		}
 
 		// Handle relay-level messages before dispatching to the rpc server.
-		if c.handleRelayMessage(connState, payload) {
+		if c.handleRelayMessage(ctx, connState, payload) {
 			continue
 		}
 
-		resp := c.server.HandleMessage(context.Background(), connState, payload)
+		resp := c.server.HandleMessage(ctx, connState, payload)
 		if resp == nil {
 			continue
 		}
@@ -82,5 +86,15 @@ func forwardTerminalEventsToRelay(connState *rpc.Connection, events <-chan event
 			log.Warn().Err(err).Msg("relay: failed to forward terminal session changed")
 			return
 		}
+	}
+}
+
+// closeSessionOnCancellation closes the connection to unblock ReadMessage when
+// the client context is canceled while the relay peer is idle.
+func closeSessionOnCancellation(ctx context.Context, connState *rpc.Connection, sessionDone <-chan struct{}) {
+	select {
+	case <-ctx.Done():
+		connState.Close()
+	case <-sessionDone:
 	}
 }
