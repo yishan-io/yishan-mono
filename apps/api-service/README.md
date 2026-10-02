@@ -9,7 +9,7 @@ API service built with Hono + Bun, deployed to both Cloudflare Workers and a rem
 - Database: Postgres via Cloudflare Hyperdrive + node-postgres
 - ORM: Drizzle ORM
 - Auth: Google OAuth + GitHub OAuth
-- Queue: Upstash QStash → Relay service → Daemon (WebSocket push)
+- Manual Run Now dispatch: Cloudflare Queue → Relay service → Daemon (WebSocket push)
 
 ## Environment Variables
 
@@ -31,8 +31,6 @@ Copy `.env.example` to `.env` (Bun) and `.dev.vars` (Wrangler local dev):
 - `GOOGLE_CLIENT_SECRET`
 - `GITHUB_CLIENT_ID`
 - `GITHUB_CLIENT_SECRET`
-- `QSTASH_URL` (Upstash QStash base URL, defaults to `https://qstash-us-east-1.upstash.io`)
-- `QSTASH_TOKEN` (Upstash QStash bearer token for dispatching scheduled job runs)
 - `RELAY_URL` (URL of the relay service, e.g. `https://relay.yishan.io`)
 - `RELAY_API_TOKEN` (bearer token for authenticating with the relay's dispatch endpoint)
 
@@ -97,40 +95,34 @@ Scheduled jobs let you define recurring agent tasks. Each job stores a prompt, o
 ### Architecture
 
 ```
-CF Worker cron (every 1 min)
-  -> evaluator: find due jobs, create "pending" runs, publish via QStash
+Daemon scheduler
+  -> claims its assigned recurring jobs from the API
+  -> executes the agent and reports the run lifecycle
 
-QStash (at-least-once delivery with automatic retries)
-  -> POST {relayURL}/api/v1/dispatch
+Cloudflare Queue (Run Now only)
+  -> Relay service
+  -> daemon
 
-Relay service (persistent WebSocket to daemon)
-  -> sends job.run notification to daemon over WS
-  -> daemon responds with job.ack then job.result
-
-Daemon receives job.run from relay:
-  -> PUT /runs/start (status -> "running")
-  -> exec: opencode run --prompt ... [--model ...] [--command ...]
-  -> PUT /runs/complete (status -> "succeeded" or "failed")
-  -> sends job.result back to relay
-
-If daemon is offline:
-  -> Relay marks run as skipped_offline
-  -> After 5 min unclaimed, evaluator marks stale runs as "skipped_offline"
+CF Worker cron (03:00 UTC)
+  -> cleanup, including stale-run terminalization
 ```
 
-- **API service (CF Worker)**: stores job definitions, evaluates due jobs on a 1-minute cron, dispatches via QStash to relay, records run history
-- **QStash**: guarantees at-least-once delivery to the relay service with automatic retries
-- **Relay service**: maintains persistent WS connections to daemon nodes; pushes `job.run` notifications, handles ack/result lifecycle
-- **CLI daemon**: connects outbound to relay via WebSocket, receives `job.run` notifications, executes agent tasks, reports results back to both relay and API
-- Each job is bound to a `nodeId` (the daemon that will execute it)
+- **API service**: stores job definitions and run history, authorizes daemon claims, and accepts lifecycle reports.
+- **CLI daemon**: owns recurring schedule timing and execution for its assigned node.
+- **Cloudflare Queue and Relay**: retain the manual Run Now dispatch path.
+- **CF Worker cleanup**: terminalizes abandoned pending/running runs during the daily cleanup.
 
 ### Run status lifecycle
 
 ```
 pending -> running -> succeeded
                    -> failed
-pending -> skipped_offline  (stale after 5 min, daemon was offline)
+pending -> skipped_offline  (terminalized during daily cleanup)
 ```
+
+### Dispatch provenance
+
+This first release persists each run's `trigger`: `schedule` for a daemon-claimed recurring occurrence and `manual` for Run Now. Manual runs may start after their parent job is paused; scheduled runs require an active job still assigned to the reporting node.
 
 ### Create a scheduled job
 
@@ -184,8 +176,8 @@ Fields:
 - Supported tokens: `*`, comma lists, ranges (`1-5`), step values (`*/5`, `1-30/2`)
 - Day-of-week supports `0-6` (`0=Sunday`) and short names (`SUN`..`SAT`)
 - Timezone: IANA timezone name (e.g. `UTC`, `America/Los_Angeles`)
-- Evaluation: CF Worker cron runs every 1 minute, processes up to 500 due jobs per tick
-- Deduplication: scheduled runs are bucketed to the minute and protected by the unique `(jobId, scheduledFor)` index; duplicate evaluator ticks skip publish on insert conflict
+- Evaluation: the assigned daemon evaluates recurring schedules and claims each occurrence through the API
+- Deduplication: claimed scheduled runs are protected by the unique `(jobId, scheduledFor)` index
 - Current hard limits:
   - `name`: 120 chars
   - `prompt`: 4096 chars
@@ -211,7 +203,7 @@ bun run dev:worker
 - [Neon](https://neon.tech) project with a Postgres database
 - Cloudflare account with Workers plan
 - `wrangler` CLI authenticated (`wrangler login`)
-- Upstash QStash account for scheduled job dispatch
+- Cloudflare Queue `scheduled-job-dispatch` for manual Run Now dispatch
 - Relay service deployed and accessible
 
 ### 1. Neon Database
@@ -249,6 +241,14 @@ binding = "HYPERDRIVE"
 id = "<your-hyperdrive-config-id>"
 ```
 
+### 3a. Create the Cloudflare Queue
+
+Create the queue referenced by the `SCHEDULED_JOB_QUEUE` producer and consumer bindings in `wrangler.toml`:
+
+```sh
+wrangler queues create scheduled-job-dispatch
+```
+
 ### 4. Set Worker Secrets
 
 Secrets are stored encrypted in Cloudflare and injected at runtime. Set each required secret:
@@ -260,7 +260,6 @@ wrangler secret put GOOGLE_CLIENT_ID
 wrangler secret put GOOGLE_CLIENT_SECRET
 wrangler secret put GITHUB_CLIENT_ID
 wrangler secret put GITHUB_CLIENT_SECRET
-wrangler secret put QSTASH_TOKEN
 wrangler secret put RELAY_API_TOKEN
 ```
 
@@ -318,9 +317,8 @@ Required GitHub repository secret:
 
 ### Cron Schedules
 
-The Worker runs two cron triggers configured in `wrangler.toml`:
+The Worker runs one cron trigger configured in `wrangler.toml`:
 
 | Cron | Description |
 |---|---|
-| `*/5 * * * *` | Evaluates due scheduled jobs every 5 minutes, creates pending runs, dispatches via QStash to relay |
-| `0 3 * * *` | Daily cleanup at 03:00 UTC -- removes expired sessions, revoked refresh tokens, and marks stale pending runs as `skipped_offline` |
+| `0 3 * * *` | Daily cleanup at 03:00 UTC -- removes expired sessions and tokens, and terminalizes stale pending/running scheduled-job runs |

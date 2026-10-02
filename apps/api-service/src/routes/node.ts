@@ -8,7 +8,12 @@ import {
   relayTokenHandler,
   updateNodeScopeHandler,
 } from "@/handlers/node";
-import { completeScheduledJobRunHandler, startScheduledJobRunHandler } from "@/handlers/scheduled-job";
+import {
+  claimScheduledJobHandler,
+  completeScheduledJobRunHandler,
+  reconcileScheduledJobsHandler,
+  startScheduledJobRunHandler,
+} from "@/handlers/scheduled-job";
 import type { AppEnv } from "@/hono";
 import { requireOrganizationMemberFromParam } from "@/middlewares/organization-access";
 import { validationErrorResponse } from "@/validation/error-response";
@@ -21,8 +26,10 @@ import {
   updateNodeScopeBodySchema,
 } from "@/validation/node";
 import {
+  claimScheduledJobRunBodySchema,
   completeScheduledJobRunBodySchema,
   nodeScheduledJobParamsSchema,
+  reconcileScheduledJobsBodySchema,
   startScheduledJobRunBodySchema,
 } from "@/validation/scheduled-job";
 
@@ -52,6 +59,20 @@ nodeRouter.route("/orgs/:orgId/nodes", orgNodesRouter);
 
 nodeRouter.post("/nodes/register", zValidator("json", registerNodeBodySchema, validationErrorResponse), (c) =>
   registerNodeHandler(c, c.req.valid("json")),
+);
+
+nodeRouter.post(
+  "/nodes/:nodeId/scheduled-jobs/reconcile",
+  zValidator("param", nodeScheduledJobParamsSchema, validationErrorResponse),
+  zValidator("json", reconcileScheduledJobsBodySchema, validationErrorResponse),
+  (c) => reconcileScheduledJobsHandler(c, c.req.valid("param"), c.req.valid("json")),
+);
+
+nodeRouter.post(
+  "/nodes/:nodeId/scheduled-jobs/claim",
+  zValidator("param", nodeScheduledJobParamsSchema, validationErrorResponse),
+  zValidator("json", claimScheduledJobRunBodySchema, validationErrorResponse),
+  (c) => claimScheduledJobHandler(c, c.req.valid("param"), c.req.valid("json")),
 );
 
 nodeRouter.put(

@@ -26,6 +26,13 @@ export class RelayEventService {
     private readonly createTimeoutSignal: TimeoutSignalFactory = createRelayEventTimeoutSignal,
   ) {}
 
+  async publishScheduledJobScheduleChanged(nodeId: string): Promise<void> {
+    await this.postRelayEvent("/api/v1/node-events", {
+      nodeId,
+      method: "job.schedule.changed",
+    });
+  }
+
   async publishWorkspaceSnapshotChanged(input: WorkspaceSnapshotChangeInput): Promise<void> {
     const relayUrl = this.config.relayUrl?.trim();
     const relayApiToken = this.config.relayApiToken?.trim();

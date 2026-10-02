@@ -392,6 +392,13 @@ export class ScheduledJobNotFoundError extends AppError {
   }
 }
 
+export class ScheduledJobClaimUnavailableError extends AppError {
+  constructor() {
+    super("Scheduled job occurrence is no longer claimable", StatusCodes.CONFLICT, "SCHEDULED_JOB_CLAIM_UNAVAILABLE");
+    this.name = "ScheduledJobClaimUnavailableError";
+  }
+}
+
 export class ScheduledJobInvalidCronError extends AppError {
   constructor(cronExpression: string, reason: string) {
     super("Invalid cron expression", StatusCodes.BAD_REQUEST, "SCHEDULED_JOB_INVALID_CRON", {
@@ -444,6 +451,17 @@ export class UnsupportedOAuthProviderError extends AppError {
   constructor(provider: string) {
     super("Unsupported OAuth provider", StatusCodes.BAD_REQUEST, "UNSUPPORTED_OAUTH_PROVIDER", { provider });
     this.name = "UnsupportedOAuthProviderError";
+  }
+}
+
+export class ScheduledJobRunTransitionUnavailableError extends AppError {
+  constructor() {
+    super(
+      "Scheduled job run transition is no longer allowed",
+      StatusCodes.CONFLICT,
+      "SCHEDULED_JOB_RUN_TRANSITION_UNAVAILABLE",
+    );
+    this.name = "ScheduledJobRunTransitionUnavailableError";
   }
 }
 

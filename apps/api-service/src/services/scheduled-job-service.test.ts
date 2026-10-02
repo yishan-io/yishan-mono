@@ -1,7 +1,11 @@
 import { scheduledJobs } from "@/db/schema";
-import { OrganizationMembershipRequiredError, ScheduledJobNotFoundError } from "@/errors";
+import {
+  OrganizationMembershipRequiredError,
+  ScheduledJobNotFoundError,
+  ScheduledJobRunTransitionUnavailableError,
+} from "@/errors";
 import { ScheduledJobService } from "@/services/scheduled-job-service";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // ── Shared fixtures ────────────────────────────────────────────────────────────
 
@@ -62,7 +66,6 @@ function createMockDb(presetRows?: Record<string, unknown>[][]) {
     mockLimit,
     mockInsert,
     mockInsertValues,
-    mockInsertReturning,
     mockUpdate,
     mockUpdateSet,
     mockUpdateWhere,
@@ -100,7 +103,7 @@ describe("ScheduledJobService.createScheduledJob", () => {
 
   it("inserts a job and returns a view when all guards pass", async () => {
     // Rows: [project check, node check]
-    const { db, mockInsert, mockInsertReturning, mockInsertValues, mockLimit } = createMockDb();
+    const { db, mockInsert, mockInsertValues, mockLimit } = createMockDb();
     // project exists + node exists (assertNodeOwnedByActor uses shared helper)
     mockLimit
       .mockResolvedValueOnce([{ id: "proj-1" }]) // assertProjectBelongsToOrganization
@@ -306,7 +309,97 @@ describe("ScheduledJobService.triggerRunNow", () => {
     const run = await service.triggerRunNow({ organizationId: "org-1", jobId: "job-1", actorUserId: "user-1" });
 
     expect(mockInsert).toHaveBeenCalled();
+    expect(mockInsertValues).toHaveBeenCalledWith(expect.objectContaining({ trigger: "manual" }));
     expect(run.job.id).toBe("job-1");
     expect(run.runId).toBeTruthy();
+  });
+});
+
+describe("ScheduledJobService.markRunNowDispatchFailed", () => {
+  it("terminalizes a pending manual run after its parent is soft-deleted without checking job visibility", async () => {
+    const { db, mockSelect, mockUpdateReturning, mockUpdateSet } = createMockDb();
+    mockUpdateReturning.mockResolvedValueOnce([
+      {
+        ...JOB_ROW,
+        id: "run-1",
+        jobId: "job-1",
+        trigger: "manual",
+        status: "failed",
+        startedAt: null,
+        finishedAt: new Date(),
+        responseBody: null,
+        errorCode: "QUEUE_DISPATCH_FAILED",
+        errorMessage: "Scheduled job run could not be dispatched to the queue",
+        errorDetails: null,
+      },
+    ]);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    const result = await service.markRunNowDispatchFailed({
+      organizationId: "org-1",
+      jobId: "job-1",
+      runId: "run-1",
+      actorUserId: "user-1",
+    });
+
+    expect(result.didMarkDispatchFailed).toBe(true);
+    expect(result.run.status).toBe("failed");
+    expect(mockSelect).not.toHaveBeenCalled();
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        errorCode: "QUEUE_DISPATCH_FAILED",
+        errorMessage: "Scheduled job run could not be dispatched to the queue",
+        finishedAt: expect.any(Date),
+      }),
+    );
+  });
+
+  it("returns the current authoritative status when the CAS loses", async () => {
+    const { db, mockLimit, mockUpdateReturning } = createMockDb();
+    mockLimit.mockResolvedValueOnce([
+      {
+        ...JOB_ROW,
+        id: "run-1",
+        jobId: "job-1",
+        trigger: "manual",
+        status: "succeeded",
+        startedAt: new Date(),
+        finishedAt: new Date(),
+        responseBody: "done",
+        errorCode: null,
+        errorMessage: null,
+        errorDetails: null,
+      },
+    ]);
+    mockUpdateReturning.mockResolvedValueOnce([]);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    const result = await service.markRunNowDispatchFailed({
+      organizationId: "org-1",
+      jobId: "job-1",
+      runId: "run-1",
+      actorUserId: "user-1",
+    });
+
+    expect(result).toMatchObject({ didMarkDispatchFailed: false, run: { status: "succeeded" } });
+  });
+
+  it("throws when its CAS loses but the authoritative run is still pending", async () => {
+    const { db, mockLimit, mockUpdateReturning } = createMockDb();
+    mockLimit.mockResolvedValueOnce([
+      { ...JOB_ROW, id: "run-1", jobId: "job-1", trigger: "manual", status: "pending" },
+    ]);
+    mockUpdateReturning.mockResolvedValueOnce([]);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    await expect(
+      service.markRunNowDispatchFailed({
+        organizationId: "org-1",
+        jobId: "job-1",
+        runId: "run-1",
+        actorUserId: "user-1",
+      }),
+    ).rejects.toBeInstanceOf(ScheduledJobRunTransitionUnavailableError);
   });
 });

@@ -63,6 +63,7 @@ func startServer() error {
 	mux.HandleFunc("/healthz", handleHealthz)
 	mux.HandleFunc("/api/v1/dispatch", srv.HandleDispatch)
 	mux.HandleFunc("/api/v1/org-events", srv.HandlePublishOrgEvent)
+	mux.HandleFunc("/api/v1/node-events", srv.HandlePublishNodeEvent)
 	mux.HandleFunc("/api/v1/runs/", srv.HandleRunStatus)
 	mux.HandleFunc("/api/v1/metrics", srv.HandleMetrics)
 

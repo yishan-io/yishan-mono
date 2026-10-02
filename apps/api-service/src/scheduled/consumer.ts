@@ -6,6 +6,8 @@ export type RelayDispatchEnv = {
   RELAY_API_TOKEN?: string;
 };
 
+export type DispatchConsumerEnv = RelayDispatchEnv;
+
 const RELAY_DISPATCH_PATH = "/api/v1/dispatch";
 
 type RelayDispatchResponse = {
@@ -18,7 +20,7 @@ type RelayDispatchResponse = {
 
 export async function handleDispatchMessage(
   jobEvaluatorService: JobEvaluatorService,
-  env: RelayDispatchEnv,
+  env: DispatchConsumerEnv,
   msg: DispatchMessage,
 ): Promise<void> {
   const scheduledFor = new Date(msg.scheduledFor);
@@ -36,6 +38,11 @@ export async function handleDispatchMessage(
 
   if (!run) {
     console.warn(`[queue-consumer] Ignored stale/invalid run ${msg.runId}`);
+    return;
+  }
+
+  if (run.trigger !== "manual") {
+    console.warn(`[queue-consumer] Ignored schedule-owned run ${msg.runId}`);
     return;
   }
 

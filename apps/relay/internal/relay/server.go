@@ -152,6 +152,35 @@ func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "notified": notified})
 }
 
+// HandlePublishNodeEvent handles POST /api/v1/node-events — sends one supported notification to a named node.
+func (s *Server) HandlePublishNodeEvent(w http.ResponseWriter, r *http.Request) {
+	if !s.authorizeNodeEventsRequest(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var body struct {
+		NodeID string `json:"nodeId"`
+		Method string `json:"method"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	nodeID := strings.TrimSpace(body.NodeID)
+	if nodeID == "" || body.Method != relayprotocol.MethodJobScheduleChanged {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "nodeId and supported method are required"})
+		return
+	}
+
+	notified := s.sessions.SendNotification(nodeID, relayprotocol.MethodJobScheduleChanged, nil)
+	log.Info().Str("nodeId", nodeID).Bool("notified", notified).Msg("node event published")
+	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "notified": notified})
+}
+
 // evictionLoop periodically removes sessions that have been disconnected for
 // longer than staleSessionMaxAge, preventing unbounded memory growth.
 func (s *Server) evictionLoop() {
@@ -595,6 +624,18 @@ func (s *Server) invalidateMetricsCache() {
 	s.metricsMu.Lock()
 	s.metricsCache = nil
 	s.metricsMu.Unlock()
+}
+
+// authorizeNodeEventsRequest validates the Authorization bearer token for node events.
+// Node-event requests must not accept query-string tokens.
+func (s *Server) authorizeNodeEventsRequest(w http.ResponseWriter, r *http.Request) bool {
+	authorization := r.Header.Get("Authorization")
+	token, hasBearerPrefix := strings.CutPrefix(authorization, "Bearer ")
+	if !hasBearerPrefix || strings.TrimSpace(token) == "" || strings.TrimSpace(token) != s.apiToken {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return false
+	}
+	return true
 }
 
 // authorizeAPIRequest extracts and validates the bearer token from the request.

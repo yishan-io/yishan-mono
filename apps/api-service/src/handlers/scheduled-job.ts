@@ -5,9 +5,13 @@ import type { AppContext } from "@/hono";
 import type { DispatchMessage } from "@/scheduled/queue";
 import { publishViaQueue } from "@/scheduled/queue";
 import type { NodeParamsInput } from "@/validation/node";
+
 import type {
+  ClaimScheduledJobRunBodyInput,
   CompleteScheduledJobRunBodyInput,
   CreateScheduledJobBodyInput,
+  NodeScheduledJobParamsInput,
+  ReconcileScheduledJobsBodyInput,
   ScheduledJobListQueryInput,
   ScheduledJobOrgParamsInput,
   ScheduledJobParamsInput,
@@ -15,6 +19,12 @@ import type {
   StartScheduledJobRunBodyInput,
   UpdateScheduledJobBodyInput,
 } from "@/validation/scheduled-job";
+
+function publishScheduledJobScheduleChanged(c: AppContext, nodeIds: string[]) {
+  for (const nodeId of new Set(nodeIds)) {
+    c.executionCtx.waitUntil(c.get("services").relayEvent.publishScheduledJobScheduleChanged(nodeId));
+  }
+}
 
 export async function listScheduledJobsHandler(
   c: AppContext,
@@ -54,6 +64,8 @@ export async function createScheduledJobHandler(
     timezone: body.timezone,
   });
 
+  publishScheduledJobScheduleChanged(c, [job.nodeId]);
+
   return c.json({ job }, StatusCodes.CREATED);
 }
 
@@ -63,7 +75,7 @@ export async function updateScheduledJobHandler(
   body: UpdateScheduledJobBodyInput,
 ) {
   const actorUser = c.get("sessionUser");
-  const job = await c.get("services").scheduledJob.updateScheduledJob({
+  const updateResult = await c.get("services").scheduledJob.updateScheduledJob({
     actorUserId: actorUser.id,
     actorRole: c.get("organizationRole"),
     organizationId: params.orgId,
@@ -78,7 +90,9 @@ export async function updateScheduledJobHandler(
     timezone: body.timezone,
   });
 
-  return c.json({ job });
+  publishScheduledJobScheduleChanged(c, [updateResult.previousNodeId, updateResult.job.nodeId]);
+
+  return c.json({ job: updateResult.job });
 }
 
 export async function pauseScheduledJobHandler(c: AppContext, params: ScheduledJobParamsInput) {
@@ -89,6 +103,8 @@ export async function pauseScheduledJobHandler(c: AppContext, params: ScheduledJ
     organizationId: params.orgId,
     jobId: params.jobId,
   });
+
+  publishScheduledJobScheduleChanged(c, [job.nodeId]);
 
   return c.json({ job });
 }
@@ -102,6 +118,8 @@ export async function resumeScheduledJobHandler(c: AppContext, params: Scheduled
     jobId: params.jobId,
   });
 
+  publishScheduledJobScheduleChanged(c, [job.nodeId]);
+
   return c.json({ job });
 }
 
@@ -114,17 +132,21 @@ export async function disableScheduledJobHandler(c: AppContext, params: Schedule
     jobId: params.jobId,
   });
 
+  publishScheduledJobScheduleChanged(c, [job.nodeId]);
+
   return c.json({ job });
 }
 
 export async function deleteScheduledJobHandler(c: AppContext, params: ScheduledJobParamsInput) {
   const actorUser = c.get("sessionUser");
-  await c.get("services").scheduledJob.deleteScheduledJob({
+  const job = await c.get("services").scheduledJob.deleteScheduledJob({
     actorUserId: actorUser.id,
     actorRole: c.get("organizationRole"),
     organizationId: params.orgId,
     jobId: params.jobId,
   });
+
+  publishScheduledJobScheduleChanged(c, [job.nodeId]);
 
   return c.json({ ok: true }, StatusCodes.OK);
 }
@@ -155,7 +177,7 @@ export async function runScheduledJobNowHandler(c: AppContext, params: Scheduled
     jobId: params.jobId,
   });
 
-  const bindings = c.env as { SCHEDULED_JOB_QUEUE?: Queue<DispatchMessage> };
+  const bindings = (c.env ?? {}) as { SCHEDULED_JOB_QUEUE?: Queue<DispatchMessage> };
   const published = await publishViaQueue(
     {
       SCHEDULED_JOB_QUEUE: bindings.SCHEDULED_JOB_QUEUE,
@@ -176,9 +198,19 @@ export async function runScheduledJobNowHandler(c: AppContext, params: Scheduled
   );
 
   if (published === 0) {
-    throw new HTTPException(StatusCodes.SERVICE_UNAVAILABLE, {
-      message: "Failed to dispatch scheduled job run",
+    const dispatchFailure = await c.get("services").scheduledJob.markRunNowDispatchFailed({
+      actorUserId: actorUser.id,
+      actorRole: c.get("organizationRole"),
+      organizationId: params.orgId,
+      jobId: params.jobId,
+      runId: pendingRun.runId,
     });
+    if (dispatchFailure.didMarkDispatchFailed) {
+      throw new HTTPException(StatusCodes.SERVICE_UNAVAILABLE, {
+        message: "Failed to dispatch scheduled job run",
+      });
+    }
+    return c.json({ ok: true, run: dispatchFailure.run }, StatusCodes.ACCEPTED);
   }
 
   return c.json(
@@ -205,20 +237,54 @@ export async function runScheduledJobNowHandler(c: AppContext, params: Scheduled
   );
 }
 
+export async function reconcileScheduledJobsHandler(
+  c: AppContext,
+  params: NodeScheduledJobParamsInput,
+  body: ReconcileScheduledJobsBodyInput,
+) {
+  const actorUser = c.get("sessionUser");
+  const jobs = await c.get("services").nodeScheduledJob.reconcileScheduledJobs({
+    actorUserId: actorUser.id,
+    nodeId: params.nodeId,
+    protectedJobs: body.protectedJobs.map((protectedJob) => ({
+      jobId: protectedJob.jobId,
+      nextRunAt: new Date(protectedJob.nextRunAt),
+    })),
+  });
+
+  return c.json({ jobs });
+}
+
+export async function claimScheduledJobHandler(
+  c: AppContext,
+  params: NodeParamsInput,
+  body: ClaimScheduledJobRunBodyInput,
+) {
+  const actorUser = c.get("sessionUser");
+  const claim = await c.get("services").nodeScheduledJob.claimScheduledJob({
+    actorUserId: actorUser.id,
+    nodeId: params.nodeId,
+    jobId: body.jobId,
+    expectedNextRunAt: new Date(body.expectedNextRunAt),
+  });
+
+  return c.json(claim);
+}
+
 export async function startScheduledJobRunHandler(
   c: AppContext,
   params: NodeParamsInput,
   body: StartScheduledJobRunBodyInput,
 ) {
   const actorUser = c.get("sessionUser");
-  await c.get("services").jobEvaluator.markRunStarted({
+  const started = await c.get("services").nodeScheduledJobRun.markRunStarted({
     actorUserId: actorUser.id,
     nodeId: params.nodeId,
     runId: body.runId,
     startedAt: body.startedAt ? new Date(body.startedAt) : undefined,
   });
 
-  return c.json({ ok: true });
+  return c.json({ ok: true, started });
 }
 
 export async function completeScheduledJobRunHandler(
@@ -227,7 +293,7 @@ export async function completeScheduledJobRunHandler(
   body: CompleteScheduledJobRunBodyInput,
 ) {
   const actorUser = c.get("sessionUser");
-  await c.get("services").jobEvaluator.completeRun({
+  const completion = await c.get("services").nodeScheduledJobRun.completeRun({
     actorUserId: actorUser.id,
     nodeId: params.nodeId,
     runId: body.runId,
@@ -239,5 +305,5 @@ export async function completeScheduledJobRunHandler(
     errorDetails: body.errorDetails,
   });
 
-  return c.json({ ok: true });
+  return c.json({ ok: true, accepted: completion.accepted });
 }

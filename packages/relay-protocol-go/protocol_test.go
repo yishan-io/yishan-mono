@@ -15,6 +15,7 @@ func TestMethodConstants(t *testing.T) {
 		"MethodJobRun":                   "job.run",
 		"MethodJobAck":                   "job.ack",
 		"MethodJobResult":                "job.result",
+		"MethodJobScheduleChanged":       "job.schedule.changed",
 		"MethodWorkspaceSnapshotChanged": "workspace.snapshot.changed",
 		"MethodTerminalSessionChanged":   "terminal.session.changed",
 		"MethodTerminalStreamRequest":    "terminal.stream.request",
@@ -24,6 +25,7 @@ func TestMethodConstants(t *testing.T) {
 	got := map[string]string{
 		"MethodPing": MethodPing, "MethodPong": MethodPong,
 		"MethodJobRun": MethodJobRun, "MethodJobAck": MethodJobAck, "MethodJobResult": MethodJobResult,
+		"MethodJobScheduleChanged":       MethodJobScheduleChanged,
 		"MethodWorkspaceSnapshotChanged": MethodWorkspaceSnapshotChanged,
 		"MethodTerminalSessionChanged":   MethodTerminalSessionChanged,
 		"MethodTerminalStreamRequest":    MethodTerminalStreamRequest,

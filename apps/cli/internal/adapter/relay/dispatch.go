@@ -103,7 +103,7 @@ func (c *Client) handleDispatchResponse(id json.RawMessage, result json.RawMessa
 // handleRelayMessage routes relay-protocol messages (heartbeat, job dispatch).
 // Returns true if the message was consumed and should not be passed to the rpc
 // server.
-func (c *Client) handleRelayMessage(connState *rpc.Connection, payload []byte) bool {
+func (c *Client) handleRelayMessage(ctx context.Context, connState *rpc.Connection, payload []byte) bool {
 	var msg struct {
 		Method string          `json:"method"`
 		Params json.RawMessage `json:"params,omitempty"`
@@ -126,7 +126,7 @@ func (c *Client) handleRelayMessage(connState *rpc.Connection, payload []byte) b
 		return true
 	default:
 		if c.handler != nil {
-			return c.handler.HandleRelayMessage(context.Background(), connState, c.nodeID, msg.Method, msg.Params)
+			return c.handler.HandleRelayMessage(ctx, connState, c.nodeID, msg.Method, msg.Params)
 		}
 		return false
 	}

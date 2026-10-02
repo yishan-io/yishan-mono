@@ -1,6 +1,7 @@
 import type { AppDb } from "@/db/client";
 import { AuthService } from "@/services/auth-service";
-import { JobEvaluatorService } from "@/services/job-evaluator-service";
+import { NodeScheduledJobRunService } from "@/services/node-scheduled-job-run-service";
+import { NodeScheduledJobService } from "@/services/node-scheduled-job-service";
 import { NodeService } from "@/services/node-service";
 import { OrganizationExportService } from "@/services/organization-export-service";
 import { OrganizationInviteService } from "@/services/organization-invite-service";
@@ -26,10 +27,11 @@ export type AppServices = {
   organizationInvite: OrganizationInviteService;
   organizationExport: OrganizationExportService;
   node: NodeService;
+  nodeScheduledJob: NodeScheduledJobService;
+  nodeScheduledJobRun: NodeScheduledJobRunService;
   project: ProjectService;
   relayEvent: RelayEventService;
   scheduledJob: ScheduledJobService;
-  jobEvaluator: JobEvaluatorService;
   workspace: WorkspaceService;
   workspacePullRequest: WorkspacePullRequestService;
   voiceTranscription: VoiceTranscriptionService;
@@ -57,10 +59,11 @@ export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppS
     organizationInvite,
     organizationExport: new OrganizationExportService(deps.db, organization),
     node: new NodeService(deps.db, organization, deps.config),
+    nodeScheduledJob: new NodeScheduledJobService(deps.db, organization),
+    nodeScheduledJobRun: new NodeScheduledJobRunService(deps.db, organization),
     project: new ProjectService(deps.db, organization),
     relayEvent,
     scheduledJob: new ScheduledJobService(deps.db, organization),
-    jobEvaluator: new JobEvaluatorService(deps.db),
     workspace: new WorkspaceService(deps.db, organization, workspaceProvisioner),
     workspacePullRequest: new WorkspacePullRequestService(deps.db, organization),
     voiceTranscription: new VoiceTranscriptionService(deps.db, deps.config, organization),

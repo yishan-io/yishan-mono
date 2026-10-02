@@ -1,15 +1,15 @@
 # Relay Service
 
-`apps/relay` is a Go relay that brokers outbound-only daemon connections and carries scheduled-job dispatch over those relay sessions.
+`apps/relay` is a Go relay that brokers outbound-only daemon connections and carries manual scheduled-job dispatch over those relay sessions.
 
 ## What it does
 
 - Accepts daemon WebSocket connections on `GET /ws` with node-scoped JWT auth.
 - Tracks node session lifecycle (`connected`, `disconnected`, `replaced`).
-- Dispatches scheduled runs to specific nodes over relay (`job.run`).
+- Dispatches manual Run Now requests to specific nodes over relay (`job.run`).
 - Processes daemon callbacks (`job.ack`, `job.result`).
 - Applies at-least-once retries for missing ack/timeouts.
-- Enforces minute-bucketed idempotency key: `(jobId, scheduledFor)`.
+- Uses the API-created `runId` as the idempotency key. Distinct manual Run Now requests dispatch independently, including within the same minute.
 - Records explicit offline behavior as `skipped_offline`.
 - Exposes basic observability endpoints for connected nodes and queue metrics.
 
@@ -86,4 +86,4 @@ curl -X POST http://localhost:8788/api/v1/dispatch \
 - No terminal output on relay client: verify daemon node is connected and client is using the same `nodeId`.
 - `skipped_offline`: target node has no active relay session.
 - Frequent retries: inspect ack/result timeouts and daemon handling of `job.run`.
-- Duplicate dispatch conflict: same `(jobId, scheduledFor-minute)` already accepted.
+- Repeated dispatches must use the original `runId`; the relay does not dispatch it twice. A reused `runId` with different job, node, or scheduled time is rejected.
