@@ -60,44 +60,38 @@ export function LocalTaskHubFilterMenu({
   }, [onClose]);
   const handleApply = useCallback(
     (field: FilterField, value: string | string[] | undefined) => {
-      const nextFilters = { ...filters };
-      if (Array.isArray(value) ? value.length > 0 : value) Object.assign(nextFilters, { [field]: value });
-      else delete nextFilters[field];
-      void setLocalTaskHubFilters(nextFilters);
+      void setLocalTaskHubFilters((current) => {
+        const nextFilters = { ...current };
+        if (Array.isArray(value) ? value.length > 0 : value) Object.assign(nextFilters, { [field]: value });
+        else delete nextFilters[field];
+        return nextFilters;
+      });
       handleClose();
     },
-    [filters, handleClose],
+    [handleClose],
   );
-  const handleSelectStatus = useCallback(
-    (status: LocalTaskStatus) => {
-      const selectedStatuses = filters.status ?? [];
+  const handleSelectStatus = useCallback((status: LocalTaskStatus) => {
+    void setLocalTaskHubFilters((current) => {
+      const selectedStatuses = current.status ?? [];
       const statuses = selectedStatuses.includes(status)
         ? selectedStatuses.filter((selectedStatus) => selectedStatus !== status)
         : [...selectedStatuses, status];
-      if (statuses.length > 0) {
-        void setLocalTaskHubFilters({ ...filters, status: statuses });
-        return;
-      }
-      const { status: _status, ...filtersWithoutStatus } = filters;
-      void setLocalTaskHubFilters(filtersWithoutStatus);
-    },
-    [filters],
-  );
-  const handleSelectTag = useCallback(
-    (tagId: string) => {
-      const selectedTagIds = filters.tagIds ?? [];
+      if (statuses.length) return { ...current, status: statuses };
+      const { status: _status, ...remainingFilters } = current;
+      return remainingFilters;
+    });
+  }, []);
+  const handleSelectTag = useCallback((tagId: string) => {
+    void setLocalTaskHubFilters((current) => {
+      const selectedTagIds = current.tagIds ?? [];
       const tagIds = selectedTagIds.includes(tagId)
         ? selectedTagIds.filter((id) => id !== tagId)
         : [...selectedTagIds, tagId];
-      if (tagIds.length > 0) {
-        void setLocalTaskHubFilters({ ...filters, tagIds });
-        return;
-      }
-      const { tagIds: _tagIds, ...filtersWithoutTagIds } = filters;
-      void setLocalTaskHubFilters(filtersWithoutTagIds);
-    },
-    [filters],
-  );
+      if (tagIds.length) return { ...current, tagIds };
+      const { tagIds: _tagIds, ...remainingFilters } = current;
+      return remainingFilters;
+    });
+  }, []);
   const handleSelectField = useCallback((field: FilterField) => {
     setSelectedField(field);
     setTagSearchQuery("");

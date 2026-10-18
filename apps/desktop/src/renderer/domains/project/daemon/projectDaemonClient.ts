@@ -1,5 +1,5 @@
 import type { WorkspaceRecord } from "@renderer/domains/workspace";
-import { request } from "@renderer/rpc";
+import { PreferencesClient, preferencesClient, request } from "@renderer/rpc";
 import { asRecord, readOptionalBoolean, readOptionalString } from "@shared/validation/primitiveReaders";
 import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord } from "../api/types";
 
@@ -83,21 +83,34 @@ function parseProjectListModePreference(value: unknown): ProjectListModePreferen
   };
 }
 
+/** Parses current and legacy navigator hints without interpreting unknown versions. */
 export function parseProjectListPreference(value: unknown): ProjectListPreference {
-  const record = asRecord(value);
+  const candidate = asRecord(value);
+  const record =
+    candidate?.version === undefined || candidate.version === 0 || candidate.version === 1 ? candidate : undefined;
+  const legacyProject = asRecord(record?.by_project);
+  const legacyNode = asRecord(record?.by_node);
   return {
-    version: typeof record?.version === "number" ? record.version : 1,
+    version: 1,
     by_project: parseProjectListModePreference(record?.by_project),
     by_node: parseProjectListModePreference(record?.by_node),
-    workspaceOrderByParentId: toStringArrayMap(record?.workspaceOrderByParentId),
+    workspaceOrderByParentId:
+      record?.workspaceOrderByParentId == null
+        ? {
+            ...toStringArrayMap(legacyProject?.workspaceOrderByParentId),
+            ...toStringArrayMap(legacyNode?.workspaceOrderByParentId),
+          }
+        : toStringArrayMap(record.workspaceOrderByParentId),
   };
 }
 
 export class DaemonProjectClient {
   private readonly invoke: InvokeFn;
+  private readonly preferences: PreferencesClient;
 
   constructor(invoke: InvokeFn) {
     this.invoke = invoke;
+    this.preferences = new PreferencesClient(invoke);
   }
 
   async listByOrg(orgId: string, _opts?: { withWorkspaces?: boolean }): Promise<ProjectWithWorkspacesRecord[]> {
@@ -109,14 +122,18 @@ export class DaemonProjectClient {
   }
 
   async getListPreferences(orgId: string): Promise<ProjectListPreference> {
-    const result = await this.invoke("project.getListPreferences", { organizationId: orgId });
-    return parseProjectListPreference(result);
+    const response = await this.preferences.get(orgId, "project.navigator");
+    const version = response.found ? asRecord(response.value)?.version : undefined;
+    if (typeof version === "number" && version !== 0 && version !== 1) {
+      throw new TypeError("Unsupported navigator preference version");
+    }
+    return parseProjectListPreference(response.found ? response.value : undefined);
   }
 
-  async setListPreferences(orgId: string, preferences: ProjectListPreference): Promise<{ ok: boolean }> {
-    const result = await this.invoke("project.setListPreferences", { organizationId: orgId, preferences });
-    const record = asRecord(result);
-    return { ok: record?.ok === true };
+  async setListPreferences(orgId: string, preferences: ProjectListPreference): Promise<ProjectListPreference> {
+    if (preferences.version !== 1) throw new TypeError("Unsupported navigator preference version");
+    const response = await this.preferences.set(orgId, "project.navigator", preferences);
+    return parseProjectListPreference(response.value);
   }
 
   private parseProjectWithWorkspaces(item: unknown): ProjectWithWorkspacesRecord {
@@ -207,7 +224,7 @@ export async function getProjectListPreferences(organizationId: string): Promise
 export async function setProjectListPreferences(
   organizationId: string,
   preferences: ProjectListPreference,
-): Promise<{ ok: boolean }> {
+): Promise<ProjectListPreference> {
   const projectRpc = await getProjectRpc();
   return projectRpc.setListPreferences(organizationId, preferences);
 }
@@ -216,4 +233,45 @@ export async function setProjectListPreferences(
 export async function getDefaultWorktreeLocation(): Promise<string> {
   const response = (await request("app.getDefaultWorktreeLocation", {})) as { worktreePath: string };
   return response.worktreePath;
+}
+
+/** SQLite filter state; initialization is distinct from an absent/default list. */
+export type ProjectFilterPreference = { isInitialized: boolean; displayProjectIds?: string[] };
+
+function parseProjectFilterPreference(payload: unknown): ProjectFilterPreference {
+  const record = asRecord(payload);
+  if (
+    typeof record?.isInitialized !== "boolean" ||
+    (record.displayProjectIds !== undefined &&
+      (!Array.isArray(record.displayProjectIds) || !record.displayProjectIds.every((id) => typeof id === "string")))
+  ) {
+    throw new Error("Invalid project filter preference response");
+  }
+  return {
+    isInitialized: record.isInitialized,
+    displayProjectIds: record.displayProjectIds === undefined ? undefined : toStringArray(record.displayProjectIds),
+  };
+}
+
+/** Reads the separate SQLite filter scope, never order/fold state. */
+export async function loadProjectFilterPreference(organizationId: string): Promise<ProjectFilterPreference> {
+  const response = await preferencesClient.get(organizationId, "project.filter");
+  return response.found ? parseProjectFilterPreference(response.value) : { isInitialized: false };
+}
+
+/** Writes or atomically initializes only the SQLite filter scope. */
+export async function saveProjectFilterPreference(
+  organizationId: string,
+  displayProjectIds: string[] | undefined,
+  initializeOnly = false,
+): Promise<ProjectFilterPreference> {
+  const response = await preferencesClient.set(
+    organizationId,
+    "project.filter",
+    { isInitialized: true, ...(displayProjectIds === undefined ? {} : { displayProjectIds }) },
+    initializeOnly,
+  );
+  const preference = parseProjectFilterPreference(response.value);
+  if (!preference.isInitialized) throw new Error("Project filter write was not acknowledged");
+  return preference;
 }

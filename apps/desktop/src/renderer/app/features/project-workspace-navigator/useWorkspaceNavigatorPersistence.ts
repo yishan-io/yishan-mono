@@ -34,7 +34,7 @@ type PendingPush = {
 
 /**
  * Persists the project list order/fold state to the daemon
- * (project.getListPreferences / project.setListPreferences).
+ * (preferences.get / preferences.set, project.navigator).
  *
  * - On mount or org switch, persisted state is fetched and seeds local state.
  * - Fetches retry with backoff until they succeed; pushes are gated on a

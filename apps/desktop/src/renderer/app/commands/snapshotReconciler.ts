@@ -50,38 +50,10 @@ function resolveWorkspaceProjectId(workspace: Pick<WorkspaceItem, "projectId" | 
 function resolveNextDisplayProjectIds(input: {
   mappedProjects: WorkspaceProjectRecord[];
   orgPreferences: WorkspaceStoreOrganizationPreference | undefined;
-  previousProjects: WorkspaceProjectRecord[];
 }): string[] {
-  const nextProjectIdSet = new Set(input.mappedProjects.map((project) => project.id));
-  const previousProjectIdSet = new Set(input.previousProjects.map((project) => project.id));
-  const persistedKnownProjectIds = input.orgPreferences?.knownProjectIds;
-  const knownProjectIdSet =
-    previousProjectIdSet.size > 0
-      ? previousProjectIdSet
-      : persistedKnownProjectIds !== undefined
-        ? new Set(persistedKnownProjectIds)
-        : undefined;
-  const baseDisplayProjectIds = input.orgPreferences?.displayProjectIds ?? [];
-  const filteredDisplayProjectIds = baseDisplayProjectIds.filter((projectId) => nextProjectIdSet.has(projectId));
-  const discoveredProjectIds =
-    knownProjectIdSet !== undefined
-      ? input.mappedProjects
-          .map((project) => project.id)
-          .filter((projectId) => !baseDisplayProjectIds.includes(projectId) && !knownProjectIdSet.has(projectId))
-      : [];
-  const hasNoPersistedPreference =
-    input.orgPreferences?.displayProjectIds === undefined || input.orgPreferences.displayProjectIds.length === 0;
-  const shouldResetPersistedDisplayProjectIds =
-    input.orgPreferences?.displayProjectIds !== undefined &&
-    input.orgPreferences.displayProjectIds.length > 0 &&
-    filteredDisplayProjectIds.length === 0 &&
-    input.mappedProjects.length > 0;
-
-  return hasNoPersistedPreference && input.mappedProjects.length > 0
-    ? input.mappedProjects.map((project) => project.id)
-    : shouldResetPersistedDisplayProjectIds
-      ? input.mappedProjects.map((project) => project.id)
-      : [...filteredDisplayProjectIds, ...discoveredProjectIds];
+  // Saved IDs express user intent, not snapshot availability. In particular,
+  // [] means show none; only an absent preference defaults to all projects.
+  return input.orgPreferences?.displayProjectIds ?? input.mappedProjects.map((project) => project.id);
 }
 
 function resolveHydratedSelection(input: {
@@ -93,7 +65,8 @@ function resolveHydratedSelection(input: {
 }): { selectedProjectId: string; selectedWorkspaceId: string } {
   const previousSelectedProjectId = input.previousSelectedProjectId ?? "";
   const previousSelectedWorkspaceId = input.previousSelectedWorkspaceId ?? "";
-  const displayedProjectIdSet = new Set(input.displayProjectIds);
+  const availableProjectIdSet = new Set(input.mappedProjects.map((project) => project.id));
+  const displayedProjectIdSet = new Set(input.displayProjectIds.filter((id) => availableProjectIdSet.has(id)));
   const fallbackSelectedWorkspace = input.workspaces.find((workspace) =>
     displayedProjectIdSet.has(resolveWorkspaceProjectId(workspace)),
   );
@@ -274,7 +247,6 @@ export function reconcileWorkspaceSnapshot(input: SnapshotReconcilerInput): Snap
   const nextDisplayProjectIds = resolveNextDisplayProjectIds({
     mappedProjects,
     orgPreferences,
-    previousProjects: previousState.projects,
   });
   const nextWorkspaces = nextBaseState.workspaces;
   const nextSelection = resolveHydratedSelection({
@@ -297,7 +269,7 @@ export function reconcileWorkspaceSnapshot(input: SnapshotReconcilerInput): Snap
         ? {
             ...previousState.organizationPreferencesById,
             [normalizedOrganizationId]: {
-              displayProjectIds: nextDisplayProjectIds,
+              displayProjectIds: orgPreferences?.displayProjectIds,
               knownProjectIds: mappedProjects.map((project) => project.id),
               lastUsedExternalAppId: orgPreferences?.lastUsedExternalAppId,
             },

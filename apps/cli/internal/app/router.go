@@ -25,6 +25,7 @@ func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspa
 	router.Register("terminal", &rpc.TerminalHandler{Services: terminalSvc})
 	router.Register("computer", &rpc.ComputerHandler{Services: systemSvc})
 	router.Register("memory", &rpc.MemoryHandler{Services: systemSvc})
+	router.Register("preferences", &rpc.PreferencesHandler{Services: systemSvc})
 	router.Register("project", &rpc.ProjectHandler{Services: projectSvc})
 	router.Register("localTask", &rpc.LocalTaskHandler{Services: localTaskSvc})
 	router.Register("system", &rpc.SystemHandler{Services: systemSvc})

@@ -265,6 +265,52 @@ describe("reconcileWorkspaceSnapshot (moves to app/commands after P30)", () => {
     expect(result.displayProjectIds).toEqual(["repo-1"]);
   });
 
+  it.each([
+    { savedIds: [], snapshotIds: ["repo-1"] },
+    { savedIds: ["repo-1"], snapshotIds: [] },
+    { savedIds: ["repo-missing"], snapshotIds: ["repo-1"] },
+    { savedIds: ["repo-1", "repo-missing"], snapshotIds: ["repo-1", "repo-new"] },
+  ])("preserves explicit filter $savedIds across snapshot $snapshotIds", ({ savedIds, snapshotIds }) => {
+    const previous = emptyPreviousState();
+    previous.selectedProjectId = savedIds[0];
+    previous.organizationPreferencesById = {
+      "org-1": { displayProjectIds: savedIds, knownProjectIds: ["repo-1"] },
+      "org-2": { displayProjectIds: ["other-project"] },
+    };
+
+    const result = reconcile({
+      projects: snapshotIds.map((id) => buildProject({ id })),
+      organizationId: "org-1",
+      previousState: previous,
+    });
+
+    expect(result.displayProjectIds).toEqual(savedIds);
+    expect(result.organizationPreferencesById?.["org-1"]?.displayProjectIds).toEqual(savedIds);
+    expect(result.organizationPreferencesById?.["org-2"]).toEqual({ displayProjectIds: ["other-project"] });
+    expect(result.selectedProjectId).toBe(snapshotIds.find((id) => savedIds.includes(id)) ?? "");
+    expect(result.selectedWorkspaceId).toBe("");
+  });
+
+  it("keeps an absent preference absent through empty and populated snapshots", () => {
+    const empty = reconcile({ organizationId: "org-1", previousState: emptyPreviousState() });
+    expect(empty.organizationPreferencesById?.["org-1"]?.displayProjectIds).toBeUndefined();
+
+    const populated = reconcile({
+      projects: [buildProject()],
+      organizationId: "org-1",
+      previousState: empty,
+    });
+    expect(populated.displayProjectIds).toEqual(["repo-1"]);
+    expect(populated.organizationPreferencesById?.["org-1"]?.displayProjectIds).toBeUndefined();
+
+    const expanded = reconcile({
+      projects: [buildProject(), buildProject({ id: "repo-new" })],
+      organizationId: "org-1",
+      previousState: populated,
+    });
+    expect(expanded.displayProjectIds).toEqual(["repo-1", "repo-new"]);
+  });
+
   it("maps a closed-status enum from the transport string", () => {
     const result = reconcile({
       projects: [buildProject()],

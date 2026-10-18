@@ -43,3 +43,5 @@ export { useProjectDeletionFlow } from "./features/project-delete/useProjectDele
 export { renderProjectIcon } from "./ui/projectIcons";
 
 export { useGitLocalProjectPromotion } from "./hooks/useGitLocalProjectPromotion";
+
+export { hydrateProjectFilter, writeProjectFilter } from "./commands/projectFilterCommands";

@@ -23,6 +23,7 @@ import {
   setLocalTaskHubSearchQuery,
   updateLocalTaskStatus,
 } from "../../commands/localTaskCommands";
+import { startTaskHub } from "../../commands/taskHubCommands";
 import type { LocalTask, LocalTaskProjectDisplay, LocalTaskStatus } from "../../localTaskTypes";
 import { localTaskStore } from "../../state/localTaskStore";
 import { CreateLocalTaskDialog } from "./CreateLocalTaskDialog";
@@ -134,8 +135,8 @@ export function TaskHubView() {
 
   useEffect(() => {
     // fire-and-forget: Local Task store owns loading and error state.
-    void refreshLocalTaskHub();
     void loadLocalTaskTagSuggestions();
+    return startTaskHub(refreshLocalTaskHub);
   }, []);
 
   useEffect(() => {

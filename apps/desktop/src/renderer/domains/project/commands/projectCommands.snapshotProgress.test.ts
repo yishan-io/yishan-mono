@@ -20,9 +20,14 @@ const rpcMocks = vi.hoisted(() => ({
   listLocalFolders: vi.fn(async () => []),
 }));
 
-vi.mock("@renderer/rpc", () => ({
+vi.mock("@renderer/rpc/client", () => ({
   subscribeConnectionStatus: vi.fn(() => vi.fn()),
-  request: async (method: string, params?: { organizationId?: string }) => {
+  request: async (
+    method: string,
+    params?: { organizationId?: string; scope?: string; key?: string; value?: unknown },
+  ) => {
+    if (params?.key === "project.filter")
+      return method === "preferences.get" ? { found: false } : { found: true, value: params.value };
     if (method === "project.listWithWorkspaces") {
       return rpcMocks.listProjects(params);
     }

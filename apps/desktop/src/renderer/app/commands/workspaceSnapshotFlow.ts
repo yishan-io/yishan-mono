@@ -1,6 +1,6 @@
 import { listOrganizations } from "@renderer/domains/organization";
 import type { ProjectRecord } from "@renderer/domains/project";
-import { listProjectsByOrg, projectStore } from "@renderer/domains/project";
+import { hydrateProjectFilter, listProjectsByOrg, projectStore } from "@renderer/domains/project";
 
 import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -35,10 +35,6 @@ import { reconcileWorkspaceSnapshot } from "./snapshotReconciler";
 
 let latestWorkspaceSnapshotRequestId = 0;
 
-function isLatestWorkspaceSnapshotRequest(requestId: number): boolean {
-  return requestId === latestWorkspaceSnapshotRequestId;
-}
-
 function hasSnapshotOmittedProjectAddedDuringRequest(
   projectIdsAtRequestStart: Set<string>,
   snapshotProjects: ProjectRecord[],
@@ -52,14 +48,25 @@ function hasSnapshotOmittedProjectAddedDuringRequest(
 /** Loads the latest workspace snapshot and syncs local desktop/daemon state to it. */
 export async function loadWorkspaceSnapshot(): Promise<void> {
   const requestId = ++latestWorkspaceSnapshotRequestId;
+  const sessionState = sessionStore.getState();
+  let isCurrentScope = true;
+  const unsubscribe = sessionStore.subscribe((current) => {
+    if (
+      current.currentUserId !== sessionState.currentUserId ||
+      current.daemonId !== sessionState.daemonId ||
+      current.selectedOrganizationId !== sessionState.selectedOrganizationId
+    )
+      isCurrentScope = false;
+  });
+  const isCurrentRequest = () => isCurrentScope && requestId === latestWorkspaceSnapshotRequestId;
   const projectIdsAtRequestStart = new Set(projectStore.getState().projects.map((project) => project.id));
   const previousWorkspaces = workspaceStore.getState().workspaces;
   const previousSelectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
 
   try {
-    const sessionState = sessionStore.getState();
     const organizations =
       sessionState.organizations.length > 0 ? sessionState.organizations : await listOrganizations();
+    if (!isCurrentRequest()) return;
     const selectedOrganization =
       sessionState.selectedOrganizationId &&
       organizations.some((organization) => organization.id === sessionState.selectedOrganizationId)
@@ -67,14 +74,14 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
         : organizations[0];
 
     if (!selectedOrganization) {
-      if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+      if (!isCurrentRequest()) {
         return;
       }
 
       workspaceStore.getState().load("", []);
 
       const orphanFolders = await listLocalFolders();
-      if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+      if (!isCurrentRequest()) {
         return;
       }
       workspaceStore.getState().loadLocalFolders(orphanFolders);
@@ -87,13 +94,14 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       return;
     }
 
+    if (!(await hydrateProjectFilter(selectedOrganization.id, isCurrentRequest)) || !isCurrentRequest()) return;
     const projectsWithWorkspaces = await listProjectsByOrg(selectedOrganization.id, {
       withWorkspaces: true,
     });
     const projects: ProjectRecord[] = projectsWithWorkspaces.map(({ workspaces: _, ...project }) => project);
     const workspaces = projectsWithWorkspaces.flatMap((project) => project.workspaces ?? []);
 
-    if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+    if (!isCurrentRequest()) {
       return;
     }
 
@@ -141,7 +149,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     // load() retains prior folder items until the authoritative folder snapshot replaces them.
     const daemonFolders = await listLocalFolders();
 
-    if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+    if (!isCurrentRequest()) {
       return;
     }
     workspaceStore.getState().loadLocalFolders(daemonFolders);
@@ -163,5 +171,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     }
   } catch (error) {
     console.error("Failed to load workspace snapshot", error);
+  } finally {
+    unsubscribe();
   }
 }

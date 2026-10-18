@@ -11,7 +11,13 @@ const rpcMocks = vi.hoisted(() => ({
   closeProject: vi.fn(async () => ({ stopped: [] })),
 }));
 
-vi.mock("@renderer/rpc", () => ({ subscribeConnectionStatus: vi.fn(() => vi.fn()) }));
+vi.mock("@renderer/rpc/client", () => ({
+  subscribeConnectionStatus: vi.fn(() => vi.fn()),
+  request: async (method: string, params?: { value?: unknown }) =>
+    method === "preferences.get"
+      ? { found: true, value: { isInitialized: true } }
+      : { found: true, value: params?.value },
+}));
 vi.mock("@renderer/events/desktopRpcEventBus", () => ({ subscribeDesktopRpcEvent: vi.fn(() => vi.fn()) }));
 vi.mock("../../../domains/workspace/daemon/daemonWorkspaceClient", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
@@ -30,21 +36,21 @@ afterEach(() => {
 });
 
 describe("workspace project visibility commands", () => {
-  it("passes the selected organization to the project visibility action", () => {
+  it("passes the selected organization to the project visibility action", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    const setOrganizationDisplayProjectIdsState = vi.fn();
+    const hydrateOrganizationProjectFilterState = vi.fn();
     const renameWorkspaceState = vi.fn();
     workspaceStore.setState({
       renameWorkspace: renameWorkspaceState,
     });
     projectStore.setState({
-      setOrganizationDisplayProjectIds: setOrganizationDisplayProjectIdsState,
+      hydrateOrganizationProjectFilter: hydrateOrganizationProjectFilterState,
     });
 
-    setDisplayRepoIds(["repo-1"]);
+    await setDisplayRepoIds(["repo-1"]);
     renameWorkspace({ repoId: "repo-1", workspaceId: "workspace-1", name: "next-name" });
 
-    expect(setOrganizationDisplayProjectIdsState).toHaveBeenCalledWith("org-1", ["repo-1"]);
+    expect(hydrateOrganizationProjectFilterState).toHaveBeenCalledWith("org-1", ["repo-1"]);
     expect(renameWorkspaceState).toHaveBeenCalledWith({
       repoId: "repo-1",
       workspaceId: "workspace-1",

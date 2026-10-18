@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
 import { localTaskStore } from "@renderer/domains/local-task";
+import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LeftPaneView } from "./LeftPaneView";
 
@@ -46,6 +47,24 @@ const mocked = vi.hoisted(() => {
     workspaceStore,
   };
 });
+
+// Keep filter commands real; only daemon IO is replaced.
+vi.mock("@renderer/rpc/client", () => ({
+  subscribeConnectionStatus: vi.fn(() => () => {}),
+  request: vi.fn(async (method: string, params?: { value?: unknown }) => {
+    if (method === "preferences.get") {
+      return {
+        found: true,
+        value: { isInitialized: true, displayProjectIds: [...mocked.stateRef.current.displayProjectIds] },
+      };
+    }
+    if (method === "preferences.set") {
+      return { found: true, value: params?.value };
+    }
+    if (method === "workspace.closeProject" || method === "workspace.openProject") return {};
+    throw new Error(`Unexpected daemon RPC: ${method}`);
+  }),
+}));
 
 vi.mock("react-i18next", () => ({
   initReactI18next: {
@@ -92,6 +111,7 @@ vi.mock("../../../domains/project/state/projectStore", () => {
       displayProjectIds: string[];
       setDisplayProjectIds: (ids: string[]) => void;
       setOrganizationDisplayProjectIds: (organizationId: string, ids: string[]) => void;
+      hydrateOrganizationProjectFilter: (organizationId: string, ids: string[]) => void;
     }) => unknown,
   ) =>
     selector({
@@ -99,6 +119,7 @@ vi.mock("../../../domains/project/state/projectStore", () => {
       displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
       setDisplayProjectIds: mocked.stateRef.current.setDisplayProjectIds,
       setOrganizationDisplayProjectIds: mocked.stateRef.current.setOrganizationDisplayProjectIds,
+      hydrateOrganizationProjectFilter: mocked.setOrganizationDisplayProjectIds,
     });
   (
     projectStore as unknown as {
@@ -107,6 +128,7 @@ vi.mock("../../../domains/project/state/projectStore", () => {
         displayProjectIds: string[];
         setDisplayProjectIds: (ids: string[]) => void;
         setOrganizationDisplayProjectIds: (organizationId: string, ids: string[]) => void;
+        hydrateOrganizationProjectFilter: (organizationId: string, ids: string[]) => void;
       };
     }
   ).getState = () => ({
@@ -114,6 +136,7 @@ vi.mock("../../../domains/project/state/projectStore", () => {
     displayProjectIds: mocked.stateRef.current.displayProjectIds ?? [],
     setDisplayProjectIds: mocked.stateRef.current.setDisplayProjectIds,
     setOrganizationDisplayProjectIds: mocked.stateRef.current.setOrganizationDisplayProjectIds,
+    hydrateOrganizationProjectFilter: mocked.setOrganizationDisplayProjectIds,
   });
   return { projectStore };
 });
@@ -164,6 +187,7 @@ vi.mock("./LeftPaneResourceUsageControl", () => ({
 
 describe("LeftPaneView deletion", () => {
   beforeEach(() => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
     mocked.stateRef.current = {
       projects: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
       workspaces: [{ id: "workspace-1", repoId: "repo-1", name: "Feature A", branch: "feature-a" }],
@@ -179,7 +203,7 @@ describe("LeftPaneView deletion", () => {
     vi.clearAllMocks();
   });
 
-  it("supports toggling individual projects and select-all in the filter popover", () => {
+  it("supports toggling individual projects and select-all in the filter popover", async () => {
     mocked.stateRef.current = {
       ...mocked.stateRef.current,
       projects: [
@@ -206,21 +230,25 @@ describe("LeftPaneView deletion", () => {
     if (!repo1Option) {
       throw new Error("Expected Repo 1 option");
     }
-    fireEvent.click(repo1Option);
+    await act(async () => {
+      fireEvent.click(repo1Option);
+    });
     rerender(<LeftPaneView />);
 
     expect(screen.queryByTestId("visible-repo-repo-1")).toBeNull();
     expect(screen.getByTestId("visible-repo-repo-2")).toBeTruthy();
 
     // Select all restores everything
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "All" }));
+    });
     rerender(<LeftPaneView />);
 
     expect(screen.getByTestId("visible-repo-repo-1")).toBeTruthy();
     expect(screen.getByTestId("visible-repo-repo-2")).toBeTruthy();
   });
 
-  it("filters popover repository options with quick search and supports selection", () => {
+  it("filters popover repository options with quick search and supports selection", async () => {
     mocked.stateRef.current = {
       ...mocked.stateRef.current,
       projects: [
@@ -244,7 +272,9 @@ describe("LeftPaneView deletion", () => {
     if (!popoverRepoOption) {
       throw new Error("Missing popover repo option");
     }
-    fireEvent.click(popoverRepoOption);
+    await act(async () => {
+      fireEvent.click(popoverRepoOption);
+    });
     rerender(<LeftPaneView />);
 
     expect(screen.getByTestId("visible-repo-repo-1")).toBeTruthy();

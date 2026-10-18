@@ -19,14 +19,14 @@ const EMPTY_PREFERENCES = {
 };
 
 const mocked = vi.hoisted(() => {
-  const getListPreferences = vi.fn(async (_params?: unknown) => EMPTY_PREFERENCES);
-  const setListPreferences = vi.fn(async (_params?: unknown) => ({ ok: true }));
+  const getPreference = vi.fn(async (_params?: unknown) => EMPTY_PREFERENCES);
+  const setPreference = vi.fn(async (_params?: unknown) => ({ ok: true }));
   const sessionState = { selectedOrganizationId: "org-1" };
   const workspaceState = {
     displayProjectIds: ["project-1", "project-2"] as string[],
     workspaceListHierarchyMode: "by_project" as "by_project" | "by_node",
   };
-  return { getListPreferences, setListPreferences, sessionState, workspaceState };
+  return { getPreference, setPreference, sessionState, workspaceState };
 });
 
 vi.mock("../../../domains/session/state/sessionStore", () => ({
@@ -65,14 +65,15 @@ vi.mock("../../../domains/workspace/state/workspaceStore", () => ({
   ),
 }));
 
-vi.mock("@renderer/rpc", () => ({
+vi.mock("@renderer/rpc/client", () => ({
   subscribeConnectionStatus: vi.fn(() => vi.fn()),
-  request: async (method: string, params?: { organizationId?: string; preferences?: unknown }) => {
-    if (method === "project.getListPreferences") {
-      return mocked.getListPreferences(params);
+  request: async (method: string, params?: { scope?: string; value?: unknown }) => {
+    if (method === "preferences.get") {
+      return { found: true, value: await mocked.getPreference(params) };
     }
-    if (method === "project.setListPreferences") {
-      return mocked.setListPreferences(params);
+    if (method === "preferences.set") {
+      await mocked.setPreference(params);
+      return { found: true, value: params?.value };
     }
     return undefined;
   },
@@ -88,8 +89,8 @@ describe("useWorkspaceNavigatorFoldState", () => {
     mocked.sessionState.selectedOrganizationId = "org-1";
     mocked.workspaceState.displayProjectIds = [];
     mocked.workspaceState.workspaceListHierarchyMode = "by_project";
-    mocked.getListPreferences.mockResolvedValue(EMPTY_PREFERENCES);
-    mocked.setListPreferences.mockResolvedValue({ ok: true });
+    mocked.getPreference.mockResolvedValue(EMPTY_PREFERENCES);
+    mocked.setPreference.mockResolvedValue({ ok: true });
   });
 
   afterEach(() => {
@@ -98,7 +99,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
   });
 
   it("seeds order state from persisted daemon preferences", async () => {
-    mocked.getListPreferences.mockResolvedValueOnce({
+    mocked.getPreference.mockResolvedValueOnce({
       version: 1,
       by_project: {
         projectOrderIds: ["project-2", "project-1"],
@@ -115,7 +116,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(mocked.getListPreferences).toHaveBeenCalledWith({ organizationId: "org-1" });
+    expect(mocked.getPreference).toHaveBeenCalledWith({ scope: "org-1", key: "project.navigator" });
     expect(result.current.projectOrderIds).toEqual(["project-2", "project-1"]);
     expect(result.current.nodeOrderByParentId["project:project-1"]).toEqual(["node-a"]);
     expect(result.current.foldedProjectIds).toEqual(["project-2"]);
@@ -147,7 +148,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
   });
 
   it("does not push the seeded state straight back after load", async () => {
-    mocked.getListPreferences.mockResolvedValueOnce({
+    mocked.getPreference.mockResolvedValueOnce({
       version: 1,
       by_project: {
         projectOrderIds: ["project-2", "project-1"],
@@ -164,7 +165,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(mocked.setListPreferences).not.toHaveBeenCalled();
+    expect(mocked.setPreference).not.toHaveBeenCalled();
   });
 
   it("pushes a debounced snapshot after a user change", async () => {
@@ -172,7 +173,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
     await act(async () => {
       await vi.runAllTimersAsync();
     });
-    mocked.setListPreferences.mockClear();
+    mocked.setPreference.mockClear();
 
     act(() => {
       result.current.setProjectOrderIds(["project-2", "project-1"]);
@@ -182,10 +183,11 @@ describe("useWorkspaceNavigatorFoldState", () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(mocked.setListPreferences).toHaveBeenCalledTimes(1);
-    expect(mocked.setListPreferences).toHaveBeenCalledWith({
-      organizationId: "org-1",
-      preferences: expect.objectContaining({
+    expect(mocked.setPreference).toHaveBeenCalledTimes(1);
+    expect(mocked.setPreference).toHaveBeenCalledWith({
+      scope: "org-1",
+      key: "project.navigator",
+      value: expect.objectContaining({
         by_project: expect.objectContaining({ projectOrderIds: ["project-2", "project-1"] }),
         by_node: expect.objectContaining({ projectOrderIds: [] }),
       }),
@@ -193,7 +195,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
   });
 
   it("refetches and resets state when the organization switches", async () => {
-    mocked.getListPreferences.mockResolvedValueOnce({
+    mocked.getPreference.mockResolvedValueOnce({
       version: 1,
       by_project: {
         projectOrderIds: ["project-1"],
@@ -212,25 +214,25 @@ describe("useWorkspaceNavigatorFoldState", () => {
     expect(result.current.projectOrderIds).toEqual(["project-1"]);
 
     mocked.sessionState.selectedOrganizationId = "org-2";
-    mocked.getListPreferences.mockResolvedValueOnce(EMPTY_PREFERENCES);
+    mocked.getPreference.mockResolvedValueOnce(EMPTY_PREFERENCES);
     rerender();
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(mocked.getListPreferences).toHaveBeenLastCalledWith({ organizationId: "org-2" });
+    expect(mocked.getPreference).toHaveBeenLastCalledWith({ scope: "org-2", key: "project.navigator" });
     expect(result.current.projectOrderIds).toEqual([]);
   });
 
   it("does not push while the daemon is unreachable, and retries the fetch until it succeeds", async () => {
-    mocked.getListPreferences.mockRejectedValueOnce(new Error("daemon down"));
+    mocked.getPreference.mockRejectedValueOnce(new Error("daemon down"));
 
     const { result } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1100);
     });
     // First fetch failed; the retry (1s backoff) then succeeded and seeded.
-    expect(mocked.getListPreferences).toHaveBeenCalledTimes(2);
+    expect(mocked.getPreference).toHaveBeenCalledTimes(2);
     expect(result.current.projectOrderIds).toEqual([]);
 
     // Changes are still pushed once hydration completed via the retry.
@@ -240,10 +242,11 @@ describe("useWorkspaceNavigatorFoldState", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(600);
     });
-    expect(mocked.setListPreferences).toHaveBeenCalledTimes(1);
-    expect(mocked.setListPreferences).toHaveBeenCalledWith({
-      organizationId: "org-1",
-      preferences: expect.objectContaining({
+    expect(mocked.setPreference).toHaveBeenCalledTimes(1);
+    expect(mocked.setPreference).toHaveBeenCalledWith({
+      scope: "org-1",
+      key: "project.navigator",
+      value: expect.objectContaining({
         version: 1,
         by_project: expect.objectContaining({ projectOrderIds: ["project-3"] }),
       }),
@@ -251,7 +254,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
   });
 
   it("never pushes before a successful fetch so persisted state is not overwritten", async () => {
-    mocked.getListPreferences.mockRejectedValue(new Error("daemon down"));
+    mocked.getPreference.mockRejectedValue(new Error("daemon down"));
 
     const { result } = renderHook(() => useWorkspaceNavigatorFoldState());
     await act(async () => {
@@ -267,7 +270,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
 
     // Fetch never succeeded: the change stays in memory but must not be
     // written over the daemon's previously persisted blob.
-    expect(mocked.setListPreferences).not.toHaveBeenCalled();
+    expect(mocked.setPreference).not.toHaveBeenCalled();
   });
 
   it("coalesces rapid changes into a single debounced push", async () => {
@@ -275,7 +278,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
     await act(async () => {
       await vi.runAllTimersAsync();
     });
-    mocked.setListPreferences.mockClear();
+    mocked.setPreference.mockClear();
 
     act(() => {
       result.current.setProjectOrderIds(["project-1"]);
@@ -287,10 +290,11 @@ describe("useWorkspaceNavigatorFoldState", () => {
       await vi.advanceTimersByTimeAsync(600);
     });
 
-    expect(mocked.setListPreferences).toHaveBeenCalledTimes(1);
-    expect(mocked.setListPreferences).toHaveBeenCalledWith({
-      organizationId: "org-1",
-      preferences: expect.objectContaining({
+    expect(mocked.setPreference).toHaveBeenCalledTimes(1);
+    expect(mocked.setPreference).toHaveBeenCalledWith({
+      scope: "org-1",
+      key: "project.navigator",
+      value: expect.objectContaining({
         by_project: expect.objectContaining({ projectOrderIds: ["project-1", "project-2"] }),
       }),
     });
@@ -301,12 +305,12 @@ describe("useWorkspaceNavigatorFoldState", () => {
     await act(async () => {
       await vi.runAllTimersAsync();
     });
-    mocked.setListPreferences.mockClear();
+    mocked.setPreference.mockClear();
 
     act(() => {
       result.current.setProjectOrderIds(["project-1"]);
     });
-    expect(mocked.setListPreferences).not.toHaveBeenCalled();
+    expect(mocked.setPreference).not.toHaveBeenCalled();
 
     mocked.sessionState.selectedOrganizationId = "org-2";
     rerender();
@@ -315,7 +319,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
     });
 
     // The org-1 push must have been cancelled, and org-2 is empty.
-    expect(mocked.setListPreferences).not.toHaveBeenCalled();
+    expect(mocked.setPreference).not.toHaveBeenCalled();
     expect(result.current.projectOrderIds).toEqual([]);
   });
 
@@ -324,20 +328,21 @@ describe("useWorkspaceNavigatorFoldState", () => {
     await act(async () => {
       await vi.runAllTimersAsync();
     });
-    mocked.setListPreferences.mockClear();
+    mocked.setPreference.mockClear();
 
     act(() => {
       result.current.setProjectOrderIds(["project-1"]);
     });
-    expect(mocked.setListPreferences).not.toHaveBeenCalled();
+    expect(mocked.setPreference).not.toHaveBeenCalled();
 
     unmount();
     await act(async () => {});
 
-    expect(mocked.setListPreferences).toHaveBeenCalledTimes(1);
-    expect(mocked.setListPreferences).toHaveBeenCalledWith({
-      organizationId: "org-1",
-      preferences: expect.objectContaining({
+    expect(mocked.setPreference).toHaveBeenCalledTimes(1);
+    expect(mocked.setPreference).toHaveBeenCalledWith({
+      scope: "org-1",
+      key: "project.navigator",
+      value: expect.objectContaining({
         by_project: expect.objectContaining({ projectOrderIds: ["project-1"] }),
       }),
     });

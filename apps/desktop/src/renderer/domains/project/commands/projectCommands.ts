@@ -28,6 +28,7 @@ import {
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
+import { writeProjectFilter } from "./projectFilterCommands";
 
 /** Records the last external application used within one organization. */
 export function recordLastUsedExternalApp(organizationId: string, appId: ExternalAppId): void {
@@ -70,7 +71,8 @@ export async function createProject(input: {
     inferredDefaultBranch = localPathImport.currentBranch;
   }
 
-  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
+  const creationSession = sessionStore.getState();
+  const selectedOrganizationId = creationSession.selectedOrganizationId?.trim();
   if (!selectedOrganizationId) {
     return;
   }
@@ -78,6 +80,15 @@ export async function createProject(input: {
   let project: ProjectWithWorkspacesRecord | undefined;
   const randomIcon = pickRandomProjectIcon();
   const randomColor = pickRandomProjectColor();
+  let isCurrentCreationScope = true;
+  const unsubscribe = sessionStore.subscribe((current) => {
+    if (
+      current.currentUserId !== creationSession.currentUserId ||
+      current.daemonId !== creationSession.daemonId ||
+      current.selectedOrganizationId !== creationSession.selectedOrganizationId
+    )
+      isCurrentCreationScope = false;
+  });
 
   try {
     project = await createProjectFromApi(selectedOrganizationId, {
@@ -94,15 +105,31 @@ export async function createProject(input: {
   } catch (error) {
     console.error("Failed to create backend project", error);
     throw new Error(getErrorMessage(error));
+  } finally {
+    unsubscribe();
   }
 
   if (!project) {
     throw new Error("Backend project response is empty");
   }
 
-  if (sessionStore.getState().selectedOrganizationId?.trim() !== selectedOrganizationId) {
+  const currentSession = sessionStore.getState();
+  if (
+    !isCurrentCreationScope ||
+    currentSession.selectedOrganizationId?.trim() !== selectedOrganizationId ||
+    currentSession.currentUserId !== creationSession.currentUserId ||
+    currentSession.daemonId !== creationSession.daemonId
+  ) {
     return;
   }
+
+  if (
+    !(await writeProjectFilter(
+      (_, explicitIds) => explicitIds && [...new Set([...explicitIds, project.id])],
+      selectedOrganizationId,
+    ))
+  )
+    return;
 
   const workspaces = project.workspaces ?? [];
   const primaryWorkspace = workspaces.find((workspace) => workspace.kind === "primary") ?? workspaces[0];

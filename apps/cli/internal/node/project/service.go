@@ -1,6 +1,6 @@
 // Package project is the Node application service for the project.* RPC
 // namespace: remote project listing with the host-local workspace runtime
-// overlay, and per-organization list preferences. It receives a small
+// overlay. It receives a small
 // dependency set and never imports the composition root or the daemon.
 package project
 
@@ -53,10 +53,6 @@ func optionalString(value string) *string {
 		return nil
 	}
 	return &trimmedValue
-}
-
-func (s *Service) projectListPreferenceStore() *sqlite.ProjectListPreferenceStore {
-	return sqlite.NewProjectListPreferenceStore(s.deps.Database)
 }
 
 // apiProjectToLocalRecord maps a remote project list record to the
@@ -191,22 +187,4 @@ func (s *Service) ListWithWorkspaces(ctx context.Context, req rpc.ProjectListWit
 		return []projectWithWorkspaces{}, nil
 	}
 	return results, nil
-}
-
-func (s *Service) GetListPreferences(ctx context.Context, req rpc.ProjectGetListPreferencesParams) (any, error) {
-	if strings.TrimSpace(req.OrganizationID) == "" {
-		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "organizationId is required")
-	}
-	return s.projectListPreferenceStore().Get(ctx, req.OrganizationID)
-}
-
-func (s *Service) SetListPreferences(ctx context.Context, req rpc.ProjectSetListPreferencesParams) (any, error) {
-	if strings.TrimSpace(req.OrganizationID) == "" {
-		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "organizationId is required")
-	}
-	req.Preferences.Version = sqlite.ProjectListPreferencesVersion
-	if err := s.projectListPreferenceStore().Set(ctx, req.OrganizationID, req.Preferences); err != nil {
-		return nil, err
-	}
-	return map[string]bool{"ok": true}, nil
 }

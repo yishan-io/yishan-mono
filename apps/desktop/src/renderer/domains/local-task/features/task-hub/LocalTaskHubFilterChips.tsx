@@ -57,14 +57,13 @@ export function LocalTaskHubFilterChips({ filters, projects, tagCatalog }: Local
     }
     return chips;
   }, [filters, projects, t, tagCatalog]);
-  const handleRemove = useCallback(
-    (field: keyof LocalTaskFilters) => {
-      const nextFilters = { ...filters };
+  const handleRemove = useCallback((field: keyof LocalTaskFilters) => {
+    void setLocalTaskHubFilters((current) => {
+      const nextFilters = { ...current };
       delete nextFilters[field];
-      void setLocalTaskHubFilters(nextFilters);
-    },
-    [filters],
-  );
+      return nextFilters;
+    });
+  }, []);
   const handleClearAll = useCallback(() => void setLocalTaskHubFilters({}), []);
 
   return (
