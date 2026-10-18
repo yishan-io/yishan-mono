@@ -332,7 +332,7 @@ describe("localTaskCommands projections and detail loading", () => {
 
     const state = localTaskStore.getState();
     expect(state.tagCatalog).toEqual([canonicalTag]);
-    expect(state.hubFilters).toEqual({ tagIds: ["tag-canonical", "tag-other"] });
+    expect(state.hubFilters).toEqual({ tagIds: ["tag-merged", "tag-other", "tag-canonical"] });
     for (const cachedTask of [
       state.taskById[task.id],
       state.hubTasks[0],
@@ -370,7 +370,7 @@ describe("localTaskCommands projections and detail loading", () => {
 
     const state = localTaskStore.getState();
     expect(state.tagCatalog).toEqual([]);
-    expect(state.hubFilters).toEqual({ tagIds: ["tag-other"] });
+    expect(state.hubFilters).toEqual({ tagIds: ["tag-deleted", "tag-other"] });
     for (const cachedTask of [
       state.taskById[task.id],
       state.hubTasks[0],

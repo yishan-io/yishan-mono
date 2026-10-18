@@ -371,6 +371,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	app.Start()
 
 	systemSvc := nodesystem.NewService(nodesystem.Deps{
+		Preferences:  sqlite.NewPreferenceStore(cfg.Database),
 		Session:      cfg.Session,
 		Events:       events,
 		ModelList:    modelList,

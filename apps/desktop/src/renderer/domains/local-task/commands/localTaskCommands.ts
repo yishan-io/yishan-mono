@@ -8,7 +8,6 @@ import type {
   LocalTask,
   LocalTaskContextFileName,
   LocalTaskDetails,
-  LocalTaskFilters,
   LocalTaskSetTemplatesInput,
   LocalTaskStatus,
   LocalTaskTagCatalogEntry,
@@ -18,6 +17,9 @@ import type {
 } from "../localTaskTypes";
 import { localTaskStore } from "../state/localTaskStore";
 import { localTaskTemplateStore } from "../state/localTaskTemplateStore";
+
+import { reconcileTaskHubTagFilter, refreshLocalTaskHub } from "./taskHubCommands";
+export { refreshLocalTaskHub, setLocalTaskHubFilters, setLocalTaskHubSearchQuery } from "./taskHubCommands";
 
 const taskLoadsInFlight = new Map<string, Promise<LocalTask>>();
 
@@ -150,43 +152,6 @@ export async function refreshProgressingLocalTaskCount(): Promise<void> {
   } catch (error) {
     console.error("Failed to refresh progressing Local Task count", error);
   }
-}
-
-/** Refreshes the Task Hub using its current search query and filters. */
-export async function refreshLocalTaskHub(): Promise<void> {
-  const { hubFilters, hubSearchQuery } = localTaskStore.getState();
-  const query = hubSearchQuery.trim();
-  const requestId = localTaskStore.getState().beginHubLoad();
-  try {
-    const [hubProjection, progressingTasks] = await Promise.all([
-      localTaskClient.listProjection(hubFilters, query),
-      localTaskClient.list({ status: ["progressing"] }),
-    ]);
-    localTaskStore
-      .getState()
-      .setHubResults(requestId, hubProjection.tasks, hubProjection.projectsById, progressingTasks.length);
-  } catch (error) {
-    localTaskStore.getState().setHubError(requestId, getErrorMessage(error));
-  }
-}
-
-function normalizeLocalTaskHubFilters(filters: LocalTaskFilters): LocalTaskFilters {
-  if (filters.status?.length) return filters;
-  const { status: _status, ...filtersWithoutStatus } = filters;
-  return filtersWithoutStatus;
-}
-
-/** Replaces Task Hub filters and refreshes the current list or search. */
-export async function setLocalTaskHubFilters(filters: LocalTaskFilters): Promise<void> {
-  const normalizedFilters = normalizeLocalTaskHubFilters(filters);
-  localTaskStore.getState().setHubFilters(normalizedFilters);
-  await refreshLocalTaskHub();
-}
-
-/** Replaces the Task Hub metadata query and refreshes its results. */
-export async function setLocalTaskHubSearchQuery(query: string): Promise<void> {
-  localTaskStore.getState().setHubSearchQuery(query);
-  await refreshLocalTaskHub();
 }
 
 /** Refreshes tasks and historical links for the selected local workspace. */
@@ -355,7 +320,7 @@ export async function renameLocalTaskTag(id: string, name: string): Promise<Loca
     const result = await localTaskClient.renameTag(id, name);
     const removedTagId = result.removedTagId ?? id;
     localTaskStore.getState().reconcileTagRename(result.tag, result.removedTagId);
-    localTaskStore.getState().reconcileHubTagFilter(removedTagId, result.tag.id);
+    await reconcileTaskHubTagFilter(removedTagId, result.tag.id);
     return result;
   });
 }
@@ -365,7 +330,7 @@ export async function deleteLocalTaskTag(id: string): Promise<void> {
   await runMutation(async () => {
     await localTaskClient.deleteTag(id);
     localTaskStore.getState().reconcileTagDeletion(id);
-    localTaskStore.getState().reconcileHubTagFilter(id);
+    await reconcileTaskHubTagFilter(id);
   });
 }
 

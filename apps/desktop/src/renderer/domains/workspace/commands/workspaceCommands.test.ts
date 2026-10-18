@@ -27,8 +27,10 @@ vi.mock("../../../domains/workspace/state/workspaceLifecycleNoticeStore", () => 
   enqueueWorkspaceLifecycleWarnings: rpcMocks.enqueueWorkspaceLifecycleWarnings,
 }));
 
-vi.mock("@renderer/rpc", () => ({
+vi.mock("@renderer/rpc/client", () => ({
   subscribeConnectionStatus: vi.fn(() => vi.fn()),
+  request: async (method: string, params?: { value?: unknown }) =>
+    method === "preferences.get" ? { found: false } : { found: true, value: params?.value },
 }));
 
 vi.mock("@renderer/events/desktopRpcEventBus", () => ({
@@ -157,14 +159,15 @@ describe("workspaceCommands", () => {
     });
     projectStore.setState({
       displayProjectIds: [],
+      organizationPreferencesById: { "org-1": { displayProjectIds: [] } },
       projects: [{ id: "repo-1", name: "Repo 1" }],
     });
 
-    setDisplayRepoIds(["repo-1"]);
+    await setDisplayRepoIds(["repo-1"]);
 
     expect(projectStore.getState().displayProjectIds).toEqual(["repo-1"]);
     expect(projectStore.getState().organizationPreferencesById).toEqual({
-      "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
+      "org-1": { displayProjectIds: ["repo-1"] },
     });
     // Warmup fires asynchronously — flush the promise queue.
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -177,7 +180,7 @@ describe("workspaceCommands", () => {
     expect(rpcMocks.closeProject).not.toHaveBeenCalled();
   });
 
-  it("does not create an organization preference when no organization is selected", () => {
+  it("does not create an organization preference when no organization is selected", async () => {
     sessionStore.setState({ selectedOrganizationId: undefined });
     projectStore.setState({
       organizationPreferencesById: {
@@ -185,15 +188,16 @@ describe("workspaceCommands", () => {
       },
     });
 
-    setDisplayRepoIds(["repo-2"]);
+    await setDisplayRepoIds(["repo-2"]);
 
-    expect(projectStore.getState().displayProjectIds).toEqual(["repo-2"]);
+    expect(projectStore.getState().displayProjectIds).toEqual([]);
     expect(projectStore.getState().organizationPreferencesById).toEqual({
       "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
     });
   });
 
   it("triggers daemon close for removed projects when unpinning", async () => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
     workspaceStore.setState({
       workspaces: [
         {
@@ -209,9 +213,12 @@ describe("workspaceCommands", () => {
         },
       ],
     });
-    projectStore.setState({ displayProjectIds: ["repo-1", "repo-2"] });
+    projectStore.setState({
+      displayProjectIds: ["repo-1", "repo-2"],
+      organizationPreferencesById: { "org-1": { displayProjectIds: ["repo-1", "repo-2"] } },
+    });
 
-    setDisplayRepoIds(["repo-1"]);
+    await setDisplayRepoIds(["repo-1"]);
 
     expect(projectStore.getState().displayProjectIds).toEqual(["repo-1"]);
     await new Promise((resolve) => setTimeout(resolve, 0));

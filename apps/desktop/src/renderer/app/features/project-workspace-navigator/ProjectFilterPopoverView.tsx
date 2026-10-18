@@ -174,10 +174,12 @@ export function ProjectFilterPopoverView() {
                         if (isLastSelected) {
                           return;
                         }
-                        const nextDisplayRepoIds = displayRepoIds.includes(repo.id)
-                          ? displayRepoIds.filter((item) => item !== repo.id)
-                          : [...displayRepoIds, repo.id];
-                        setDisplayRepoIds(nextDisplayRepoIds);
+                        setDisplayRepoIds((currentIds) => {
+                          if (currentIds.includes(repo.id)) {
+                            return currentIds.length === 1 ? currentIds : currentIds.filter((id) => id !== repo.id);
+                          }
+                          return [...currentIds, repo.id];
+                        });
                       }}
                       sx={{ py: 0, px: 0.5, minHeight: 28 }}
                     >

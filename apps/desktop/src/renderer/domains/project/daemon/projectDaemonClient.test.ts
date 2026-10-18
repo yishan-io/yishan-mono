@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DaemonProjectClient } from "./projectDaemonClient";
+import { DaemonProjectClient, parseProjectListPreference } from "./projectDaemonClient";
 
 describe("DaemonProjectClient", () => {
   it("carries workspace lifecycle state and health through listWithWorkspaces", async () => {
@@ -117,26 +117,29 @@ describe("DaemonProjectClient", () => {
 
   it("loads and normalizes persisted list preferences", async () => {
     const invoke = vi.fn(async () => ({
-      version: 1,
-      by_project: {
-        projectOrderIds: ["project-2", "project-1"],
-        nodeOrderByParentId: { "project:project-1": ["node-a"] },
-        foldedProjectIds: ["project-2"],
-        foldedNodeKeys: [],
+      found: true,
+      value: {
+        version: 1,
+        by_project: {
+          projectOrderIds: ["project-2", "project-1"],
+          nodeOrderByParentId: { "project:project-1": ["node-a"] },
+          foldedProjectIds: ["project-2"],
+          foldedNodeKeys: [],
+        },
+        by_node: {
+          projectOrderIds: [],
+          nodeOrderByParentId: { "root:node": ["node-b"] },
+          foldedProjectIds: [],
+          foldedNodeKeys: ["node-a:project-1"],
+        },
+        workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
       },
-      by_node: {
-        projectOrderIds: [],
-        nodeOrderByParentId: { "root:node": ["node-b"] },
-        foldedProjectIds: [],
-        foldedNodeKeys: ["node-a:project-1"],
-      },
-      workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
     }));
 
     const client = new DaemonProjectClient(invoke);
     const preferences = await client.getListPreferences("org-1");
 
-    expect(invoke).toHaveBeenCalledWith("project.getListPreferences", { organizationId: "org-1" });
+    expect(invoke).toHaveBeenCalledWith("preferences.get", { scope: "org-1", key: "project.navigator" });
     expect(preferences.by_project.projectOrderIds).toEqual(["project-2", "project-1"]);
     expect(preferences.by_project.nodeOrderByParentId["project:project-1"]).toEqual(["node-a"]);
     expect(preferences.by_node.foldedNodeKeys).toEqual(["node-a:project-1"]);
@@ -145,9 +148,11 @@ describe("DaemonProjectClient", () => {
 
   it("normalizes malformed list preference payloads to safe defaults", async () => {
     const invoke = vi.fn(async () => ({
-      version: "latest",
-      by_project: { projectOrderIds: "not-an-array", nodeOrderByParentId: [1, 2] },
-      by_node: undefined,
+      found: true,
+      value: {
+        version: "latest",
+        by_project: { projectOrderIds: "not-an-array", nodeOrderByParentId: [1, 2] },
+      },
     }));
 
     const client = new DaemonProjectClient(invoke);
@@ -161,7 +166,10 @@ describe("DaemonProjectClient", () => {
   });
 
   it("persists list preferences with the org id", async () => {
-    const invoke = vi.fn(async () => ({ ok: true }));
+    const invoke = vi.fn(async (_method: string, params?: unknown) => ({
+      found: true,
+      value: (params as { value: unknown }).value,
+    }));
     const client = new DaemonProjectClient(invoke);
 
     const result = await client.setListPreferences("org-1", {
@@ -181,9 +189,10 @@ describe("DaemonProjectClient", () => {
       workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
     });
 
-    expect(invoke).toHaveBeenCalledWith("project.setListPreferences", {
-      organizationId: "org-1",
-      preferences: {
+    expect(invoke).toHaveBeenCalledWith("preferences.set", {
+      scope: "org-1",
+      key: "project.navigator",
+      value: {
         version: 1,
         by_project: {
           projectOrderIds: ["project-1"],
@@ -200,6 +209,26 @@ describe("DaemonProjectClient", () => {
         workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
       },
     });
-    expect(result).toEqual({ ok: true });
+    expect(result.by_project.projectOrderIds).toEqual(["project-1"]);
+  });
+  it("merges legacy workspace buckets with by_node winning conflicts, unless a shared bucket exists", () => {
+    const legacy = {
+      version: 0,
+      by_project: { workspaceOrderByParentId: { shared: ["project"], project: ["p"] } },
+      by_node: { workspaceOrderByParentId: { shared: ["node"], node: ["n"] } },
+    };
+    expect(parseProjectListPreference(legacy).workspaceOrderByParentId).toEqual({
+      shared: ["node"],
+      project: ["p"],
+      node: ["n"],
+    });
+    expect(parseProjectListPreference({ ...legacy, workspaceOrderByParentId: {} }).workspaceOrderByParentId).toEqual(
+      {},
+    );
+    expect(parseProjectListPreference({ ...legacy, version: 2 }).workspaceOrderByParentId).toEqual({});
+  });
+  it("does not hydrate future versions into a writable default snapshot", async () => {
+    const client = new DaemonProjectClient(vi.fn().mockResolvedValue({ found: true, value: { version: 2 } }));
+    await expect(client.getListPreferences("org")).rejects.toThrow("Unsupported");
   });
 });

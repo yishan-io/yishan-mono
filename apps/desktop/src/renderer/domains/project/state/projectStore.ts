@@ -60,6 +60,7 @@ export type ProjectStoreState = {
   updateProjectConfig: (projectId: string, config: RepoConfigUpdate) => void;
   applyProjectRecord: (project: ProjectRecord) => void;
   setProjectTaskPrefix: (projectId: string, taskPrefix: string) => void;
+  hydrateOrganizationProjectFilter: (organizationId: string, projectIds: string[] | undefined) => void;
   setDisplayProjectIds: (projectIds: string[]) => void;
   setOrganizationDisplayProjectIds: (organizationId: string, projectIds: string[]) => void;
   setLastUsedExternalAppId: (organizationId: string, appId: ExternalAppId) => void;
@@ -218,7 +219,9 @@ function applyCreatedProjectState(
   } satisfies WorkspaceProjectRecord;
 
   state.projects.push(nextProject);
-  state.displayProjectIds = [...(currentDisplayProjectIds ?? []), nextRepoId];
+  state.displayProjectIds = currentDisplayProjectIds.includes(nextRepoId)
+    ? currentDisplayProjectIds
+    : [...currentDisplayProjectIds, nextRepoId];
 }
 
 /** Project-slice delete: removes the project + its display-project id. */
@@ -277,7 +280,9 @@ export const projectStore = create<ProjectStoreState>()(
             state.organizationPreferencesById ??= {};
             state.organizationPreferencesById[normalizedOrganizationId] ??= {};
             const orgPrefs = state.organizationPreferencesById[normalizedOrganizationId];
-            orgPrefs.displayProjectIds = state.displayProjectIds;
+            if (orgPrefs.displayProjectIds !== undefined) {
+              orgPrefs.displayProjectIds = state.displayProjectIds;
+            }
             orgPrefs.knownProjectIds = state.projects.map((project) => project.id);
           }
         });
@@ -328,6 +333,17 @@ export const projectStore = create<ProjectStoreState>()(
           if (project) {
             project.taskPrefix = taskPrefix;
           }
+        });
+      },
+      hydrateOrganizationProjectFilter: (organizationId, projectIds) => {
+        set((state) => {
+          state.organizationPreferencesById ??= {};
+          state.organizationPreferencesById[organizationId] ??= {};
+          const preferences = state.organizationPreferencesById[organizationId];
+          preferences.displayProjectIds = projectIds;
+          state.displayProjectIds =
+            projectIds ??
+            state.projects.filter((project) => project.organizationId === organizationId).map((project) => project.id);
         });
       },
       setDisplayProjectIds: (displayProjectIds) => {

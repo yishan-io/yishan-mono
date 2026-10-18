@@ -5,7 +5,7 @@ import {
   requestUndo,
 } from "@renderer/domains/files";
 import { renameGitBranch } from "@renderer/domains/git";
-import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
+import { projectStore, supportsGitFeatures, writeProjectFilter } from "@renderer/domains/project";
 import { filterVisibleProjects } from "@renderer/domains/project";
 import { sessionStore } from "@renderer/domains/session";
 
@@ -61,22 +61,32 @@ export function subscribeOpenCreateWorkspaceDialog(
 }
 
 /** Stores visible repo ids for left-pane pinning state and triggers daemon warmup/close. */
-export function setDisplayRepoIds(repoIds: string[]) {
-  const previousDisplayIds = projectStore.getState().displayProjectIds;
-  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
-  projectStore.getState().setOrganizationDisplayProjectIds(selectedOrganizationId, repoIds);
+export async function setDisplayRepoIds(repoIds: string[] | ((currentIds: string[]) => string[])) {
+  try {
+    let previousDisplayIds: string[] = [];
+    let nextDisplayIds: string[] = [];
+    const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
+    const didSave = await writeProjectFilter((currentIds) => {
+      previousDisplayIds = currentIds;
+      nextDisplayIds = typeof repoIds === "function" ? repoIds(currentIds) : repoIds;
+      return nextDisplayIds;
+    }, selectedOrganizationId);
+    if (!didSave) return;
 
-  const repoIdSet = new Set(repoIds);
-  const prevSet = new Set(previousDisplayIds);
+    const repoIdSet = new Set(nextDisplayIds);
+    const prevSet = new Set(previousDisplayIds);
 
-  const addedIds = repoIds.filter((id) => !prevSet.has(id));
-  const removedIds = previousDisplayIds.filter((id) => !repoIdSet.has(id));
+    const addedIds = nextDisplayIds.filter((id) => !prevSet.has(id));
+    const removedIds = previousDisplayIds.filter((id) => !repoIdSet.has(id));
 
-  if (addedIds.length > 0) {
-    void warmupWorkspacesForProjects(addedIds);
-  }
-  if (removedIds.length > 0) {
-    void closeWorkspacesForProjects(removedIds);
+    if (addedIds.length > 0) {
+      void warmupWorkspacesForProjects(addedIds);
+    }
+    if (removedIds.length > 0) {
+      void closeWorkspacesForProjects(removedIds);
+    }
+  } catch (error) {
+    console.error("Failed to save Project filter", error);
   }
 }
 

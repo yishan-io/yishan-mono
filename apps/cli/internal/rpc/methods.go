@@ -46,11 +46,9 @@ const (
 	MethodComputerGetConfig              = "computer.getConfig"
 	MethodComputerUpdateConfig           = "computer.updateConfig"
 
-	MethodProjectList               = "project.list"
-	MethodProjectListWithWkspaces   = "project.listWithWorkspaces"
-	MethodProjectGetListPreferences = "project.getListPreferences"
-	MethodProjectSetListPreferences = "project.setListPreferences"
-	MethodNodeList                  = "node.list"
+	MethodProjectList             = "project.list"
+	MethodProjectListWithWkspaces = "project.listWithWorkspaces"
+	MethodNodeList                = "node.list"
 
 	MethodLocalTaskCreate                    = "localTask.create"
 	MethodLocalTaskGet                       = "localTask.get"

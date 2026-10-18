@@ -26,7 +26,9 @@ const commands = vi.hoisted(() => ({
   navigateToLocalTaskWorkspace: vi.fn(),
   openLocalTaskContextInFileTree: vi.fn(),
   refreshLocalTaskHub: vi.fn(async () => undefined),
-  setLocalTaskHubFilters: vi.fn(async () => undefined),
+  setLocalTaskHubFilters: vi.fn(
+    async (_intent: import("../../commands/taskHubCommands").TaskHubFilterIntent) => undefined,
+  ),
   setLocalTaskHubSearchQuery: vi.fn(async () => undefined),
   updateLocalTask: vi.fn(async () => undefined),
   updateLocalTaskStatus: vi.fn(async () => undefined),
@@ -219,7 +221,7 @@ describe("TaskHubView", () => {
     expect(screen.queryByRole("textbox", { name: "localTask.filters.addFilter" })).toBeNull();
     fireEvent.click(screen.getByRole("menuitem", { name: "localTask.fields.status" }));
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.new" }));
-    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: ["new"] });
+    expect(getRequestedFilters()).toEqual({ status: ["new"] });
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
     fireEvent.click(screen.getByRole("button", { name: "localTask.actions.refresh" }));
     expect(commands.refreshLocalTaskHub).toHaveBeenCalledTimes(2);
@@ -261,7 +263,7 @@ describe("TaskHubView", () => {
     unselectedStatus.focus();
     await user.keyboard("{Enter}");
 
-    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ status: ["new", "progressing"] });
+    expect(getRequestedFilters()).toEqual({ status: ["new", "progressing"] });
   });
   it("renders value icons and searches only the Tag filter menu", () => {
     localTaskStore.setState({
@@ -324,13 +326,13 @@ describe("TaskHubView", () => {
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.new" }));
     act(() => localTaskStore.setState({ hubFilters: { status: ["new"] } }));
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.progressing" }));
-    expect(commands.setLocalTaskHubFilters).toHaveBeenLastCalledWith({ status: ["new", "progressing"] });
+    expect(getRequestedFilters()).toEqual({ status: ["new", "progressing"] });
     act(() => localTaskStore.setState({ hubFilters: { status: ["new", "progressing"] } }));
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.new" }));
-    expect(commands.setLocalTaskHubFilters).toHaveBeenLastCalledWith({ status: ["progressing"] });
+    expect(getRequestedFilters()).toEqual({ status: ["progressing"] });
     act(() => localTaskStore.setState({ hubFilters: { status: ["progressing"] } }));
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "localTask.status.progressing" }));
-    expect(commands.setLocalTaskHubFilters).toHaveBeenLastCalledWith({});
+    expect(getRequestedFilters()).toEqual({});
   });
   it("renders active multi-status filters as removable grouped chips", () => {
     localTaskStore.setState({ hubFilters: { status: ["new", "progressing"] } });
@@ -341,7 +343,7 @@ describe("TaskHubView", () => {
     expect(screen.queryByRole("button", { name: "localTask.filters.addFilter" })).toBeNull();
     expect(screen.getByRole("button", { name: "localTask.filters.clearAll" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "localTask.filters.remove localTask.fields.status" }));
-    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({});
+    expect(getRequestedFilters()).toEqual({});
   });
   it("removes an active filter with its keyboard-accessible button", async () => {
     localTaskStore.setState({ hubFilters: { priority: "high" } });
@@ -351,7 +353,7 @@ describe("TaskHubView", () => {
     });
     removeFilterButton.focus();
     await userEvent.keyboard("{Enter}");
-    expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({});
+    expect(getRequestedFilters()).toEqual({});
   });
   it("uses catalog IDs for tag filters", async () => {
     localTaskStore.setState({
@@ -364,7 +366,7 @@ describe("TaskHubView", () => {
     expect(tagFilterDot).toBeTruthy();
     expect(getComputedStyle(tagFilterDot as Element).backgroundColor).toBe("rgb(59, 130, 246)");
     fireEvent.click(screen.getByRole("menuitem", { name: "alpha" }));
-    await waitFor(() => expect(commands.setLocalTaskHubFilters).toHaveBeenCalledWith({ tagIds: ["tag-alpha"] }));
+    await waitFor(() => expect(getRequestedFilters()).toEqual({ tagIds: ["tag-alpha"] }));
     expect(screen.getByRole("textbox", { name: "localTask.filters.searchTags" })).toBeTruthy();
     fireEvent.keyDown(screen.getByRole("textbox", { name: "localTask.filters.searchTags" }), { key: "Escape" });
   });
@@ -505,3 +507,8 @@ describe("TaskHubView", () => {
     expect(screen.queryByRole("navigation", { name: "localTask.pagination.label" })).toBeNull();
   });
 });
+
+function getRequestedFilters() {
+  const intent = commands.setLocalTaskHubFilters.mock.lastCall?.[0];
+  return typeof intent === "function" ? intent(localTaskStore.getState().hubFilters) : intent;
+}

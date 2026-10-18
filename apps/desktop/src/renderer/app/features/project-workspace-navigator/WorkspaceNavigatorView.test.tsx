@@ -146,6 +146,15 @@ const mocked = vi.hoisted(() => {
   };
 });
 
+// The imported terminal runtime subscribes at module load. Do not start a
+// real socket/reconnect loop while hover tests drain fake timers.
+vi.mock("@renderer/rpc", () => ({
+  subscribeConnectionStatus: vi.fn(() => () => {}),
+  request: vi.fn(async (method: string) => {
+    throw new Error(`Unexpected daemon RPC: ${method}`);
+  }),
+}));
+
 vi.mock("react-i18next", () => ({
   initReactI18next: {
     type: "3rdParty",

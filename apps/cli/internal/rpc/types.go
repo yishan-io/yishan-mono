@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/workspace/application"
 )
@@ -290,15 +289,6 @@ type ProjectListParams struct {
 
 type ProjectListWithWorkspacesParams struct {
 	OrganizationID string `json:"organizationId"`
-}
-
-type ProjectGetListPreferencesParams struct {
-	OrganizationID string `json:"organizationId"`
-}
-
-type ProjectSetListPreferencesParams struct {
-	OrganizationID string                       `json:"organizationId"`
-	Preferences    sqlite.ProjectListPreference `json:"preferences"`
 }
 
 // ---- context namespace ----
