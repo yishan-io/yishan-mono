@@ -13,9 +13,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"yishan/apps/cli/cmd/output"
 	"yishan/apps/cli/internal/daemon"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
-	"yishan/apps/cli/cmd/output"
 )
 
 var mcpCmd = &cobra.Command{
@@ -357,8 +357,6 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 			return textResult(string(encoded)), nil, nil
 		},
 	)
-
-	registerComputerTools(server, daemonClient)
 
 	return server.Run(context.Background(), &mcp.StdioTransport{})
 }

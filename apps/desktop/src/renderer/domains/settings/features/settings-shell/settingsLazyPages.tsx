@@ -29,9 +29,6 @@ export const MemberSettingsView = lazy(() =>
   import("@renderer/domains/organization").then((m) => ({ default: m.MemberSettingsView })),
 );
 export { ServiceTokenSettingsView } from "../account/ServiceTokenSettingsView";
-export const ComputerUseSettingsView = lazy(() =>
-  import("@renderer/domains/agent").then((m) => ({ default: m.ComputerUseSettingsView })),
-);
 export const DaemonSettingsView = lazy(() =>
   import("../daemon/DaemonSettingsView").then((m) => ({ default: m.DaemonSettingsView })),
 );

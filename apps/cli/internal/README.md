@@ -29,14 +29,14 @@ Enforced by `internal/archtest` (`TestForbiddenImports`).
 | `node/agent` | Application boundary | `pi.*`, `skill.*`, `customize.*` + task runs, pi session registry, desktop-connection tracking |
 | `node/terminal` | Application boundary | `terminal.*` + remote stream state, binary terminal frames |
 | `node/project` | Application boundary | `project.*` (list, preferences) |
-| `node/system` | Application boundary | `system.*`, `memory.*`, `computer.*`, `context.*` + CLI tool detection, scheduled jobs, memory-summarizer runner |
+| `node/system` | Application boundary | `system.*`, `memory.*`, `context.*` + CLI tool detection, scheduled jobs, memory-summarizer runner |
 | `node/hook` | Application boundary | Agent hook HTTP ingress (pi notify bridge), usage tracker |
 | `node/context` | Application boundary | Renderer-pushed desktop context store |
 | `workspace` | Domain owner | Workspace types + lifecycle rules; `application/` (create/close orchestration), `instance/`, `pr/`, `watchers/`, `worktree/` |
 | `agent` | Domain owner | `session/`, `process/`, `command/`, `setup/`, `auth/`, `catalog/`, `kind/` |
 | `tokenusage` | Domain owner | `collection/`, `scanner/`, `attribution/`, `pricing/`, `repository/` |
 | `memory` | Domain owner | Store, reconcile, summarizer, persona |
-| `files` `git` `terminal` `computer` | Capability owners | Standalone local capabilities (standalone = not workspace internals) |
+| `files` `git` `terminal` | Capability owners | Standalone local capabilities (standalone = not workspace internals) |
 | `adapter/cloud` | Edge adapter | `cloud.Client` HTTP operations + DTOs; `session/` (auth state), `login/` |
 | `adapter/sqlite` | Edge adapter | SQLite store + migrations + row conversion |
 | `adapter/relay` | Edge adapter | Relay envelopes + relay client |
@@ -52,7 +52,7 @@ Enforced by `internal/archtest` (`TestForbiddenImports`).
 - `workspace` → daemon, rpc, agent, adapter/cloud, adapter/sqlite,
   adapter/relay, node (the workspace domain depends only on interfaces)
 - `rpc` → daemon, node, agent
-- `files` / `git` / `terminal` / `computer` → daemon, rpc, agent, node
+- `files` / `git` / `terminal` → daemon, rpc, agent, node
   (standalone capabilities, domain errors only)
 - `workspace/worktree` → daemon, rpc, agent, node
 - `agent` → daemon, node, rpc
@@ -66,8 +66,7 @@ Enforced by `internal/archtest` (`TestForbiddenImports`).
 ## Error ownership
 
 - Domain/capability owners return their own errors: `workspace.Error`,
-  `files.Error`, `git.Error`, `worktree.Error`, `terminal.Error`,
-  `computer.Error`.
+  `files.Error`, `git.Error`, `worktree.Error`, `terminal.Error`.
 - `rpc.MapRPCError` maps domain errors to wire codes; `rpc` owns the
   JSON-RPC numeric codes; `cmd/output` owns process exit-code policy
   (`CodeToExitCode`).

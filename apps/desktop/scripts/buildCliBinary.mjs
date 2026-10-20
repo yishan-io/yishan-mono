@@ -20,9 +20,6 @@ const cliVersion =
   (typeof packageJson.version === "string" ? packageJson.version.trim() : "") ||
   "0.0.0";
 
-// Computer Use runtime packaging/signing follow-up notes:
-// docs/computer-use-macos-packaging.md
-
 if (!SUPPORTED_DESKTOP_BUILD_PLATFORMS.has(process.platform)) {
   console.error(`Desktop packaging is only supported on macOS and Linux. Received: ${process.platform}`);
   process.exit(1);

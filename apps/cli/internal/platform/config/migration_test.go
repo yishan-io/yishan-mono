@@ -77,7 +77,6 @@ func TestLoadSettingsMigratesLegacyViperIntoSettingsFile(t *testing.T) {
 	if cfg.Memory.SummarizerModel != "gpt-test" {
 		t.Fatalf("SummarizerModel = %q, want %q", cfg.Memory.SummarizerModel, "gpt-test")
 	}
-	assertDefaultComputerUse(t, cfg.ComputerUse)
 
 	stored := loadTestConfig(t, settingsPath)
 	if stored.GetString(KeyDefaultOrgID) != "org-from-credential" {
@@ -172,13 +171,6 @@ func TestLoadRemovesLegacyCredentialCurrentOrgIDAfterMigration(t *testing.T) {
 	storedSettings := loadTestConfig(t, filepath.Join(dir, "settings.yaml"))
 	if storedSettings.GetString(KeyDefaultOrgID) != "org-legacy" {
 		t.Fatalf("stored settings default_org_id = %q, want %q", storedSettings.GetString(KeyDefaultOrgID), "org-legacy")
-	}
-}
-
-func assertDefaultComputerUse(t *testing.T, cfg ComputerUseConfig) {
-	t.Helper()
-	if !cfg.Enabled || !cfg.Observe || !cfg.Capture || !cfg.Inspect || !cfg.Actions || !cfg.Mouse || !cfg.Keyboard || !cfg.ClipboardRead || !cfg.ClipboardWrite || !cfg.ApplicationControl {
-		t.Fatalf("expected default computer_use config to be fully enabled: %+v", cfg)
 	}
 }
 

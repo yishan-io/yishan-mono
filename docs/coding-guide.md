@@ -294,7 +294,7 @@ internal/
     agent/            pi.*/skill.*/customize.* + task runs + session registry
     terminal/         terminal.* + remote stream state + binary frames
     project/          project.* (list, preferences)
-    system/           system.*/memory.*/computer.*/context.* + cli tools
+    system/           system.*/memory.*/context.* + cli tools
     hook/             agent hook ingress (pi notify bridge)
     context/          renderer context store
   workspace/        Workspace domain types + lifecycle rules + application/
@@ -302,7 +302,7 @@ internal/
   agent/            Agent domain: session/process/command/setup/auth/catalog/kind
   tokenusage/       Usage domain: collection/scanner/attribution/pricing/repository
   memory/           Memory domain: store/reconcile/summarizer/persona
-  files/ git/ terminal/ computer/   Standalone capability packages
+  files/ git/ terminal/             Standalone capability packages
   adapter/
     cloud/            Cloud API client + DTOs (+ session, login)
     sqlite/           SQLite store + migrations + row conversion
@@ -340,14 +340,14 @@ internal/
   loop, concurrency limits, binary terminal frames), `Connection`, `Router`,
   protocol types, and one namespace handler per RPC namespace
   (`WorkspaceHandler`, `FileHandler`, `GitHandler`, `TerminalHandler`,
-  `MemoryHandler`, `ComputerHandler`, `ContextHandler`, `ProjectHandler`,
+  `MemoryHandler`, `ContextHandler`, `ProjectHandler`,
   `SystemHandler`, `AgentHandler`). Each handler decodes params and calls
   exactly one typed method on a per-namespace service interface.
 - Error ownership: domain and capability owners return their own errors
   (`workspace.Error`, `files.Error`, `git.Error`, ...); `rpc.MapRPCError`
   maps them to wire errors. `rpc` owns the JSON-RPC numeric codes; the
   command output package (`cmd/output`) owns process exit codes.
-- Capability packages (`files`, `git`, `terminal`, `computer`) stay
+- Capability packages (`files`, `git`, `terminal`) stay
   independent — they are not workspace internals. `workspace/worktree` and
   `workspace/watchers/fswatch` are single-owner packages under their owner.
 - Edge adapters (`adapter/cloud`, `adapter/sqlite`, `adapter/relay`) and
@@ -726,8 +726,7 @@ Package names match their directory roles (Phase 21): `adapter/cloud` is
 - Every top-level internal package has one documented role: composition
   (`app`), host/transport (`daemon`, `rpc`), application boundary
   (`node/*` vertical services), domain owner (`workspace`, `agent`,
-  `tokenusage`, `memory`), capability owner (`files`, `git`, `terminal`,
-  `computer`), edge adapter (`adapter/cloud`, `adapter/sqlite`,
+  `tokenusage`, `memory`), capability owner (`files`, `git`, `terminal`), edge adapter (`adapter/cloud`, `adapter/sqlite`,
   `adapter/relay`), or platform owner (`platform/config`,
   `platform/shellenv`, `platform/logging`, `platform/release`). The
   `adapter` and `platform` roots contain no Go files.
@@ -736,8 +735,7 @@ Package names match their directory roles (Phase 21): `adapter/cloud` is
   store), `workspace/worktree`, `workspace/watchers/fswatch`,
   `cmd/output` (CLI output + exit-code policy).
 - Domain and capability owners return their own errors (`workspace.Error`,
-  `files.Error`, `git.Error`, `worktree.Error`, `terminal.Error`,
-  `computer.Error`) and never import `rpc`; `rpc.MapRPCError` maps domain
+  `files.Error`, `git.Error`, `worktree.Error`, `terminal.Error`) and never import `rpc`; `rpc.MapRPCError` maps domain
   errors to wire errors.
 - `internal/app` is the only composition root and may import every concrete
   package; node services never import `internal/app` or `internal/daemon`.

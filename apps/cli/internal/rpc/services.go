@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -102,33 +101,6 @@ type MemoryService interface {
 	Status(ctx context.Context) (any, error)
 	Config(ctx context.Context) (any, error)
 	SetConfig(ctx context.Context, req MemoryUpdateConfigParams) (any, error)
-}
-
-// ComputerService backs the computer.* RPC methods. Each method is named
-// after the wire method tail; the service type already carries the namespace.
-type ComputerService interface {
-	Health(ctx context.Context) (any, error)
-	Permissions(ctx context.Context) (any, error)
-	GetConfig(ctx context.Context) (any, error)
-	UpdateConfig(ctx context.Context, req computer.FeatureConfig) (any, error)
-	ListDisplays(ctx context.Context) (any, error)
-	ListApplications(ctx context.Context) (any, error)
-	ListWindows(ctx context.Context, req ComputerListWindowsParams) (any, error)
-	CaptureDisplay(ctx context.Context, req ComputerCaptureDisplayParams) (any, error)
-	CaptureWindow(ctx context.Context, req ComputerCaptureWindowParams) (any, error)
-	GetUITree(ctx context.Context, req ComputerGetUITreeParams) (any, error)
-	PerformAction(ctx context.Context, req computer.AccessibilityActionRequest) (any, error)
-	FocusWindow(ctx context.Context, req ComputerFocusWindowParams) (any, error)
-	LaunchApplication(ctx context.Context, req ComputerLaunchApplicationParams) (any, error)
-	MovePointer(ctx context.Context, req ComputerMovePointerParams) (any, error)
-	Click(ctx context.Context, req computer.ClickRequest) (any, error)
-	Drag(ctx context.Context, req computer.DragRequest) (any, error)
-	Scroll(ctx context.Context, req computer.ScrollRequest) (any, error)
-	TypeText(ctx context.Context, req ComputerTypeTextParams) (any, error)
-	SendKey(ctx context.Context, req computer.KeyRequest) (any, error)
-	ReadClipboard(ctx context.Context) (any, error)
-	WriteClipboard(ctx context.Context, req computer.ClipboardContent) (any, error)
-	OpenPermissionSettings(ctx context.Context, req ComputerOpenPermissionSettingsParams) (any, error)
 }
 
 // ContextService backs the context.* RPC methods. Each method is named after

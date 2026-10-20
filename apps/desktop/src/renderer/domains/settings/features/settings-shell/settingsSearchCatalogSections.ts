@@ -3,7 +3,6 @@ import {
   BiBell,
   BiBot,
   BiChip,
-  BiCommand,
   BiDesktop,
   BiDownload,
   BiGitBranch,
@@ -71,29 +70,6 @@ export const DAEMON_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.daemon.restart.action",
       "settings.daemon.quitOnExit.label",
       "settings.daemon.quitOnExit.description",
-    ],
-  },
-];
-
-export const COMPUTER_USE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
-  {
-    id: "computer-use-features",
-    tab: "computerUse",
-    icon: BiCommand,
-    labelKey: "settings.computerUse.title",
-    sectionLabelKey: "settings.items.computerUse",
-    keywordKeys: [
-      "settings.computerUse.description",
-      "settings.computerUse.enabled.label",
-      "settings.computerUse.observe.label",
-      "settings.computerUse.capture.label",
-      "settings.computerUse.inspect.label",
-      "settings.computerUse.actions.label",
-      "settings.computerUse.mouse.label",
-      "settings.computerUse.keyboard.label",
-      "settings.computerUse.clipboardRead.label",
-      "settings.computerUse.clipboardWrite.label",
-      "settings.computerUse.applicationControl.label",
     ],
   },
 ];

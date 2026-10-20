@@ -5,8 +5,6 @@ import type {
   AgentDefinitionDetail,
   AgentDefinitionInfo,
   AgentDefinitionUpdateInput,
-  ComputerPermissionStatus,
-  ComputerUseFeatureConfig,
   MemoryConfig,
   MemoryUpdateConfigInput,
   PiActiveSessionSummary,
@@ -22,7 +20,7 @@ import type {
 
 /**
  * Agent procedure adapters (desktop7 Phase 25/26). The agent Domain owns its
- * chat / pi / agent / skill / customize / memory / computer namespace
+ * chat / pi / agent / skill / customize / memory namespace
  * procedures over the root transport's path-based invoke. Wire DTOs live in
  * `daemonAgentTypes` (Domain Infrastructure, desktop7 Phase 26); these
  * wrappers are the only agent code that touches transport.
@@ -166,26 +164,6 @@ export async function getMemoryConfig(): Promise<MemoryConfig> {
 
 export async function updateMemoryConfig(config: MemoryUpdateConfigInput): Promise<{ ok: boolean }> {
   return (await request("memory.updateConfig", config)) as { ok: boolean };
-}
-
-// ─── computer ────────────────────────────────────────────────────────────────
-
-export async function getComputerUsePermissions(): Promise<ComputerPermissionStatus> {
-  return (await request("computer.permissions", {})) as ComputerPermissionStatus;
-}
-
-export async function openComputerUsePermissionSettings(input: {
-  permission: string;
-}): Promise<{ ok: boolean }> {
-  return (await request("computer.openPermissionSettings", input)) as { ok: boolean };
-}
-
-export async function getComputerUseConfig(): Promise<ComputerUseFeatureConfig> {
-  return (await request("computer.getConfig", {})) as ComputerUseFeatureConfig;
-}
-
-export async function updateComputerUseConfig(config: ComputerUseFeatureConfig): Promise<{ ok: boolean }> {
-  return (await request("computer.updateConfig", config)) as { ok: boolean };
 }
 
 // ─── skill ───────────────────────────────────────────────────────────────────

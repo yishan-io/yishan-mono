@@ -12,7 +12,7 @@ import {
 import type { TFunction } from "i18next";
 import { RxExit } from "react-icons/rx";
 import { SearchInput } from "../../../../ui/components/SearchInput";
-import { type SettingsSearchResult, renderExperimentalSidebarLabel, renderSidebarLabel } from "./settingsSearch";
+import { type SettingsSearchResult, renderSidebarLabel } from "./settingsSearch";
 import type { SettingsTab } from "./settingsSearchCatalog";
 import { SETTINGS_NAV_SECTIONS } from "./settingsSearchCatalog";
 
@@ -96,11 +96,7 @@ export function SettingsSidebar({
                       <Icon size={16} />
                     </ListItemIcon>
                     <ListItemText
-                      primary={
-                        result.tab === "computerUse"
-                          ? renderExperimentalSidebarLabel(result.label, t("settings.computerUse.experimental"))
-                          : renderSidebarLabel(result.label)
-                      }
+                      primary={renderSidebarLabel(result.label)}
                       secondary={
                         <Typography variant="caption" sx={{ color: "text.secondary" }}>
                           {result.sectionLabel}
@@ -141,11 +137,7 @@ export function SettingsSidebar({
                           <Icon size={16} />
                         </ListItemIcon>
                         <ListItemText
-                          primary={
-                            item.tab === "computerUse"
-                              ? renderExperimentalSidebarLabel(t(item.labelKey), t("settings.computerUse.experimental"))
-                              : renderSidebarLabel(t(item.labelKey))
-                          }
+                          primary={renderSidebarLabel(t(item.labelKey))}
                         />
                       </ListItemButton>
                     );

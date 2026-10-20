@@ -3,7 +3,6 @@ import {
   BiBell,
   BiChip,
   type BiCog,
-  BiCommand,
   BiDesktop,
   BiDownload,
   BiGitBranch,
@@ -21,7 +20,6 @@ import {
   ACCOUNT_SEARCH_ITEMS,
   APPEARANCE_SEARCH_ITEMS,
   CLI_SEARCH_ITEMS,
-  COMPUTER_USE_SEARCH_ITEMS,
   CUSTOMIZE_SEARCH_ITEMS,
   DAEMON_SEARCH_ITEMS,
   GIT_WORKSPACE_SEARCH_ITEMS,
@@ -43,7 +41,6 @@ export type SettingsTab =
   | "account"
   | "appearance"
   | "cli"
-  | "computerUse"
   | "customize"
   | "daemon"
   | "keybindings"
@@ -116,7 +113,6 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
       { tab: "daemon", labelKey: "settings.items.daemon", icon: BiChip },
       { tab: "memory", labelKey: "settings.items.memory", icon: BiChip },
-      { tab: "computerUse", labelKey: "settings.items.computerUse", icon: BiCommand },
     ],
   },
 ];
@@ -144,7 +140,6 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...MEMBERS_SEARCH_ITEMS,
   ...NODES_SEARCH_ITEMS,
   ...KEYBINDINGS_SEARCH_ITEMS,
-  ...COMPUTER_USE_SEARCH_ITEMS,
   ...DAEMON_SEARCH_ITEMS,
   ...MEMORY_SEARCH_ITEMS,
   ...LOCAL_TAGS_SEARCH_ITEMS,
