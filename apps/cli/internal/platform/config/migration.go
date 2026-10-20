@@ -86,7 +86,6 @@ func migrateSettingsFromLegacy(settingsPath string, legacyViper *viper.Viper) er
 		cfg.Memory.SummarizerAgentKind = legacyViper.GetString(KeyMemorySummarizerAgentKind)
 		cfg.Memory.SummarizerModel = legacyViper.GetString(KeyMemorySummarizerModel)
 	}
-	cfg.ComputerUse = defaultComputerUseConfig()
 
 	if cfg.DefaultOrgID == "" {
 		cfg.DefaultOrgID = readLegacyContextOrgID(settingsPath)
@@ -99,6 +98,5 @@ func migrateSettingsFromLegacy(settingsPath string, legacyViper *viper.Viper) er
 		v.Set("memory.summarizer.enabled", cfg.Memory.SummarizerEnabled)
 		v.Set("memory.summarizer.agent_kind", cfg.Memory.SummarizerAgentKind)
 		v.Set("memory.summarizer.model", cfg.Memory.SummarizerModel)
-		writeComputerUseConfig(v, cfg.ComputerUse)
 	})
 }

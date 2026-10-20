@@ -136,11 +136,6 @@ var forbiddenEdges = []struct {
 		reason:       "the repository is persistence-only; it converts records, it does not scan or orchestrate",
 	},
 	{
-		sourcePrefix: "computer",
-		targets:      []string{"daemon", "rpc", "node", "agent"},
-		reason:       "computer-use is standalone infrastructure",
-	},
-	{
 		sourcePrefix: "memory",
 		targets:      []string{"daemon", "rpc", "node", "agent"},
 		reason:       "memory services are standalone infrastructure",

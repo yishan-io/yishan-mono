@@ -14,7 +14,7 @@ import { type AgentChatWidth, displaySettingsStore } from "../state/displaySetti
  * SettingsCommands — the public command surface for the Settings feature.
  *
  * Phase 8 contract, trimmed at desktop7 Phase 23: agent-domain commands
- * (memory config, computer-use permissions, agent models, skills, agent
+ * (memory config, agent models, skills, agent
  * definitions) moved to the Agent domain. Settings keeps language, service
  * tokens, voice usage, and daemon log wrappers.
  */

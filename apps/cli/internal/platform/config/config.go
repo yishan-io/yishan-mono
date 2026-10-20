@@ -111,23 +111,9 @@ type MemoryConfig struct {
 	SummarizerModel     string
 }
 
-type ComputerUseConfig struct {
-	Enabled            bool
-	Observe            bool
-	Capture            bool
-	Inspect            bool
-	Actions            bool
-	Mouse              bool
-	Keyboard           bool
-	ClipboardRead      bool
-	ClipboardWrite     bool
-	ApplicationControl bool
-}
-
 type SettingsConfig struct {
 	DefaultOrgID string
 	Memory       MemoryConfig
-	ComputerUse  ComputerUseConfig
 }
 
 type Config struct {
@@ -139,11 +125,10 @@ type Config struct {
 	// UserID mirrors the active account recorded in credential.yaml. It is
 	// informational: account data dir resolution reads the file directly, so
 	// ReloadAuthConfig intentionally does not refresh it.
-	UserID      string
-	API         APIConfig
-	Daemon      DaemonConfig
-	Memory      MemoryConfig
-	ComputerUse ComputerUseConfig
+	UserID string
+	API    APIConfig
+	Daemon DaemonConfig
+	Memory MemoryConfig
 }
 
 func ResolveConfigPath(v *viper.Viper, explicitConfigPath string) (string, error) {
@@ -196,8 +181,7 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 			RelayURL:     v.GetString("daemon_relay_url"),
 			RelayToken:   v.GetString("daemon_relay_token"),
 		},
-		Memory:      settingsCfg.Memory,
-		ComputerUse: settingsCfg.ComputerUse,
+		Memory: settingsCfg.Memory,
 	}, nil
 }
 

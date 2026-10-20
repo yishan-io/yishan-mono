@@ -73,17 +73,6 @@ moves only with its behavior owner; helpers stay with their single consumer.
 |---|---|---|---|---|---|---|---|
 | archtest/arch_test.go | 287 | contract | Forbidden import edges across internal packages | archtest (keep) | yes | — | keep; update rules with 17B (drop rpcerror), 18/19 moves |
 
-## computer — Capability owner
-
-| Test file | Lines | Type | Behavior | Target owner | Private | Duplicate | Action |
-|---|---|---|---|---|---|---|---|
-| computer/darwin/capture_test.go | 37 | unit | Capture option normalization, opaque id parse | computer/darwin (keep) | yes | — | keep |
-| computer/darwin/discovery_test.go | 42 | unit | Window filter matching, bundle-id enrichment | computer/darwin (keep) | yes | — | keep |
-| computer/darwin/runtime_test.go | 33 | unit | Health availability, permission-state mapping (darwin build tag) | computer/darwin (keep) | yes | — | keep |
-| computer/mock/runtime_test.go | 29 | unit | Mock runtime defaults | computer/mock (keep) | yes | — | keep |
-| computer/runtime_test.go | 36 | unit | Error details, noop runtime unavailability | computer (keep) | yes | — | keep |
-| computer/service_test.go | 117 | use case | Approval-gated type/text/clipboard, focus-target errors | computer (keep) | yes | — | keep |
-
 ## config — Platform owner (→ platform/config in Phase 19)
 
 | Test file | Lines | Type | Behavior | Target owner | Private | Duplicate | Action |
@@ -165,7 +154,6 @@ moves only with its behavior owner; helpers stay with their single consumer.
 | Test file | Lines | Type | Behavior | Target owner | Private | Duplicate | Action |
 |---|---|---|---|---|---|---|---|
 | node/cli_tool_install_test.go | 35 | use case | CLI tool install/uninstall unknown-tool rejection | node/agent (customization) | yes | — | move with customize service (Phase 18 step 5) |
-| node/dispatch_computer_test.go | 188 | use case | Computer dispatch: permissions, capture, list, map error metadata | node/system | yes | — | rename off `dispatch_`; move with system service (step 2); TestMapRPCErrorIncludesComputerMetadata → rpc |
 | node/dispatch_customize_test.go | 203 | use case | Customize dispatch: extensions/agents list/install/remove/restore + validation | node/agent (customization) | yes | — | rename → customize_test.go; move with agent service (step 5) |
 | node/dispatch_file_test.go | 49 | use case | file.search dispatch wiring | rpc (routing) | yes | file behavior covered by files/file_search_test.go | move with file app ops (step 3); routing → rpc |
 | node/dispatch_project_list_preferences_test.go | 154 | use case | Project list preferences get/set/prune via handler | node/project | yes | store behavior covered by db/project_list_preferences_test.go | rename; move with project service (step 1) |

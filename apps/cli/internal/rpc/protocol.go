@@ -11,7 +11,6 @@ import (
 
 	relayprotocol "yishan/packages/relay-protocol-go"
 
-	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/localtask"
@@ -61,24 +60,12 @@ func asJSONID(raw json.RawMessage) any {
 }
 
 // MapRPCError converts a handler error into an RPC error object. Structured
-// rpc.Error values pass through; computer-use errors keep their structured
-// code/details/retryable data; anything else becomes a generic server error.
+// rpc.Error values pass through; domain errors map to wire codes; anything
+// else becomes a generic server error.
 func MapRPCError(err error) *RPCError {
 	var e *Error
 	if errors.As(err, &e) {
 		return &RPCError{Code: e.Code, Message: e.Message}
-	}
-	var computerErr *computer.Error
-	if errors.As(err, &computerErr) {
-		return &RPCError{
-			Code:    CodeServerError,
-			Message: computerErr.Message,
-			Data: map[string]any{
-				"code":      computerErr.Code,
-				"details":   computerErr.Details,
-				"retryable": computerErr.Retryable,
-			},
-		}
 	}
 	var filesErr *files.Error
 	if errors.As(err, &filesErr) {

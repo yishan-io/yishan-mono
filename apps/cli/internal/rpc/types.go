@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/workspace/application"
 )
 
@@ -238,47 +237,6 @@ type MemoryUpdateConfigParams struct {
 	Enabled   bool   `json:"enabled"`
 	AgentKind string `json:"agentKind"`
 	Model     string `json:"model"`
-}
-
-// ---- computer namespace ----
-
-type ComputerListWindowsParams struct {
-	Filter computer.WindowFilter `json:"filter"`
-}
-
-type ComputerCaptureDisplayParams struct {
-	DisplayID string                  `json:"displayId"`
-	Options   computer.CaptureOptions `json:"options"`
-}
-
-type ComputerCaptureWindowParams struct {
-	WindowID string                  `json:"windowId"`
-	Options  computer.CaptureOptions `json:"options"`
-}
-
-type ComputerGetUITreeParams struct {
-	Target  computer.Target      `json:"target"`
-	Options computer.TreeOptions `json:"options"`
-}
-
-type ComputerFocusWindowParams struct {
-	WindowID string `json:"windowId"`
-}
-
-type ComputerLaunchApplicationParams struct {
-	BundleID string `json:"bundleId"`
-}
-
-type ComputerMovePointerParams struct {
-	Point computer.Point `json:"point"`
-}
-
-type ComputerTypeTextParams struct {
-	Text string `json:"text"`
-}
-
-type ComputerOpenPermissionSettingsParams struct {
-	Permission string `json:"permission"`
 }
 
 // ---- project namespace ----

@@ -23,7 +23,6 @@ func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspa
 	router.Register("git", &rpc.GitHandler{Services: workspaceSvc})
 	router.Register("file", &rpc.FileHandler{Services: workspaceSvc})
 	router.Register("terminal", &rpc.TerminalHandler{Services: terminalSvc})
-	router.Register("computer", &rpc.ComputerHandler{Services: systemSvc})
 	router.Register("memory", &rpc.MemoryHandler{Services: systemSvc})
 	router.Register("preferences", &rpc.PreferencesHandler{Services: systemSvc})
 	router.Register("project", &rpc.ProjectHandler{Services: projectSvc})

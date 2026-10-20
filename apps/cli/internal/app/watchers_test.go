@@ -323,7 +323,6 @@ func newWatchTestApp(t *testing.T, store workspace.WorkspaceStore) *App {
 		Session:      nil,
 		NodeID:       "node-1",
 		logFilePath:  filepath.Join(t.TempDir(), "daemon.log"),
-		settingsPath: filepath.Join(t.TempDir(), "config.yml"),
 		serverCtx:    context.Background(),
 	}
 	t.Cleanup(func() { _ = app.Close() })

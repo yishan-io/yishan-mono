@@ -22,7 +22,6 @@ import (
 	piauth "yishan/apps/cli/internal/agent/auth"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
-	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
@@ -35,7 +34,6 @@ import (
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
-	"yishan/apps/cli/internal/platform/config"
 	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/tokenusage"
@@ -94,7 +92,6 @@ type App struct {
 	terminals *terminal.Manager
 
 	memory       *memory.Service
-	computer     *computer.Service
 	modelList    *modellist.Service
 	agentMgr     *agentmanager.Manager
 	piAuth       *piauth.Store
@@ -108,7 +105,6 @@ type App struct {
 	Session      *session.Session
 	NodeID       string
 	logFilePath  string
-	settingsPath string
 
 	// agentLifecycleCtx bounds pi agent process lifetimes; Close cancels it
 	// before stopping the agent manager.
@@ -151,7 +147,7 @@ func resolveLocalTaskKeyAllocator(cfg Config) nodelocaltask.KeyAllocator {
 
 // Bootstrap composes the daemon's service graph for one account. It mirrors
 // the historical daemon startup order: workspace store → cleanup store →
-// context store → token usage → computer (+ settings) → memory → hydrate →
+// context store → token usage → memory → hydrate →
 // watch → background tasks → rpc layer.
 func Bootstrap(cfg Config) (*App, error) {
 	filesService := files.NewFileService()
@@ -208,7 +204,6 @@ func Bootstrap(cfg Config) (*App, error) {
 	agentLifecycleCtx, cancelAgentLifecycle := context.WithCancel(context.Background())
 	cleanupCtx, cancelCleanup := context.WithCancel(context.Background())
 
-	computerSvc := nodesystem.NewDefaultComputerService()
 	modelList := modellist.NewService()
 	agentMgr := agentmanager.NewManagerWithStderr(cfg.AgentStderr)
 	piAuth := nodeagent.NewManagedPiAuthStore()
@@ -326,7 +321,6 @@ func Bootstrap(cfg Config) (*App, error) {
 		git:                  gitService,
 		terminals:            terminals,
 		memory:               memorySvc,
-		computer:             computerSvc,
 		modelList:            modelList,
 		agentMgr:             agentMgr,
 		piAuth:               piAuth,
@@ -340,7 +334,6 @@ func Bootstrap(cfg Config) (*App, error) {
 		Session:              cfg.Session,
 		NodeID:               cfg.NodeID,
 		logFilePath:          cfg.LogFilePath,
-		settingsPath:         cfg.SettingsPath,
 		serverCtx:            context.Background(),
 		agentLifecycleCtx:    agentLifecycleCtx,
 		cancelAgentLifecycle: cancelAgentLifecycle,
@@ -350,11 +343,6 @@ func Bootstrap(cfg Config) (*App, error) {
 		workspaceSvc:         workspaceSvc,
 		localTaskSvc:         localTaskSvc,
 		hookIngress:          hookIngress,
-	}
-
-	// Computer feature config comes from settings.yaml.
-	if err := app.applyComputerSettings(); err != nil {
-		return nil, err
 	}
 
 	// Restore persisted workspaces and register a filesystem watcher for every
@@ -379,7 +367,6 @@ func Bootstrap(cfg Config) (*App, error) {
 		Memory:       memorySvc,
 		TaskContexts: localTaskSvc,
 		Registry:     registry,
-		Computer:     computerSvc,
 		ContextStore: contextStore,
 		SettingsPath: cfg.SettingsPath,
 		ServerCtx:    context.Background(),
@@ -414,31 +401,6 @@ func Bootstrap(cfg Config) (*App, error) {
 	}
 
 	return app, nil
-}
-
-// applyComputerSettings loads the computer-use feature config from
-// settings.yaml. A missing/empty settings path leaves the defaults.
-func (a *App) applyComputerSettings() error {
-	if a.settingsPath == "" || a.computer == nil {
-		return nil
-	}
-	cfg, err := config.LoadSettings(a.settingsPath, nil)
-	if err != nil {
-		return fmt.Errorf("load computer settings: %w", err)
-	}
-	a.computer.UpdateConfig(computer.FeatureConfig{
-		Enabled:            cfg.ComputerUse.Enabled,
-		Observe:            cfg.ComputerUse.Observe,
-		Capture:            cfg.ComputerUse.Capture,
-		Inspect:            cfg.ComputerUse.Inspect,
-		Actions:            cfg.ComputerUse.Actions,
-		Mouse:              cfg.ComputerUse.Mouse,
-		Keyboard:           cfg.ComputerUse.Keyboard,
-		ClipboardRead:      cfg.ComputerUse.ClipboardRead,
-		ClipboardWrite:     cfg.ComputerUse.ClipboardWrite,
-		ApplicationControl: cfg.ComputerUse.ApplicationControl,
-	})
-	return nil
 }
 
 // RPCServer exposes the JSON-RPC/WebSocket transport server to the daemon

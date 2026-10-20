@@ -366,7 +366,6 @@ proves the exit criteria, and stops the refactor.
 | `daemon/account_migration_test.go` | 338 | Account-layout migration tests | cohesive, keep |
 | `app/watchers_test.go` | 331 | Event-hub watcher tests | cohesive, keep |
 | `git/git_branch.go` | 328 | Branch status/current-branch queries | one cohesive behavior, keep |
-| `computer/service.go` | 325 | Computer capability service | one cohesive behavior, keep |
 | `workspace/workspace_context.go` | 323 | Context-link ensure/remove/sync | one cohesive behavior, keep |
 | `memory/agent_reader_test.go` | 319 | Reader tests | cohesive, keep |
 

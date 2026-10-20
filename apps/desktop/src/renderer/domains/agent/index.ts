@@ -115,4 +115,3 @@ export { AgentProviderSettingsView } from "./features/manage-providers/AgentProv
 export { SkillsSettingsView } from "./features/manage-skills/SkillsSettingsView";
 export { CustomizeSettingsView } from "./features/agent-definitions/CustomizeSettingsView";
 export { MemorySettingsView } from "./features/agent-memory/MemorySettingsView";
-export { ComputerUseSettingsView } from "./features/computer-use/ComputerUseSettingsView";

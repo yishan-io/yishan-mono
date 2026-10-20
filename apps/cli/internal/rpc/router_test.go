@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/localtask"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -152,26 +151,6 @@ func TestMapRPCError_WorkspaceDomainErrorSurvivesWrapping(t *testing.T) {
 	got := MapRPCError(err)
 	if got == nil || got.Code != CodeNotFound || got.Message != "workspace not found" {
 		t.Fatalf("MapRPCError(wrapped) = %#v, want code %d", got, CodeNotFound)
-	}
-}
-
-func TestHandleMessage_ComputerErrorKeepsStructuredData(t *testing.T) {
-	server := NewServer(HandlerFunc(func(ctx context.Context, connection *Connection, method string, params json.RawMessage) (any, error) {
-		return nil, computer.NewErrorWithDetails("computer.Error", "boom", map[string]any{"k": "v"}, true)
-	}))
-
-	resp := server.HandleMessage(context.Background(), &Connection{}, []byte(`{"jsonrpc":"2.0","id":1,"method":"computer.health"}`))
-	if resp == nil || resp.Error == nil || resp.Error.Code != CodeServerError {
-		t.Fatalf("unexpected response: %#v", resp)
-	}
-	data, ok := resp.Error.Data.(map[string]any)
-	if !ok {
-		t.Fatalf("computer error data lost: %#v", resp.Error)
-	}
-	code, _ := data["code"].(computer.ErrorCode)
-	retryable, _ := data["retryable"].(bool)
-	if code != "computer.Error" || !retryable {
-		t.Fatalf("computer error data lost: %#v", resp.Error)
 	}
 }
 

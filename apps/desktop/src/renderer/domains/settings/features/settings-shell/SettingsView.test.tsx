@@ -47,10 +47,6 @@ vi.mock("../daemon/DaemonSettingsView", () => ({
   DaemonSettingsView: () => <div data-testid="daemon-settings-panel" />,
 }));
 
-vi.mock("@renderer/domains/agent/features/computer-use/ComputerUseSettingsView", () => ({
-  ComputerUseSettingsView: () => <div data-testid="computer-use-settings-panel" />,
-}));
-
 vi.mock("../workspace/GitWorkspaceSettingsView", () => ({
   GitWorkspaceSettingsView: () => <div data-testid="git-workspace-settings-panel" />,
 }));
@@ -364,7 +360,26 @@ describe("SettingsView", () => {
     expect(await screen.findByTestId("daemon-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
-  it("renders computer use panel when computerUse tab is selected", async () => {
+  it("does not offer the retired Computer Use tab in navigation or search", async () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(screen.queryByRole("button", { name: /settings\.items\.computerUse/ })).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText("settings.searchPlaceholder"), {
+      target: { value: "computerUse" },
+    });
+    expect(await screen.findByText("settings.searchNoResults")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /computerUse/ })).toBeNull();
+  });
+
+  it("falls back to account for a legacy computerUse tab URL", async () => {
     render(
       <AppThemePreferenceProvider>
         <MemoryRouter initialEntries={["/settings?tab=computerUse"]}>
@@ -375,7 +390,8 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(await screen.findByTestId("computer-use-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
+    expect(await screen.findByText("settings.account.loading", {}, { timeout: 30000 })).toBeTruthy();
+    expect(screen.queryByTestId("computer-use-settings-panel")).toBeNull();
   });
 
   it("renders git workspace settings panel when workspace tab is selected", async () => {

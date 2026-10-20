@@ -1,4 +1,4 @@
-import { Box, Chip, Typography } from "@mui/material";
+import { Typography } from "@mui/material";
 import type { NotificationSettingsFocusItemId } from "@renderer/domains/notification";
 import type { ReactNode } from "react";
 import type { BiCog } from "react-icons/bi";
@@ -27,17 +27,6 @@ export function renderSidebarLabel(label: ReactNode) {
     <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
       {label}
     </Typography>
-  );
-}
-
-export function renderExperimentalSidebarLabel(label: string, chipLabel: string) {
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-      <Typography variant="body2" sx={{ lineHeight: 1.35 }} noWrap>
-        {label}
-      </Typography>
-      <Chip size="small" label={chipLabel} variant="outlined" sx={{ height: 18, flexShrink: 0 }} />
-    </Box>
   );
 }
 

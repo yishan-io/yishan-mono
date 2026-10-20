@@ -15,7 +15,6 @@ import {
   AgentChatWidthSettingsView,
   AgentProviderSettingsView,
   CLISettingsView,
-  ComputerUseSettingsView,
   CustomizeSettingsView,
   DaemonSettingsView,
   EditorSettingsView,
@@ -57,7 +56,6 @@ export function SettingsView() {
       selectedTabParam === "account" ||
       selectedTabParam === "appearance" ||
       selectedTabParam === "cli" ||
-      selectedTabParam === "computerUse" ||
       selectedTabParam === "customize" ||
       selectedTabParam === "daemon" ||
       selectedTabParam === "keybindings" ||
@@ -151,11 +149,6 @@ export function SettingsView() {
             <CLISettingsView />
           </Suspense>
         </SettingsErrorBoundary>
-      ),
-      computerUse: (
-        <Suspense fallback={null}>
-          <ComputerUseSettingsView />
-        </Suspense>
       ),
       appearance: (
         <Stack spacing={2}>

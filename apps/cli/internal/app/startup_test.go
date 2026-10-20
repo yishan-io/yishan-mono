@@ -111,7 +111,7 @@ func TestBootstrap_StartupSequence(t *testing.T) {
 	if app.memory == nil {
 		t.Fatal("expected memory service after Bootstrap")
 	}
-	if app.computer == nil || app.agentMgr == nil || app.modelList == nil || app.events == nil {
+	if app.agentMgr == nil || app.modelList == nil || app.events == nil {
 		t.Fatal("expected full service graph after Bootstrap")
 	}
 	if app.prTracker == nil || app.watchers == nil || app.cleanupStore == nil || app.contextStore == nil {
