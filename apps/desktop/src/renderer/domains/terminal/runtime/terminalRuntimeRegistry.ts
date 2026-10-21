@@ -404,6 +404,12 @@ export function recoverAttachedTerminalRuntime(tabId: string): boolean {
   }
 
   notifyTerminalResizeIfNeeded(entry, true, onTerminalResized);
+  try {
+    // xterm documents atlas corruption after OS sleep; preserve terminal text.
+    entry.terminal.clearTextureAtlas();
+  } catch (error) {
+    reportTerminalAsyncError("clear terminal texture atlas after background restore", error);
+  }
   refreshTerminalRenderer(entry, "refresh terminal after background restore");
   return true;
 }

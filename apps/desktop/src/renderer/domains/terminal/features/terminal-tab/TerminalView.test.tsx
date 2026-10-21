@@ -4,7 +4,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   __resetTerminalRuntimeRegistryForTests,
+  attachTerminalRuntime,
+  detachTerminalRuntime,
+  ensureTerminalRuntime,
+  forceFitTerminalRuntimes,
   getTerminalRuntime,
+  recoverAttachedTerminalRuntime,
 } from "../../../../domains/terminal/runtime/terminalRuntimeRegistry";
 import { __resetTerminalSessionServiceForTests } from "../../../../domains/terminal/runtime/terminalSessionService";
 import { TerminalView } from "./TerminalView";
@@ -66,6 +71,9 @@ const mocked = vi.hoisted(() => {
   });
   const xtermFocus = vi.fn();
   const xtermClear = vi.fn();
+  const xtermReset = vi.fn();
+  const xtermClearTextureAtlas = vi.fn();
+  const xtermRefresh = vi.fn();
   const xtermWrite = vi.fn((_chunk: string | Uint8Array, callback?: () => void) => {
     callback?.();
   });
@@ -103,6 +111,9 @@ const mocked = vi.hoisted(() => {
     writeTerminalInput,
     xtermFocus,
     xtermClear,
+    xtermReset,
+    xtermClearTextureAtlas,
+    xtermRefresh,
     xtermWrite,
     fitTerminal,
     closeTab,
@@ -194,7 +205,15 @@ vi.mock("@xterm/xterm", () => {
     open(parent: HTMLElement) {
       parent.appendChild(this.textarea);
     }
-    reset() {}
+    reset() {
+      mocked.xtermReset();
+    }
+    clearTextureAtlas() {
+      mocked.xtermClearTextureAtlas();
+    }
+    refresh(start: number, end: number) {
+      mocked.xtermRefresh(start, end);
+    }
     clear() {
       mocked.xtermClear();
     }
@@ -694,6 +713,7 @@ describe("TerminalView", () => {
     expect(mocked.xtermWrite).toHaveBeenNthCalledWith(1, "hel", expect.any(Function));
     expect(mocked.xtermWrite).toHaveBeenNthCalledWith(2, "lo", expect.any(Function));
     expect(animationFrames).toHaveLength(0);
+    expect(mocked.xtermClearTextureAtlas).not.toHaveBeenCalled();
   });
 
   it("flushes output queued while xterm write is in flight immediately after completion", async () => {
@@ -754,6 +774,7 @@ describe("TerminalView", () => {
     expect(mocked.xtermWrite).toHaveBeenCalledTimes(2);
     expect(mocked.xtermWrite).toHaveBeenNthCalledWith(2, "i", expect.any(Function));
     expect(animationFrames).toHaveLength(0);
+    expect(mocked.xtermClearTextureAtlas).not.toHaveBeenCalled();
   });
 
   it("truncates long command titles and keeps terminal tabs independent", async () => {
@@ -1071,6 +1092,8 @@ describe("TerminalView", () => {
     expect(delayedRetryTimeout).toBeTruthy();
     delayedRetryTimeout?.callback();
     expect(mocked.fitTerminal).toHaveBeenCalledTimes(4);
+    expect(mocked.xtermClearTextureAtlas).toHaveBeenCalledTimes(4);
+    expect(mocked.xtermRefresh).toHaveBeenCalledTimes(4);
   });
 
   it("recovers the terminal immediately when the document becomes visible with a sane rect", async () => {
@@ -1111,6 +1134,9 @@ describe("TerminalView", () => {
     vi.spyOn(runtime.hostElement, "getBoundingClientRect").mockReturnValue(createDomRect(640, 360));
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
 
+    forceFitTerminalRuntimes([runtime.tabId]);
+    expect(mocked.xtermClearTextureAtlas).not.toHaveBeenCalled();
+
     mocked.resizeTerminal.mockClear();
     mocked.fitTerminal.mockClear();
 
@@ -1121,7 +1147,16 @@ describe("TerminalView", () => {
     document.dispatchEvent(new Event("visibilitychange"));
 
     expect(mocked.fitTerminal).toHaveBeenCalledTimes(1);
-    expect(mocked.resizeTerminal).toHaveBeenCalledTimes(1);
+    expect(mocked.resizeTerminal).not.toHaveBeenCalled();
+    expect(mocked.xtermClearTextureAtlas).toHaveBeenCalledTimes(1);
+    expect(mocked.xtermRefresh).toHaveBeenCalledWith(0, 29);
+    expect(mocked.xtermClearTextureAtlas.mock.invocationCallOrder[0]).toBeLessThan(
+      mocked.xtermRefresh.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(mocked.xtermClear).not.toHaveBeenCalled();
+    expect(mocked.xtermReset).not.toHaveBeenCalled();
+    expect(mocked.xtermWrite).not.toHaveBeenCalled();
+    expect(mocked.writeTerminalInput).not.toHaveBeenCalled();
     expect(animationFrames).toHaveLength(1);
   });
 
@@ -1348,5 +1383,53 @@ describe("TerminalView", () => {
     });
 
     expect(mocked.xtermWrite).toHaveBeenCalledWith(new Uint8Array([0x61]), expect.any(Function));
+  });
+});
+
+describe("terminal recovery texture atlas", () => {
+  it("does not clear the atlas for missing, idle, invalid, detached, or failed-fit runtimes", () => {
+    stubAsyncTerminalBrowserApis();
+    expect(recoverAttachedTerminalRuntime("missing")).toBe(false);
+    const runtime = ensureTerminalRuntime("atlas-guards");
+    expect(recoverAttachedTerminalRuntime(runtime.tabId)).toBe(false);
+    const placeholder = document.createElement("div");
+    attachTerminalRuntime(runtime.tabId, placeholder);
+    vi.spyOn(runtime.hostElement, "getBoundingClientRect").mockReturnValue(createDomRect(0, 0));
+    expect(recoverAttachedTerminalRuntime(runtime.tabId)).toBe(false);
+    vi.spyOn(runtime.hostElement, "getBoundingClientRect").mockReturnValue(createDomRect(640, 360));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocked.fitTerminal.mockImplementationOnce(() => {
+      throw new Error("fit failed");
+    });
+    expect(recoverAttachedTerminalRuntime(runtime.tabId)).toBe(false);
+    detachTerminalRuntime(runtime.tabId, placeholder);
+    expect(recoverAttachedTerminalRuntime(runtime.tabId)).toBe(false);
+    expect(mocked.xtermClearTextureAtlas).not.toHaveBeenCalled();
+    expect(mocked.xtermRefresh).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("logs atlas clear errors and still refreshes without changing terminal text", () => {
+    stubAsyncTerminalBrowserApis();
+    const runtime = ensureTerminalRuntime("atlas-error");
+    attachTerminalRuntime(runtime.tabId, document.createElement("div"));
+    vi.spyOn(runtime.hostElement, "getBoundingClientRect").mockReturnValue(createDomRect(640, 360));
+    const atlasError = new Error("atlas clear failed");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocked.xtermClearTextureAtlas.mockImplementationOnce(() => {
+      throw atlasError;
+    });
+
+    expect(recoverAttachedTerminalRuntime(runtime.tabId)).toBe(true);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[TerminalRegistry] Failed to clear terminal texture atlas after background restore",
+      atlasError,
+    );
+    expect(mocked.xtermRefresh).toHaveBeenCalledWith(0, 29);
+    expect(mocked.xtermClear).not.toHaveBeenCalled();
+    expect(mocked.xtermReset).not.toHaveBeenCalled();
+    expect(mocked.xtermWrite).not.toHaveBeenCalled();
+    expect(mocked.writeTerminalInput).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });
