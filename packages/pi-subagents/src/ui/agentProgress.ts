@@ -1,7 +1,7 @@
 import type { ExtensionContext, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 
 import type { AgentRecord } from "../agents/types";
-import type { AgentManager } from "../runtime/agentManager";
+import type { AgentManager } from "../delegation";
 import { createLiveTranscriptEmitter } from "./liveTranscriptEmitter";
 import { buildLiveTranscriptPayload } from "./liveTranscriptPayload";
 

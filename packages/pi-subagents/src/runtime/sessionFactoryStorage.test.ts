@@ -16,6 +16,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
 });
 vi.mock("@yishan-io/pi-lsp", () => ({ createPiLspExtension: () => {} }));
 
+import { createDelegatedSession } from "../delegation";
 import { createChildAgentSession } from "./sessionFactory";
 
 describe("child session storage", () => {
@@ -31,6 +32,27 @@ describe("child session storage", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     rmSync(agentDir, { recursive: true, force: true });
+  });
+
+  it("reports a throwing generic session adapter without preventing assembly", async () => {
+    const report = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const result = await createDelegatedSession({
+        cwd,
+        agentId: "one",
+        agentName: "test",
+        mode: "foreground",
+        systemPrompt: "test",
+        onSessionCreated: () => {
+          throw new Error("adapter");
+        },
+      });
+      expect(result.sessionId).toEqual(expect.any(String));
+      expect(result.sessionId.length).toBeGreaterThan(0);
+      expect(report).toHaveBeenCalled();
+    } finally {
+      report.mockRestore();
+    }
   });
 
   it("resolves the default directory without persisting a phantom transcript", () => {

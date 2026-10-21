@@ -1,8 +1,17 @@
-import type { AgentRecord, AgentResult, AgentTask } from "../agents/types";
-import { emptyAgentUsageStats } from "../agents/types";
-import { type AgentRunHandle, type StartAgentRunOptions, startAgentRun } from "./agentRunner";
+import type { AgentSession } from "@earendil-works/pi-coding-agent";
+import { type AgentRunHandle, type StartAgentRunOptions, startDelegatedRun } from "./agentRunner";
 import { ConcurrencyQueue, QueuedTaskCancelledError } from "./concurrencyQueue";
 import { formatResultCollectorOutput } from "./resultCollector";
+import type {
+  AgentCancellationOrigin,
+  AgentObservation,
+  AgentParentCorrelation,
+  AgentRecord,
+  AgentResult,
+  AgentTask,
+  AgentTerminalEvent,
+} from "./types";
+import { AgentCancellation, emptyAgentUsageStats, invokeAgentObserver } from "./types";
 
 const DEFAULT_MAX_CONCURRENCY = 4;
 const AGENT_ID_PREFIX = "agent";
@@ -13,6 +22,7 @@ const MANAGER_SHUTDOWN_ERROR = "Agent manager is shut down";
  * session_shutdown can never block indefinitely.
  */
 const SHUTDOWN_SETTLE_TIMEOUT_MS = 10_000;
+const ASSEMBLY_CANCEL_SETTLE_TIMEOUT_MS = 2_000;
 
 /** Configurable dependencies for the shared agent manager. */
 export interface AgentManagerOptions {
@@ -27,11 +37,14 @@ export type AgentManagerListener = (records: AgentRecord[]) => void;
 /** Optional controls for one started agent run. */
 export interface AgentRunRequestOptions {
   signal?: AbortSignal;
+  parent?: Readonly<AgentParentCorrelation>;
+  onAdmitted?: (agentId: string) => void;
 }
 
 interface RunningAgentState {
   handle?: AgentRunHandle;
-  stopRequested: boolean;
+  cancellation: AgentCancellation;
+  cancelPromise?: Promise<void>;
 }
 
 /**
@@ -46,11 +59,13 @@ export class AgentManager {
   private readonly runningAgentStates = new Map<string, RunningAgentState>();
   private readonly listeners = new Set<AgentManagerListener>();
   private readonly completionPromises = new Map<string, Promise<AgentResult>>();
+  private readonly terminalListeners = new Set<(event: AgentTerminalEvent) => void>();
+  private readonly parents = new Map<string, Readonly<AgentParentCorrelation>>();
   private nextAgentSequence = 1;
   private isShuttingDown = false;
 
   constructor(options: AgentManagerOptions = {}) {
-    this.createAgentRun = options.createAgentRun ?? startAgentRun;
+    this.createAgentRun = options.createAgentRun ?? startDelegatedRun;
     this.now = options.now ?? (() => Date.now());
     this.queue = new ConcurrencyQueue(options.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY);
   }
@@ -73,64 +88,31 @@ export class AgentManager {
   }
 
   /** Stops one queued or running agent by agent id or child session id. Returns true when a matching run was found. */
-  async stop(agentIdOrSessionId: string): Promise<boolean> {
+  async stop(agentIdOrSessionId: string, origin: AgentCancellationOrigin = "caller"): Promise<boolean> {
     const agentId = this.resolveAgentId(agentIdOrSessionId);
-    if (!agentId) {
-      return false;
-    }
-
-    const queuedCancel = this.queuedCancels.get(agentId);
-    if (queuedCancel?.()) {
-      const record = this.agentRecords.get(agentId);
-      if (record) {
-        const completedAt = this.now();
-        record.status = "cancelled";
-        record.completedAt = completedAt;
-        record.error = "Agent run was cancelled before start";
-        this.emitChange();
-      }
-      this.queuedCancels.delete(agentId);
-      return true;
-    }
-
-    const runningAgentState = this.runningAgentStates.get(agentId);
-    if (!runningAgentState) {
-      return false;
-    }
-
-    if (!runningAgentState.handle) {
-      runningAgentState.stopRequested = true;
-      return true;
-    }
-
-    await runningAgentState.handle.cancel();
+    const state = agentId ? this.runningAgentStates.get(agentId) : undefined;
+    if (!agentId || !state || this.agentRecords.get(agentId)?.completedAt !== undefined) return false;
+    state.cancellation.request(origin);
+    this.queuedCancels.get(agentId)?.();
+    if (state.handle) await cancelRun(state, state.handle);
     return true;
   }
 
-  /** Shuts down the manager by cancelling queued and active work, then waiting for completion. */
+  /** Closes admission and signals every admitted run synchronously before waiting. */
   async shutdown(): Promise<void> {
     this.isShuttingDown = true;
-
-    const activeAgentIds = this.list()
-      .filter((record) => record.status === "queued" || record.status === "starting" || record.status === "running")
-      .map((record) => record.id);
-    if (activeAgentIds.length === 0) {
-      return;
+    const active = [...this.runningAgentStates.entries()];
+    for (const [, state] of active) state.cancellation.request("shutdown");
+    const stops = active.map(([id, state]) => {
+      this.queuedCancels.get(id)?.();
+      return state.handle ? cancelRun(state, state.handle) : undefined;
+    });
+    const bound = cancellableDelay(SHUTDOWN_SETTLE_TIMEOUT_MS);
+    try {
+      await Promise.race([Promise.allSettled([...stops, ...this.completionPromises.values()]), bound.promise]);
+    } finally {
+      bound.cancel();
     }
-
-    // Bound each wait: a hung turn (or a run handle that never settles) must
-    // not keep session_shutdown hanging; the daemon force-kills the process
-    // after its own abort grace period regardless.
-    const stopBound = cancellableDelay(SHUTDOWN_SETTLE_TIMEOUT_MS);
-    await Promise.race([Promise.allSettled(activeAgentIds.map((agentId) => this.stop(agentId))), stopBound.promise]);
-    stopBound.cancel();
-
-    const completionBound = cancellableDelay(SHUTDOWN_SETTLE_TIMEOUT_MS);
-    await Promise.race([
-      Promise.allSettled(activeAgentIds.map((agentId) => this.completionPromises.get(agentId)).filter(Boolean)),
-      completionBound.promise,
-    ]);
-    completionBound.cancel();
   }
 
   /** Steers one running agent with a follow-up message. */
@@ -160,9 +142,17 @@ export class AgentManager {
   /** Subscribes to snapshot updates for all tracked agent records. */
   subscribe(listener: AgentManagerListener): () => void {
     this.listeners.add(listener);
-    listener(this.list());
+    invokeAgentObserver(() => listener(this.list()));
     return () => {
       this.listeners.delete(listener);
+    };
+  }
+
+  /** Subscribes to future terminal transitions; listener failures are reported and isolated. */
+  subscribeTerminal(listener: (event: AgentTerminalEvent) => void): () => void {
+    this.terminalListeners.add(listener);
+    return () => {
+      this.terminalListeners.delete(listener);
     };
   }
 
@@ -200,11 +190,6 @@ export class AgentManager {
       if (record.sessionId === agentIdOrSessionId) {
         return record.id;
       }
-
-      const liveSessionId = record.session?.sessionManager?.getSessionId?.();
-      if (liveSessionId === agentIdOrSessionId) {
-        return record.id;
-      }
     }
 
     return undefined;
@@ -218,11 +203,6 @@ export class AgentManager {
       throw new Error(MANAGER_SHUTDOWN_ERROR);
     }
 
-    if (!task.agentDefinition) {
-      throw new Error(`Agent definition is required for task: ${task.agentName}`);
-    }
-
-    const agentDefinition = task.agentDefinition;
     const agentId = this.createAgentId();
     const record: AgentRecord = {
       id: agentId,
@@ -233,14 +213,22 @@ export class AgentManager {
       createdAt: this.now(),
       usage: { ...emptyAgentUsageStats },
     };
+    const cancellation = new AgentCancellation();
+    const runningAgentState: RunningAgentState = { cancellation };
+    this.runningAgentStates.set(agentId, runningAgentState);
     this.agentRecords.set(agentId, record);
+    const parent = options.parent ?? task.parent;
+    if (parent) this.parents.set(agentId, Object.freeze({ ...parent }));
+    invokeAgentObserver(() => options.onAdmitted?.(agentId));
     this.emitChange();
 
     const abortSignal = options.signal;
     const abortListener = () => {
-      void this.stop(agentId);
+      // fire-and-forget: caller abort signals cancellation synchronously.
+      void this.stop(agentId, "caller").catch((error) => console.warn("[pi-subagents] cancel failed", error));
     };
     abortSignal?.addEventListener("abort", abortListener, { once: true });
+    if (abortSignal?.aborted) cancellation.request("caller");
 
     const queuedTask = this.queue.enqueue(
       async () => {
@@ -248,44 +236,72 @@ export class AgentManager {
         record.startedAt = this.now();
         this.emitChange();
 
-        const runningAgentState: RunningAgentState = {
-          stopRequested: abortSignal?.aborted ?? false,
-        };
-        this.runningAgentStates.set(agentId, runningAgentState);
         let unsubscribeSessionChanges: (() => void) | undefined;
 
         try {
-          const runningHandle = await this.createAgentRun({
-            agentId,
-            agentName: task.agentName,
-            prompt: task.prompt,
-            cwd: task.cwd,
-            mode: task.mode,
-            parentToolCallId: task.parentToolCallId,
-            parentSession: task.parentSession,
-            parentSessionWriter: task.parentSessionWriter,
-            childSessionDescriptor: task.childSessionDescriptor,
-            tools: task.tools,
-            model: task.model,
-            parentModel: task.parentModel,
-            parentThinking: task.parentThinking,
-            thinking: task.thinking,
-            maxTurns: task.maxTurns,
-            timeoutMs: task.timeoutMs,
-            agentDefinition,
+          if (cancellation.signal.aborted) throw new QueuedTaskCancelledError();
+          let cancelAssembly!: () => void;
+          let assemblyCancelTimer: ReturnType<typeof setTimeout> | undefined;
+          const cancelled = new Promise<never>((_resolve, reject) => {
+            // The runner may already be prompting before its async handle reaches us.
+            // Allow the same interrupt grace as a running turn before freeing the slot.
+            cancelAssembly = () => {
+              assemblyCancelTimer = setTimeout(
+                () => reject(new QueuedTaskCancelledError()),
+                ASSEMBLY_CANCEL_SETTLE_TIMEOUT_MS,
+              );
+            };
+            cancellation.signal.addEventListener("abort", cancelAssembly, { once: true });
           });
-          record.session = runningHandle.session;
+          let assembly: Promise<AgentRunHandle>;
+          try {
+            assembly = this.createAgentRun({
+              cancellation,
+              agentId,
+              agentName: task.agentName,
+              prompt: task.prompt,
+              cwd: task.cwd,
+              mode: task.mode,
+              systemPrompt: task.systemPrompt,
+              parentSessionPath: task.parentSessionPath,
+              resolveExtensions: task.resolveExtensions,
+              onSessionCreated: task.onSessionCreated,
+              onStarted: task.onStarted,
+              onCompleted: task.onCompleted,
+              tools: task.tools,
+              model: task.model,
+              parentModel: task.parentModel,
+              parentThinking: task.parentThinking,
+              thinking: task.thinking,
+              maxTurns: task.maxTurns,
+              timeoutMs: task.timeoutMs,
+            });
+          } catch (error) {
+            assembly = Promise.reject(error);
+          }
+          // fire-and-forget: late assembly must be interrupted even after manager settlement.
+          void assembly
+            .then((handle) => {
+              if (cancellation.signal.aborted) return cancelRun(runningAgentState, handle);
+            })
+            .catch((error) => console.warn("[pi-subagents] late assembly cleanup failed", error));
+          let runningHandle: AgentRunHandle;
+          try {
+            runningHandle = await Promise.race([assembly, cancelled]);
+          } finally {
+            cancellation.signal.removeEventListener("abort", cancelAssembly);
+            if (assemblyCancelTimer !== undefined) clearTimeout(assemblyCancelTimer);
+          }
+          record.session = createLiveObservation(runningHandle.session);
           record.sessionId = runningHandle.sessionId;
           record.sessionPath = runningHandle.sessionPath ?? record.sessionPath;
           runningAgentState.handle = runningHandle;
           unsubscribeSessionChanges = runningHandle.session.subscribe(() => this.emitChange());
           record.status = "running";
           this.emitChange();
-          if (runningAgentState.stopRequested) {
-            await runningHandle.cancel();
-          }
-
-          const result = await runningHandle.completion;
+          if (cancellation.signal.aborted) await cancelRun(runningAgentState, runningHandle);
+          const completed = await runningHandle.completion;
+          const result = cancellation.origin ? interruptedResult(record, cancellation, completed) : completed;
           this.applyResult(record, result);
           return result;
         } catch (error) {
@@ -296,8 +312,9 @@ export class AgentManager {
             error: getAgentRunErrorMessage(error),
             usage: { ...emptyAgentUsageStats },
           };
-          this.applyResult(record, failedResult);
-          return failedResult;
+          const result = cancellation.origin ? interruptedResult(record, cancellation) : failedResult;
+          this.applyResult(record, result);
+          return result;
         } finally {
           unsubscribeSessionChanges?.();
           this.runningAgentStates.delete(agentId);
@@ -309,6 +326,7 @@ export class AgentManager {
     );
 
     this.queuedCancels.set(agentId, queuedTask.cancel);
+    if (cancellation.signal.aborted) queuedTask.cancel();
     const resultPromise = queuedTask.promise.catch((error: unknown) => {
       if (error instanceof QueuedTaskCancelledError) {
         const cancelledResult: AgentResult = {
@@ -318,8 +336,12 @@ export class AgentManager {
           error: "Agent run was cancelled before start",
           usage: { ...emptyAgentUsageStats },
         };
-        this.applyResult(record, cancelledResult);
-        return cancelledResult;
+        const result = { ...cancelledResult, cancellationOrigin: cancellation.origin };
+        this.applyResult(record, result);
+        this.runningAgentStates.delete(agentId);
+        this.queuedCancels.delete(agentId);
+        abortSignal?.removeEventListener("abort", abortListener);
+        return result;
       }
 
       throw error;
@@ -333,6 +355,7 @@ export class AgentManager {
   }
 
   private applyResult(record: AgentRecord, result: AgentResult): void {
+    if (record.completedAt !== undefined) return;
     record.status = result.status;
     record.completedAt = this.now();
     record.sessionId = result.sessionId;
@@ -340,13 +363,21 @@ export class AgentManager {
     record.responseText = result.responseText;
     record.error = result.error;
     record.usage = { ...result.usage };
+    record.cancellationOrigin = result.cancellationOrigin;
     this.emitChange();
+    const event: AgentTerminalEvent = {
+      record: { ...record, usage: { ...record.usage } },
+      result,
+      parent: this.parents.get(record.id),
+    };
+    this.parents.delete(record.id);
+    for (const listener of this.terminalListeners) invokeAgentObserver(() => listener(event));
   }
 
   private emitChange(): void {
     const records = this.list();
     for (const listener of this.listeners) {
-      listener(records);
+      invokeAgentObserver(() => listener(records));
     }
   }
 
@@ -380,4 +411,42 @@ function cancellableDelay(ms: number): { promise: Promise<void>; cancel: () => v
       }
     },
   };
+}
+
+/** Build a stable, getter-only view; every read uses the latest SDK state. */
+function createLiveObservation(session: AgentSession): AgentObservation {
+  return Object.freeze({
+    get messages() {
+      return session.messages;
+    },
+    get model() {
+      return session.model;
+    },
+    get thinkingLevel() {
+      return session.thinkingLevel;
+    },
+  });
+}
+
+function interruptedResult(record: AgentRecord, cancellation: AgentCancellation, result?: AgentResult): AgentResult {
+  const origin = cancellation.origin;
+  const limited = origin === "timeout" || origin === "maxTurns";
+  return {
+    ...result,
+    agentId: record.id,
+    agentName: record.agentName,
+    usage: result?.usage ?? { ...emptyAgentUsageStats },
+    status: limited ? "failed" : "cancelled",
+    error: result?.cancellationOrigin
+      ? result.error
+      : limited
+        ? `Agent run interrupted: ${origin}`
+        : "Agent run was cancelled",
+    cancellationOrigin: origin,
+  };
+}
+
+function cancelRun(state: RunningAgentState, handle: AgentRunHandle): Promise<void> {
+  state.cancelPromise ??= handle.cancel();
+  return state.cancelPromise;
 }

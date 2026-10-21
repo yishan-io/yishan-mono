@@ -107,7 +107,7 @@ vi.mock("./agents/registry", () => ({
   },
 }));
 
-vi.mock("./runtime/agentManager", () => ({
+vi.mock("./delegation", () => ({
   AgentManager: class {
     run(task: unknown) {
       return managerMock.run(task);
@@ -123,6 +123,10 @@ vi.mock("./runtime/agentManager", () => ({
 
     list() {
       return managerMock.list();
+    }
+
+    subscribeTerminal() {
+      return vi.fn();
     }
 
     subscribe(listener: (records: unknown[]) => void) {
@@ -182,14 +186,19 @@ describe("createPiSubagentsExtension", () => {
 
     createPiSubagentsExtension(pi as never);
 
-    expect(registerAgentCommandsMock).toHaveBeenCalledTimes(1);
-    expect(registerAgentToolMock).toHaveBeenCalledTimes(1);
-
     const sessionStartHandler = handlers.get("session_start");
     if (!sessionStartHandler) {
       throw new Error("Expected session_start handler");
     }
-    await sessionStartHandler({}, { ui: { addAutocompleteProvider: addAutocompleteProviderMock } });
+    await sessionStartHandler(
+      {},
+      {
+        sessionManager: { getSessionId: () => "parent" },
+        ui: { addAutocompleteProvider: addAutocompleteProviderMock },
+      },
+    );
+    expect(registerAgentCommandsMock).toHaveBeenCalledTimes(1);
+    expect(registerAgentToolMock).toHaveBeenCalledTimes(1);
     expect(addAutocompleteProviderMock).toHaveBeenCalledTimes(1);
     expect(bindAgentProgressUiMock).toHaveBeenCalledTimes(1);
 

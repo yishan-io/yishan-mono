@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AgentDefinition, AgentTask, AgentUsageStats } from "../agents/types";
-import { AgentManager } from "./agentManager";
-import type { AgentRunHandle } from "./agentRunner";
+import type { AgentTask, AgentUsageStats } from "../delegation";
+import { AgentManager } from "../delegation";
+import type { AgentRunHandle } from "../delegation";
 
 function createDeferredPromise<T>() {
   let resolvePromise: ((value: T | PromiseLike<T>) => void) | undefined;
@@ -27,13 +27,6 @@ const emptyUsage: AgentUsageStats = {
   turns: 0,
 };
 
-const testAgentDefinition: AgentDefinition = {
-  name: "Explore",
-  description: "Search the codebase",
-  systemPrompt: "Explore prompt",
-  source: "builtin",
-};
-
 function createTask(overrides: Partial<AgentTask> = {}): AgentTask {
   return {
     agentName: "Explore",
@@ -41,7 +34,7 @@ function createTask(overrides: Partial<AgentTask> = {}): AgentTask {
     mode: "foreground",
     cwd: "/tmp/project",
     workspaceAccess: "read",
-    agentDefinition: testAgentDefinition,
+    systemPrompt: "Explore prompt",
     ...overrides,
   };
 }
@@ -93,7 +86,7 @@ describe("AgentManager", () => {
     const [record] = agentManager.list();
 
     expect(result.status).toBe("completed");
-    expect(createAgentRun).toHaveBeenCalledWith(expect.objectContaining({ parentToolCallId: undefined }));
+    expect(createAgentRun).toHaveBeenCalledWith(expect.objectContaining({ onStarted: undefined }));
     expect(record).toMatchObject({
       agentName: "Explore",
       status: "completed",
@@ -112,7 +105,7 @@ describe("AgentManager", () => {
     });
   });
 
-  it("forwards parent tool call ids to agent runs", async () => {
+  it("forwards generic lifecycle callbacks to agent runs", async () => {
     const createAgentRun = vi.fn(async () =>
       createMockRunHandle(
         Promise.resolve({
@@ -125,9 +118,10 @@ describe("AgentManager", () => {
     );
     const agentManager = new AgentManager({ createAgentRun });
 
-    await agentManager.run(createTask({ parentToolCallId: "tool-1" }));
+    const onStarted = vi.fn();
+    await agentManager.run(createTask({ onStarted }));
 
-    expect(createAgentRun).toHaveBeenCalledWith(expect.objectContaining({ parentToolCallId: "tool-1" }));
+    expect(createAgentRun).toHaveBeenCalledWith(expect.objectContaining({ onStarted }));
   });
 
   it("marks runs failed when createAgentRun rejects", async () => {

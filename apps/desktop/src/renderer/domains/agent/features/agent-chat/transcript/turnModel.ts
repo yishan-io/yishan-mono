@@ -3,6 +3,7 @@ import type {
   AgentMessage,
   AgentThinkingSignature,
 } from "../../../../../domains/agent/chat/agentChatTypes";
+import { type SubagentCompletion, projectSubagentCompletion } from "../../../chat/agentChatCompletion";
 import { type AgentToolResultMap, extractMessageText } from "./helpers";
 
 /** One display message inside a turn (assistant messages with merged tool results). */
@@ -18,14 +19,21 @@ export type Turn = {
   items: TurnItem[];
   isWorking: boolean;
   workedDurationMs: number | null;
+  /** Parent timing items across completion-separated segments; never used for content grouping. */
+  timingItems?: TurnItem[];
+  /** A later display segment owns this logical parent's timing header. */
+  timingContinues?: boolean;
   /** Timestamp of the preceding user message; used to derive worked time for history-loaded turns that lack durationMs. */
   startTimestampMs?: number;
   /** When the turn began working (first assistant item's startedAtMs); base for the live elapsed header. */
   startedAtMs?: number;
 };
 
-/** One row of the transcript: a standalone user message or a collapsible assistant turn. */
-export type TranscriptRow = { kind: "user"; message: AgentMessage } | { kind: "turn"; turn: Turn };
+/** A chronological user message, assistant turn, or validated child completion notice. */
+export type TranscriptRow =
+  | { kind: "user"; message: AgentMessage }
+  | { kind: "turn"; turn: Turn }
+  | { kind: "completion"; id: string; completion: SubagentCompletion };
 
 /** One tool call paired with its merged result, grouped at turn level. */
 export type TurnToolCall = {
@@ -53,7 +61,7 @@ export type TurnWorkingBlock =
 /**
  * Builds the transcript rows. A turn group starts at an assistant message:
  * consecutive assistant messages (with their merged tool results) form one
- * turn until the next user message. User messages are standalone rows and are
+ * turn until the next user message or visible completion notice. User messages are standalone rows and are
  * never part of a collapsible turn. Unmatched tool result messages (no owning
  * tool call in the transcript) stay visible inside the current turn so no
  * message content is lost.
@@ -65,11 +73,20 @@ export type TurnWorkingBlock =
 export function buildTranscriptRows(displayMessages: TurnItem[], isWorking = false): TranscriptRow[] {
   const rows: TranscriptRow[] = [];
   let currentTurn: Turn | null = null;
+  let lastParentSegment: Turn | null = null;
   let lastUserTimestamp: number | undefined;
 
   for (const item of displayMessages) {
+    const completion = projectSubagentCompletion(item.message);
+    if (completion) {
+      currentTurn = null;
+      // Split display content only; child timing never enters the parent projection.
+      rows.push({ kind: "completion", id: item.message.id, completion });
+      continue;
+    }
     if (item.message.role === "user") {
       currentTurn = null;
+      lastParentSegment = null;
       lastUserTimestamp = typeof item.message.timestamp === "number" ? item.message.timestamp : undefined;
       rows.push({ kind: "user", message: item.message });
       continue;
@@ -77,10 +94,12 @@ export function buildTranscriptRows(displayMessages: TurnItem[], isWorking = fal
 
     if (item.message.role === "toolResult") {
       if (!currentTurn) {
-        currentTurn = createTurn(item.message.id, lastUserTimestamp);
+        currentTurn = createTurn(item.message.id, lastUserTimestamp, lastParentSegment);
+        lastParentSegment = currentTurn;
         rows.push({ kind: "turn", turn: currentTurn });
       }
       currentTurn.items.push(item);
+      currentTurn.timingItems?.push(item);
       continue;
     }
 
@@ -89,11 +108,13 @@ export function buildTranscriptRows(displayMessages: TurnItem[], isWorking = fal
     }
 
     if (!currentTurn) {
-      currentTurn = createTurn(item.message.id, lastUserTimestamp);
+      currentTurn = createTurn(item.message.id, lastUserTimestamp, lastParentSegment);
+      lastParentSegment = currentTurn;
       rows.push({ kind: "turn", turn: currentTurn });
     }
 
     currentTurn.items.push(item);
+    currentTurn.timingItems?.push(item);
     if (item.isStreaming) {
       currentTurn.isWorking = true;
     }
@@ -106,24 +127,32 @@ export function buildTranscriptRows(displayMessages: TurnItem[], isWorking = fal
   }
 
   if (isWorking) {
-    // Only the trailing turn can be the running one; when the last row is a
-    // user message the new turn has not started emitting yet.
-    const lastRow = rows[rows.length - 1];
-    if (lastRow?.kind === "turn") {
-      lastRow.turn.isWorking = true;
+    // Child completion does not end the parent's running turn. Skip notices,
+    // but stop at a user prompt so an older turn is never revived.
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      const row = rows[index];
+      if (row?.kind === "completion") continue;
+      if (row?.kind === "turn") row.turn.isWorking = true;
+      break;
     }
   }
 
   return rows;
 }
 
-function createTurn(id: string, startTimestampMs?: number): Turn {
+function createTurn(id: string, startTimestampMs?: number, previous?: Turn | null): Turn {
+  if (previous) {
+    previous.timingContinues = true;
+    previous.isWorking = false;
+  }
   return {
     id,
     items: [],
     isWorking: false,
-    workedDurationMs: null,
+    workedDurationMs: previous?.workedDurationMs ?? null,
     startTimestampMs,
+    startedAtMs: previous?.startedAtMs,
+    timingItems: previous ? [...(previous.timingItems ?? previous.items)] : undefined,
   };
 }
 
@@ -291,7 +320,7 @@ export function getTurnElapsedSpanMs(turn: Turn): number | null {
   let firstStartedAtMs: number | null = null;
   let finalAssistant: TurnItem | null = null;
 
-  for (const item of turn.items) {
+  for (const item of turn.timingItems ?? turn.items) {
     if (item.message.role !== "assistant") {
       continue;
     }
@@ -331,7 +360,7 @@ export function getTurnElapsedSpanMs(turn: Turn): number | null {
  * so returns null.
  */
 export function getTurnWorkedDurationMs(turn: Turn): number | null {
-  if (turn.isWorking) {
+  if (turn.isWorking || turn.timingContinues) {
     return null;
   }
 
@@ -348,7 +377,7 @@ export function getTurnWorkedDurationMs(turn: Turn): number | null {
 
   // History-loaded turns lack renderer timing; derive the worked time from the
   // preceding user message timestamp and the last assistant message timestamp.
-  const endTimestampMs = getLastAssistantTimestampMs(turn.items);
+  const endTimestampMs = getLastAssistantTimestampMs(turn.timingItems ?? turn.items);
   if (typeof turn.startTimestampMs === "number" && Number.isFinite(turn.startTimestampMs) && endTimestampMs !== null) {
     return Math.max(0, endTimestampMs - turn.startTimestampMs);
   }

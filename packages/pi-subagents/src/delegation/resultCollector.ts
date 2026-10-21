@@ -1,4 +1,4 @@
-import type { AgentResult } from "../agents/types";
+import type { AgentResult } from "./types";
 
 /**
  * Formats multiple agent results into the structured block form injected back into the main agent.

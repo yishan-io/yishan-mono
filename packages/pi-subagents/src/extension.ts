@@ -3,13 +3,16 @@ import { Key } from "@earendil-works/pi-tui";
 
 import { AgentRegistry } from "./agents/registry";
 import { registerAgentCommands } from "./commands/registerAgentCommands";
+import { AgentManager } from "./delegation";
+import { CompletionOwner } from "./delivery/completionOwner";
 import { createAgentAutocompleteProvider } from "./input/autocompleteProvider";
 import { parseAgentInvocation } from "./input/invocationParser";
 import { rewriteDelegationMessage } from "./input/rewriteDelegationMessage";
-import { AgentManager } from "./runtime/agentManager";
 import { registerAgentTool } from "./tools/agentTool";
 import { openAgentLiveOverlay } from "./ui/agentLiveOverlay";
 import { bindAgentProgressUi, clearAgentProgress, renderPendingDelegation } from "./ui/agentProgress";
+
+let nextOwnerLifetime = 1;
 
 const DELEGATION_GUIDANCE = `You can delegate work to sub-agents using the Agent tool.
 
@@ -28,6 +31,7 @@ Do not use Agent when:
 
 If workstreams are independent, delegate them separately and prefer read-only agents for parallel work.
 Use background runs only when you can continue with non-overlapping work while the sub-agent runs.
+Background and slash-launched results arrive automatically as subagent-completion messages. Do not poll or use slash commands to hand off results.
 
 Once you delegate work, do not duplicate the same exploration or edits yourself. Wait for the result or continue only with non-overlapping tasks.
 
@@ -40,13 +44,19 @@ You remain responsible for validating sub-agent results and producing the final 
  */
 export function createPiSubagentsExtension(pi: ExtensionAPI): void {
   const registry = new AgentRegistry({ cwd: process.cwd() });
-  const manager = new AgentManager();
+  let manager = new AgentManager();
+  let owner: CompletionOwner | undefined;
+  let parentSessionManager: unknown;
+  let disposeTerminal: (() => void) | undefined;
   let disposeAgentProgressUi: (() => void) | undefined;
   let pendingDelegationAgentNames: string[] | undefined;
 
   const resolveAgentRecord = async (args: string, ctx: { ui: Pick<ExtensionUIContext, "notify" | "select"> }) => {
+    const currentManager = manager;
+    const currentOwner = owner;
+    if (!currentOwner || currentOwner.isClosed) return undefined;
     const trimmedArgs = args.trim();
-    const records = manager.list();
+    const records = currentManager.list();
     if (records.length === 0) {
       ctx.ui.notify("No agent runs available", "warning");
       return undefined;
@@ -70,13 +80,14 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
       agentId = selectedRecord.id;
     }
 
-    const selectedRecord = manager.get(agentId);
+    if (currentOwner.isClosed) return undefined;
+    const selectedRecord = currentManager.get(agentId);
     if (!selectedRecord) {
       ctx.ui.notify(`Unknown agent id: ${agentId}`, "error");
       return undefined;
     }
 
-    return selectedRecord;
+    return { record: selectedRecord, manager: currentManager };
   };
 
   const openAgentView = async (args: string, ctx: { ui: Pick<ExtensionUIContext, "custom" | "notify" | "select"> }) => {
@@ -85,11 +96,8 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
       return;
     }
 
-    await openAgentLiveOverlay(selectedRecord, manager, ctx.ui);
+    await openAgentLiveOverlay(selectedRecord.record, selectedRecord.manager, ctx.ui);
   };
-
-  registerAgentCommands(pi, registry, manager);
-  registerAgentTool(pi, registry, manager);
 
   pi.registerCommand("agent-view", {
     description: "Select one agent and open its live popup viewer",
@@ -118,10 +126,37 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
   });
 
   pi.on("session_start", async (_event, ctx) => {
+    // The factory runs before a parent exists. Capture its ID only from this live SDK context.
+    const sessionManager = ctx.sessionManager;
+    const sessionId = sessionManager.getSessionId();
+    let previousShutdown: Promise<void> | undefined;
+    if (!owner || owner.isClosed || owner.parent.sessionId !== sessionId || parentSessionManager !== sessionManager) {
+      if (owner) {
+        owner.close();
+        disposeTerminal?.();
+        disposeAgentProgressUi?.();
+        disposeAgentProgressUi = undefined;
+        previousShutdown = manager.shutdown();
+        manager = new AgentManager();
+      }
+      owner = new CompletionOwner({
+        sessionId,
+        lifetime: String(nextOwnerLifetime++),
+        send: (message, options) => pi.sendMessage(message, options),
+        warn: (message) => ctx.ui.notify(message, "warning"),
+      });
+      parentSessionManager = sessionManager;
+      const currentOwner = owner;
+      disposeTerminal = manager.subscribeTerminal((event) => currentOwner.terminal(event));
+    }
+    // Each registration captures this lifetime, so stale tool/command closures cannot launch into its successor.
+    registerAgentCommands(pi, registry, manager, owner);
+    registerAgentTool(pi, registry, manager, owner);
     registry.reload();
     ctx.ui.addAutocompleteProvider((current) => createAgentAutocompleteProvider(current, registry.list()));
     disposeAgentProgressUi?.();
     disposeAgentProgressUi = bindAgentProgressUi(manager, ctx.ui, ctx.mode);
+    await previousShutdown;
   });
 
   pi.on("input", async (event, ctx) => {
@@ -187,9 +222,13 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
   }));
 
   pi.on("session_shutdown", async () => {
+    owner?.close();
     pendingDelegationAgentNames = undefined;
     disposeAgentProgressUi?.();
     disposeAgentProgressUi = undefined;
-    await manager.shutdown();
+    disposeTerminal?.();
+    disposeTerminal = undefined;
+    const closingManager = manager;
+    await closingManager.shutdown();
   });
 }

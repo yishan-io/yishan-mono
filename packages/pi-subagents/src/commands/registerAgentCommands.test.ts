@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AgentDefinition } from "../agents/types";
+import { CompletionOwner } from "../delivery/completionOwner";
 import { registerAgentCommands } from "./registerAgentCommands";
 
 const testAgentDefinition: AgentDefinition = {
@@ -79,37 +80,51 @@ describe("registerAgentCommands", () => {
         timeoutMs: undefined,
         workspaceAccess: "read",
       }),
+      undefined,
     );
     expect(notify).toHaveBeenCalledWith("Started Explore as agent-1", "info");
   });
 
-  it("registers /agent-send and queues completed results for the main agent", async () => {
-    const { commands, sendUserMessage, pi } = createCommandHarness();
-    const registry = {
-      reload: vi.fn(),
-      list: vi.fn(() => [testAgentDefinition]),
-      getByName: vi.fn(() => testAgentDefinition),
-    };
-    const manager = {
-      collectResults: vi.fn(() => '<subagent name="Explore">Done</subagent>'),
-      list: vi.fn(() => [{ id: "agent-1" }]),
-    };
-    const notify = vi.fn();
-
-    registerAgentCommands(pi as never, registry as never, manager as never);
-    const command = commands.get("agent-send");
-    if (!command) {
-      throw new Error("Expected /agent-send command to be registered");
+  it("does not register /agent-send, with or without a completion owner", () => {
+    for (const owner of [
+      undefined,
+      new CompletionOwner({ sessionId: "parent", lifetime: "one", send: vi.fn(), warn: vi.fn() }),
+    ]) {
+      const { commands, sendUserMessage, pi } = createCommandHarness();
+      registerAgentCommands(pi as never, {} as never, {} as never, owner);
+      expect(commands.has("agent-send")).toBe(false);
+      expect(sendUserMessage).not.toHaveBeenCalled();
     }
-
-    await command.handler("agent-1", {
-      isIdle: () => true,
-      ui: { notify },
-    });
-
-    expect(sendUserMessage).toHaveBeenCalledWith(
-      'The following sub-agents completed their tasks.\n\n<subagent name="Explore">Done</subagent>\n\nReview the findings, resolve conflicts, and produce the final response.',
-    );
-    expect(notify).toHaveBeenCalledWith("Queued sub-agent results for the main agent", "info");
   });
+
+  it.each([false, true])(
+    "enrolls every slash launch before zero-duration execution (background=%s)",
+    async (background) => {
+      const { commands, pi } = createCommandHarness();
+      const owner = new CompletionOwner({ sessionId: "parent", lifetime: "one", send: vi.fn(), warn: vi.fn() });
+      const enroll = vi.spyOn(owner, "enroll");
+      const launch = vi.fn(async (_task, options) => {
+        expect(options.parent).toEqual({ ...owner.parent, source: "command" });
+        options.onAdmitted("instant");
+        expect(enroll).toHaveBeenCalledWith("instant");
+        return background ? "instant" : { agentId: "instant", agentName: "Explore", status: "completed" };
+      });
+      registerAgentCommands(
+        pi as never,
+        { reload: vi.fn(), getByName: () => testAgentDefinition } as never,
+        { run: launch, runInBackground: launch } as never,
+        owner,
+      );
+      const ctx = {
+        cwd: "/tmp",
+        sessionManager: { getSessionId: () => "parent", getSessionFile: () => undefined },
+        ui: { notify: vi.fn() },
+      };
+      await commands.get("agent")?.handler(`Explore ${background ? "--background " : ""}go`, ctx);
+      expect(launch).toHaveBeenCalledTimes(1);
+      owner.close();
+      await expect(commands.get("agent")?.handler("Explore go", ctx)).rejects.toThrow("closed");
+      expect(launch).toHaveBeenCalledTimes(1);
+    },
+  );
 });

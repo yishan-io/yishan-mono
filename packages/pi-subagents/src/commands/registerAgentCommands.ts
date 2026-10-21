@@ -2,8 +2,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { AutocompleteItem } from "@earendil-works/pi-tui";
 
 import type { AgentRegistry } from "../agents/registry";
-import type { AgentTask } from "../agents/types";
-import type { AgentManager } from "../runtime/agentManager";
+import type { AgentManager } from "../delegation";
+import type { CompletionOwner } from "../delivery/completionOwner";
 import { buildAgentTask } from "../runtime/buildAgentTask";
 import {
   createLifecycleWidgetEmitter,
@@ -11,17 +11,21 @@ import {
   getParentSessionReference,
 } from "../runtime/sessionRelationship";
 
-const AGENT_SEND_PROMPT_HEADER = "The following sub-agents completed their tasks.";
-const AGENT_SEND_PROMPT_FOOTER = "Review the findings, resolve conflicts, and produce the final response.";
 const BACKGROUND_FLAG = "--background";
 
 /**
  * Registers the slash-command surface for Pi sub-agents.
  */
-export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry, manager: AgentManager): void {
+export function registerAgentCommands(
+  pi: ExtensionAPI,
+  registry: AgentRegistry,
+  manager: AgentManager,
+  owner?: CompletionOwner,
+): void {
   pi.registerCommand("agents", {
     description: "List loaded agent definitions and runtime state",
     handler: async (_args, ctx) => {
+      if (owner?.isClosed) throw new Error("Sub-agent parent lifetime is closed");
       registry.reload();
       const lines = [
         "Agents:",
@@ -43,6 +47,7 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
     description: "Run one agent: /agent <name> [--background] <prompt>",
     getArgumentCompletions: (prefix) => getAgentNameCompletions(registry, prefix),
     handler: async (args, ctx) => {
+      if (owner?.isClosed) throw new Error("Sub-agent parent lifetime is closed");
       registry.reload();
       const parsedArguments = parseAgentCommandArguments(args);
       if (!parsedArguments.agentName || !parsedArguments.prompt) {
@@ -66,17 +71,24 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
         parentThinking: pi.getThinkingLevel(),
       });
       task.parentSession = getParentSessionReference(ctx.sessionManager, ctx.cwd);
+      task.parent = { sessionId: ctx.sessionManager.getSessionId(), source: "command" };
       task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager, {
         emitLifecycle: createLifecycleWidgetEmitter(ctx.ui, ctx.mode),
       });
 
+      const delivery = owner
+        ? {
+            parent: { ...owner.parent, source: "command" as const },
+            onAdmitted: (id: string) => owner.enroll(id),
+          }
+        : undefined;
       if (parsedArguments.isBackground) {
-        const agentId = await manager.runInBackground(task);
+        const agentId = await manager.runInBackground(task, delivery);
         ctx.ui.notify(`Started ${agentDefinition.name} as ${agentId}`, "info");
         return;
       }
 
-      const result = await manager.run(task);
+      const result = await manager.run(task, delivery);
       ctx.ui.notify(formatAgentResultSummary(result), result.status === "completed" ? "info" : "warning");
     },
   });
@@ -85,6 +97,7 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
     description: "Show one agent result: /agent-result <id>",
     getArgumentCompletions: (prefix) => getAgentIdCompletions(manager, prefix),
     handler: async (args, ctx) => {
+      if (owner?.isClosed) throw new Error("Sub-agent parent lifetime is closed");
       const agentId = args.trim();
       if (agentId.length === 0) {
         ctx.ui.notify("Usage: /agent-result <id>", "error");
@@ -114,13 +127,14 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
     description: "Stop one queued or running agent: /agent-stop <id>",
     getArgumentCompletions: (prefix) => getAgentIdCompletions(manager, prefix),
     handler: async (args, ctx) => {
+      if (owner?.isClosed) throw new Error("Sub-agent parent lifetime is closed");
       const agentId = args.trim();
       if (agentId.length === 0) {
         ctx.ui.notify("Usage: /agent-stop <id>", "error");
         return;
       }
 
-      const stopped = await manager.stop(agentId);
+      const stopped = await manager.stop(agentId, "user");
       if (!stopped) {
         ctx.ui.notify(`Unknown running agent or child session: ${agentId}`, "error");
         return;
@@ -133,6 +147,7 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
     description: "Steer one running agent: /agent-steer <id> <message>",
     getArgumentCompletions: (prefix) => getAgentIdCompletions(manager, prefix),
     handler: async (args, ctx) => {
+      if (owner?.isClosed) throw new Error("Sub-agent parent lifetime is closed");
       const trimmedArgs = args.trim();
       const firstSpaceIndex = trimmedArgs.indexOf(" ");
       if (firstSpaceIndex < 0) {
@@ -149,31 +164,6 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
 
       await manager.steer(agentId, message);
       ctx.ui.notify(`Steered ${agentId}`, "info");
-    },
-  });
-
-  pi.registerCommand("agent-send", {
-    description: "Manually send completed sub-agent results to the main agent",
-    getArgumentCompletions: (prefix) => getAgentIdCompletions(manager, prefix),
-    handler: async (args, ctx) => {
-      const requestedAgentIds = args
-        .split(/[\s,]+/)
-        .map((value) => value.trim())
-        .filter(Boolean);
-      const agentIds = requestedAgentIds.length > 0 ? requestedAgentIds : manager.list().map((record) => record.id);
-      const resultPayload = manager.collectResults(agentIds);
-      if (resultPayload.length === 0) {
-        ctx.ui.notify("No completed agent results available to send", "warning");
-        return;
-      }
-
-      const message = `${AGENT_SEND_PROMPT_HEADER}\n\n${resultPayload}\n\n${AGENT_SEND_PROMPT_FOOTER}`;
-      if (ctx.isIdle()) {
-        pi.sendUserMessage(message);
-      } else {
-        pi.sendUserMessage(message, { deliverAs: "followUp" });
-      }
-      ctx.ui.notify("Queued sub-agent results for the main agent", "info");
     },
   });
 }

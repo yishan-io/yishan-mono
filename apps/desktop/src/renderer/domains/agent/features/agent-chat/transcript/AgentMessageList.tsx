@@ -9,12 +9,12 @@ import type {
   AgentMessage as AgentMessageType,
   AgentQueueState,
 } from "../../../../../domains/agent/chat/agentChatTypes";
+import { projectSubagentCompletion } from "../../../chat/agentChatCompletion";
 import { AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX } from "../chat/AgentChatContentLayout";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentChatEmptyState } from "./AgentChatEmptyState";
-import { AgentTurn } from "./AgentTurn";
 import { QueuedMessageList } from "./QueuedMessageList";
-import { UserMessageRow } from "./UserMessageRow";
+import { VirtualTranscriptRows } from "./VirtualTranscriptRows";
 import type { AgentToolResultMap } from "./helpers";
 import { buildTranscriptRows } from "./turnModel";
 
@@ -143,7 +143,7 @@ function shouldHideMessage(message: AgentMessageType): boolean {
   }
 
   if (message.role === "custom") {
-    return message.display === false;
+    return projectSubagentCompletion(message) === null;
   }
 
   return false;
@@ -186,7 +186,9 @@ function AgentMessageListComponent({
     [messages, trailingMessage],
   );
   const rowIdsRef = useRef<string[]>([]);
-  rowIdsRef.current = rows.map((row) => (row.kind === "user" ? `user:${row.message.id}` : row.turn.id));
+  rowIdsRef.current = rows.map((row) =>
+    row.kind === "turn" ? row.turn.id : row.kind === "user" ? `user:${row.message.id}` : `completion:${row.id}`,
+  );
   const getVirtualMessageKey = useCallback((index: number) => rowIdsRef.current[index] ?? index, []);
   const queuedCount = (queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0);
   const hasWorkingTurn = rows.some((row) => row.kind === "turn" && row.turn.isWorking);
@@ -344,20 +346,12 @@ function AgentMessageListComponent({
     };
   }, [isActive, scrollToLatestMessage, tabId, virtualMessageTotalSize]);
 
-  const isInEmptyState = displayMessages.length === 0 && queuedCount === 0;
-
-  if (isInEmptyState) {
+  if (displayMessages.length === 0 && queuedCount === 0) {
     return <AgentChatEmptyState helpLines={emptyHelpLines} helpPrefix={emptyHelpPrefix} />;
   }
 
   return (
-    <Box
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        position: "relative",
-      }}
-    >
+    <Box sx={{ flex: 1, minHeight: 0, position: "relative" }}>
       <Box
         ref={scrollRef}
         data-testid="agent-message-scroll-container"
@@ -388,40 +382,15 @@ function AgentMessageListComponent({
               : {}),
           }}
         >
-          <Box sx={{ height: virtualMessageTotalSize, position: "relative", width: "100%" }}>
-            {virtualMessages.map((virtualMessage) => {
-              const row = rows[virtualMessage.index];
-              if (!row) {
-                return null;
-              }
-
-              return (
-                <Box
-                  key={virtualMessage.key}
-                  data-index={virtualMessage.index}
-                  ref={virtualizer.measureElement}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    transform: `translateY(${virtualMessage.start}px)`,
-                    width: "100%",
-                  }}
-                >
-                  {row.kind === "user" ? (
-                    <UserMessageRow message={row.message} />
-                  ) : (
-                    <AgentTurn
-                      turn={row.turn}
-                      workspacePath={workspacePath}
-                      agentToolCallStates={agentToolCallStates}
-                      onOpenCompletedSubagent={onOpenCompletedSubagent}
-                    />
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
+          <VirtualTranscriptRows
+            rows={rows}
+            virtualMessages={virtualMessages}
+            totalSize={virtualMessageTotalSize}
+            measureElement={virtualizer.measureElement}
+            workspacePath={workspacePath}
+            agentToolCallStates={agentToolCallStates}
+            onOpenCompletedSubagent={onOpenCompletedSubagent}
+          />
           {isWorking && !hasWorkingTurn && (
             <Box
               data-testid="agent-turn-working-indicator"

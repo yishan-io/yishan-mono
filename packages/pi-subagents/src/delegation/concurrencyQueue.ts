@@ -1,4 +1,4 @@
-import type { WorkspaceAccess } from "../agents/types";
+import type { WorkspaceAccess } from "./types";
 
 /** Options for scheduling one queued agent run. */
 export interface QueueTaskOptions {

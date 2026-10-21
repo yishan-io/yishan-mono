@@ -3,7 +3,7 @@ import type { TUI } from "@earendil-works/pi-tui";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 import type { AgentRecord } from "../agents/types";
-import type { AgentManager } from "../runtime/agentManager";
+import type { AgentManager } from "../delegation";
 import { getRecentActivityLines, truncateSingleLine } from "./agentActivity";
 
 interface AgentOverlayTheme {

@@ -22,7 +22,7 @@ function createTempDir(): string {
 }
 
 function createMockSession(options: { abortRejects?: boolean; hung?: boolean; sessionPath?: string } = {}) {
-  let listener: ((event: { type: string }) => void) | undefined;
+  let listener: ((event: { type: string; message?: unknown }) => void) | undefined;
   let resolvePrompt: (() => void) | undefined;
   const sessionPath = options.sessionPath ?? "/tmp/shared-sessions/child-session-1.jsonl";
   const abortMock = vi.fn(async () => {
@@ -64,7 +64,7 @@ function createMockSession(options: { abortRejects?: boolean; hung?: boolean; se
         { id: "entry-1", parentId: null, type: "session_info", timestamp: "2026-07-11T00:00:01.000Z", name: "Test" },
       ],
     },
-    subscribe(nextListener: (event: { type: string }) => void) {
+    subscribe(nextListener: (event: { type: string; message?: unknown }) => void) {
       listener = nextListener;
       return () => {
         listener = undefined;
@@ -78,6 +78,9 @@ function createMockSession(options: { abortRejects?: boolean; hung?: boolean; se
     abort: abortMock,
     steer: vi.fn(async () => {}),
     dispose: vi.fn(),
+    emitMessageEnd() {
+      listener?.({ type: "message_end", message: session.messages[0] });
+    },
     emitTurnEnd() {
       listener?.({ type: "turn_end" });
     },
@@ -137,6 +140,7 @@ describe("startAgentRun", () => {
       },
     });
 
+    session.emitMessageEnd();
     session.abort();
     const result = await handle.completion;
 
