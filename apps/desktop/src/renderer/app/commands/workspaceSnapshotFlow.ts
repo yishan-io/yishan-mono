@@ -45,9 +45,20 @@ function hasSnapshotOmittedProjectAddedDuringRequest(
     .projects.some((project) => !projectIdsAtRequestStart.has(project.id) && !snapshotProjectIds.has(project.id));
 }
 
-/** Loads the latest workspace snapshot and syncs local desktop/daemon state to it. */
-export async function loadWorkspaceSnapshot(): Promise<void> {
+/** Loads the latest snapshot; callers may opt into diagnostics and rethrowing errors (background loads swallow them). */
+export async function loadWorkspaceSnapshot(options?: {
+  diagnostics?: boolean;
+  throwOnError?: boolean;
+}): Promise<void> {
   const requestId = ++latestWorkspaceSnapshotRequestId;
+  let outcome: "applied" | "error" | "skipped" = "skipped";
+  let stage = "organizations";
+  let reason = "filter-not-hydrated";
+  // Null distinguishes a stage not reached from an authoritative empty snapshot.
+  let fetchedProjectCount: number | null = null;
+  let fetchedWorkspaceCount: number | null = null;
+  let reconciledProjectCount: number | null = null;
+  let reconciledWorkspaceCount: number | null = null;
   const sessionState = sessionStore.getState();
   let isCurrentScope = true;
   const unsubscribe = sessionStore.subscribe((current) => {
@@ -58,7 +69,17 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     )
       isCurrentScope = false;
   });
-  const isCurrentRequest = () => isCurrentScope && requestId === latestWorkspaceSnapshotRequestId;
+  const isCurrentRequest = () => {
+    if (!isCurrentScope) {
+      reason = "scope-changed";
+      return false;
+    }
+    if (requestId !== latestWorkspaceSnapshotRequestId) {
+      reason = "request-superseded";
+      return false;
+    }
+    return true;
+  };
   const projectIdsAtRequestStart = new Set(projectStore.getState().projects.map((project) => project.id));
   const previousWorkspaces = workspaceStore.getState().workspaces;
   const previousSelectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
@@ -78,8 +99,10 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
         return;
       }
 
+      stage = "apply-empty-workspaces";
       workspaceStore.getState().load("", []);
 
+      stage = "local-folders";
       const orphanFolders = await listLocalFolders();
       if (!isCurrentRequest()) {
         return;
@@ -90,16 +113,24 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       // list/read/write and terminal.start work after a daemon restart.
       void openFoldersForSnapshot(orphanFolders, "");
 
+      stage = "sync-tabs";
       await syncTabStoreWithWorkspace(previousWorkspaces);
+      outcome = "applied";
+      stage = "complete";
+      reason = "local-folders-only";
       return;
     }
 
+    stage = "project-filter";
     if (!(await hydrateProjectFilter(selectedOrganization.id, isCurrentRequest)) || !isCurrentRequest()) return;
+    stage = "projects";
     const projectsWithWorkspaces = await listProjectsByOrg(selectedOrganization.id, {
       withWorkspaces: true,
     });
     const projects: ProjectRecord[] = projectsWithWorkspaces.map(({ workspaces: _, ...project }) => project);
     const workspaces = projectsWithWorkspaces.flatMap((project) => project.workspaces ?? []);
+    fetchedProjectCount = projects.length;
+    fetchedWorkspaceCount = workspaces.length;
 
     if (!isCurrentRequest()) {
       return;
@@ -108,6 +139,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     // A successful local create can update the stores while this request is
     // pending. Do not let the pre-create response erase that visible project.
     if (hasSnapshotOmittedProjectAddedDuringRequest(projectIdsAtRequestStart, projects)) {
+      reason = "snapshot-omitted-new-project";
       return;
     }
 
@@ -115,6 +147,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     // reconciler is the single owner of snapshot reconciliation; the flow
     // applies the reconciled result to each owner (projects -> project store,
     // workspaces -> workspace store view models).
+    stage = "reconcile";
     const reconciled = reconcileWorkspaceSnapshot({
       projects,
       workspacesFromApi: workspaces,
@@ -129,6 +162,9 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
         organizationPreferencesById: projectStore.getState().organizationPreferencesById,
       },
     });
+    reconciledProjectCount = reconciled.projects.length;
+    reconciledWorkspaceCount = reconciled.workspaces.length;
+    stage = "apply-stores";
     projectStore
       .getState()
       .loadProjects(
@@ -147,6 +183,7 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     workbenchNavigationStore.getState().setActiveWorkspaceId(reconciled.selectedWorkspaceId);
 
     // load() retains prior folder items until the authoritative folder snapshot replaces them.
+    stage = "local-folders";
     const daemonFolders = await listLocalFolders();
 
     if (!isCurrentRequest()) {
@@ -158,20 +195,45 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     // list/read/write and terminal.start work after a daemon restart.
     void openFoldersForSnapshot(daemonFolders, selectedOrganization.id);
 
+    stage = "create-progress";
     workspaceCreateProgressStore
       .getState()
       .reconcileHydratedWorkspaceCreateProgress(workspaceStore.getState().workspaces);
+    stage = "sync-tabs";
     await syncTabStoreWithWorkspace(previousWorkspaces);
 
     // Warm up workspaces for currently pinned projects so the daemon has them
     // open and indexed for restart recovery. Already-open workspaces are skipped.
+    stage = "warmup";
     const pinnedProjectIds = projectStore.getState().displayProjectIds;
     if (pinnedProjectIds.length > 0) {
       void warmupWorkspacesForProjects(pinnedProjectIds);
     }
+    outcome = "applied";
+    stage = "complete";
+    reason = "snapshot-applied";
   } catch (error) {
+    outcome = "error";
+    reason = "exception";
     console.error("Failed to load workspace snapshot", error);
+    if (options?.throwOnError) throw error;
   } finally {
     unsubscribe();
+    if (options?.diagnostics) {
+      const { projects, displayProjectIds } = projectStore.getState();
+      console.info("Workspace snapshot diagnostics", {
+        requestId,
+        outcome,
+        stage,
+        reason,
+        fetchedProjectCount,
+        fetchedWorkspaceCount,
+        reconciledProjectCount,
+        reconciledWorkspaceCount,
+        storeProjectCount: projects.length,
+        storeWorkspaceCount: workspaceStore.getState().workspaces.length,
+        displayedProjectCount: projects.filter((project) => displayProjectIds.includes(project.id)).length,
+      });
+    }
   }
 }

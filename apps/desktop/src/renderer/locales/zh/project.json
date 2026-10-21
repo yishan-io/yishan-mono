@@ -1,5 +1,6 @@
 {
   "project": {
+    "refreshFailed": "刷新项目失败：{{message}}",
     "list": {
       "title": "\u9879\u76ee",
       "workspaces": "\u5de5\u4f5c\u533a",

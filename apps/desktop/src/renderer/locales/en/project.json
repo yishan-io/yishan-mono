@@ -1,5 +1,6 @@
 {
   "project": {
+    "refreshFailed": "Could not refresh projects: {{message}}",
     "list": {
       "title": "Projects",
       "workspaces": "Workspaces",
