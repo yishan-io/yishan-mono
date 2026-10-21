@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import {
   type AgentSession,
@@ -57,7 +58,9 @@ export async function createChildAgentSession(
       appendSystemPrompt: [options.agentDefinition.systemPrompt],
     },
   });
-  const sessionManager = SessionManager.create(options.cwd, undefined, {
+  // A fresh manager resolves Pi's cwd default directory without writing a transcript.
+  const defaultSessionDir = SessionManager.create(options.cwd).getSessionDir();
+  const sessionManager = SessionManager.create(options.cwd, join(defaultSessionDir, "subagents"), {
     parentSession: options.parentSession?.sessionPath,
   });
   const resolvedModel = resolveModelSpecifier(

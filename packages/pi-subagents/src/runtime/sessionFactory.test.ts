@@ -70,6 +70,7 @@ describe("createChildAgentSession", () => {
     sessionManagerAppendCustomEntryMock.mockReset();
     createSessionManagerMock.mockReturnValue({
       kind: "session-manager",
+      getSessionDir: () => "/tmp/shared-sessions",
       getSessionId: () => "child-session-1",
       getSessionFile: () => "/tmp/shared-sessions/child-session-1.jsonl",
       appendCustomEntry: sessionManagerAppendCustomEntryMock,
@@ -82,7 +83,7 @@ describe("createChildAgentSession", () => {
     });
   });
 
-  it("creates a persisted child session in the shared session store with parent metadata", async () => {
+  it("creates a persisted child session with parent metadata", async () => {
     const resolvedModel = createModel("anthropic", "claude-haiku-4-5");
     createAgentSessionServicesMock.mockResolvedValue({
       modelRuntime: createModelRuntime([resolvedModel]),
@@ -120,7 +121,7 @@ describe("createChildAgentSession", () => {
         appendSystemPrompt: ["Explore prompt"],
       },
     });
-    expect(createSessionManagerMock).toHaveBeenCalledWith("/tmp/project", undefined, {
+    expect(createSessionManagerMock).toHaveBeenCalledWith("/tmp/project", "/tmp/shared-sessions/subagents", {
       parentSession: "/tmp/shared-sessions/parent-session-1.jsonl",
     });
     expect(sessionManagerAppendCustomEntryMock).toHaveBeenCalledWith(

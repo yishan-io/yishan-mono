@@ -54,14 +54,31 @@ func (c *sessionPreviewCollector) preview() string {
 }
 
 // FindSessionFile returns the full transcript file path for one session id under
-// cwd, or "" when no matching transcript exists yet (fresh sessions flush lazily).
+// cwd, checking top-level transcripts before direct subagents transcripts.
+// It returns "" when no match exists yet (fresh sessions flush lazily).
 func FindSessionFile(ctx context.Context, cwd string, sessionID string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	root, err := config.ManagedPiSessionsDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve managed session root: %w", err)
 	}
 
 	sessionDir := filepath.Join(root, encodeSessionCWD(cwd))
+	for _, dir := range []string{sessionDir, filepath.Join(sessionDir, "subagents")} {
+		filePath, err := findSessionFileInDir(ctx, dir, sessionID)
+		if err != nil || filePath != "" {
+			return filePath, err
+		}
+	}
+	return "", nil
+}
+
+func findSessionFileInDir(ctx context.Context, sessionDir, sessionID string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	entries, err := os.ReadDir(sessionDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -82,7 +99,7 @@ func FindSessionFile(ctx context.Context, cwd string, sessionID string) (string,
 			return filePath, nil
 		}
 	}
-	return "", nil
+	return "", ctx.Err()
 }
 
 // ListSessionSummaries reads managed sessions for one cwd and returns newest-first
