@@ -14,7 +14,10 @@ import (
 	"yishan/apps/cli/internal/platform/config"
 )
 
-const maxSessionSummaryScanLineBytes = 1024 * 1024
+const (
+	maxSessionSummaryScanLineBytes = 1024 * 1024
+	maxSessionSummaryCandidates    = 30
+)
 
 // SessionSummary is one history entry loaded from a managed session file.
 type SessionSummary struct {
@@ -51,14 +54,31 @@ func (c *sessionPreviewCollector) preview() string {
 }
 
 // FindSessionFile returns the full transcript file path for one session id under
-// cwd, or "" when no matching transcript exists yet (fresh sessions flush lazily).
+// cwd, checking top-level transcripts before direct subagents transcripts.
+// It returns "" when no match exists yet (fresh sessions flush lazily).
 func FindSessionFile(ctx context.Context, cwd string, sessionID string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	root, err := config.ManagedPiSessionsDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve managed session root: %w", err)
 	}
 
 	sessionDir := filepath.Join(root, encodeSessionCWD(cwd))
+	for _, dir := range []string{sessionDir, filepath.Join(sessionDir, "subagents")} {
+		filePath, err := findSessionFileInDir(ctx, dir, sessionID)
+		if err != nil || filePath != "" {
+			return filePath, err
+		}
+	}
+	return "", nil
+}
+
+func findSessionFileInDir(ctx context.Context, sessionDir, sessionID string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	entries, err := os.ReadDir(sessionDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -79,7 +99,7 @@ func FindSessionFile(ctx context.Context, cwd string, sessionID string) (string,
 			return filePath, nil
 		}
 	}
-	return "", nil
+	return "", ctx.Err()
 }
 
 // ListSessionSummaries reads managed sessions for one cwd and returns newest-first
@@ -95,26 +115,21 @@ func ListSessionSummaries(ctx context.Context, cwd string) ([]SessionSummary, er
 }
 
 func readSessionSummaries(ctx context.Context, sessionDir string) ([]SessionSummary, error) {
-	entries, err := os.ReadDir(sessionDir)
+	candidates, err := selectSessionSummaryFiles(ctx, sessionDir)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return []SessionSummary{}, nil
-		}
-		return nil, fmt.Errorf("read session dir %q: %w", sessionDir, err)
+		return nil, err
 	}
-
-	summaries := make([]SessionSummary, 0, len(entries))
-	for _, entry := range entries {
+	summaries := make([]SessionSummary, 0, len(candidates))
+	for _, candidate := range candidates {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		if !isSessionSummaryFile(entry) {
-			continue
+		summary, err := readSessionSummary(ctx, filepath.Join(sessionDir, candidate.name))
+		if contextErr := ctx.Err(); contextErr != nil {
+			return nil, contextErr
 		}
-		summary, err := readSessionSummary(ctx, filepath.Join(sessionDir, entry.Name()))
 		if err != nil {
-			// Best-effort listing: skip unreadable session files so one bad transcript
-			// does not hide the rest of the history.
+			// Best-effort listing: skipped candidates still consume the cap; no backfill.
 			continue
 		}
 		summaries = append(summaries, summary)
@@ -130,6 +145,49 @@ func readSessionSummaries(ctx context.Context, sessionDir string) ([]SessionSumm
 	})
 
 	return summaries, nil
+}
+
+type sessionSummaryFile struct {
+	name     string
+	modified time.Time
+}
+
+func selectSessionSummaryFiles(ctx context.Context, sessionDir string) ([]sessionSummaryFile, error) {
+	entries, err := os.ReadDir(sessionDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []sessionSummaryFile{}, nil
+		}
+		return nil, fmt.Errorf("read session dir %q: %w", sessionDir, err)
+	}
+	candidates := make([]sessionSummaryFile, 0, len(entries))
+	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		if !isSessionSummaryFile(entry) {
+			continue
+		}
+		metadata, err := entry.Info()
+		if err != nil {
+			// Best effort: without metadata this entry cannot be ranked by mtime.
+			continue
+		}
+		candidates = append(candidates, sessionSummaryFile{name: entry.Name(), modified: metadata.ModTime()})
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].modified.Equal(candidates[j].modified) {
+			return candidates[i].name < candidates[j].name
+		}
+		return candidates[i].modified.After(candidates[j].modified)
+	})
+	if len(candidates) > maxSessionSummaryCandidates {
+		candidates = candidates[:maxSessionSummaryCandidates]
+	}
+	return candidates, nil
 }
 
 func isSessionSummaryFile(entry os.DirEntry) bool {
