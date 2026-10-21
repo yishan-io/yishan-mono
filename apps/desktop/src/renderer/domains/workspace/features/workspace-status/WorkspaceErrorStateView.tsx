@@ -1,22 +1,23 @@
 import { Box, Button, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { LuTriangleAlert } from "react-icons/lu";
 import { closeWorkspace } from "../../../../domains/workspace/commands/workspaceCloseCommand";
 import type { WorkspaceItem } from "../../../../domains/workspace/workspaceTypes";
 
 type WorkspaceErrorStateViewProps = {
   workspace: WorkspaceItem;
+  onDeleteProject?: () => void;
 };
 
 /**
  * Full-pane error state for a broken (error) workspace. Broken workspaces are
- * close-only: no tabs, no file tree, no right pane. This view replaces the
- * main content area and offers the single allowed action (close).
+ * shown without tabs, a file tree, or a right pane. Project deletion is
+ * supplied by app composition for missing paths.
  */
-export function WorkspaceErrorStateView({ workspace }: WorkspaceErrorStateViewProps) {
+export function WorkspaceErrorStateView({ workspace, onDeleteProject }: WorkspaceErrorStateViewProps) {
+  const { t } = useTranslation();
   const message =
-    workspace.health === "not-worktree"
-      ? "This workspace path is not a git worktree. Close the workspace to remove it."
-      : "This workspace worktree is missing. Close the workspace to remove it.";
+    workspace.health === "not-worktree" ? t("workspace.error.notWorktree") : t("workspace.error.pathMissing");
 
   return (
     <Box
@@ -38,6 +39,11 @@ export function WorkspaceErrorStateView({ workspace }: WorkspaceErrorStateViewPr
       <Typography variant="body2" color="text.secondary">
         {message}
       </Typography>
+      {workspace.health === "path-missing" && onDeleteProject && (
+        <Button variant="outlined" color="error" onClick={onDeleteProject}>
+          {t("project.actions.delete")}
+        </Button>
+      )}
       <Button
         variant="outlined"
         color="error"
@@ -45,7 +51,7 @@ export function WorkspaceErrorStateView({ workspace }: WorkspaceErrorStateViewPr
           void closeWorkspace(workspace.id);
         }}
       >
-        Close workspace
+        {t("workspace.actions.delete")}
       </Button>
     </Box>
   );

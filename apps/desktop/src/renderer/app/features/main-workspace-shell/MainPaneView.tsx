@@ -32,7 +32,6 @@ import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { TabPanel } from "@renderer/domains/workbench";
 import { openTabWithContentSeed, retainOpenTabFocus } from "@renderer/domains/workbench";
 import { workspaceStore } from "@renderer/domains/workspace";
-import { WorkspaceErrorStateView } from "@renderer/domains/workspace";
 import { isFolderWorkspace } from "@renderer/domains/workspace";
 import { DARK_SURFACE_COLORS } from "@renderer/ui/theme";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -48,6 +47,7 @@ import { LaunchView } from "../launch/LaunchView";
 import { useTabContentRenderer } from "../tab-content/useTabContentRenderer";
 import { MainPaneTitleBarView } from "../title-bar/MainPaneTitleBarView";
 import { MainPaneRightArea } from "./MainPaneRightArea";
+import { WorkspaceErrorPaneView } from "./WorkspaceErrorPaneView";
 
 /** Renders the primary workspace pane with split-pane tabbed content, per-tab views, and pane visibility controls. */
 export function MainPaneView() {
@@ -194,7 +194,7 @@ export function MainPaneView() {
         {/* Main content area */}
         <Box sx={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 0 }}>
           {isErrorWorkspace && selectedWorkspace ? (
-            <WorkspaceErrorStateView workspace={selectedWorkspace} />
+            <WorkspaceErrorPaneView key={selectedWorkspace.id} workspace={selectedWorkspace} />
           ) : (
             <>
               {Array.from(workspaceIdsWithTabs).map((wsId) => (
