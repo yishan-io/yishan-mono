@@ -3,7 +3,12 @@ import type { Api, Model } from "@earendil-works/pi-ai";
 
 import type { AgentDefinition, AgentTask } from "../agents/types";
 import { resolveWorkspaceAccessFromTools } from "../agents/workspaceAccess";
-import { buildChildSessionDescriptor } from "./sessionRelationship";
+import type { AgentTask as DelegationTask } from "../delegation";
+import { resolveChildExtensionFactories } from "./childExtensions";
+import { buildChildSessionDescriptor, createSessionRelationshipHooks } from "./sessionRelationship";
+
+/** Executable task with legacy adapter fields and resolved neutral configuration. */
+export type ResolvedAgentTask = AgentTask & DelegationTask;
 
 const DEFAULT_READ_ONLY_TOOL_NAMES = ["read", "grep", "find", "ls"];
 
@@ -18,13 +23,15 @@ export function buildAgentTask(input: {
   mode: AgentTask["mode"];
   parentModel?: Model<Api>;
   parentThinking?: ThinkingLevel;
-}): AgentTask {
+}): ResolvedAgentTask {
   const tools = resolveAgentTools(input.agentDefinition);
   const workspaceAccess = resolveWorkspaceAccess(input.agentDefinition, tools);
 
-  return {
+  const task: ResolvedAgentTask = {
     agentName: input.agentName,
     agentDefinition: input.agentDefinition,
+    systemPrompt: input.agentDefinition.systemPrompt,
+    resolveExtensions: resolveChildExtensionFactories,
     prompt: input.prompt,
     cwd: input.cwd,
     mode: input.mode,
@@ -38,6 +45,9 @@ export function buildAgentTask(input: {
     timeoutMs: input.agentDefinition.timeoutMs,
     workspaceAccess,
   };
+  // Preserve the live parent binding assigned by tool/command adapters after construction.
+  Object.defineProperties(task, Object.getOwnPropertyDescriptors(createSessionRelationshipHooks(task)));
+  return task;
 }
 
 function resolveAgentTools(agentDefinition: AgentDefinition): string[] | undefined {

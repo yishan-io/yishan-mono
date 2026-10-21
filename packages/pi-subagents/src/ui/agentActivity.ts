@@ -22,7 +22,11 @@ export function formatAgentStatusSymbol(ui: ExtensionUIContext, status: AgentRec
   return ui.theme.fg("warning", "…");
 }
 
-export function getRecentActivityLines(messages: AgentMessage[], responseText?: string, error?: string): string[] {
+export function getRecentActivityLines(
+  messages: readonly AgentMessage[],
+  responseText?: string,
+  error?: string,
+): string[] {
   const activityLines = messages
     .flatMap((message) => toActivityLine(message))
     .filter(Boolean)

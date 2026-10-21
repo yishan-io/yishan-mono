@@ -1,35 +1,24 @@
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import type { AgentSession } from "@earendil-works/pi-coding-agent";
-
+import type { AgentRunMode, WorkspaceAccess } from "../delegation";
 import type {
   ChildSessionDescriptor,
   ParentSessionReference,
   ParentSessionWriter,
 } from "../runtime/sessionRelationship";
+export {
+  emptyAgentUsageStats,
+  type AgentObservation,
+  type AgentRecord,
+  type AgentResult,
+  type AgentRunMode,
+  type AgentStatus,
+  type AgentUsageStats,
+  type WorkspaceAccess,
+} from "../delegation";
 
 /** Supported sources for one resolved agent definition. */
 export type AgentDefinitionSource = "builtin" | "user" | "project";
-
-/** Lifecycle states for one managed sub-agent run. */
-export type AgentStatus = "queued" | "starting" | "running" | "completed" | "failed" | "cancelled" | "interrupted";
-
-/** Execution mode for one agent run. */
-export type AgentRunMode = "foreground" | "background";
-
-/** Declared workspace access required for one agent run. */
-export type WorkspaceAccess = "read" | "write";
-
-/** Shared usage summary captured from one agent run. */
-export interface AgentUsageStats {
-  input: number;
-  output: number;
-  cacheRead: number;
-  cacheWrite: number;
-  cost: number;
-  contextTokens: number;
-  turns: number;
-}
 
 /** Canonical agent definition loaded from built-in, user, or project sources. */
 export interface AgentDefinition {
@@ -79,36 +68,6 @@ export interface AgentTask {
   workspaceAccess: WorkspaceAccess;
 }
 
-/** Result returned when one managed agent run finishes. */
-export interface AgentResult {
-  agentId: string;
-  agentName: string;
-  sessionId?: string;
-  sessionPath?: string;
-  status: Extract<AgentStatus, "completed" | "failed" | "cancelled">;
-  responseText?: string;
-  error?: string;
-  usage: AgentUsageStats;
-}
-
-/** Mutable runtime record tracked by the shared agent manager. */
-export interface AgentRecord {
-  id: string;
-  agentName: string;
-  prompt: string;
-  status: AgentStatus;
-  mode: AgentRunMode;
-  createdAt: number;
-  startedAt?: number;
-  completedAt?: number;
-  session?: AgentSession;
-  sessionId?: string;
-  sessionPath?: string;
-  responseText?: string;
-  error?: string;
-  usage: AgentUsageStats;
-}
-
 /** Diagnostics produced while loading agent definitions. */
 export interface AgentDefinitionDiagnostic {
   path?: string;
@@ -121,14 +80,3 @@ export interface AgentRegistrySnapshot {
   diagnostics: AgentDefinitionDiagnostic[];
   invalidAgentsByName?: Map<string, InvalidAgentDefinition>;
 }
-
-/** Shared empty usage value for agent initialization paths. */
-export const emptyAgentUsageStats: AgentUsageStats = {
-  input: 0,
-  output: 0,
-  cacheRead: 0,
-  cacheWrite: 0,
-  cost: 0,
-  contextTokens: 0,
-  turns: 0,
-};

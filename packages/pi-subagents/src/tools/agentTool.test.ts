@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AgentDefinition, AgentTask } from "../agents/types";
+import { registerAgentCommands } from "../commands/registerAgentCommands";
+import { AgentManager } from "../delegation";
 import { registerAgentTool } from "./agentTool";
 
 const testAgentDefinition: AgentDefinition = {
@@ -349,3 +351,78 @@ describe("registerAgentTool", () => {
     expect(expandedComponent.render(120).join("\n")).toContain("session: /tmp/shared-sessions/child-session-1.jsonl");
   });
 });
+
+it("background survives parent abort while foreground inherits it", async () => {
+  const { pi, getRegisteredTool } = createToolHarness();
+  const signal = new AbortController();
+  signal.abort();
+  const createAgentRun = vi.fn(async (options) => ({
+    session: { subscribe: () => () => {} },
+    sessionId: "child",
+    completion: Promise.resolve({
+      agentId: options.agentId,
+      agentName: "Explore",
+      status: "completed",
+      usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
+    }),
+    cancel: vi.fn(async () => {}),
+    steer: vi.fn(),
+  }));
+  const manager = new AgentManager({ createAgentRun: createAgentRun as never });
+  registerAgentTool(pi as never, { reload: vi.fn(), getByName: () => testAgentDefinition } as never, manager);
+  const ctx = { cwd: "/tmp", sessionManager: { getSessionId: () => "parent", getSessionFile: () => undefined } };
+  await getRegisteredTool().execute(
+    "bg",
+    { agent: "Explore", prompt: "go", background: true },
+    signal.signal,
+    undefined,
+    ctx,
+  );
+  await getRegisteredTool().execute("fg", { agent: "Explore", prompt: "go" }, signal.signal, undefined, ctx);
+  await manager.shutdown();
+  expect(createAgentRun).toHaveBeenCalledTimes(1);
+  expect(manager.list()[1]?.status).toBe("cancelled");
+});
+
+it("slash stop explicitly supplies user provenance", async () => {
+  const commands = new Map<string, { handler: (args: string, ctx: unknown) => Promise<void> }>();
+  const stop = vi.fn(async () => true);
+  registerAgentCommands(
+    { registerCommand: (name: string, command: never) => commands.set(name, command) } as never,
+    {} as never,
+    { stop } as never,
+  );
+  await commands.get("agent-stop")?.handler("agent-1", { ui: { notify: vi.fn() } });
+  expect(stop).toHaveBeenCalledWith("agent-1", "user");
+});
+
+it.each([false, true])(
+  "enrolls only background Agent admission and rejects stale launches (background=%s)",
+  async (background) => {
+    const { CompletionOwner } = await import("../delivery/completionOwner");
+    const { pi, getRegisteredTool } = createToolHarness();
+    const owner = new CompletionOwner({ sessionId: "parent", lifetime: "one", send: vi.fn(), warn: vi.fn() });
+    const enroll = vi.spyOn(owner, "enroll");
+    const launch = vi.fn(async (_task, options) => {
+      expect(options.parent).toEqual({ ...owner.parent, source: "tool", toolCallId: "call" });
+      options.onAdmitted?.("instant");
+      expect(enroll).toHaveBeenCalledTimes(background ? 1 : 0);
+      return background ? "instant" : { agentId: "instant", agentName: "Explore", status: "completed" };
+    });
+    registerAgentTool(
+      pi as never,
+      { reload: vi.fn(), getByName: () => testAgentDefinition } as never,
+      { run: launch, runInBackground: launch } as never,
+      owner,
+    );
+    const execute = () =>
+      getRegisteredTool().execute("call", { agent: "Explore", prompt: "go", background }, undefined, undefined, {
+        cwd: "/tmp",
+        sessionManager: { getSessionId: () => "parent", getSessionFile: () => undefined },
+      });
+    await execute();
+    owner.close();
+    await expect(execute()).rejects.toThrow("closed");
+    expect(launch).toHaveBeenCalledTimes(1);
+  },
+);

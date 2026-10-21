@@ -138,7 +138,7 @@ function selectMessagesWithinCountBudget(messages: readonly AgentMessage[]): Age
   return messages.filter((_, index) => keptIndexes.has(index));
 }
 /** Groups each raw tool-call assistant message with its emitted tool results. */
-function buildRawToolAssociationGroups(messages: readonly AgentMessage[]): Map<number, number[]> {
+function buildRawToolAssociationGroups(messages: readonly unknown[]): Map<number, number[]> {
   const assistantIndexByCallId = new Map<string, number>();
   const resultIndexesByAssistant = new Map<number, number[]>();
   for (const [index, raw] of messages.entries()) {
@@ -171,7 +171,7 @@ function buildRawToolAssociationGroups(messages: readonly AgentMessage[]): Map<n
   }
   return groups;
 }
-function normalizeLiveMessage(raw: AgentMessage, counter: { truncated: number }): LiveTranscriptMessage | undefined {
+function normalizeLiveMessage(raw: unknown, counter: { truncated: number }): LiveTranscriptMessage | undefined {
   if (!isRecord(raw) || typeof raw.role !== "string") {
     return undefined;
   }
@@ -302,7 +302,7 @@ function normalizeUserContent(
 }
 /** Removes tool results whose calls were omitted from a byte-capped assistant message. */
 function collectDroppedToolCallIds(
-  raw: AgentMessage,
+  raw: unknown,
   message: LiveTranscriptMessage,
   droppedToolCallIds: Set<string>,
 ): void {

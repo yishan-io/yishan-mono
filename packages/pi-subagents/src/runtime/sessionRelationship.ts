@@ -1,5 +1,7 @@
 import type { ExtensionContext, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 
+import type { ChildSessionOptions } from "../delegation";
+
 import type { AgentResult, AgentRunMode, AgentUsageStats } from "../agents/types";
 
 const CHILD_SESSION_CUSTOM_TYPE = "pi-subagent-parent";
@@ -192,4 +194,63 @@ function truncateText(text: string, maxLength: number): string {
   }
 
   return `${text.slice(0, maxLength - 3)}...`;
+}
+
+/** Bind legacy transcript metadata and UI writers without exposing their wire contract to delegation. */
+export function createSessionRelationshipHooks(options: {
+  agentName: string;
+  mode: AgentRunMode;
+  parentSession?: ParentSessionReference;
+  parentSessionWriter?: ParentSessionWriter;
+  parentToolCallId?: string;
+  childSessionDescriptor?: ChildSessionDescriptor;
+}): Pick<ChildSessionOptions, "parentSessionPath" | "onSessionCreated" | "onStarted" | "onCompleted"> {
+  const describe = () => ({
+    version: 1,
+    agentName: options.agentName,
+    mode: options.mode,
+    parentToolCallId: options.parentToolCallId,
+    title: options.childSessionDescriptor?.title ?? options.agentName,
+    summary: options.childSessionDescriptor?.summary,
+    parentSessionId: options.parentSession?.sessionId,
+    parentSessionPath: options.parentSession?.sessionPath,
+  });
+  return {
+    get parentSessionPath() {
+      return options.parentSession?.sessionPath;
+    },
+    onSessionCreated(manager, reference) {
+      recordChildSessionMetadata(manager, {
+        ...describe(),
+        sessionKind: "subagent",
+        agentId: reference.agentId,
+        childSessionId: reference.sessionId,
+        childSessionPath: reference.sessionPath,
+      });
+    },
+    onStarted(reference) {
+      options.parentSessionWriter?.recordChildSessionStarted({
+        ...describe(),
+        event: "started",
+        agentId: reference.agentId,
+        childSessionId: reference.sessionId,
+        childSessionPath: reference.sessionPath,
+        createdAt: reference.createdAt,
+      });
+    },
+    onCompleted(result) {
+      // Runs always have a persisted child identity before reaching this callback.
+      if (!result.sessionId) return;
+      options.parentSessionWriter?.recordChildSessionCompleted({
+        ...describe(),
+        event: "completed",
+        agentId: result.agentId,
+        childSessionId: result.sessionId,
+        childSessionPath: result.sessionPath,
+        status: result.status,
+        completedAt: new Date().toISOString(),
+        usage: result.usage,
+      });
+    },
+  };
 }

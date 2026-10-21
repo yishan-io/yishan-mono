@@ -9,7 +9,7 @@ This package adds a lightweight multi-agent layer on top of Pi using Pi's SDK se
 Current MVP features:
 - `@agent:<name>` direct invocation
 - Multiple leading `@agent:<name>` tokens with one shared task
-- `/agent`, `/agents`, `/agent-result`, `/agent-stop`, `/agent-steer`, `/agent-send`, `/agent-view`
+- `/agent`, `/agents`, `/agent-result`, `/agent-stop`, `/agent-steer`, `/agent-view`
 - Main-agent `Agent` tool for delegation
 - User/project agent overrides
 - Background runs, stop/steer support, and persisted child sessions in the shared Pi session store
@@ -17,6 +17,9 @@ Current MVP features:
 - Read-only-aware concurrency control
 
 ## Installation
+
+Requires Pi 1.3.0 or later within major version 1 (SDK peers `^1.3.0`).
+The package-local SDK test baseline is pinned to 1.3.0.
 
 As a Pi package:
 
@@ -120,7 +123,6 @@ Investigate the current authentication implementation.
 /agent-result agent-abc123
 /agent-stop agent-abc123
 /agent-steer agent-abc123 focus on tests too
-/agent-send agent-abc123
 /agent-view
 /agent-view agent-abc123
 ```
@@ -142,7 +144,11 @@ Agent({
 
 Foreground runs return the child agent response.
 Background runs return the new agent id immediately.
-Completed background results are not auto-injected back into the main agent; use `/agent-send <agent-id>` (or `/agent-send` for all completed runs) to hand them back manually.
+Background Agent runs and all `/agent` runs automatically deliver a displayed `subagent-completion` message to their original parent session. Busy parents receive a follow-up, not steering. Explicit `/agent-stop` cancellation does not wake an idle parent; other outcomes trigger a turn. Foreground Agent calls return only their tool result, without an automatic duplicate.
+
+`/agent-result <id>` is UI-only, read-only inspection; it does not return output to the parent model. After an initial synchronous send failure, automatic delivery retries after 100, 500, and 1500 ms. If all three retries fail, delivery stops and warns to inspect with `/agent-result <id>`. Duplicate terminal events or enrollment do not restart exhausted delivery; there is no manual retry command. Accepted results are never replayed.
+
+Delivery guarantees synchronous Pi acceptance within the current process and parent lifetime, not durable delivery across restart/reload or exactly-once provider responses. Session replacement closes delivery before child teardown. Completion text is error-first and limited to 50,000 characters including headers and references. The readable child transcript path stays outside truncated output so the parent model can read the persisted session; if no session was persisted, the message says so. Usage is still counted only by the existing child lifecycle ledger.
 `/agent-steer` applies only to a currently running agent, and this MVP does not expose an OpenCode-style resumable `task_id` flow.
 
 ## Live progress in TUI
@@ -170,7 +176,7 @@ The parent session also records child-reference metadata so the relationship can
 - Child sessions intentionally disable extension loading to avoid recursive self-loading; they still use Pi SDK sessions, context files, and normal tool/session infrastructure.
 - Session-history list filtering/classification for parent vs child sessions is intentionally deferred to a separate follow-up task.
 - Built-in agent definitions are loaded from this package manually because Pi packages do not auto-discover agent-definition directories.
-- The package currently exposes only the single-agent `Agent` tool; result/stop/steer remain slash-command driven, and background-result handoff remains manual via `/agent-send`.
+- The package currently exposes only the single-agent `Agent` tool; inspection/stop/steer remain slash-command driven, while background and slash-run results return automatically.
 - The progress widget is intentionally lightweight for MVP; it does not yet stream rich per-agent session history or provide a dedicated selector/details pane.
 - Child runs are fresh Pi SDK sessions; this MVP does not expose an OpenCode-style resumable `task_id`/session-resume API.
 

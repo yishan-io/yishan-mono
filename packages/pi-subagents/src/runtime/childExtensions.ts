@@ -10,8 +10,6 @@
  */
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 
-type PiLspModule = { createPiLspExtension?: ExtensionFactory };
-
 let piLspFactory: ExtensionFactory | undefined;
 let piLspChecked = false;
 
@@ -41,8 +39,16 @@ async function resolvePiLspFactory(): Promise<ExtensionFactory | undefined> {
   if (piLspChecked) return piLspFactory;
   piLspChecked = true;
   try {
-    const mod = (await import("@yishan-io/pi-lsp")) as PiLspModule;
-    piLspFactory = typeof mod.createPiLspExtension === "function" ? mod.createPiLspExtension : undefined;
+    // Optional peers may compile against a different host SDK. Validate the
+    // module boundary rather than asserting that SDK type identities match.
+    const mod: unknown = await import("@yishan-io/pi-lsp");
+    if (mod && typeof mod === "object" && "createPiLspExtension" in mod) {
+      const factory = mod.createPiLspExtension;
+      if (typeof factory === "function")
+        piLspFactory = async (pi) => {
+          await factory(pi);
+        };
+    }
   } catch {
     // pi-lsp is an optional peer; child sessions run without LSP tools.
     piLspFactory = undefined;

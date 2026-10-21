@@ -3,8 +3,8 @@ import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 import type { AgentRegistry } from "../agents/registry";
-import type { AgentTask } from "../agents/types";
-import type { AgentManager } from "../runtime/agentManager";
+import type { AgentManager } from "../delegation";
+import type { CompletionOwner } from "../delivery/completionOwner";
 import { buildAgentTask } from "../runtime/buildAgentTask";
 import {
   createLifecycleWidgetEmitter,
@@ -28,6 +28,7 @@ const AGENT_TOOL_PROMPT_GUIDELINES = [
   "In the prompt, state whether the sub-agent should do research or modify code, point it to the most relevant files or directories, and specify what result it should return.",
   "Once you delegate work, do not duplicate the same exploration or edits yourself; wait for the result or continue only with non-overlapping tasks.",
   "Use Agent with background=true only when the work can continue asynchronously while you do something else unrelated.",
+  "Background results arrive automatically as subagent-completion messages. Do not poll or invoke slash commands to fetch or hand off results.",
 ] as const;
 
 interface AgentToolDetails {
@@ -41,7 +42,12 @@ interface AgentToolDetails {
 /**
  * Registers the main-agent `Agent` tool backed by the shared manager.
  */
-export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, manager: AgentManager): void {
+export function registerAgentTool(
+  pi: ExtensionAPI,
+  registry: AgentRegistry,
+  manager: AgentManager,
+  owner?: CompletionOwner,
+): void {
   pi.registerTool({
     name: "Agent",
     label: "Agent",
@@ -50,6 +56,7 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
     promptGuidelines: [...AGENT_TOOL_PROMPT_GUIDELINES],
     parameters: agentToolSchema,
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+      if (owner?.isClosed) throw new Error("Sub-agent parent lifetime is closed");
       registry.reload();
       const agentDefinition = registry.getByName(params.agent);
       if (!agentDefinition) {
@@ -61,7 +68,7 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
         throw new Error(`Unknown agent: ${params.agent}`);
       }
 
-      const task: AgentTask = buildAgentTask({
+      const task = buildAgentTask({
         agentName: agentDefinition.name,
         agentDefinition,
         prompt: params.prompt,
@@ -72,19 +79,24 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
       });
       task.parentToolCallId = _toolCallId;
       task.parentSession = getParentSessionReference(ctx.sessionManager, ctx.cwd);
+      task.parent = { sessionId: ctx.sessionManager.getSessionId(), toolCallId: _toolCallId, source: "tool" };
       task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager, {
         emitLifecycle: createLifecycleWidgetEmitter(ctx.ui, ctx.mode),
       });
 
+      const parent = owner ? { ...owner.parent, toolCallId: _toolCallId, source: "tool" as const } : task.parent;
       if (params.background) {
-        const agentId = await manager.runInBackground(task, { signal });
+        const agentId = await manager.runInBackground(
+          task,
+          owner ? { parent, onAdmitted: (id) => owner.enroll(id) } : undefined,
+        );
         return {
           content: [{ type: "text", text: `Started ${agentDefinition.name} as ${agentId}` }],
           details: { agentId, mode: "background" } satisfies AgentToolDetails,
         };
       }
 
-      const result = await manager.run(task, { signal });
+      const result = await manager.run(task, { signal, ...(owner ? { parent } : {}) });
       const payload = result.responseText ?? result.error ?? "(no output)";
       return {
         content: [{ type: "text", text: payload }],
