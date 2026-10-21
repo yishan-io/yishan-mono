@@ -52,6 +52,14 @@
         "unavailable": "\u4e0d\u53ef\u7528\uff1a{{reason}}"
       }
     },
+    "subagentCompletion": {
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "open": "打开记录",
+      "openLabel": "打开子代理 {{agentName}}",
+      "unavailable": "记录不可用"
+    },
     "scrollToBottom": "滚动到底部",
     "userMessage": {
       "showMore": "展开",

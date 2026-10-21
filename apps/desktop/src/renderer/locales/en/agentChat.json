@@ -52,6 +52,14 @@
         "unavailable": "Unavailable: {{reason}}"
       }
     },
+    "subagentCompletion": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "open": "Open record",
+      "openLabel": "Open sub-agent {{agentName}}",
+      "unavailable": "Record unavailable"
+    },
     "scrollToBottom": "Scroll to bottom",
     "userMessage": {
       "showMore": "Show more",

@@ -2,11 +2,19 @@ import type { AgentResult } from "../delegation";
 
 const MAX_COMPLETION_LENGTH = 50_000;
 
-/** Model-facing completion only; usage remains solely in the existing lifecycle ledger. */
+/** Model-facing completion with versioned UI identity; usage remains solely in the existing lifecycle ledger. */
 export function buildCompletionMessage(result: AgentResult): {
-  customType: string;
+  customType: "subagent-completion";
   content: string;
   display: true;
+  /** Minimal UI projection contract; sessionId identifies the child, not the parent. */
+  details: {
+    version: 1;
+    agentId: string;
+    agentName: string;
+    status: AgentResult["status"];
+    sessionId?: string;
+  };
 } {
   const reference = `\n\nChild transcript: ${result.sessionPath || "unavailable (child session was not persisted)"}`;
   const notice = "\n[Result truncated]";
@@ -23,5 +31,16 @@ export function buildCompletionMessage(result: AgentResult): {
     body.length > available
       ? `${body.slice(0, available - notice.length)}${notice}${reference}`
       : `${body}${reference}`;
-  return { customType: "subagent-completion", content, display: true };
+  return {
+    customType: "subagent-completion",
+    content,
+    display: true,
+    details: {
+      version: 1,
+      agentId: result.agentId,
+      agentName: result.agentName,
+      status: result.status,
+      ...(result.sessionId !== undefined ? { sessionId: result.sessionId } : {}),
+    },
+  };
 }

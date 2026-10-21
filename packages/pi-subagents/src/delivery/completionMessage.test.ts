@@ -14,6 +14,30 @@ function result(overrides: Partial<AgentResult> = {}): AgentResult {
 }
 
 describe("completion message", () => {
+  it.each(["completed", "failed", "cancelled"] as const)("includes versioned identity details for %s", (status) => {
+    const message = buildCompletionMessage(
+      result({
+        status,
+        sessionId: "child-session-one",
+        responseText: "Sub-agent other (Wrong): failed",
+        error: status === "failed" ? "failure" : undefined,
+      }),
+    );
+    expect(message).toEqual({
+      customType: "subagent-completion",
+      display: true,
+      content: expect.any(String),
+      details: { version: 1, agentId: "one", agentName: "Explore", status, sessionId: "child-session-one" },
+    });
+    expect(message).not.toHaveProperty("usage");
+    expect(message.details).not.toHaveProperty("usage");
+  });
+
+  it("omits absent child session identity even when a transcript path exists", () => {
+    const message = buildCompletionMessage(result({ sessionPath: "/tmp/one.jsonl" }));
+    expect(message.details).toEqual({ version: 1, agentId: "one", agentName: "Explore", status: "completed" });
+    expect(message.details).not.toHaveProperty("sessionId");
+  });
   it.each(["output", "error"])("retains a readable transcript path outside truncated %s", (field) => {
     const sessionPath = "/tmp/child sessions/one.jsonl";
     const message = buildCompletionMessage(
@@ -31,7 +55,12 @@ describe("completion message", () => {
       message.content.indexOf("output") < 0 ? 50000 : message.content.indexOf("output"),
     );
     expect(message.content).not.toContain("/agent-result");
-    expect(message).toEqual({ customType: "subagent-completion", display: true, content: expect.any(String) });
+    expect(message).toEqual({
+      customType: "subagent-completion",
+      display: true,
+      content: expect.any(String),
+      details: { version: 1, agentId: "one", agentName: "Explore", status: "failed" },
+    });
   });
 
   it("includes short output and transcript reference without truncation", () => {
@@ -49,6 +78,8 @@ describe("completion message", () => {
     expect(message.content).toContain("Cancellation: user");
     expect(message.content).toContain("(no output)");
     expect(message.content).toContain("Child transcript: unavailable");
-    expect(message).not.toHaveProperty("details");
+    expect(message.details).toEqual({ version: 1, agentId: "one", agentName: "Explore", status: "cancelled" });
+    expect(message).not.toHaveProperty("usage");
+    expect(message.details).not.toHaveProperty("usage");
   });
 });
