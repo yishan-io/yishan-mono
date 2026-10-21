@@ -26,6 +26,10 @@
     "title": "Workspace title",
     "column": "Workspace",
     "emptySelection": "No workspace selected.",
+    "error": {
+      "notWorktree": "This workspace path is not a git worktree. Close the workspace to remove it.",
+      "pathMissing": "This workspace worktree is missing. Close the workspace to remove it."
+    },
     "create": {
       "title": "New workspace",
       "nameLabel": "Workspace name",

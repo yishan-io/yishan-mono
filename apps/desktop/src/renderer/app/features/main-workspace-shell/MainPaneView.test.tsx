@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { WorkspacePaneVisibilityProvider, layoutStore } from "@renderer/domains/workbench";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileTabContentStore } from "../../../domains/files/state/fileTabContentStore";
@@ -833,12 +834,14 @@ describe("MainPaneView", () => {
           onToggleRightPane: vi.fn(),
         }}
       >
-        <MainPaneView />
+        <QueryClientProvider client={new QueryClient()}>
+          <MainPaneView />
+        </QueryClientProvider>
       </WorkspacePaneVisibilityProvider>,
     );
 
     expect(screen.getByTestId("workspace-error-state")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Close workspace" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "workspace.actions.delete" })).toBeTruthy();
     expect(screen.queryByTestId("dashboard-sidebar")).toBeNull();
     expect(screen.queryByRole("button", { name: "files.files" })).toBeNull();
     expect(screen.queryByRole("button", { name: "files.changes" })).toBeNull();
