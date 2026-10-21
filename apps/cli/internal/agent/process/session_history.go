@@ -2,6 +2,7 @@ package process
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -247,12 +248,12 @@ func scanSessionSummaryLines(
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
+		line := bytes.TrimSpace(scanner.Bytes())
+		if len(line) == 0 {
 			continue
 		}
 
-		top, ok := parseSessionLine(line)
+		top, ok := parseSessionSummaryLine(line, collector.firstUserText == "")
 		if !ok {
 			// Ignore malformed lines and keep scanning the rest of the transcript.
 			continue
