@@ -3,9 +3,12 @@
 import { localTaskStore } from "@renderer/domains/local-task";
 import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LeftPaneView } from "./LeftPaneView";
+
+const snapshotMock = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("../../../app/commands/workspaceSnapshotFlow", () => ({ loadWorkspaceSnapshot: snapshotMock }));
 
 const mocked = vi.hoisted(() => {
   const setDisplayProjectIds = vi.fn((repoIds: string[]) => {
@@ -72,10 +75,11 @@ vi.mock("react-i18next", () => ({
     init: () => undefined,
   },
   useTranslation: () => ({
-    t: (key: string, params?: { name?: string; count?: number }) => {
+    t: (key: string, params?: { name?: string; count?: number; message?: string }) => {
       const translations: Record<string, string> = {
         "workspace.actions.delete": "Delete workspace",
         "workspace.delete.confirm": `Delete workspace '${params?.name ?? ""}'?`,
+        "project.refreshFailed": `Could not refresh projects: ${params?.message ?? ""}`,
         "project.actions.delete": "Delete project",
         "project.delete.confirm": `Delete project '${params?.name ?? ""}' and all child workspaces?`,
         "project.filter.placeholder": "Filter by project, path, workspace, or branch",
@@ -91,6 +95,7 @@ vi.mock("react-i18next", () => ({
         "project.pin.hierarchy.byProject": "By project",
         "project.pin.hierarchy.byNode": "By node",
         "common.actions.cancel": "Cancel",
+        "common.actions.close": "Close",
         "org.settings.title": "Organization settings",
         "project.list.title": "Projects",
         "project.actions.filter": "Filter",
@@ -201,6 +206,54 @@ describe("LeftPaneView deletion", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  it("opts into diagnostics only when manual refresh is clicked", async () => {
+    render(<LeftPaneView />);
+    expect(snapshotMock).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "project.actions.refresh" }));
+    });
+    expect(snapshotMock).toHaveBeenCalledExactlyOnceWith({ diagnostics: true, throwOnError: true });
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  });
+
+  it("shows refresh error details, recovers the spinner, supports dismissal and clears errors on retry", async () => {
+    snapshotMock.mockRejectedValueOnce(new Error("Daemon is offline"));
+    render(<LeftPaneView />);
+    const refresh = screen.getByRole("button", { name: "project.actions.refresh" });
+    await act(async () => {
+      fireEvent.click(refresh);
+    });
+    expect(screen.getByRole("alert").textContent).toContain("Could not refresh projects: Daemon is offline");
+    expect(refresh.hasAttribute("disabled")).toBe(false);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    });
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+
+    snapshotMock.mockRejectedValueOnce("Connection refused");
+    await act(async () => {
+      fireEvent.click(refresh);
+    });
+    expect(screen.getByRole("alert").textContent).toContain("Connection refused");
+    let resolve!: () => void;
+    snapshotMock.mockImplementationOnce(
+      () =>
+        new Promise<void>((done) => {
+          resolve = done;
+        }),
+    );
+    await act(async () => {
+      fireEvent.click(refresh);
+    });
+    expect(refresh.hasAttribute("disabled")).toBe(true);
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    await act(async () => {
+      resolve();
+    });
+    expect(refresh.hasAttribute("disabled")).toBe(false);
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
   it("supports toggling individual projects and select-all in the filter popover", async () => {

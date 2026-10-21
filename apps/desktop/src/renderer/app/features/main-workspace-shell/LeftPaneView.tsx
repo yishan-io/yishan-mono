@@ -1,4 +1,4 @@
-import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, IconButton, Snackbar, Stack, Tooltip, Typography } from "@mui/material";
 
 import { localTaskStore } from "@renderer/domains/local-task";
 import { projectStore } from "@renderer/domains/project";
@@ -11,6 +11,7 @@ import {
 import { PaneHeader } from "@renderer/domains/workbench";
 import { PaneToggleButton } from "@renderer/domains/workbench";
 import { getRendererPlatform } from "@renderer/platform/platform";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar, LuClock3, LuListTodo, LuPanelLeft, LuPlus, LuRefreshCw } from "react-icons/lu";
@@ -47,11 +48,16 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
   const isTasksPanelOpen = overlayPanel === "tasks";
   const progressingTaskCount = localTaskStore((state) => state.progressingTaskCount);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const dismissRefreshError = useCallback(() => setRefreshError(null), []);
 
   const handleRefreshProjects = useCallback(async () => {
+    setRefreshError(null);
     setIsRefreshing(true);
     try {
-      await loadWorkspaceSnapshot();
+      await loadWorkspaceSnapshot({ diagnostics: true, throwOnError: true });
+    } catch (error) {
+      setRefreshError(getErrorMessage(error));
     } finally {
       setIsRefreshing(false);
     }
@@ -92,6 +98,11 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         overflow: "hidden",
       }}
     >
+      <Snackbar open={refreshError !== null}>
+        <Alert severity="error" onClose={dismissRefreshError} closeText={t("common.actions.close")}>
+          {t("project.refreshFailed", { message: refreshError })}
+        </Alert>
+      </Snackbar>
       <PaneHeader py={0.75}>
         <Box
           className="electron-webkit-app-region-no-drag"
