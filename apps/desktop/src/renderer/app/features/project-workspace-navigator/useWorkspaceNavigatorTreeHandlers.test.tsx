@@ -130,3 +130,34 @@ describe("useWorkspaceNavigatorTreeHandlers onExpandedItemsChange", () => {
     expect(foldedNodeUpdate).toContain(`solo-node:${LOCAL_FOLDER_PROJECT_ID}`);
   });
 });
+
+describe.each(["by_project", "by_node"] as const)("%s full sibling drag order", (mode) => {
+  it.each(["repo-1", LOCAL_FOLDER_PROJECT_ID])(
+    "persists the entire %s/node group, not just dragged rows",
+    (projectId) => {
+      let order: Record<string, string[]> = { [`${projectId}:node-1`]: ["c", "deleted"], other: ["untouched"] };
+      const { result } = renderHook(() =>
+        useWorkspaceNavigatorTreeHandlers(
+          buildInput({
+            workspaceListHierarchyMode: mode,
+            treeWorkspaces: ["c", "a", "b", "d"].map((id) => ({ id, projectId, nodeId: "node-1" })),
+            workspaceOrderByParentId: order,
+            setWorkspaceOrderByParentId: (updater) => {
+              order = updater(order);
+            },
+          }),
+        ),
+      );
+      act(() =>
+        result.current.onRowReorder({
+          draggedRowId: "workspace:d",
+          targetRowId: "workspace:a",
+          rowKind: "workspace",
+          parentId: null,
+          position: "before",
+        }),
+      );
+      expect(order).toEqual({ [`${projectId}:node-1`]: ["c", "d", "a", "b"], other: ["untouched"] });
+    },
+  );
+});

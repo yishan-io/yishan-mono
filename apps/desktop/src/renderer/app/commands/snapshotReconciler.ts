@@ -205,6 +205,7 @@ function mapApiData(
       const displayMetadata = resolveHydratedWorkspaceDisplayMetadata(workspace);
       return {
         id: workspace.id,
+        createdAt: workspace.createdAt,
         organizationId: workspace.organizationId,
         projectId: workspace.projectId,
         repoId: workspace.projectId,

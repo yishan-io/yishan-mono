@@ -14,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
-import { reconcileOrder } from "./workspaceNavigatorOrder";
+import { createNavigatorOrderComparator } from "./workspaceNavigatorOrder";
 
 type TreeProject = WorkspaceTreeProject;
 type TreeNode = WorkspaceTreeNode;
@@ -83,15 +83,7 @@ export function useWorkspaceNavigatorTreeData(input: {
   }, {});
 
   const filteredProjects = useMemo(() => {
-    const projectById = new Map(
-      filterVisibleProjects(projects, displayProjectIds).map((project) => [project.id, project]),
-    );
-    const orderedIds = projectOrderIds.filter((projectId) => projectById.has(projectId));
-    const missingIds = Array.from(projectById.keys()).filter((projectId) => !orderedIds.includes(projectId));
-    const nextIds = [...orderedIds, ...missingIds];
-    return nextIds
-      .map((projectId) => projectById.get(projectId))
-      .filter((project): project is NonNullable<typeof project> => Boolean(project));
+    return filterVisibleProjects(projects, displayProjectIds).sort(createNavigatorOrderComparator(projectOrderIds));
   }, [displayProjectIds, projectOrderIds, projects]);
 
   const treeProjects = filteredProjects.map((project) => ({
@@ -125,37 +117,7 @@ export function useWorkspaceNavigatorTreeData(input: {
         ? projectWorkspaces.filter((workspace) => workspace.kind !== "local")
         : projectWorkspaces;
 
-      const parentNodeOrder = nodeOrderByParentId[`project:${project.id}`] ?? [];
-      const nodeRankById = new Map(parentNodeOrder.map((nodeId, index) => [nodeId, index]));
-      const workspaceRankCache = new Map<string, Map<string, number>>();
-      const getWorkspaceRank = (projectId: string, nodeId: string, workspaceId: string) => {
-        const parentKey = `${projectId}:${nodeId}`;
-        let rankById = workspaceRankCache.get(parentKey);
-        if (!rankById) {
-          rankById = new Map((workspaceOrderByParentId[parentKey] ?? []).map((id, index) => [id, index]));
-          workspaceRankCache.set(parentKey, rankById);
-        }
-        return rankById.get(workspaceId) ?? Number.MAX_SAFE_INTEGER;
-      };
-      const sortedWorkspaces = [...displayedWorkspaces].sort((a, b) => {
-        const nodeA = a.nodeId?.trim() || "unknown";
-        const nodeB = b.nodeId?.trim() || "unknown";
-        const rankA = nodeRankById.get(nodeA) ?? Number.MAX_SAFE_INTEGER;
-        const rankB = nodeRankById.get(nodeB) ?? Number.MAX_SAFE_INTEGER;
-        if (rankA !== rankB) {
-          return rankA - rankB;
-        }
-        if (nodeA === nodeB) {
-          const workspaceRankA = getWorkspaceRank(project.id, nodeA, a.id);
-          const workspaceRankB = getWorkspaceRank(project.id, nodeB, b.id);
-          if (workspaceRankA !== workspaceRankB) {
-            return workspaceRankA - workspaceRankB;
-          }
-        }
-        return 0;
-      });
-
-      for (const workspace of sortedWorkspaces) {
+      for (const workspace of displayedWorkspaces) {
         const isCreating = workspace.status === "provisioning";
         rows.push({
           id: workspace.id,
@@ -198,33 +160,61 @@ export function useWorkspaceNavigatorTreeData(input: {
       });
     }
 
-    if (workspaceListHierarchyMode !== "by_node") {
-      return rows;
-    }
-
-    const topNodeOrder = nodeOrderByParentId["root:node"] ?? [];
-    const topNodeRankById = new Map(topNodeOrder.map((nodeId, index) => [nodeId, index]));
-    return [...rows].sort((a, b) => {
-      const rankNodeA = topNodeRankById.get(a.nodeId) ?? Number.MAX_SAFE_INTEGER;
-      const rankNodeB = topNodeRankById.get(b.nodeId) ?? Number.MAX_SAFE_INTEGER;
-      if (rankNodeA !== rankNodeB) {
-        return rankNodeA - rankNodeB;
+    const workspaceById = new Map(workspaces.map((workspace) => [workspace.id, workspace]));
+    const projectById = new Map(filteredProjects.map((project) => [project.id, project]));
+    const nodeById = new Map((nodesQuery.data ?? []).map((node) => [node.id, node]));
+    const comparatorByParent = new Map<string, ReturnType<typeof createNavigatorOrderComparator>>();
+    const getComparator = (parentKey: string, order: string[]) => {
+      let comparator = comparatorByParent.get(parentKey);
+      if (!comparator) {
+        comparator = createNavigatorOrderComparator(order);
+        comparatorByParent.set(parentKey, comparator);
       }
-
-      const projectOrder = nodeOrderByParentId[`node:${a.nodeId}`] ?? [];
-      const projectRankById = new Map(projectOrder.map((projectId, index) => [projectId, index]));
-      const rankProjectA = projectRankById.get(a.projectId) ?? Number.MAX_SAFE_INTEGER;
-      const rankProjectB = projectRankById.get(b.projectId) ?? Number.MAX_SAFE_INTEGER;
-      if (rankProjectA !== rankProjectB) {
-        return rankProjectA - rankProjectB;
+      return comparator;
+    };
+    return rows.sort((a, b) => {
+      if (workspaceListHierarchyMode === "by_node") {
+        if (a.nodeId !== b.nodeId) {
+          return getComparator("root:node", nodeOrderByParentId["root:node"] ?? [])(
+            nodeById.get(a.nodeId) ?? { id: a.nodeId },
+            nodeById.get(b.nodeId) ?? { id: b.nodeId },
+          );
+        }
+        if (a.projectId !== b.projectId) {
+          const parentKey = `node:${a.nodeId}`;
+          return getComparator(parentKey, nodeOrderByParentId[parentKey] ?? [])(
+            projectById.get(a.projectId) ?? { id: a.projectId },
+            projectById.get(b.projectId) ?? { id: b.projectId },
+          );
+        }
+      } else {
+        if (a.projectId !== b.projectId) {
+          return getComparator("root:project", projectOrderIds)(
+            projectById.get(a.projectId) ?? { id: a.projectId },
+            projectById.get(b.projectId) ?? { id: b.projectId },
+          );
+        }
+        if (a.nodeId !== b.nodeId) {
+          const parentKey = `project:${a.projectId}`;
+          return getComparator(parentKey, nodeOrderByParentId[parentKey] ?? [])(
+            nodeById.get(a.nodeId) ?? { id: a.nodeId },
+            nodeById.get(b.nodeId) ?? { id: b.nodeId },
+          );
+        }
       }
-
-      return 0;
+      // The same project/node bucket is used in both hierarchy modes, including local folders.
+      const parentKey = `${a.projectId}:${a.nodeId}`;
+      return getComparator(parentKey, workspaceOrderByParentId[parentKey] ?? [])(
+        workspaceById.get(a.id) ?? a,
+        workspaceById.get(b.id) ?? b,
+      );
     });
   }, [
     filteredProjects,
     gitChangeTotalsByWorkspaceId,
     nodeOrderByParentId,
+    nodesQuery.data,
+    projectOrderIds,
     workspaceOrderByParentId,
     workspaceListHierarchyMode,
     workspaceAgentStatusByWorkspaceId,

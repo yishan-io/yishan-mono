@@ -63,3 +63,25 @@ export function parseNodeRowNodeId(rowId: string): string {
   }
   return value.slice(splitIndex + 1);
 }
+
+/** Builds a total sibling order: saved ranks, then creation time (unknown last), then immutable ID. */
+export function createNavigatorOrderComparator(storedOrder: string[]) {
+  const rankById = new Map(storedOrder.map((id, index) => [id, index]));
+  const getCreatedTime = (createdAt: string | undefined) => {
+    const timestamp = createdAt ? Date.parse(createdAt) : Number.NaN;
+    return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
+  };
+  return (a: { id: string; createdAt?: string }, b: { id: string; createdAt?: string }): number => {
+    const rankA = rankById.get(a.id) ?? Number.POSITIVE_INFINITY;
+    const rankB = rankById.get(b.id) ?? Number.POSITIVE_INFINITY;
+    if (rankA !== rankB) {
+      return rankA < rankB ? -1 : 1;
+    }
+    const timeA = getCreatedTime(a.createdAt);
+    const timeB = getCreatedTime(b.createdAt);
+    if (timeA !== timeB) {
+      return timeA < timeB ? -1 : 1;
+    }
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  };
+}
