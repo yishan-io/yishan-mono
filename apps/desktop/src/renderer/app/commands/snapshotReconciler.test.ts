@@ -90,6 +90,7 @@ describe("reconcileWorkspaceSnapshot (moves to app/commands after P30)", () => {
     expect(result.workspaces).toHaveLength(1);
     expect(result.workspaces[0]).toMatchObject({
       id: "ws-1",
+      createdAt: "2026-01-01T00:00:00Z",
       // display metadata: worktree rows use the branch as name and the
       // worktree path file name as title (workspaceDisplayNames.ts)
       name: "main",

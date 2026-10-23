@@ -108,7 +108,7 @@ export function useVisibleWorkspaceTree({
 
       // A node that hosts only folder workspaces must still render its row, so
       // the node loop unions regular and folder node ids.
-      const nodeIds = Array.from(new Set([...regularWorkspacesByNodeId.keys(), ...folderWorkspacesByNodeId.keys()]));
+      const nodeIds = Array.from(new Set(workspaces.map((workspace) => workspace.nodeId)));
 
       for (const nodeId of nodeIds) {
         const nodeWorkspaces = regularWorkspacesByNodeId.get(nodeId) ?? [];

@@ -36,6 +36,8 @@ export type WorkspaceGitChangeTotals = {
 
 export type WorkspaceItem = {
   id: string;
+  /** Immutable backend creation time; absent for legacy or local-only rows. */
+  createdAt?: string;
   organizationId?: string;
   projectId?: string;
   repoId: string;
