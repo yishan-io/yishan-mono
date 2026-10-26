@@ -36,11 +36,19 @@ export type ToolExecutionState = "unknown" | "pending" | "running" | "succeeded"
 /** Explicit terminal outcome, independent of content completeness. */
 export type ToolOutcome = "succeeded" | "failed" | "interrupted";
 
-/** Runtime execution evidence with caller-supplied authority. */
-export type ToolExecutionFact = { readonly state: ToolExecutionState; readonly source: ToolCallSource };
+/** Execution evidence; untagged facts are independent runtime evidence. */
+export type ToolExecutionFact = {
+  readonly state: ToolExecutionState;
+  readonly source: ToolCallSource;
+  readonly derivedFrom?: "result";
+};
 
 /** Dispatch evidence retains its own authority independently of selected result content. */
-export type ToolDispatchFact = { readonly state: "accepted" | "failed"; readonly source: ToolCallSource };
+export type ToolDispatchFact = {
+  readonly state: "accepted" | "failed";
+  readonly source: ToolCallSource;
+  readonly derivedFrom?: "result";
+};
 
 /** One normalized result fact. */
 export type ToolCallResult = {
@@ -75,10 +83,14 @@ export type ToolCallDiagnostic = {
 export type ToolCallEntity = ToolCallIdentity & {
   readonly executionState: ToolExecutionState;
   readonly execution?: ToolExecutionFact;
+  /** Single selected independent execution fact, unaffected by result-derived selection. */
+  readonly runtimeExecution?: ToolExecutionFact;
   readonly dispatch?: ToolDispatchFact;
   readonly dispatchState?: "unknown" | "accepted" | "failed";
   readonly children?: ReadonlyMap<string, ToolChildState>;
   readonly diagnostics?: readonly ToolCallDiagnostic[];
+  /** Sticky while this entity is retained, even if its owner leaves the raw window. */
+  readonly hasObservedOwner?: true;
   readonly owner?: ToolCallOwner;
   readonly result?: ToolCallResult;
 };

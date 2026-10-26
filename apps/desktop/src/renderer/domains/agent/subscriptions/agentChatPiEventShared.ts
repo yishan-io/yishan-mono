@@ -14,6 +14,7 @@ import {
   setAgentChatStreamTabVisible as setBufferedAgentChatStreamTabVisible,
 } from "../runtime/agentChatStreamBuffer";
 import { agentChatStore } from "../state/agentChatStore";
+import { matchesHistoryRequest } from "../state/agentChatStoreHistory";
 import {
   PER_MESSAGE_UTF8_BYTES,
   isRecord,
@@ -220,14 +221,21 @@ export function handlePiResponse(tabId: string, sessionId: string, event: Record
       break;
     }
     case "get_messages": {
-      if (!success) break;
-      const messages = isRecord(event.data) && Array.isArray(event.data.messages) ? event.data.messages : [];
+      if (typeof event.id !== "string") break;
+      const response = { requestId: event.id, sessionId };
+      if (!matchesHistoryRequest(agentChatStore.getState().sessionsByTabId[tabId], response)) break;
+      if (!success || !isRecord(event.data) || !Array.isArray(event.data.messages)) {
+        agentChatStore.getState().clearHistoryRequest(tabId, response);
+        break;
+      }
+      const messages = event.data.messages;
       agentChatStore.getState().replaceMessages(
         tabId,
         messages.flatMap((rawMessage) => {
           const message = normalizeIncomingAgentMessage(rawMessage);
           return message ? [cloneIncomingAgentMessage(message)] : [];
         }),
+        response,
       );
       break;
     }

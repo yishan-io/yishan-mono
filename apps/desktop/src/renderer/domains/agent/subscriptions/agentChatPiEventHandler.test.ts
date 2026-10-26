@@ -290,6 +290,9 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
   );
   it("derives a subagent lifecycle from JSON-string details when history content is omitted", () => {
     agentChatStore.getState().initSession("tab-string-details-history", "session-string-details-history");
+    agentChatStore
+      .getState()
+      .recordHistoryRequest("tab-string-details-history", "session-string-details-history", "history-fixture");
 
     handleAgentPiEvent({
       sessionId: "session-string-details-history",
@@ -298,6 +301,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
       event: {
         type: "response",
         command: "get_messages",
+        id: "history-fixture",
         success: true,
         data: {
           messages: [
@@ -333,6 +337,9 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
   });
   it("normalizes malformed history messages before storing them", () => {
     agentChatStore.getState().initSession("tab-malformed-history", "session-malformed-history");
+    agentChatStore
+      .getState()
+      .recordHistoryRequest("tab-malformed-history", "session-malformed-history", "history-fixture");
 
     handleAgentPiEvent({
       sessionId: "session-malformed-history",
@@ -341,6 +348,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
       event: {
         type: "response",
         command: "get_messages",
+        id: "history-fixture",
         success: true,
         data: {
           messages: [
@@ -381,6 +389,9 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
   });
   it("derives running subagents from full transcript history keyed by child session id", () => {
     agentChatStore.getState().initSession("tab-subagents-history", "session-subagents-history");
+    agentChatStore
+      .getState()
+      .recordHistoryRequest("tab-subagents-history", "session-subagents-history", "history-fixture");
 
     handleAgentPiEvent({
       sessionId: "session-subagents-history",
@@ -389,6 +400,7 @@ describe("agentChatPiEventHandler.handleAgentPiEvent", () => {
       event: {
         type: "response",
         command: "get_messages",
+        id: "history-fixture",
         success: true,
         data: {
           messages: [

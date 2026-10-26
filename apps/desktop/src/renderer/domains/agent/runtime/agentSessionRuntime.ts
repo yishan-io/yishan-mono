@@ -312,10 +312,17 @@ export async function fetchAgentMessages(opts: {
   tabId: string;
   sessionId: string;
 }): Promise<void> {
-  await sendPiCommandProcedure({
-    sessionId: opts.sessionId,
-    command: { type: "get_messages" },
-  });
+  const requestId = generateId();
+  if (!agentChatStore.getState().recordHistoryRequest(opts.tabId, opts.sessionId, requestId)) return;
+  try {
+    await sendPiCommandProcedure({
+      sessionId: opts.sessionId,
+      command: { type: "get_messages", id: requestId },
+    });
+  } catch (error) {
+    agentChatStore.getState().clearHistoryRequest(opts.tabId, { requestId, sessionId: opts.sessionId });
+    throw error;
+  }
 }
 
 /**

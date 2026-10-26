@@ -10,6 +10,10 @@ import type {
   AgentSessionStats,
   AgentSubagentCancelState,
 } from "../chat/agentChatTypes";
+import { createTranscriptState } from "../chat/transcript/compose";
+import type { LiveMessageSource } from "../chat/transcript/session";
+import type { TranscriptState } from "../chat/transcript/types";
+import type { HistoryRequest } from "./agentChatStoreHistory";
 import { createAgentChatUsageLedger } from "./agentChatUsageLedger";
 
 /** Display state for a live sub-agent progress row. */
@@ -23,10 +27,14 @@ export type AgentSubagentProgressTarget = {
 /** Mutable state for one agent-chat tab. */
 export type AgentChatSessionData = {
   sessionId: string;
+  historyRequestGeneration: number;
+  pendingHistoryRequest: HistoryRequest | null;
   state: AgentSessionState;
   isTurnActive: boolean;
   activeCoreTurnAssistantId: string | null;
   compactionReason: AgentCompactionReason;
+  transcript: TranscriptState;
+  transcriptLiveSources: Record<string, LiveMessageSource>;
   messages: AgentMessage[];
   streamingMessage: AgentMessage | null;
   availableModels: AgentModel[];
@@ -56,10 +64,14 @@ export type AgentChatSessionData = {
 export function createAgentChatSession(sessionId: string): AgentChatSessionData {
   return {
     sessionId,
+    historyRequestGeneration: 0,
+    pendingHistoryRequest: null,
     state: "idle",
     isTurnActive: false,
     activeCoreTurnAssistantId: null,
     compactionReason: null,
+    transcript: createTranscriptState({ sessionId, namespace: `local:${sessionId}`, seed: 0 }),
+    transcriptLiveSources: {},
     messages: [],
     streamingMessage: null,
     availableModels: [],

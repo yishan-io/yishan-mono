@@ -31,7 +31,9 @@ export type AssistantObservation = {
 
 /** Already validated child notice; it does not contribute to parent timing or summary. */
 export type CompletionContent = {
-  readonly childSessionId: string;
+  readonly childSessionId?: string;
+  readonly agentId?: string;
+  readonly agentName?: string;
   readonly text: string;
   readonly outcome: "unknown" | "succeeded" | "failed" | "interrupted";
 };

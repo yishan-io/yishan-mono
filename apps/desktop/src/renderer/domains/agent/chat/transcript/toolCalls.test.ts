@@ -44,6 +44,7 @@ describe("A: exact owner/result association", () => {
       ...identity,
       executionState: "unknown",
       dispatchState: "unknown",
+      hasObservedOwner: true,
       owner: owner.owner,
       result: result.result,
     });
@@ -78,7 +79,12 @@ describe("A: exact owner/result association", () => {
     freezeDeep(before);
     const completed = applyToolCallOperation(owned, result);
     expect(empty.size).toBe(0);
-    expect(getToolCall(owned, identity)).toEqual({ ...identity, executionState: "unknown", owner: owner.owner });
+    expect(getToolCall(owned, identity)).toEqual({
+      ...identity,
+      executionState: "unknown",
+      hasObservedOwner: true,
+      owner: owner.owner,
+    });
     expect(getToolCall(completed, identity)?.result).toEqual(result.result);
     expect(getToolCall(owned, identity)).toBe(before);
   });
@@ -87,7 +93,7 @@ describe("A: exact owner/result association", () => {
 function execution(
   state: "unknown" | "pending" | "running" | "succeeded" | "failed" | "interrupted",
   priority = 1,
-): ToolCallOperation {
+): Extract<ToolCallOperation, { type: "execution" }> {
   return { ...identity, type: "execution", execution: { state, source: { ...source, priority } } };
 }
 
@@ -143,6 +149,48 @@ describe("B: explicit execution and final authority", () => {
       }
     },
   );
+
+  it("keeps one independent runtime fact separate from result selection in either order", () => {
+    const runtime = execution("failed");
+    const failed: ToolCallOperation = {
+      ...result,
+      result: { ...result.result, outcome: "failed", source: { ...source, priority: 2 } },
+    };
+    const contentOnly: ToolCallOperation = {
+      ...result,
+      result: { ...result.result, source: { ...source, priority: 10 } },
+    };
+    const correction: ToolCallOperation = {
+      ...failed,
+      result: { ...failed.result, outcome: "succeeded", source: { ...source, priority: 3 } },
+    };
+    for (const facts of [
+      [runtime, failed],
+      [failed, runtime],
+    ]) {
+      const retained = apply(...facts, contentOnly);
+      expect(getToolCall(retained, identity)).toMatchObject({
+        runtimeExecution: runtime.execution,
+        execution: { state: "failed", derivedFrom: "result", source: failed.result.source },
+        result: contentOnly.result,
+      });
+      const corrected = applyToolCallOperation(retained, correction);
+      expect(getToolCall(corrected, identity)).toMatchObject({
+        runtimeExecution: runtime.execution,
+        execution: { state: "succeeded", derivedFrom: "result" },
+        result: contentOnly.result,
+      });
+      const runtimeCorrection = execution("interrupted", 4);
+      const updated = applyToolCallOperation(corrected, runtimeCorrection);
+      expect(getToolCall(updated, identity)).toMatchObject({
+        runtimeExecution: runtimeCorrection.execution,
+        executionState: "interrupted",
+      });
+      expect(getToolCall(applyToolCallOperation(updated, execution("running", 999)), identity)).toEqual(
+        getToolCall(updated, identity),
+      );
+    }
+  });
 
   it("updates partial arguments to final, rejecting stale partial even at higher priority", () => {
     const partial: ToolCallOperation = {

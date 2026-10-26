@@ -34,8 +34,9 @@ export function applyToolCallOperation(state: ToolCallsState, operation: ToolCal
   let next: ToolCallEntity = previous;
   switch (operation.type) {
     case "owner":
+      next = { ...previous, hasObservedOwner: true };
       if (!previous.owner || compareSources(operation.owner.source, previous.owner.source) > 0) {
-        next = { ...previous, owner: operation.owner };
+        next = { ...next, owner: operation.owner };
       }
       break;
     case "result": {
@@ -51,13 +52,14 @@ export function applyToolCallOperation(state: ToolCallsState, operation: ToolCal
         dispatchState &&
         (!previous.dispatch || compareSources(operation.result.source, previous.dispatch.source) > 0)
       ) {
-        next = { ...next, dispatch: { state: dispatchState, source: operation.result.source } };
+        next = { ...next, dispatch: { state: dispatchState, source: operation.result.source, derivedFrom: "result" } };
       }
       if (operation.result.outcome) {
         next = {
           ...next,
           execution: selectExecution(previous.execution, {
             state: operation.result.outcome,
+            derivedFrom: "result",
             source: operation.result.source,
           }),
         };
@@ -75,6 +77,11 @@ export function applyToolCallOperation(state: ToolCallsState, operation: ToolCal
     }
     case "execution":
       next = { ...previous, execution: selectExecution(previous.execution, operation.execution) };
+      if (!operation.execution.derivedFrom) {
+        const runtimeExecution =
+          previous.runtimeExecution ?? (previous.execution?.derivedFrom ? undefined : previous.execution);
+        next = { ...next, runtimeExecution: selectExecution(runtimeExecution, operation.execution) };
+      }
       break;
   }
   if (next.result) {
