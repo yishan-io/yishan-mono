@@ -1,4 +1,4 @@
-import { type Draft, castDraft, enableMapSet } from "immer";
+import { type Draft, castDraft, current, enableMapSet, isDraft } from "immer";
 import { trimSessionMessages } from "../chat/agentChatRetention";
 import type { AgentMessage } from "../chat/agentChatTypes";
 import { getTranscriptContextTokens, projectTranscript } from "../chat/transcript/presentation";
@@ -19,44 +19,50 @@ export function refreshSessionTranscript(
   transientToolResultIds?: ReadonlySet<string>,
   shouldRetainOwnerlessRuntime = true,
 ): void {
-  const compose = (previous = session.transcript) =>
+  // Read current transaction facts once; original() would discard in-flight mutations.
+  const snapshot = isDraft(session) ? current(session) : session;
+  let { messages, streamingMessage, transcriptLiveSources } = snapshot;
+  const compose = (previous = snapshot.transcript) =>
     composeSessionTranscript(
       previous,
-      session.messages,
-      session.streamingMessage,
-      session.transcriptLiveSources,
-      session.state === "running" && session.isTurnActive,
-      session.state !== "idle" && session.state !== "error",
+      messages,
+      streamingMessage,
+      transcriptLiveSources,
+      snapshot.state === "running" && snapshot.isTurnActive,
+      snapshot.state !== "idle" && snapshot.state !== "error",
       shouldRetainOwnerlessRuntime,
-      session.subagentSessionEndedAtMs,
+      snapshot.subagentSessionEndedAtMs,
     );
   let transcript = compose();
-  const candidate = session.streamingMessage ? [...session.messages, session.streamingMessage] : session.messages;
+  const candidate = streamingMessage ? [...messages, streamingMessage] : messages;
   const retained = trimSessionMessages(candidate, transientToolResultIds);
   const retainedIds = new Set(retained.map((message) => message.id));
   const hasTrimmed = retained.length !== candidate.length;
-  session.messages = retained.filter((message) => message.id !== session.streamingMessage?.id);
-  if (session.streamingMessage && !retainedIds.has(session.streamingMessage.id)) session.streamingMessage = null;
-  session.transcriptLiveSources = Object.fromEntries(
-    Object.entries(session.transcriptLiveSources).filter(([id]) => retainedIds.has(id)),
+  messages = retained.filter((message) => message.id !== streamingMessage?.id);
+  if (streamingMessage && !retainedIds.has(streamingMessage.id)) streamingMessage = null;
+  transcriptLiveSources = Object.fromEntries(
+    Object.entries(transcriptLiveSources).filter(([id]) => retainedIds.has(id)),
   );
+  session.messages = castDraft(messages);
+  session.streamingMessage = castDraft(streamingMessage);
+  session.transcriptLiveSources = transcriptLiveSources;
   session.rendererFinalAssistantIds = Object.fromEntries(
-    Object.entries(session.rendererFinalAssistantIds).filter(([id]) => retainedIds.has(id)),
+    Object.entries(snapshot.rendererFinalAssistantIds).filter(([id]) => retainedIds.has(id)),
   );
   session.rendererFinalToolCallAssistantIds = Object.fromEntries(
-    Object.entries(session.rendererFinalToolCallAssistantIds).filter(([id]) => retainedIds.has(id)),
+    Object.entries(snapshot.rendererFinalToolCallAssistantIds).filter(([id]) => retainedIds.has(id)),
   );
-  if (hasTrimmed) transcript = compose(castDraft(transcript));
+  if (hasTrimmed) transcript = compose(transcript);
   session.transcript = castDraft(transcript);
   session.presentation = castDraft(
-    projectTranscript(transcript, { contextTokens: getTranscriptContextTokens(session.messages) }),
+    projectTranscript(transcript, { contextTokens: getTranscriptContextTokens(messages) }),
   );
   session.subagentSnapshots = castDraft(
     refreshSubagentSnapshotActivity(
-      session.subagentSnapshots,
+      snapshot.subagentSnapshots,
       transcript,
-      session.subagentSessionEndedAtMs,
-      session.state === "error",
+      snapshot.subagentSessionEndedAtMs,
+      snapshot.state === "error",
     ),
   );
 }
