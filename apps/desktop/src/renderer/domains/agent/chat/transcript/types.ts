@@ -1,3 +1,4 @@
+import type { SubagentRun } from "./subagents";
 import type { ToolCallEntity, ToolCallOperation, ToolCallsState, ToolExecutionState } from "./toolCalls.types";
 
 /** Provenance supplied by the adapter; generated IDs are not cross-snapshot anchors. */
@@ -38,9 +39,18 @@ export type CompletionContent = {
   readonly outcome: "unknown" | "succeeded" | "failed" | "interrupted";
 };
 
+/** An unowned result with no protocol call identity; source is presentation provenance only. */
+export type UnmatchedResultContent = {
+  readonly text: string;
+  readonly toolName?: string;
+  readonly isError: boolean;
+  readonly details?: Readonly<Record<string, unknown>>;
+};
+
 /** Chronological typed observations. Unresolved references explicitly retain orphan facts. */
 export type TranscriptObservation =
   | AssistantObservation
+  | ({ readonly kind: "unmatched"; readonly source: TranscriptSource } & UnmatchedResultContent)
   | { readonly kind: "user"; readonly source: TranscriptSource; readonly text: string; readonly timestampMs?: number }
   | { readonly kind: "completion"; readonly source: TranscriptSource; readonly completion: CompletionContent }
   | { readonly kind: "unresolved"; readonly source: TranscriptSource; readonly callId: string };
@@ -109,7 +119,8 @@ export type TranscriptTurn = {
 
 /** Session-level rows; orphan results are visible without a fake successful tool card. */
 export type TranscriptRow =
-  | { readonly kind: "user"; readonly id: string; readonly text: string }
+  | ({ readonly kind: "unmatched"; readonly id: string; readonly source: TranscriptSource } & UnmatchedResultContent)
+  | { readonly kind: "user"; readonly id: string; readonly text: string; readonly timestampMs?: number }
   | { readonly kind: "turn"; readonly turn: TranscriptTurn }
   | { readonly kind: "completion"; readonly id: string; readonly completion: CompletionContent }
   | { readonly kind: "unresolved"; readonly id: string; readonly callId: string; readonly entity?: ToolCallEntity };
@@ -132,4 +143,6 @@ export type TranscriptState = {
   readonly registry: readonly IdentityEntry[];
   readonly toolCalls: ToolCallsState;
   readonly rows: readonly TranscriptRow[];
+  /** Current raw-window child sessions, keyed only by real child identity. */
+  readonly childRuns?: ReadonlyMap<string, SubagentRun>;
 };

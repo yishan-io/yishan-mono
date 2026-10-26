@@ -23,7 +23,7 @@ export type MessageAdapterDiagnostic = {
   readonly messageIndex: number;
 };
 
-/** Pure adapter output; diagnostics identify messages the caller must retain separately. */
+/** Pure adapter output; unmatched rows retain bodies while diagnostics trace missing identities. */
 export type AdaptedAgentMessages = {
   readonly snapshot: TranscriptSnapshot;
   readonly diagnostics: readonly MessageAdapterDiagnostic[];
@@ -67,6 +67,12 @@ export function adaptAgentMessages(input: AgentMessagesInput): AdaptedAgentMessa
               });
               return [{ kind: "tool", callId: block.id }];
             });
+      if (
+        message.stopReason === "error" &&
+        message.errorMessage?.trim() &&
+        !blocks.some((block) => block.kind === "tool" || block.text.trim().length > 0)
+      )
+        continue;
       observations.push({
         kind: "assistant",
         source,
@@ -80,6 +86,14 @@ export function adaptAgentMessages(input: AgentMessagesInput): AdaptedAgentMessa
       if (!message.toolCallId?.trim()) {
         if (diagnostics.length < MAX_ADAPTER_DIAGNOSTICS) diagnostics.push({ code: "missingToolCallId", messageIndex });
         else hasMoreDiagnostics = true;
+        observations.push({
+          kind: "unmatched",
+          source,
+          text: extractText(message.content),
+          isError: message.isError === true,
+          ...(message.toolName !== undefined ? { toolName: message.toolName } : {}),
+          ...(message.details !== undefined ? { details: { ...message.details } } : {}),
+        });
         continue;
       }
       const text = extractText(message.content);
@@ -88,6 +102,7 @@ export function adaptAgentMessages(input: AgentMessagesInput): AdaptedAgentMessa
         sessionId: input.sessionId,
         callId: message.toolCallId,
         result: {
+          ...(message.toolName !== undefined ? { toolName: message.toolName } : {}),
           source: toolSource,
           // Normalized Pi toolResult is terminal; content/finality do not determine success.
           outcome: message.isError === true ? "failed" : "succeeded",

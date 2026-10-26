@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
+
 import { UserMessageRow } from "./UserMessageRow";
 
 vi.mock("react-i18next", () => ({
@@ -44,8 +44,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function userMessage(id: string, text: string): AgentMessage {
-  return { id, role: "user", content: text };
+function userMessage(id: string, text: string) {
+  return { id, text };
 }
 
 function makeOverflowing(content: HTMLElement): void {
@@ -55,7 +55,7 @@ function makeOverflowing(content: HTMLElement): void {
 
 describe("UserMessageRow", () => {
   it("renders the message text without an expand button when it is short", () => {
-    render(<UserMessageRow message={userMessage("short-1", "short prompt")} />);
+    render(<UserMessageRow row={userMessage("short-1", "short prompt")} />);
 
     expect(screen.getByTestId("user-content").textContent).toBe("short prompt");
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
@@ -63,7 +63,7 @@ describe("UserMessageRow", () => {
   });
 
   it("clamps an overflowing message and shows the expand button", () => {
-    render(<UserMessageRow message={userMessage("long-1", "a".repeat(500))} />);
+    render(<UserMessageRow row={userMessage("long-1", "a".repeat(500))} />);
 
     const content = screen.getByTestId("user-message-content");
     makeOverflowing(content);
@@ -77,7 +77,7 @@ describe("UserMessageRow", () => {
   });
 
   it("expands to the full text on click and offers a collapse action", () => {
-    render(<UserMessageRow message={userMessage("long-2", "a".repeat(500))} />);
+    render(<UserMessageRow row={userMessage("long-2", "a".repeat(500))} />);
 
     const content = screen.getByTestId("user-message-content");
     makeOverflowing(content);
@@ -104,7 +104,7 @@ describe("UserMessageRow", () => {
   });
 
   it("hides the expand affordance once the message no longer overflows", () => {
-    render(<UserMessageRow message={userMessage("short-2", "short prompt")} />);
+    render(<UserMessageRow row={userMessage("short-2", "short prompt")} />);
 
     const content = screen.getByTestId("user-message-content");
     makeOverflowing(content);
@@ -121,12 +121,12 @@ describe("UserMessageRow", () => {
   });
 
   it("shows the human-readable timestamp when recorded", () => {
-    render(<UserMessageRow message={userMessage("ts-1", "prompt")} />);
+    render(<UserMessageRow row={userMessage("ts-1", "prompt")} />);
 
     expect(screen.queryByText(/^\d/)).toBeNull();
 
     cleanup();
-    render(<UserMessageRow message={{ id: "u2", role: "user", content: "prompt", timestamp: 1_000_000_000_000 }} />);
+    render(<UserMessageRow row={{ id: "u2", text: "prompt", timestampMs: 1_000_000_000_000 }} />);
     expect(screen.queryByText(/^\d/)).not.toBeNull();
   });
 });

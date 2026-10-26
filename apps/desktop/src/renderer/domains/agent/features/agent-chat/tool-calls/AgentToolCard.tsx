@@ -1,6 +1,7 @@
 import { Box, Collapse, IconButton, Tab, Tabs, Tooltip, Typography } from "@mui/material";
 import { useState } from "react";
 import { LuBot, LuPanelRightOpen } from "react-icons/lu";
+import { DefaultToolCard } from "./DefaultToolCard";
 import { ToolSummaryBadge } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
@@ -8,36 +9,29 @@ import { extractResultText } from "./diff";
 import { getAgentStatusBadgeColor } from "./statusColors";
 import type { AgentToolCallCardProps } from "./summary";
 
-const TERMINAL_AGENT_RESULT_STATUSES = new Set(["completed", "failed", "error", "cancelled", "canceled"]);
-
 /** Renders the specialized Agent delegation tool-call card. */
-export function AgentToolCard({
-  toolCall,
-  result = null,
-  onOpenCompletedSubagent,
-  agentLifecycleState,
-}: AgentToolCallCardProps) {
+export function AgentToolCard(props: AgentToolCallCardProps) {
+  const {
+    renderer,
+    isError,
+    agentLabel,
+    agentStatusLabel,
+    navigationTarget,
+    result = null,
+    onOpenCompletedSubagent,
+  } = props;
   const resultText = extractResultText(result);
   const [open, setOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<"prompt" | "response">(resultText ? "response" : "prompt");
-  const agentName = typeof toolCall.arguments.agent === "string" ? toolCall.arguments.agent : null;
-  const agentPrompt = typeof toolCall.arguments.prompt === "string" ? toolCall.arguments.prompt : null;
-  const resultStatus = typeof result?.details?.status === "string" ? result.details.status : null;
-  const agentStatus =
-    resultStatus && TERMINAL_AGENT_RESULT_STATUSES.has(resultStatus)
-      ? resultStatus
-      : (agentLifecycleState ?? resultStatus);
-  const childSessionId = typeof result?.details?.sessionId === "string" ? result.details.sessionId : null;
-  const agentId = typeof result?.details?.agentId === "string" ? result.details.agentId : undefined;
-  const canOpenCompletedSubagent =
-    agentStatus === "completed" && Boolean(childSessionId) && Boolean(onOpenCompletedSubagent);
+  const agentName = agentLabel;
+  const agentPrompt = renderer.kind === "agent" ? renderer.prompt : null;
+  const agentStatus = agentStatusLabel;
+  const canOpenCompletedSubagent = Boolean(navigationTarget && onOpenCompletedSubagent);
 
-  if (!agentName || !agentPrompt) {
-    return null;
-  }
+  if (renderer.kind !== "agent") return <DefaultToolCard {...props} />;
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open} testId="agent-tool-summary">
           <Box component="span" aria-hidden sx={{ display: "inline-flex", alignItems: "center", opacity: 0.8 }}>
@@ -60,17 +54,14 @@ export function AgentToolCard({
             {agentPrompt}
           </Typography>
           {agentStatus ? <ToolSummaryBadge label={agentStatus} color={getAgentStatusBadgeColor(agentStatus)} /> : null}
-          {canOpenCompletedSubagent && childSessionId ? (
+          {canOpenCompletedSubagent && navigationTarget ? (
             <Tooltip title="Open sub-agent detail" placement="top">
               <IconButton
                 aria-label={`Open sub-agent ${agentName}`}
                 onClick={(event) => {
                   event.stopPropagation();
-                  void onOpenCompletedSubagent?.({
-                    agentId,
-                    childSessionId,
-                    title: `${agentName} — ${agentPrompt}`,
-                  });
+                  // fire-and-forget: navigation is owned by the caller.
+                  void onOpenCompletedSubagent?.(navigationTarget);
                 }}
                 sx={{ p: 0.5 }}
               >
@@ -147,7 +138,7 @@ export function AgentToolCard({
                   mb: 0.5,
                 }}
               >
-                response{result?.isError ? " (error)" : ""}
+                response{isError ? " (error)" : ""}
               </Typography>
               <Typography
                 variant="body2"
@@ -159,7 +150,7 @@ export function AgentToolCard({
                   m: 0,
                   maxHeight: 200,
                   overflow: "auto",
-                  color: result?.isError ? "error.main" : undefined,
+                  color: isError ? "error.main" : undefined,
                 }}
               >
                 {resultText}

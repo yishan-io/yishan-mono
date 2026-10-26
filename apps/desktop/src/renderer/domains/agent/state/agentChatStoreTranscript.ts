@@ -1,7 +1,9 @@
 import { type Draft, castDraft, enableMapSet } from "immer";
 import { trimSessionMessages } from "../chat/agentChatRetention";
 import type { AgentMessage } from "../chat/agentChatTypes";
+import { getTranscriptContextTokens, projectTranscript } from "../chat/transcript/presentation";
 import { composeSessionTranscript } from "../chat/transcript/session";
+import { refreshSubagentSnapshotActivity } from "../chat/transcript/subagentSnapshots";
 import type { AgentChatSessionData } from "./agentChatStoreSession";
 
 enableMapSet();
@@ -26,6 +28,7 @@ export function refreshSessionTranscript(
       session.state === "running" && session.isTurnActive,
       session.state !== "idle" && session.state !== "error",
       shouldRetainOwnerlessRuntime,
+      session.subagentSessionEndedAtMs,
     );
   let transcript = compose();
   const candidate = session.streamingMessage ? [...session.messages, session.streamingMessage] : session.messages;
@@ -45,6 +48,17 @@ export function refreshSessionTranscript(
   );
   if (hasTrimmed) transcript = compose(castDraft(transcript));
   session.transcript = castDraft(transcript);
+  session.presentation = castDraft(
+    projectTranscript(transcript, { contextTokens: getTranscriptContextTokens(session.messages) }),
+  );
+  session.subagentSnapshots = castDraft(
+    refreshSubagentSnapshotActivity(
+      session.subagentSnapshots,
+      transcript,
+      session.subagentSessionEndedAtMs,
+      session.state === "error",
+    ),
+  );
 }
 
 /** Revokes live authority when history replaces the actual fact, even with the same message ID. */

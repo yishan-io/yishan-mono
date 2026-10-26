@@ -1,14 +1,15 @@
 import { Box, Typography } from "@mui/material";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { openSubagentSessionInRightSplitPane } from "../../../commands/agentChatSubagentCommands";
 
-import type { AgentMessage, AgentModel, AgentQueueState } from "../../../chat/agentChatTypes";
+import type { AgentModel, AgentQueueState } from "../../../chat/agentChatTypes";
+import type { TranscriptDisplay } from "../../../chat/transcript/presentation.types";
 import { formatSupportedThinkingLevels } from "../../../providers/agentThinkingLevels";
 import { THINKING_LEVEL_LABELS } from "../../select-model/ThinkingLevelControl";
 import { AgentMessageList } from "../transcript/AgentMessageList";
 
-const EMPTY_MESSAGES: AgentMessage[] = [];
+const EMPTY_PRESENTATION: TranscriptDisplay = { rows: [] };
 const EMPTY_QUEUE: AgentQueueState = { steering: [], followUp: [] };
 
 type AgentChatTranscriptPaneProps = {
@@ -25,7 +26,7 @@ type AgentChatTranscriptPaneProps = {
 
 type AgentChatSubagentDetailFooterProps = {
   model: AgentModel | null;
-  usage: AgentMessage["usage"] | null;
+  contextTokens: number | undefined;
   thinkingLevel: string | null;
 };
 
@@ -35,8 +36,8 @@ function formatCompactTokenCount(value: number): string {
   return value.toLocaleString();
 }
 
-function AgentChatSubagentDetailFooter({ model, usage, thinkingLevel }: AgentChatSubagentDetailFooterProps) {
-  const contextUsed = usage?.totalTokens ?? usage?.total;
+function AgentChatSubagentDetailFooter({ model, contextTokens, thinkingLevel }: AgentChatSubagentDetailFooterProps) {
+  const contextUsed = contextTokens;
   const contextLabel =
     typeof contextUsed === "number"
       ? `${formatCompactTokenCount(contextUsed)}${model?.contextWindow ? ` / ${formatCompactTokenCount(model.contextWindow)}` : ""} tokens`
@@ -78,8 +79,7 @@ function AgentChatTranscriptPane({
   const { t } = useTranslation();
   const session = agentChatStore((state) => state.sessionsByTabId[tabId]);
   const sessions = agentChatStore((state) => state.sessionsByTabId);
-  const messages = session?.messages ?? EMPTY_MESSAGES;
-  const trailingMessage = session?.streamingMessage ?? null;
+  const presentation = session?.presentation ?? EMPTY_PRESENTATION;
   const sessionState = session?.state ?? "starting";
   const compactionReason = session?.compactionReason ?? null;
   const sessionId = session?.sessionId;
@@ -92,16 +92,8 @@ function AgentChatTranscriptPane({
     return Object.values(sessions).find((candidate) => candidate.sessionId === parentSessionId)?.currentModel ?? null;
   })();
   const queue = session?.queue ?? EMPTY_QUEUE;
-  const isTurnActive = session?.isTurnActive ?? false;
   const footerModel = currentModel ?? parentModel;
   const thinkingLevel = session?.thinkingLevel ?? null;
-  const latestUsage = useMemo(() => {
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const usage = messages[index]?.usage;
-      if (usage) return usage;
-    }
-    return null;
-  }, [messages]);
   const handleOpenCompletedSubagent = useCallback(
     async (target: { agentId?: string; childSessionId: string; title: string }) => {
       await openSubagentSessionInRightSplitPane({
@@ -116,7 +108,6 @@ function AgentChatTranscriptPane({
   );
 
   const isWorking = sessionState === "running" || sessionState === "compacting";
-  const isTurnRunning = sessionState === "running" && isTurnActive;
   const workingLabel =
     sessionState === "compacting" ? t(`agentChat.compaction.${compactionReason ?? "generic"}`) : undefined;
 
@@ -125,11 +116,9 @@ function AgentChatTranscriptPane({
       <AgentMessageList
         tabId={tabId}
         isActive={isActive}
-        messages={messages}
-        trailingMessage={trailingMessage}
+        presentation={presentation}
         workspacePath={cwd}
         isWorking={isWorking}
-        isTurnRunning={isTurnRunning}
         workingLabel={workingLabel}
         queuedMessages={isReadOnlySubagentDetail ? undefined : queue}
         emptyHelpLines={emptyHelpLines}
@@ -137,7 +126,11 @@ function AgentChatTranscriptPane({
         onOpenCompletedSubagent={handleOpenCompletedSubagent}
       />
       {isReadOnlySubagentDetail ? (
-        <AgentChatSubagentDetailFooter model={footerModel} usage={latestUsage} thinkingLevel={thinkingLevel} />
+        <AgentChatSubagentDetailFooter
+          model={footerModel}
+          contextTokens={presentation.contextTokens}
+          thinkingLevel={thinkingLevel}
+        />
       ) : null}
     </>
   );

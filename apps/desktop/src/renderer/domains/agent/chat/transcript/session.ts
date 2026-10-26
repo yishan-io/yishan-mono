@@ -1,6 +1,7 @@
 import type { AgentMessage } from "../agentChatTypes";
 import { composeTranscript } from "./compose";
-import { adaptAgentMessages } from "./messages";
+import { type AgentMessagesInput, adaptAgentMessages } from "./messages";
+import { projectSubagents } from "./subagents";
 import type { ToolCallEntity } from "./toolCalls.types";
 import type { TranscriptState } from "./types";
 
@@ -19,10 +20,11 @@ export function composeSessionTranscript(
   isWorking: boolean,
   canStream = true,
   shouldRetainOwnerlessRuntime = true,
+  sessionEndedAtMs?: number | null,
 ): TranscriptState {
   const update = previous.update + 1;
   const window = streamingMessage ? [...messages, streamingMessage] : messages;
-  const adapted = adaptAgentMessages({
+  const input: AgentMessagesInput = {
     sessionId: previous.sessionId,
     generation: previous.generation,
     update,
@@ -44,7 +46,9 @@ export function composeSessionTranscript(
         },
       };
     }),
-  });
+  };
+  const adapted = adaptAgentMessages(input);
+  const subagents = projectSubagents(input, sessionEndedAtMs);
   // Rebuild raw-owned facts from the authoritative window, retaining independent runtime evidence.
   const calls = new Map<string, ToolCallEntity>();
   for (const [callId, entity] of previous.toolCalls.get(previous.sessionId) ?? []) {
@@ -59,7 +63,7 @@ export function composeSessionTranscript(
       executionState: execution?.state ?? "unknown",
       dispatch,
       dispatchState: dispatch?.state,
-      children: entity.children,
+      children: new Map([...(entity.children ?? [])].filter(([, child]) => !child.derivedFrom)),
     });
   }
   const retained = new Set(
@@ -92,8 +96,29 @@ export function composeSessionTranscript(
       },
     });
   }
-  return composeTranscript(
-    { ...previous, toolCalls: new Map([[previous.sessionId, calls]]) },
-    { ...adapted.snapshot, observations },
+  for (const child of subagents.childRuns.values()) {
+    if (!child.parentCallId || retained.has(child.parentCallId)) continue;
+    observations.push({
+      kind: "unresolved",
+      callId: child.parentCallId,
+      source: { id: `child:${child.childSessionId}`, stability: "stable", origin: child.source.origin },
+    });
+    retained.add(child.parentCallId);
+  }
+  const toolOperations = adapted.snapshot.toolOperations.map((operation) =>
+    operation.type === "result" && subagents.acceptedResultSourceIds.has(operation.result.source.id)
+      ? { ...operation, result: { ...operation.result, dispatch: "accepted" as const } }
+      : operation,
   );
+  const composed = composeTranscript(
+    { ...previous, toolCalls: new Map([[previous.sessionId, calls]]) },
+    { ...adapted.snapshot, observations, toolOperations: [...toolOperations, ...subagents.childOperations] },
+  );
+  const childRuns = new Map(subagents.childRuns);
+  for (const [childSessionId, child] of childRuns) {
+    if (!child.parentCallId) continue;
+    const selected = composed.toolCalls.get(previous.sessionId)?.get(child.parentCallId)?.children?.get(childSessionId);
+    if (selected) childRuns.set(childSessionId, { ...child, ...selected, derivedFrom: selected.derivedFrom });
+  }
+  return { ...composed, childRuns };
 }

@@ -1,3 +1,4 @@
+import type { Draft } from "immer";
 import { type RunningSubagentSummary, deriveFinishedSubagents } from "../chat/agentChatSubagents";
 import type {
   AgentCompactionReason,
@@ -11,9 +12,14 @@ import type {
   AgentSubagentCancelState,
 } from "../chat/agentChatTypes";
 import { createTranscriptState } from "../chat/transcript/compose";
+import { projectTranscript } from "../chat/transcript/presentation";
+import type { TranscriptDisplay } from "../chat/transcript/presentation.types";
 import type { LiveMessageSource } from "../chat/transcript/session";
+import type { SubagentSnapshot, SubagentSnapshotCoverage } from "../chat/transcript/subagentSnapshots.types";
 import type { TranscriptState } from "../chat/transcript/types";
+import type { AgentChatStoreState } from "./agentChatStore";
 import type { HistoryRequest } from "./agentChatStoreHistory";
+import { stopSubagentSnapshotDetail } from "./agentChatStoreSubagentSnapshots";
 import { createAgentChatUsageLedger } from "./agentChatUsageLedger";
 
 /** Display state for a live sub-agent progress row. */
@@ -34,6 +40,7 @@ export type AgentChatSessionData = {
   activeCoreTurnAssistantId: string | null;
   compactionReason: AgentCompactionReason;
   transcript: TranscriptState;
+  presentation: TranscriptDisplay;
   transcriptLiveSources: Record<string, LiveMessageSource>;
   messages: AgentMessage[];
   streamingMessage: AgentMessage | null;
@@ -51,6 +58,9 @@ export type AgentChatSessionData = {
   finishedSubagents: RunningSubagentSummary[];
   subagentProgressTargets: AgentSubagentProgressTarget[];
   subagentLiveTranscripts: Record<string, AgentMessage[]>;
+  subagentSnapshots: Record<string, SubagentSnapshot>;
+  subagentSnapshotBinding: { parentSessionId: string; childSessionId: string } | null;
+  subagentSnapshotCoverage: SubagentSnapshotCoverage | null;
   subagentCancelStates: Record<string, AgentSubagentCancelState>;
   subagentSessionEndedAtMs: number | null;
   hasLoadedMessages: boolean;
@@ -62,6 +72,7 @@ export type AgentChatSessionData = {
 
 /** Creates state for a newly registered agent-chat session. */
 export function createAgentChatSession(sessionId: string): AgentChatSessionData {
+  const transcript = createTranscriptState({ sessionId, namespace: `local:${sessionId}`, seed: 0 });
   return {
     sessionId,
     historyRequestGeneration: 0,
@@ -70,7 +81,8 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
     isTurnActive: false,
     activeCoreTurnAssistantId: null,
     compactionReason: null,
-    transcript: createTranscriptState({ sessionId, namespace: `local:${sessionId}`, seed: 0 }),
+    transcript,
+    presentation: projectTranscript(transcript),
     transcriptLiveSources: {},
     messages: [],
     streamingMessage: null,
@@ -88,6 +100,9 @@ export function createAgentChatSession(sessionId: string): AgentChatSessionData 
     finishedSubagents: [],
     subagentProgressTargets: [],
     subagentLiveTranscripts: {},
+    subagentSnapshots: {},
+    subagentSnapshotBinding: null,
+    subagentSnapshotCoverage: null,
     subagentCancelStates: {},
     subagentSessionEndedAtMs: null,
     hasLoadedMessages: false,
@@ -144,4 +159,39 @@ export function setFinishedSubagents(session: AgentChatSessionData): void {
   )
     return;
   session.finishedSubagents = nextFinished;
+}
+
+/** Removes parent sessions while stopping their same-store live detail views. */
+export function createSessionRemovalActions(
+  set: (recipe: (state: Draft<AgentChatStoreState>) => void) => void,
+): Pick<AgentChatStoreState, "removeSession" | "removeSessions"> {
+  return {
+    removeSession: (tabId) => {
+      set((state) => {
+        const parent = state.sessionsByTabId[tabId];
+        for (const detail of Object.values(state.sessionsByTabId)) {
+          if (parent && detail.subagentSnapshotBinding?.parentSessionId === parent.sessionId) {
+            stopSubagentSnapshotDetail(detail);
+          }
+        }
+        delete state.sessionsByTabId[tabId];
+      });
+    },
+
+    removeSessions: (tabIds) => {
+      if (tabIds.length === 0) return;
+      const removed = new Set(tabIds);
+      set((state) => {
+        const parentIds = new Set(tabIds.map((id) => state.sessionsByTabId[id]?.sessionId));
+        for (const detail of Object.values(state.sessionsByTabId)) {
+          if (detail.subagentSnapshotBinding && parentIds.has(detail.subagentSnapshotBinding.parentSessionId)) {
+            stopSubagentSnapshotDetail(detail);
+          }
+        }
+        state.sessionsByTabId = Object.fromEntries(
+          Object.entries(state.sessionsByTabId).filter(([id]) => !removed.has(id)),
+        );
+      });
+    },
+  };
 }

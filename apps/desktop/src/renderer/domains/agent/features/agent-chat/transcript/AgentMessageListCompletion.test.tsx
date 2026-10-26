@@ -9,6 +9,7 @@ import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessage } from "../../../chat/agentChatTypes";
+import { agentChatStore } from "../../../state/agentChatStore";
 import { normalizeIncomingAgentMessage } from "../../../subscriptions/agentChatInboundMessage";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentMessageList } from "./AgentMessageList";
@@ -49,7 +50,22 @@ async function renderList(
     resources: { en: { translation: en }, zh: { translation: zh } },
     interpolation: { escapeValue: false },
   });
-  const props = { tabId: "completion-test", isActive: true, messages, onOpenCompletedSubagent };
+  const store = agentChatStore.getState();
+  store.initSession("completion-test", "parent-completion");
+  const presentationFor = (next: AgentMessage[], isWorking = false) => {
+    store.setSessionState("completion-test", isWorking ? "running" : "idle");
+    store.setTurnActive("completion-test", isWorking);
+    store.replaceMessages("completion-test", next);
+    const session = agentChatStore.getState().sessionsByTabId["completion-test"];
+    if (!session) throw new Error("Expected completion test session");
+    return session.presentation;
+  };
+  const props = {
+    tabId: "completion-test",
+    isActive: true,
+    presentation: presentationFor(messages),
+    onOpenCompletedSubagent,
+  };
   const rendered = render(
     <I18nextProvider i18n={i18n}>
       <AppThemePreferenceProvider>
@@ -63,7 +79,7 @@ async function renderList(
       rendered.rerender(
         <I18nextProvider i18n={i18n}>
           <AppThemePreferenceProvider>
-            <AgentMessageList {...props} messages={next} isWorking={isWorking} isTurnRunning={isWorking} />
+            <AgentMessageList {...props} presentation={presentationFor(next, isWorking)} isWorking={isWorking} />
           </AppThemePreferenceProvider>
         </I18nextProvider>,
       ),

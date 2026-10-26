@@ -1,17 +1,12 @@
 import { tabStore } from "@renderer/domains/workbench";
-import { MAX_SUBAGENT_CHILDREN, MAX_SUBAGENT_MESSAGES_PER_CHILD } from "../chat/agentChatBudget";
-import type { AgentMessage, AgentModel } from "../chat/agentChatTypes";
+import { MAX_SUBAGENT_CHILDREN } from "../chat/agentChatBudget";
+import type { AgentModel } from "../chat/agentChatTypes";
+import type { SubagentLiveTranscript } from "../chat/transcript/subagentSnapshots.types";
 import { agentChatStore } from "../state/agentChatStore";
-import { isRecord, normalizeIncomingAgentMessage } from "./agentChatInboundMessage";
+import { isRecord } from "./agentChatInboundMessage";
+import { parseSubagentSnapshotMessages } from "./agentChatSubagentSnapshot";
 
 // ─── Subagent event parsers ───────────────────────────────────────────────────
-
-type SubagentLiveTranscript = {
-  childSessionId: string;
-  messages: AgentMessage[];
-  thinkingLevel?: string;
-  model?: AgentModel;
-};
 
 export function parseSubagentProgressTargets(
   event: Record<string, unknown>,
@@ -82,26 +77,22 @@ export function parseSubagentLiveTranscripts(event: Record<string, unknown>): Su
       if (!agent || typeof agent !== "object") {
         return [];
       }
-      const { childSessionId, messages, thinkingLevel, model } = agent as {
+      const { childSessionId, messages, thinkingLevel, model, status } = agent as {
         childSessionId?: unknown;
         messages?: unknown;
         thinkingLevel?: unknown;
         model?: unknown;
+        status?: unknown;
       };
       if (typeof childSessionId !== "string" || childSessionId.trim().length === 0 || !Array.isArray(messages)) {
         return [];
       }
 
-      const cappedMessages = messages.slice(-MAX_SUBAGENT_MESSAGES_PER_CHILD);
-
-      const normalizedMessages = cappedMessages.flatMap((message) => {
-        const normalizedMessage = normalizeIncomingAgentMessage(message);
-        return normalizedMessage ? [normalizedMessage] : [];
-      });
       return [
         {
           childSessionId,
-          messages: normalizedMessages,
+          ...parseSubagentSnapshotMessages(messages),
+          status: status === "queued" || status === "starting" || status === "running" ? status : undefined,
           thinkingLevel: typeof thinkingLevel === "string" ? thinkingLevel : undefined,
           model: parseLiveTranscriptModel(model),
         },
@@ -112,35 +103,42 @@ export function parseSubagentLiveTranscripts(event: Record<string, unknown>): Su
   }
 }
 
-export function applySubagentLiveTranscripts(parentTabId: string, transcripts: SubagentLiveTranscript[]): void {
+export function applySubagentLiveTranscripts(
+  parentTabId: string,
+  transcripts: (Omit<SubagentLiveTranscript, "coverage"> & Partial<Pick<SubagentLiveTranscript, "coverage">>)[],
+): void {
+  const detailTargets = tabStore.getState().tabs.flatMap((tab) =>
+    tab.kind === "agent-chat" && tab.data.sessionView === "subagent-detail" && tab.data.sessionId?.trim()
+      ? [
+          {
+            tabId: tab.id,
+            childSessionId: tab.data.sessionId.trim(),
+            sessionView: tab.data.sessionView,
+            subagentParentSessionId: tab.data.subagentParentSessionId,
+          },
+        ]
+      : [],
+  );
   agentChatStore
     .getState()
     .setSubagentLiveTranscripts(
       parentTabId,
       Object.fromEntries(transcripts.map((transcript) => [transcript.childSessionId, transcript.messages])),
+      {
+        detailTargets,
+        metadata: Object.fromEntries(
+          transcripts.map((transcript) => [
+            transcript.childSessionId,
+            {
+              status: transcript.status,
+              model: transcript.model,
+              thinkingLevel: transcript.thinkingLevel,
+              coverage: transcript.coverage ?? { completeness: "unknown", omittedMessages: 0, reasons: [] },
+            },
+          ]),
+        ),
+      },
     );
-
-  for (const transcript of transcripts) {
-    const detailTab = tabStore.getState().tabs.find((tab) => {
-      return (
-        tab.kind === "agent-chat" &&
-        tab.data.sessionView === "subagent-detail" &&
-        tab.data.sessionId?.trim() === transcript.childSessionId
-      );
-    });
-    if (!detailTab) {
-      continue;
-    }
-
-    agentChatStore.getState().replaceMessages(detailTab.id, transcript.messages);
-
-    if (transcript.thinkingLevel) {
-      agentChatStore.getState().setThinkingLevel(detailTab.id, transcript.thinkingLevel);
-    }
-    if (transcript.model) {
-      agentChatStore.getState().setCurrentModel(detailTab.id, transcript.model);
-    }
-  }
 }
 
 /**

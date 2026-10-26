@@ -6,19 +6,14 @@ import { extractResultText } from "./diff";
 import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the fallback tool-call card for unsupported tool types. */
-export function DefaultToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function DefaultToolCard({ toolCall, result = null, isError }: AgentToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const argsStr = JSON.stringify(toolCall.arguments, null, 2);
   const resultText = extractResultText(result);
 
   return (
-    <ToolCardShell isError={result?.isError === true} outlined>
-      <ToolDefaultHeader
-        toolName={toolCall.name}
-        isError={result?.isError === true}
-        onToggle={() => setOpen(!open)}
-        open={open}
-      />
+    <ToolCardShell isError={isError} outlined>
+      <ToolDefaultHeader toolName={toolCall.name} isError={isError} onToggle={() => setOpen(!open)} open={open} />
       <ToolSummaryPanel>
         <Typography
           variant="caption"
@@ -43,7 +38,7 @@ export function DefaultToolCard({ toolCall, result = null }: AgentToolCallCardPr
           {argsStr}
         </Typography>
       </ToolSummaryPanel>
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} />
+      <ToolOutputSection open={open} resultText={resultText} isError={isError} />
     </ToolCardShell>
   );
 }

@@ -1,3 +1,4 @@
+import { getToolPresentationState } from "./subagents";
 import { getToolCall } from "./toolCalls";
 import type { ToolCallsState, ToolExecutionState } from "./toolCalls.types";
 import type { AssistantObservation, GroupMember, ThinkingBlock, ToolCallGroup, TurnBlock, TurnSummary } from "./types";
@@ -79,6 +80,6 @@ export function summarizeToolGroup(group: ToolCallGroup, calls: ToolCallsState, 
     failed: 0,
     interrupted: 0,
   };
-  for (const callId of callIds) stateCounts[getToolCall(calls, { sessionId, callId })?.executionState ?? "unknown"]++;
+  for (const callId of callIds) stateCounts[getToolPresentationState(getToolCall(calls, { sessionId, callId }))]++;
   return { ...group, callCount: callIds.size, stateCounts };
 }

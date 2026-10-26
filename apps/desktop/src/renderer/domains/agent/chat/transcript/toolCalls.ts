@@ -117,7 +117,8 @@ function selectExecution(
   return compareSources(incoming.source, previous.source) > 0 ? incoming : previous;
 }
 
-function selectChild(previous: ToolChildState | undefined, incoming: ToolChildFact): ToolChildState {
+/** Selects canonical child evidence: completion beats late starts, then explicit source authority. */
+export function selectChild(previous: ToolChildState | undefined, incoming: ToolChildFact): ToolChildState {
   const isComplete = incoming.event === "completed";
   if (previous) {
     if (previous.isComplete && !isComplete) return previous;

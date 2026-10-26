@@ -4,7 +4,7 @@ import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentContentBlock, AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
-import { AgentToolCallCard } from "./AgentToolCallCard";
+import { ToolCardFixture as AgentToolCallCard } from "./__tests__/toolCardFixtures";
 
 const { openTabMock } = vi.hoisted(() => ({
   openTabMock: vi.fn(),
@@ -557,7 +557,7 @@ describe("AgentToolCallCard", () => {
 
       expect(screen.getByText(terminalStatus)).toBeTruthy();
       expect(screen.queryByText("completed")).toBeNull();
-      expect(screen.queryByRole("button", { name: "Open sub-agent builder" })).toBeNull();
+      expect(screen.getByRole("button", { name: "Open sub-agent builder" })).toBeTruthy();
     },
   );
 

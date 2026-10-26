@@ -53,6 +53,7 @@
       }
     },
     "subagentCompletion": {
+      "unknown": "Status unknown",
       "completed": "Completed",
       "failed": "Failed",
       "cancelled": "Cancelled",

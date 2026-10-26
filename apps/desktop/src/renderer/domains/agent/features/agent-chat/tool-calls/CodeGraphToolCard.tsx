@@ -27,7 +27,7 @@ const CODEGRAPH_TOOL_SUMMARIES: Record<string, CodeGraphToolSummary> = {
 };
 
 /** Renders a compact, expandable card for all CodeGraph agent tools. */
-export function CodeGraphToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function CodeGraphToolCard({ toolCall, result = null, isError }: AgentToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const summary = CODEGRAPH_TOOL_SUMMARIES[toolCall.name];
   const resultText = extractResultText(result);
@@ -37,7 +37,7 @@ export function CodeGraphToolCard({ toolCall, result = null }: AgentToolCallCard
   const badges = getCodeGraphBadges(toolCall.name, toolCall.arguments);
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary testId="codegraph-tool-card" onToggle={() => setOpen(!open)} open={open}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, minWidth: 0, flex: 1 }}>
@@ -65,7 +65,7 @@ export function CodeGraphToolCard({ toolCall, result = null }: AgentToolCallCard
           </Box>
         </ToolExpandableSummary>
       </ToolSummaryPanel>
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} label="result" />
+      <ToolOutputSection open={open} resultText={resultText} isError={isError} label="result" />
     </ToolCardShell>
   );
 }

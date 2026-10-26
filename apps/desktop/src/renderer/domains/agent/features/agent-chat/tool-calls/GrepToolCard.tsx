@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { useMemo, useState } from "react";
 import { LuSearch } from "react-icons/lu";
+import { DefaultToolCard } from "./DefaultToolCard";
 import { ToolSummaryBadge } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
@@ -11,19 +12,20 @@ import { openGrepFileMatch, parseGrepMatchLines } from "./grep";
 import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized grep tool-call card. */
-export function GrepToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {
+export function GrepToolCard(props: AgentToolCallCardProps) {
+  const { toolCall, result = null, workspacePath, renderer, isError } = props;
   const [open, setOpen] = useState(false);
-  const grepPattern = typeof toolCall.arguments.pattern === "string" ? toolCall.arguments.pattern : null;
   const grepPath = typeof toolCall.arguments.path === "string" ? toolCall.arguments.path : null;
   const resultText = extractResultText(result);
   const grepMatchLines = useMemo(() => parseGrepMatchLines(resultText, grepPath), [grepPath, resultText]);
 
-  if (!grepPattern) {
-    return null;
+  if (renderer.kind !== "grep") {
+    return <DefaultToolCard {...props} />;
   }
+  const grepPattern = renderer.pattern;
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
           <ToolPathSummary
@@ -33,7 +35,7 @@ export function GrepToolCard({ toolCall, result = null, workspacePath }: AgentTo
           />
         </ToolExpandableSummary>
       </ToolSummaryPanel>
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true}>
+      <ToolOutputSection open={open} resultText={resultText} isError={isError}>
         {grepMatchLines.length > 0 ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
             {grepMatchLines.map((matchLine) => {

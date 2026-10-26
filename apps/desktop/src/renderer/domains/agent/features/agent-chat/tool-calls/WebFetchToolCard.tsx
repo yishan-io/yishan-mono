@@ -1,7 +1,8 @@
 import { Box, Typography } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { TbWorldSearch } from "react-icons/tb";
 import { AgentMarkdownContent } from "../transcript/AgentMarkdownContent";
+import { DefaultToolCard } from "./DefaultToolCard";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolOutputSection } from "./ToolOutputSection";
@@ -9,27 +10,20 @@ import { extractResultText } from "./diff";
 import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized web_fetch tool-call card. */
-export function WebFetchToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {
+export function WebFetchToolCard(props: AgentToolCallCardProps) {
+  const { toolCall, result = null, workspacePath, renderer, isError } = props;
   const [open, setOpen] = useState(false);
   const resultText = extractResultText(result);
 
-  const summaryLabel = useMemo(() => {
-    const pages = toolCall.arguments.pages;
-    if (Array.isArray(pages) && pages.length > 0) {
-      const pageCount = pages.length;
-      return `${pageCount} page${pageCount !== 1 ? "s" : ""}`;
-    }
-
-    const url = typeof toolCall.arguments.url === "string" ? toolCall.arguments.url : null;
-    return url;
-  }, [toolCall.arguments.pages, toolCall.arguments.url]);
-
-  if (!summaryLabel) {
-    return null;
+  if (renderer.kind !== "webFetch") {
+    return <DefaultToolCard {...props} />;
   }
+  const isBatch = Array.isArray(toolCall.arguments.pages) && toolCall.arguments.pages.length > 0;
+  const pageCount = renderer.urls.length;
+  const summaryLabel = isBatch ? `${pageCount} page${pageCount !== 1 ? "s" : ""}` : renderer.urls[0];
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
           <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.75, minWidth: 0, flex: 1 }}>
@@ -68,7 +62,7 @@ export function WebFetchToolCard({ toolCall, result = null, workspacePath }: Age
           </Box>
         </ToolExpandableSummary>
       </ToolSummaryPanel>
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} label="fetched content">
+      <ToolOutputSection open={open} resultText={resultText} isError={isError} label="fetched content">
         <Box sx={{ maxHeight: 320, overflowY: "auto" }}>
           <AgentMarkdownContent content={resultText} workspacePath={workspacePath} />
         </Box>

@@ -1,11 +1,7 @@
 import { castDraft } from "immer";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import {
-  getRetainedToolResultIds,
-  mergeActiveTurnHistory,
-  trimSubagentLiveTranscripts,
-} from "../chat/agentChatRetention";
+import { getRetainedToolResultIds, mergeActiveTurnHistory } from "../chat/agentChatRetention";
 import { deriveRunningSubagents } from "../chat/agentChatSubagents";
 import type {
   AgentCompactionReason,
@@ -18,6 +14,7 @@ import type {
   AgentSessionStats,
   AgentSubagentCancelState,
 } from "../chat/agentChatTypes";
+import type { SubagentSnapshotOptions } from "../chat/transcript/subagentSnapshots.types";
 import {
   type ToolExecutionObservation,
   applySessionToolExecution,
@@ -32,9 +29,15 @@ import {
   type AgentChatSessionData,
   type AgentSubagentProgressTarget,
   createAgentChatSession,
+  createSessionRemovalActions,
   setFinishedSubagents,
   setRunningSubagentsIfChanged,
 } from "./agentChatStoreSession";
+import {
+  createSubagentSnapshotActions,
+  stopSubagentSnapshotDetail,
+  synchronizeSubagentSnapshotDetails,
+} from "./agentChatStoreSubagentSnapshots";
 import { reconcileLiveMessages, refreshSessionTranscript, registerLiveMessage } from "./agentChatStoreTranscript";
 import {
   mergeAgentChatUsageLedgerHistory,
@@ -77,7 +80,13 @@ export type AgentChatStoreState = {
   setPendingUiRequest: (tabId: string, request: AgentPendingUiRequest) => void;
   setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
   setSubagentProgressTargets: (tabId: string, targets: AgentSubagentProgressTarget[]) => void;
-  setSubagentLiveTranscripts: (tabId: string, transcripts: Record<string, AgentMessage[]>) => void;
+  /** Binds a detail to the actual retained parent cache by session identity. */
+  applySubagentDetailSnapshot: (detailTabId: string, parentTabId: string, childSessionId: string) => void;
+  setSubagentLiveTranscripts: (
+    tabId: string,
+    transcripts: Record<string, AgentMessage[]>,
+    options?: SubagentSnapshotOptions,
+  ) => void;
   setSubagentCancelState: (tabId: string, rowKey: string, state: AgentSubagentCancelState) => void;
   clearSubagentCancelState: (tabId: string, rowKey: string) => void;
   setSubagentSessionEndedAt: (tabId: string, endedAtMs: number | null) => void;
@@ -87,10 +96,6 @@ export type AgentChatStoreState = {
   removeSession: (tabId: string) => void;
   removeSessions: (tabIds: string[]) => void;
 };
-
-function omitKeys<T>(record: Record<string, T>, removedIds: Set<string>): Record<string, T> {
-  return Object.fromEntries(Object.entries(record).filter(([id]) => !removedIds.has(id)));
-}
 
 function hasToolCall(message: AgentMessage): boolean {
   return (
@@ -104,6 +109,8 @@ export const agentChatStore = create<AgentChatStoreState>()(
   immer((set) => ({
     sessionsByTabId: {},
     ...createHistoryRequestActions(set),
+    ...createSessionRemovalActions(set),
+    ...createSubagentSnapshotActions(set),
 
     applyToolExecution: (tabId, observation) => {
       set((state) => {
@@ -121,6 +128,12 @@ export const agentChatStore = create<AgentChatStoreState>()(
 
     initSession: (tabId, sessionId) => {
       set((state) => {
+        const previous = state.sessionsByTabId[tabId];
+        for (const detail of Object.values(state.sessionsByTabId)) {
+          if (previous && detail.subagentSnapshotBinding?.parentSessionId === previous.sessionId) {
+            stopSubagentSnapshotDetail(detail);
+          }
+        }
         state.sessionsByTabId[tabId] = castDraft(createAgentChatSession(sessionId));
       });
     },
@@ -131,6 +144,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session) {
           session.state = sessionState;
           refreshSessionTranscript(session);
+          synchronizeSubagentSnapshotDetails(state.sessionsByTabId, session);
         }
       });
     },
@@ -141,6 +155,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session) {
           session.isTurnActive = active;
           refreshSessionTranscript(session);
+          synchronizeSubagentSnapshotDetails(state.sessionsByTabId, session);
         }
       });
     },
@@ -161,6 +176,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.state = "error";
           session.error = error;
           refreshSessionTranscript(session);
+          synchronizeSubagentSnapshotDetails(state.sessionsByTabId, session);
         }
       });
     },
@@ -199,6 +215,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.rendererFinalToolCallAssistantIds[message.id] = true;
         }
         refreshSessionTranscript(session);
+        synchronizeSubagentSnapshotDetails(state.sessionsByTabId, session);
         setRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
@@ -215,6 +232,8 @@ export const agentChatStore = create<AgentChatStoreState>()(
           if (!matchesHistoryRequest(session, response)) return;
           session.pendingHistoryRequest = null;
         }
+        session.subagentSnapshotBinding = null;
+        session.subagentSnapshotCoverage = null;
         const hasLiveStream =
           Boolean(session.streamingMessage) && (session.isTurnActive || session.state === "running");
         const historyMessages = hasLiveStream
@@ -245,6 +264,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.activeCoreTurnAssistantId = null;
         }
         refreshSessionTranscript(session, retainedToolResultIds, false);
+        synchronizeSubagentSnapshotDetails(state.sessionsByTabId, session);
         setRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
@@ -263,6 +283,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         session.streamingMessage = message;
         registerLiveMessage(session, message.id, false);
         refreshSessionTranscript(session);
+        synchronizeSubagentSnapshotDetails(state.sessionsByTabId, session);
         setRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, session.subagentSessionEndedAtMs),
@@ -292,6 +313,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         }
         session.streamingMessage = null;
         refreshSessionTranscript(session);
+        synchronizeSubagentSnapshotDetails(state.sessionsByTabId, session);
         setRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, undefined, session.subagentSessionEndedAtMs),
@@ -320,6 +342,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (!message || typeof message.startedAtMs !== "number") return;
         message.durationMs = Math.max(0, endedAtMs - message.startedAtMs);
         refreshSessionTranscript(session);
+        synchronizeSubagentSnapshotDetails(state.sessionsByTabId, session);
       });
     },
 
@@ -406,14 +429,6 @@ export const agentChatStore = create<AgentChatStoreState>()(
       });
     },
 
-    setSubagentLiveTranscripts: (tabId, transcripts) => {
-      set((state) => {
-        const session = state.sessionsByTabId[tabId];
-        if (!session) return;
-        session.subagentLiveTranscripts = trimSubagentLiveTranscripts(transcripts);
-      });
-    },
-
     setSubagentCancelState: (tabId, rowKey, cancelState) => {
       set((state) => {
         const session = state.sessionsByTabId[tabId];
@@ -435,6 +450,8 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.subagentSessionEndedAtMs = endedAtMs;
+        refreshSessionTranscript(session);
+        synchronizeSubagentSnapshotDetails(state.sessionsByTabId, session);
         setRunningSubagentsIfChanged(
           session,
           deriveRunningSubagents(session.messages, session.streamingMessage, endedAtMs),
@@ -463,20 +480,6 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.hasLoadedState = true;
-      });
-    },
-
-    removeSession: (tabId) => {
-      set((state) => {
-        delete state.sessionsByTabId[tabId];
-      });
-    },
-
-    removeSessions: (tabIds) => {
-      if (tabIds.length === 0) return;
-      const removed = new Set(tabIds);
-      set((state) => {
-        state.sessionsByTabId = omitKeys(state.sessionsByTabId, removed);
       });
     },
   })),

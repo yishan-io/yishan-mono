@@ -132,11 +132,17 @@ export function composeTranscript(previous: TranscriptState, snapshot: Transcrip
     finishTurn();
     const id = identities.allocate(observation.kind, "", getObservationAnchors(observation));
     if (observation.kind === "user") {
-      rows.push({ kind: "user", id, text: observation.text });
+      rows.push({
+        kind: "user",
+        id,
+        text: observation.text,
+        ...(observation.timestampMs !== undefined ? { timestampMs: observation.timestampMs } : {}),
+      });
       startTimestampMs = observation.timestampMs;
       timingItems = [];
       previousTurnIndex = undefined;
-    } else if (observation.kind === "completion")
+    } else if (observation.kind === "unmatched") rows.push({ ...observation, id });
+    else if (observation.kind === "completion")
       rows.push({ kind: "completion", id, completion: observation.completion });
     else
       rows.push({
@@ -150,7 +156,7 @@ export function composeTranscript(previous: TranscriptState, snapshot: Transcrip
   if (snapshot.isWorking) {
     for (let index = rows.length - 1; index >= 0; index--) {
       const row = rows[index];
-      if (row?.kind === "completion" || row?.kind === "unresolved") continue;
+      if (row?.kind === "completion" || row?.kind === "unresolved" || row?.kind === "unmatched") continue;
       if (row?.kind === "turn")
         rows[index] = { kind: "turn", turn: { ...row.turn, isWorking: true, workedDurationMs: null } };
       break;

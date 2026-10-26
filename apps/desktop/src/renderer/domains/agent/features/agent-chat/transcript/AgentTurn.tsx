@@ -1,31 +1,20 @@
 import { Box, CircularProgress, IconButton, Paper, Typography } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
-import type { AgentToolCallLifecycleState } from "../../../../../domains/agent/chat/agentChatSubagents";
+import type { TurnDisplay } from "../../../chat/transcript/presentation.types";
 import { AgentToolCallGroup } from "../tool-calls/AgentToolCallGroup";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentMarkdownContent } from "./AgentMarkdownContent";
 import { ThinkingBlock } from "./ThinkingBlock";
-import { ToolResultMessageContent } from "./ToolResultMessageContent";
-import {
-  type Turn,
-  type TurnSection,
-  buildTurnSections,
-  extractTurnSummaryText,
-  extractTurnSummaryThinking,
-  formatTurnDuration,
-  getTurnLiveElapsedMs,
-  getTurnWorkedDurationMs,
-} from "./turnModel";
+import { formatTurnDuration } from "./turnDuration";
 
 /** Persists per-turn collapse state across virtualized row unmounts (mirrors savedScrollTopByTabId). */
 const collapsedTurnIds = new Set<string>();
 
 type AgentTurnProps = {
-  turn: Turn;
+  turn: TurnDisplay;
   workspacePath?: string;
-  agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
@@ -36,12 +25,14 @@ type AgentTurnProps = {
  * hides only the working content (thinking, tool calls); the final summary
  * message's thinking and text stay visible below the header.
  */
-export function AgentTurn({ turn, workspacePath, agentToolCallStates, onOpenCompletedSubagent }: AgentTurnProps) {
+export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: AgentTurnProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(() => !collapsedTurnIds.has(turn.id));
   const isExpanded = open || turn.isWorking;
-  const workedDurationMs = getTurnWorkedDurationMs(turn);
-  const liveElapsedMs = getTurnLiveElapsedMs(turn, useLiveNow(turn.isWorking));
+  const workedDurationMs = turn.workedDurationMs;
+  const startedAtMs = turn.startedAtMs ?? turn.startTimestampMs;
+  const now = useLiveNow(turn.isWorking && startedAtMs !== undefined);
+  const liveElapsedMs = turn.isWorking && startedAtMs !== undefined ? Math.max(0, now - startedAtMs) : null;
   const collapseLabel = isExpanded ? t("agentChat.turn.collapse") : t("agentChat.turn.expand");
   const handleToggle = () => {
     if (turn.isWorking) {
@@ -58,29 +49,9 @@ export function AgentTurn({ turn, workspacePath, agentToolCallStates, onOpenComp
     });
   };
 
-  const summaryText = useMemo(() => extractTurnSummaryText(turn.items), [turn.items]);
-  const summaryItemId = useMemo(() => {
-    for (let index = turn.items.length - 1; index >= 0; index -= 1) {
-      const item = turn.items[index];
-      if (item?.message.role === "assistant") {
-        return item.message.id;
-      }
-    }
-    return null;
-  }, [turn.items]);
-  const summaryThinking = useMemo(
-    () => extractTurnSummaryThinking(turn.items, summaryItemId),
-    [summaryItemId, turn.items],
-  );
-  const sections = useMemo(
-    () => buildTurnSections(turn.items, summaryItemId, summaryText),
-    [summaryItemId, summaryText, turn.items],
-  );
-  const summaryItemIsStreaming = useMemo(() => {
-    const item = turn.items.find((candidate) => candidate.message.id === summaryItemId);
-    return item?.isStreaming ?? false;
-  }, [summaryItemId, turn.items]);
-  const hasCollapsibleContent = sections.length > 0 || turn.items.some((item) => item.message.role === "toolResult");
+  const summaryText = turn.summary?.text;
+  const summaryThinking = turn.summary?.thinking ?? [];
+  const hasCollapsibleContent = turn.blocks.length > 0;
 
   return (
     <Paper
@@ -131,7 +102,7 @@ export function AgentTurn({ turn, workspacePath, agentToolCallStates, onOpenComp
       </Box>
       {isExpanded && hasCollapsibleContent ? (
         <Box data-testid="agent-turn-body" sx={{ px: 1.5, py: 0.5, display: "flex", flexDirection: "column", gap: 1 }}>
-          {sections.map((section, sectionIndex) =>
+          {turn.blocks.map((section, sectionIndex) =>
             section.kind === "text" ? (
               <AgentMarkdownContent
                 key={`${turn.id}-text-${sectionIndex}`}
@@ -139,37 +110,18 @@ export function AgentTurn({ turn, workspacePath, agentToolCallStates, onOpenComp
                 workspacePath={workspacePath}
                 renderMode={section.isStreaming ? "streaming" : "final"}
               />
+            ) : section.kind === "thinking" ? (
+              <ThinkingBlock key={section.key} model={section} />
             ) : (
               <AgentToolCallGroup
-                key={getRunKey(turn.id, section)}
-                id={getRunKey(turn.id, section)}
-                blocks={section.blocks}
+                key={section.id}
+                group={section}
                 showRunningBlocks={turn.isWorking}
-                agentToolCallStates={agentToolCallStates}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
             ),
           )}
-          {turn.items.map((item) => {
-            if (item.message.role !== "toolResult") {
-              return null;
-            }
-            return (
-              <Paper
-                key={item.message.id}
-                elevation={0}
-                sx={{
-                  p: 1.5,
-                  width: "100%",
-                  bgcolor: "action.hover",
-                  borderRadius: 0,
-                }}
-              >
-                <ToolResultMessageContent message={item.message} />
-              </Paper>
-            );
-          })}
         </Box>
       ) : null}
       {summaryThinking.length > 0 || summaryText ? (
@@ -185,31 +137,19 @@ export function AgentTurn({ turn, workspacePath, agentToolCallStates, onOpenComp
           }}
         >
           {summaryThinking.map((block) => (
-            <ThinkingBlock
-              key={block.id}
-              thinking={block.thinking}
-              thinkingSignature={block.thinkingSignature}
-              isStreaming={block.isStreaming}
-            />
+            <ThinkingBlock key={block.key} model={block} />
           ))}
           {summaryText ? (
             <AgentMarkdownContent
               content={summaryText}
               workspacePath={workspacePath}
-              renderMode={summaryItemIsStreaming ? "streaming" : "final"}
+              renderMode={turn.summary?.isStreaming ? "streaming" : "final"}
             />
           ) : null}
         </Box>
       ) : null}
     </Paper>
   );
-}
-
-function getRunKey(turnId: string, section: Extract<TurnSection, { kind: "toolRun" }>): string {
-  const firstBlockId = section.blocks[0]?.id;
-  // Key by the first block id so streaming reflows (new text sections inserted
-  // before this run) do not remount the group and reset its expansion state.
-  return firstBlockId ? `${turnId}-run-${firstBlockId}` : `${turnId}-run-${section.blocks.length}`;
 }
 
 /** Ticks once per second while `active`, giving the live elapsed header its clock. */

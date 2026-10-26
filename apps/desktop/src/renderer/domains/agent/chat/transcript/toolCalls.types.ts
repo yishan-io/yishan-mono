@@ -52,6 +52,7 @@ export type ToolDispatchFact = {
 
 /** One normalized result fact. */
 export type ToolCallResult = {
+  readonly toolName?: string;
   readonly content: ToolResultContent;
   readonly source: ToolCallSource;
   readonly outcome?: ToolOutcome;
@@ -62,6 +63,7 @@ export type ToolCallResult = {
 export type ToolChildFact = {
   readonly childSessionId: string;
   readonly event: "started" | "completed";
+  readonly derivedFrom?: "lifecycle" | "result";
   readonly outcome?: ToolOutcome;
   readonly source: ToolCallSource;
 };

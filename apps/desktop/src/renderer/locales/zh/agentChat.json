@@ -53,6 +53,7 @@
       }
     },
     "subagentCompletion": {
+      "unknown": "状态未知",
       "completed": "已完成",
       "failed": "失败",
       "cancelled": "已取消",

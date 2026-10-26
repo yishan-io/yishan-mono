@@ -28,13 +28,18 @@ export function createIdentityAllocator(previous: TranscriptState, activeAnchors
   let counter = previous.counter;
   const registry: IdentityEntry[] = [];
   const claimed = new Set<string>();
+  // Empty registrations can never match; preserve the order of all possible matches.
+  const anchoredEntries = previous.registry.filter((entry) => entry.anchors.length > 0);
   return {
     allocate(kind: string, scope: string, anchors: readonly string[], eligibleAnchors = activeAnchors): string {
-      const previousEntry = previous.registry.find((entry) => {
-        if (entry.kind !== kind || entry.scope !== scope || claimed.has(entry.id)) return false;
-        const surviving = entry.anchors.find((anchor) => eligibleAnchors.has(anchor));
-        return surviving !== undefined && anchors.includes(surviving);
-      });
+      const previousEntry =
+        anchors.length === 0
+          ? undefined
+          : anchoredEntries.find((entry) => {
+              if (entry.kind !== kind || entry.scope !== scope || claimed.has(entry.id)) return false;
+              const surviving = entry.anchors.find((anchor) => eligibleAnchors.has(anchor));
+              return surviving !== undefined && anchors.includes(surviving);
+            });
       const id = previousEntry?.id ?? JSON.stringify([previous.namespace, previous.sessionId, counter++]);
       claimed.add(id);
       registry.push({ id, kind, scope, anchors });

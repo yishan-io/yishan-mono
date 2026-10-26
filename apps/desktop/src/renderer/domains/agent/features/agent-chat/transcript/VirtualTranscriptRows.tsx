@@ -1,19 +1,18 @@
 import { Box } from "@mui/material";
 import type { VirtualItem } from "@tanstack/react-virtual";
-import type { AgentToolCallLifecycleState } from "../../../chat/agentChatSubagents";
+import type { DisplayRow } from "../../../chat/transcript/presentation.types";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentTurn } from "./AgentTurn";
 import { SubagentCompletionRow } from "./SubagentCompletionRow";
+import { ToolResultMessageContent } from "./ToolResultMessageContent";
 import { UserMessageRow } from "./UserMessageRow";
-import type { TranscriptRow } from "./turnModel";
 
 type VirtualTranscriptRowsProps = {
-  rows: TranscriptRow[];
+  rows: readonly DisplayRow[];
   virtualMessages: VirtualItem[];
   totalSize: number;
   measureElement: (element: HTMLDivElement | null) => void;
   workspacePath?: string;
-  agentToolCallStates: ReadonlyMap<string, AgentToolCallLifecycleState>;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
@@ -24,7 +23,6 @@ export function VirtualTranscriptRows({
   totalSize,
   measureElement,
   workspacePath,
-  agentToolCallStates,
   onOpenCompletedSubagent,
 }: VirtualTranscriptRowsProps) {
   return (
@@ -46,14 +44,22 @@ export function VirtualTranscriptRows({
             }}
           >
             {row.kind === "user" ? (
-              <UserMessageRow message={row.message} />
+              <UserMessageRow row={row} />
             ) : row.kind === "completion" ? (
               <SubagentCompletionRow completion={row.completion} onOpenCompletedSubagent={onOpenCompletedSubagent} />
+            ) : row.kind === "unmatched" ? (
+              <ToolResultMessageContent toolName={row.toolName} text={row.text} isError={row.isError} />
+            ) : row.kind === "unresolved" ? (
+              <ToolResultMessageContent
+                toolName={row.card.toolCall.name}
+                text={row.card.result?.text ?? ""}
+                isError={row.card.isError}
+                state={row.card.presentationState}
+              />
             ) : (
               <AgentTurn
                 turn={row.turn}
                 workspacePath={workspacePath}
-                agentToolCallStates={agentToolCallStates}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
             )}

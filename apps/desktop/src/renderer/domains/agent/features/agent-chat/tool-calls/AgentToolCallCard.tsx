@@ -20,56 +20,43 @@ import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders one agent tool call using a specialized card per tool type. */
 export function AgentToolCallCard(props: AgentToolCallCardProps) {
-  switch (props.toolCall.name) {
+  switch (props.renderer.kind) {
     case "bash":
       return <BashToolCard {...props} />;
     case "read":
       return <ReadToolCard {...props} />;
-    case "edit":
-    case "write":
+    case "diff":
       return <DiffToolCard {...props} />;
     case "grep":
       return <GrepToolCard {...props} />;
-    case "codegraph_search":
-    case "codegraph_callers":
-    case "codegraph_callees":
-    case "codegraph_impact":
-    case "codegraph_explore":
-    case "codegraph_node":
-    case "codegraph_status":
-    case "codegraph_files":
+    case "codeGraph":
       return <CodeGraphToolCard {...props} />;
-    case "Agent":
+    case "agent":
       return <AgentToolCard {...props} />;
-    case "memory_read":
+    case "memoryRead":
       return <MemoryReadToolCard {...props} />;
-    case "memory_search":
+    case "memorySearch":
       return <MemorySearchToolCard {...props} />;
-    case "memory_store":
+    case "memoryStore":
       return <MemoryStoreToolCard {...props} />;
-    case "ask_user":
+    case "askUser":
       return <AskUserToolCard {...props} />;
-    case "lsp_diagnostics":
-    case "lsp_fix":
+    case "lsp":
       return <LspToolCard {...props} />;
-    case "workspace_list":
-      return <WorkspaceListToolCard {...props} />;
-    case "workspace_find":
-      return <WorkspaceFindToolCard {...props} />;
-    case "workspace_create":
-      return <WorkspaceCreateToolCard {...props} />;
-    case "workspace_close":
-      return <WorkspaceCloseToolCard {...props} />;
-    case "task_start":
-    case "task_list":
-    case "task_read":
-    case "task_write":
-    case "task_append_note":
-    case "task_finish":
+    case "workspace": {
+      const WorkspaceCard = {
+        workspace_list: WorkspaceListToolCard,
+        workspace_find: WorkspaceFindToolCard,
+        workspace_create: WorkspaceCreateToolCard,
+        workspace_close: WorkspaceCloseToolCard,
+      }[props.renderer.toolName];
+      return <WorkspaceCard {...props} />;
+    }
+    case "task":
       return <TaskToolCard {...props} />;
-    case "web_fetch":
+    case "webFetch":
       return <WebFetchToolCard {...props} />;
-    default:
+    case "generic":
       return <DefaultToolCard {...props} />;
   }
 }

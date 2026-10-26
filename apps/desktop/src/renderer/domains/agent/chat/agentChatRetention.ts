@@ -398,7 +398,10 @@ export function trimSubagentLiveTranscripts(
   for (const childId of cappedChildIds) {
     const messages = transcripts[childId];
     if (!messages) continue;
-    perChildCapped[childId] = messages.slice(-MAX_SUBAGENT_MESSAGES_PER_CHILD);
+    perChildCapped[childId] = removeIncompleteAssociations(
+      messages,
+      Math.max(0, messages.length - MAX_SUBAGENT_MESSAGES_PER_CHILD),
+    );
   }
 
   // 3. Apply aggregate byte budget across children (keep newest = last in sorted order).

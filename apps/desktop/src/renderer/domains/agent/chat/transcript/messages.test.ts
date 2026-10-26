@@ -366,7 +366,12 @@ describe("message adapter slice B", () => {
     );
     const mapped = adapt(malformed);
     expect(mapped.snapshot.toolOperations).toEqual([]);
-    expect(mapped.snapshot.observations).toEqual([]);
+    expect(mapped.snapshot.observations).toHaveLength(25);
+    expect(mapped.snapshot.observations[0]).toMatchObject({
+      kind: "unmatched",
+      text: "retained by caller",
+      isError: false,
+    });
     expect(mapped.diagnostics).toHaveLength(20);
     expect(mapped.diagnostics[0]).toEqual({ code: "missingToolCallId", messageIndex: 0 });
     expect(mapped.diagnostics[19]).toEqual({ code: "missingToolCallId", messageIndex: 19 });

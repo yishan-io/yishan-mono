@@ -1,385 +1,213 @@
 // @vitest-environment jsdom
-
 import { displaySettingsStore } from "@renderer/domains/settings";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage as AgentMessageType } from "../../../../../domains/agent/chat/agentChatTypes";
+import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import type { DisplayRow, ToolCardModel, TurnDisplay } from "../../../chat/transcript/presentation.types";
 import { AgentMessageList } from "./AgentMessageList";
 
+const render = renderWithAppTheme;
 const virtualizerMocks = vi.hoisted(() => ({
   measureElement: vi.fn(),
-  useVirtualizer: vi.fn(({ count }: { count: number }) => {
-    const indices = count >= 10 ? [0, count - 1] : Array.from({ length: count }, (_, index) => index);
-    return {
-      getVirtualItems: () => indices.map((index) => ({ index, key: index, start: index * 180 })),
-      getTotalSize: () => count * 180,
-      measureElement: virtualizerMocks.measureElement,
-    };
-  }),
+  useVirtualizer: vi.fn(({ count, getItemKey }: { count: number; getItemKey: (index: number) => string | number }) => ({
+    getVirtualItems: () =>
+      (count >= 10 ? [0, count - 1] : Array.from({ length: count }, (_, index) => index)).map((index) => ({
+        index,
+        key: getItemKey(index),
+        start: index * 180,
+      })),
+    getTotalSize: () => count * 180,
+    measureElement: virtualizerMocks.measureElement,
+  })),
 }));
-
-vi.mock("@tanstack/react-virtual", () => ({
-  useVirtualizer: virtualizerMocks.useVirtualizer,
-}));
-
-vi.mock("./AgentTurn", () => ({
-  AgentTurn: ({
-    turn,
-  }: {
-    turn: {
-      id: string;
-      items: { message: { id: string }; mergedToolResults: Record<string, AgentMessageType | undefined> }[];
-    };
-  }) => (
-    <div data-testid="agent-turn-row">
-      <span>{turn.id}</span>
-      {turn.items.map((item) => (
-        <span key={item.message.id}>
-          {item.message.id}
-          <span data-testid={`merged-count-${item.message.id}`}>{Object.keys(item.mergedToolResults).length}</span>
-        </span>
-      ))}
-    </div>
-  ),
-}));
-
-vi.mock("./QueuedMessageList", () => ({
-  QueuedMessageList: ({ steering, followUp }: { steering: string[]; followUp: string[] }) =>
-    steering.length + followUp.length > 0 ? <div data-testid="queued-message-list" /> : null,
-}));
-
-vi.mock("./UserMessageRow", () => ({
-  UserMessageRow: ({ message }: { message: AgentMessageType }) => (
-    <div data-testid="user-row">
-      <span>{message.id}</span>
-    </div>
-  ),
-}));
-
+vi.mock("@tanstack/react-virtual", () => ({ useVirtualizer: virtualizerMocks.useVirtualizer }));
+beforeAll(async () => {
+  const { initI18n, i18n } = await import("@renderer/i18n");
+  await initI18n();
+  await i18n.changeLanguage("en");
+});
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
+function user(id: string): Extract<DisplayRow, { kind: "user" }> {
+  return { kind: "user", id, text: id };
+}
+const turn: TurnDisplay = {
+  id: "turn-layout",
+  blocks: [],
+  summary: { text: "Answer", thinking: [], isStreaming: false },
+  isWorking: true,
+  timingContinues: false,
+  workedDurationMs: null,
+};
 
-describe("AgentMessageList", () => {
-  it("keeps the scrollbar's parent pane-wide while constraining fixed-mode transcript content", () => {
-    displaySettingsStore.setState({ agentChatWidth: "fixed" });
-    const messages: AgentMessageType[] = [{ id: "user-1", role: "user", content: "Prompt" }];
-
-    render(<AgentMessageList tabId="tab-fixed-width" isActive messages={messages} />);
-
-    expect(getComputedStyle(screen.getByTestId("agent-message-scroll-container")).width).toBe("100%");
-    expect(getComputedStyle(screen.getByTestId("agent-message-list-content")).maxWidth).toBe("960px");
-    expect(getComputedStyle(screen.getByTestId("agent-message-list-content")).marginLeft).toBe("auto");
-  });
-
-  it("top-aligns short transcripts", () => {
-    const messages: AgentMessageType[] = [{ id: "user-1", role: "user", content: "Prompt" }];
-
-    render(<AgentMessageList tabId="tab-top-alignment" isActive messages={messages} />);
-
-    expect(getComputedStyle(screen.getByTestId("agent-message-list-content")).justifyContent).toBe("flex-start");
-  });
-
-  it("renders only virtual rows (standalone user messages and turns) and registers each for dynamic-height measurement", () => {
-    const messages = Array.from({ length: 10 }, (_, index): AgentMessageType[] => [
-      { id: `user-${index}`, role: "user", content: `Prompt ${index}` },
-      { id: `assistant-${index}`, role: "assistant", content: [{ type: "text", text: `Message ${index}` }] },
-    ]).flat();
-
-    render(<AgentMessageList tabId="tab-virtual" isActive messages={messages} />);
-
-    expect(screen.getAllByTestId("user-row")).toHaveLength(1);
-    expect(screen.getAllByTestId("agent-turn-row")).toHaveLength(1);
-    expect(screen.getByText("user-0")).toBeTruthy();
-    expect(screen.queryByText("user-1")).toBeNull();
-    expect(screen.getByText("user-0").closest("[data-index]")?.getAttribute("data-index")).toBe("0");
-    const turnRow = screen.getByTestId("agent-turn-row");
-    expect(turnRow.textContent).toContain("assistant-9");
-    expect(turnRow.closest("[data-index]")?.getAttribute("data-index")).toBe("19");
-  });
-
-  it.each([
-    "bash",
-    "read",
-    "edit",
-    "write",
-    "grep",
-    "Agent",
-    "memory_read",
-    "memory_search",
-    "memory_store",
-    "ask_user",
-    "web_fetch",
-    "workspace_list",
-    "workspace_find",
-    "workspace_create",
-    "workspace_close",
-  ] as const)("merges %s tool results into the preceding assistant tool call", (toolName) => {
-    const messages: AgentMessageType[] = [
-      {
-        id: "assistant-1",
-        role: "assistant",
-        content: [
-          {
-            type: "toolCall",
-            id: "tool-1",
-            name: toolName,
-            arguments:
-              toolName === "Agent"
-                ? {
-                    agent: "code-reviewer",
-                    prompt: "Review the code quality of the services directory.",
-                  }
-                : { path: "src/example.ts" },
-          },
-        ],
-      },
-      {
-        id: "tool-result-1",
-        role: "toolResult",
-        toolCallId: "tool-1",
-        toolName,
-        content: "tool result",
-      },
-    ];
-
-    render(<AgentMessageList tabId="tab-1" isActive messages={messages} />);
-
-    expect(screen.getAllByTestId("agent-turn-row")).toHaveLength(1);
-    expect(screen.getByTestId("merged-count-assistant-1").textContent).toBe("1");
-    expect(screen.queryByText("tool-result-1")).toBeNull();
-  });
-
-  it("associates delayed parallel results by toolCallId across intervening messages", () => {
-    const messages: AgentMessageType[] = [
-      {
-        id: "assistant-tools",
-        role: "assistant",
-        content: [
-          { type: "toolCall", id: "read-call", name: "read", arguments: { path: "src/read.ts" } },
-          { type: "toolCall", id: "bash-call", name: "bash", arguments: { command: "echo hi" } },
-          { type: "toolCall", id: "custom-call", name: "custom_tool", arguments: { mode: "full" } },
-        ],
-      },
-      { id: "intervening", role: "assistant", content: [{ type: "text", text: "Waiting for results" }] },
-      {
-        id: "bash-result",
-        role: "toolResult",
-        toolCallId: "bash-call",
-        toolName: "bash",
-        content: "bash output",
-      },
-      {
-        id: "read-result",
-        role: "toolResult",
-        toolCallId: "read-call",
-        toolName: "read",
-        content: "read output",
-      },
-      {
-        id: "custom-result",
-        role: "toolResult",
-        toolCallId: "custom-call",
-        toolName: "custom_tool",
-        content: "custom output",
-      },
-      {
-        id: "duplicate-bash-result",
-        role: "toolResult",
-        toolCallId: "bash-call",
-        toolName: "bash",
-        content: "duplicate bash output",
-      },
-      {
-        id: "unmatched-result",
-        role: "toolResult",
-        toolCallId: "missing-call",
-        toolName: "read",
-        content: "keep me visible",
-      },
-    ];
-
-    render(<AgentMessageList tabId="tab-delayed" isActive messages={messages} />);
-
-    expect(screen.getByTestId("merged-count-assistant-tools").textContent).toBe("3");
-    expect(screen.getAllByTestId("agent-turn-row")).toHaveLength(1);
-    expect(screen.queryByText("bash-result")).toBeNull();
-    expect(screen.queryByText("read-result")).toBeNull();
-    expect(screen.queryByText("custom-result")).toBeNull();
-    expect(screen.getByText("duplicate-bash-result")).toBeTruthy();
-    expect(screen.getByText("unmatched-result")).toBeTruthy();
-  });
-
-  it("hides assistant error snapshots that have no renderable content", () => {
-    render(
-      <AgentMessageList
-        tabId="tab-error"
-        isActive
-        messages={[
-          {
-            id: "assistant-error",
-            role: "assistant",
-            content: [],
-            stopReason: "error",
-            errorMessage: "Codex error: The usage limit has been reached",
-          },
-        ]}
-      />,
-    );
-
-    expect(screen.queryByText("assistant-error")).toBeNull();
-    expect(screen.getByTestId("agent-chat-empty-state")).toBeTruthy();
-  });
-
-  it("hides hidden custom messages, including pi-memory-context", () => {
-    render(
-      <AgentMessageList
-        tabId="tab-hidden-custom"
-        isActive
-        messages={[
-          {
-            id: "custom-hidden-1",
-            role: "custom",
-            customType: "some-internal-message",
-            display: false,
-            content: "hidden",
-          },
-          {
-            id: "custom-hidden-memory",
-            role: "custom",
-            customType: "pi-memory-context",
-            display: false,
-            content: "memory",
-          },
-        ]}
-      />,
-    );
-
-    expect(screen.queryByText("custom-hidden-1")).toBeNull();
-    expect(screen.queryByText("custom-hidden-memory")).toBeNull();
-    expect(screen.getByTestId("agent-chat-empty-state")).toBeTruthy();
-  });
-
-  it("renders exactly one randomly chosen help line with a prefix in the empty state", () => {
-    const helpLines = ["you can @mention files to add context?", "you can use voice input to prompt hands-free?"];
-    render(
-      <AgentMessageList
-        tabId="tab-empty-help"
-        isActive
-        messages={[]}
-        emptyHelpLines={helpLines}
-        emptyHelpPrefix="Did you know"
-      />,
-    );
-
-    const helpElements = screen.getAllByTestId("agent-chat-empty-help");
-    expect(helpElements).toHaveLength(1);
-    const helpText = helpElements[0]?.textContent ?? "";
-    expect(helpText).toMatch(/^Did you know /);
-    expect(helpLines).toContain(helpText.replace(/^Did you know /, ""));
-  });
-
-  it("shows a help line again when the chat returns to the empty state", () => {
-    const helpLines = ["@mention files to add context", "Type / to run skills"];
-    const message: AgentMessageType = {
-      id: "assistant-1",
-      role: "assistant",
-      content: [{ type: "text", text: "Hello" }],
+describe("AgentMessageList display routing and layout", () => {
+  it("retains unmatched and unresolved bodies without inventing success", () => {
+    const card: ToolCardModel = {
+      kind: "card",
+      sessionId: "parent",
+      callId: "orphan",
+      toolCall: { id: "orphan", name: "read", arguments: {} },
+      rendererKind: "generic",
+      renderer: { kind: "generic" },
+      result: { text: "Unresolved body", isError: true },
+      executionState: "unknown",
+      presentationState: "unknown",
+      isError: true,
+      hasResult: true,
+      completeness: "unknown",
+      isPending: false,
+      isLive: false,
+      agentStatus: null,
     };
-    const { rerender } = render(
-      <AgentMessageList tabId="tab-empty-repick" isActive messages={[]} emptyHelpLines={helpLines} />,
-    );
-
-    expect(screen.getAllByTestId("agent-chat-empty-help")).toHaveLength(1);
-
-    rerender(<AgentMessageList tabId="tab-empty-repick" isActive messages={[message]} emptyHelpLines={helpLines} />);
-    expect(screen.queryAllByTestId("agent-chat-empty-help")).toHaveLength(0);
-
-    rerender(<AgentMessageList tabId="tab-empty-repick" isActive messages={[]} emptyHelpLines={helpLines} />);
-    const helpElements = screen.getAllByTestId("agent-chat-empty-help");
-    expect(helpElements).toHaveLength(1);
-    expect(helpLines).toContain(helpElements[0]?.textContent);
+    const rows: DisplayRow[] = [
+      {
+        kind: "unmatched",
+        id: "unmatched",
+        source: { id: "source", stability: "stable", origin: "live" },
+        toolName: "bash",
+        text: "Unmatched body",
+        isError: true,
+      },
+      { kind: "unresolved", id: "unresolved", callId: "orphan", card },
+      {
+        kind: "unresolved",
+        id: "empty",
+        callId: "empty",
+        card: { ...card, result: null, hasResult: false, isError: false },
+      },
+    ];
+    render(<AgentMessageList tabId="orphan-results" isActive presentation={{ rows }} />);
+    expect(screen.getByText("Unmatched body")).toBeTruthy();
+    expect(screen.getByText("Unresolved body")).toBeTruthy();
+    expect(screen.getAllByText(/read.*unknown/)).toHaveLength(2);
+    expect(screen.queryByText(/succeeded|completed/i)).toBeNull();
+    expect(screen.queryByRole("progressbar")).toBeNull();
   });
-
-  it("shows a working indicator while the turn is still running without a trailing streaming message", () => {
+  it("labels an unknown completion explicitly without a fabricated child target", () => {
+    const onOpen = vi.fn();
     render(
       <AgentMessageList
-        tabId="tab-1"
+        tabId="unknown-completion"
         isActive
-        messages={[
-          {
-            id: "assistant-1",
-            role: "assistant",
-            content: [{ type: "text", text: "Done writing files." }],
-          },
-        ]}
-        isWorking
-      />,
-    );
-
-    expect(screen.getByText("working…")).toBeTruthy();
-  });
-
-  it("hides the bottom working indicator when a working turn header already shows it", () => {
-    render(
-      <AgentMessageList
-        tabId="tab-working-turn"
-        isActive
-        messages={[
-          {
-            id: "assistant-1",
-            role: "assistant",
-            content: [{ type: "text", text: "Done writing files." }],
-          },
-        ]}
-        trailingMessage={{
-          id: "assistant-streaming",
-          role: "assistant",
-          content: [{ type: "text", text: "Streaming…" }],
+        presentation={{
+          rows: [
+            {
+              kind: "completion",
+              id: "completion",
+              completion: { agentName: "Reviewer", outcome: "unknown", text: "sessionId=fake-child" },
+            },
+          ],
         }}
-        isWorking
+        onOpenCompletedSubagent={onOpen}
       />,
     );
-
-    expect(screen.queryByText("working…")).toBeNull();
+    expect(screen.getByText("Status unknown")).toBeTruthy();
+    expect(screen.getByText("Record unavailable")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(onOpen).not.toHaveBeenCalled();
   });
-
-  it("keeps the bottom indicator hidden while the session is running a turn without a streaming message", () => {
-    render(
-      <AgentMessageList
-        tabId="tab-running-turn"
-        isActive
-        messages={[
-          {
-            id: "assistant-1",
-            role: "assistant",
-            content: [{ type: "text", text: "Done writing files." }],
-          },
-        ]}
-        isWorking
-        isTurnRunning
-      />,
-    );
-
-    expect(screen.queryByText("working…")).toBeNull();
+  it("keeps pane-wide scrolling, fixed width, and top alignment", () => {
+    displaySettingsStore.setState({ agentChatWidth: "fixed" });
+    render(<AgentMessageList tabId="fixed" isActive presentation={{ rows: [user("Prompt")] }} />);
+    expect(getComputedStyle(screen.getByTestId("agent-message-scroll-container")).width).toBe("100%");
+    const style = getComputedStyle(screen.getByTestId("agent-message-list-content"));
+    expect(style.maxWidth).toBe("960px");
+    expect(style.marginLeft).toBe("auto");
+    expect(style.justifyContent).toBe("flex-start");
   });
-
-  it("shows the bottom working indicator when running but no turn exists yet", () => {
-    render(
+  it("renders only measured virtual model rows with model identities", () => {
+    const rows: DisplayRow[] = Array.from({ length: 20 }, (_, index) =>
+      index === 19 ? { kind: "turn", turn } : user(`user-${index}`),
+    );
+    render(<AgentMessageList tabId="virtual" isActive presentation={{ rows }} />);
+    expect(screen.getByText("user-0").closest("[data-index]")?.getAttribute("data-index")).toBe("0");
+    expect(screen.queryByText("user-1")).toBeNull();
+    expect(screen.getByTestId("agent-turn").closest("[data-index]")?.getAttribute("data-index")).toBe("19");
+    expect(virtualizerMocks.measureElement).toHaveBeenCalled();
+    const options = virtualizerMocks.useVirtualizer.mock.calls.at(-1)?.[0];
+    expect(options?.getItemKey(0)).toBe("user-0");
+    expect(options?.getItemKey(19)).toBe(turn.id);
+  });
+  it("hides the footer spinner for a working turn, but keeps compaction and pre-chunk feedback", () => {
+    const view = render(
+      <AgentMessageList tabId="working" isActive presentation={{ rows: [{ kind: "turn", turn }] }} isWorking />,
+    );
+    expect(screen.queryByTestId("agent-turn-working-indicator")).toBeNull();
+    view.rerender(
       <AgentMessageList
-        tabId="tab-pre-chunk"
+        tabId="working"
         isActive
-        messages={[{ id: "user-1", role: "user", content: "Prompt" }]}
+        presentation={{ rows: [user("Prompt")] }}
         isWorking
-        isTurnRunning
+        workingLabel="Compacting"
       />,
     );
-
+    expect(screen.getByText("Compacting")).toBeTruthy();
+    view.rerender(<AgentMessageList tabId="working" isActive presentation={{ rows: [user("Prompt")] }} isWorking />);
     expect(screen.getByText("working…")).toBeTruthy();
   });
-
+  it("keeps queue-only content and empty help gating", () => {
+    const view = render(
+      <AgentMessageList
+        tabId="empty"
+        isActive
+        presentation={{ rows: [] }}
+        emptyHelpLines={["Tip one", "Tip two"]}
+        emptyHelpPrefix="Hint"
+      />,
+    );
+    expect(screen.getAllByTestId("agent-chat-empty-help")).toHaveLength(1);
+    expect(screen.getByTestId("agent-chat-empty-help").textContent).toMatch(/^Hint Tip (one|two)$/);
+    view.rerender(
+      <AgentMessageList
+        tabId="empty"
+        isActive
+        presentation={{ rows: [] }}
+        queuedMessages={{ steering: ["queued steering"], followUp: ["queued followup"] }}
+      />,
+    );
+    expect(screen.queryByTestId("agent-chat-empty-state")).toBeNull();
+    expect(screen.getByText("queued steering")).toBeTruthy();
+    expect(screen.getByText("queued followup")).toBeTruthy();
+    view.rerender(
+      <AgentMessageList
+        tabId="empty"
+        isActive
+        presentation={{ rows: [] }}
+        queuedMessages={{ steering: [], followUp: [] }}
+      />,
+    );
+    expect(screen.getByTestId("agent-chat-empty-state")).toBeTruthy();
+  });
+  it("follows same-row content growth only while pinned", () => {
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    const view = render(<AgentMessageList tabId="growth" isActive presentation={{ rows: [user("grow")] }} />);
+    const element = screen.getByTestId("agent-message-scroll-container");
+    Object.defineProperties(element, {
+      clientHeight: { value: 80, configurable: true },
+      scrollHeight: { value: 400, configurable: true },
+      scrollTop: { value: 320, writable: true, configurable: true },
+    });
+    Object.defineProperty(element, "scrollHeight", { value: 500, configurable: true });
+    view.rerender(
+      <AgentMessageList tabId="growth" isActive presentation={{ rows: [{ ...user("grow"), text: "Grown" }] }} />,
+    );
+    expect(element.scrollTop).toBe(500);
+    fireEvent.scroll(element); // consume the programmatic scroll
+    element.scrollTop = 20;
+    fireEvent.scroll(element);
+    view.rerender(
+      <AgentMessageList tabId="growth" isActive presentation={{ rows: [{ ...user("grow"), text: "Grown again" }] }} />,
+    );
+    expect(element.scrollTop).toBe(20);
+  });
   it("keeps a manually scrolled transcript position when messages arrive", () => {
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
@@ -387,11 +215,9 @@ describe("AgentMessageList", () => {
     });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-    const initialMessages: AgentMessageType[] = [
-      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "First" }] },
-    ];
-    const { container, rerender } = render(
-      <AgentMessageList tabId="tab-manual-scroll" isActive messages={initialMessages} />,
+    const initialMessages = [user("first"), user("second")];
+    const { rerender } = render(
+      <AgentMessageList tabId="tab-manual-scroll" isActive presentation={{ rows: initialMessages }} />,
     );
     const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
     Object.defineProperties(scrollContainer, {
@@ -406,10 +232,7 @@ describe("AgentMessageList", () => {
       <AgentMessageList
         tabId="tab-manual-scroll"
         isActive
-        messages={[
-          ...initialMessages,
-          { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] },
-        ]}
+        presentation={{ rows: [...initialMessages, user("third")] }}
       />,
     );
 
@@ -423,23 +246,12 @@ describe("AgentMessageList", () => {
     });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-    const initialMessages: AgentMessageType[] = [
-      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "First" }] },
-      { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] },
-    ];
-    const thirdMessage: AgentMessageType = {
-      id: "assistant-3",
-      role: "assistant",
-      content: [{ type: "text", text: "Third" }],
-    };
-    const fourthMessage: AgentMessageType = {
-      id: "assistant-4",
-      role: "assistant",
-      content: [{ type: "text", text: "Fourth" }],
-    };
+    const initialMessages = [user("first"), user("second")];
+    const thirdMessage = user("thirdMessage");
+    const fourthMessage = user("fourthMessage");
 
     const { rerender } = render(
-      <AgentMessageList tabId="tab-switch-back" isActive={false} messages={initialMessages} />,
+      <AgentMessageList tabId="tab-switch-back" isActive={false} presentation={{ rows: initialMessages }} />,
     );
 
     const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
@@ -452,12 +264,18 @@ describe("AgentMessageList", () => {
     // Content arrives while the tab is still inactive: the hidden surface must
     // not scroll (the activation scroll on switch-back handles it).
     rerender(
-      <AgentMessageList tabId="tab-switch-back" isActive={false} messages={[...initialMessages, thirdMessage]} />,
+      <AgentMessageList
+        tabId="tab-switch-back"
+        isActive={false}
+        presentation={{ rows: [...initialMessages, thirdMessage] }}
+      />,
     );
     expect(scrollContainer.scrollTop).toBe(0);
 
     // Switch back: the activation scroll lands at the (estimated) bottom.
-    rerender(<AgentMessageList tabId="tab-switch-back" isActive messages={[...initialMessages, thirdMessage]} />);
+    rerender(
+      <AgentMessageList tabId="tab-switch-back" isActive presentation={{ rows: [...initialMessages, thirdMessage] }} />,
+    );
     expect(scrollContainer.scrollTop).toBe(1000);
 
     // The browser dispatches the scroll event for the programmatic scroll; in
@@ -471,7 +289,7 @@ describe("AgentMessageList", () => {
       <AgentMessageList
         tabId="tab-switch-back"
         isActive
-        messages={[...initialMessages, thirdMessage, fourthMessage]}
+        presentation={{ rows: [...initialMessages, thirdMessage, fourthMessage] }}
       />,
     );
 
@@ -487,11 +305,11 @@ describe("AgentMessageList", () => {
     });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-    const messages: AgentMessageType[] = [
-      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "First" }] },
-    ];
+    const messages = [user("first"), user("second")];
 
-    const { rerender } = render(<AgentMessageList tabId="tab-noop-activation" isActive={false} messages={messages} />);
+    const { rerender } = render(
+      <AgentMessageList tabId="tab-noop-activation" isActive={false} presentation={{ rows: messages }} />,
+    );
 
     const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
     Object.defineProperties(scrollContainer, {
@@ -504,7 +322,7 @@ describe("AgentMessageList", () => {
 
     // Switch back while already at the bottom: the activation scroll must not
     // leave a programmatic marker behind for the next user scroll.
-    rerender(<AgentMessageList tabId="tab-noop-activation" isActive messages={messages} />);
+    rerender(<AgentMessageList tabId="tab-noop-activation" isActive presentation={{ rows: messages }} />);
     expect(scrollContainer.scrollTop).toBe(320);
 
     // The user scrolls up; this must be evaluated as a user scroll (pinned=false).
@@ -514,11 +332,7 @@ describe("AgentMessageList", () => {
     // A message arriving while the user is away from the bottom must not yank
     // the view back to the bottom.
     rerender(
-      <AgentMessageList
-        tabId="tab-noop-activation"
-        isActive
-        messages={[...messages, { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] }]}
-      />,
+      <AgentMessageList tabId="tab-noop-activation" isActive presentation={{ rows: [...messages, user("third")] }} />,
     );
 
     expect(scrollContainer.scrollTop).toBe(200);
@@ -531,15 +345,9 @@ describe("AgentMessageList", () => {
     });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-    const messages: AgentMessageType[] = [
-      {
-        id: "assistant-1",
-        role: "assistant",
-        content: [{ type: "text", text: "Done writing files." }],
-      },
-    ];
+    const messages = [user("first"), user("second")];
 
-    const { container, rerender } = render(<AgentMessageList tabId="tab-scroll" isActive messages={messages} />);
+    const { rerender } = render(<AgentMessageList tabId="tab-scroll" isActive presentation={{ rows: messages }} />);
 
     const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
     Object.defineProperties(scrollContainer, {
@@ -550,67 +358,9 @@ describe("AgentMessageList", () => {
 
     Object.defineProperty(scrollContainer, "scrollHeight", { value: 160, configurable: true });
 
-    rerender(<AgentMessageList tabId="tab-scroll" isActive messages={messages} isWorking />);
+    rerender(<AgentMessageList tabId="tab-scroll" isActive presentation={{ rows: messages }} isWorking />);
 
     expect(scrollContainer.scrollTop).toBe(160);
-  });
-
-  it("renders queued messages below the message list when queuedMessages is provided", () => {
-    const messages: AgentMessageType[] = [
-      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
-    ];
-
-    render(
-      <AgentMessageList
-        tabId="tab-q"
-        isActive
-        messages={messages}
-        queuedMessages={{ steering: ["steer me"], followUp: ["follow up"] }}
-      />,
-    );
-
-    expect(screen.getByTestId("queued-message-list")).toBeTruthy();
-  });
-
-  it("renders no queued section when queuedMessages is empty", () => {
-    const messages: AgentMessageType[] = [
-      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
-    ];
-
-    render(
-      <AgentMessageList
-        tabId="tab-q-empty"
-        isActive
-        messages={messages}
-        queuedMessages={{ steering: [], followUp: [] }}
-      />,
-    );
-
-    expect(screen.queryByTestId("queued-message-list")).toBeNull();
-  });
-
-  it("renders no queued section when queuedMessages is undefined", () => {
-    const messages: AgentMessageType[] = [
-      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
-    ];
-
-    render(<AgentMessageList tabId="tab-q-undef" isActive messages={messages} />);
-
-    expect(screen.queryByTestId("queued-message-list")).toBeNull();
-  });
-
-  it("renders queued messages even when the message list is otherwise empty", () => {
-    render(
-      <AgentMessageList
-        tabId="tab-q-only"
-        isActive
-        messages={[]}
-        queuedMessages={{ steering: ["pending message"], followUp: [] }}
-      />,
-    );
-
-    expect(screen.getByTestId("queued-message-list")).toBeTruthy();
-    expect(screen.queryByTestId("agent-chat-empty-state")).toBeNull();
   });
 
   describe("scroll-to-bottom button", () => {
@@ -621,11 +371,9 @@ describe("AgentMessageList", () => {
       });
       vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-      const messages: AgentMessageType[] = [
-        { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
-      ];
+      const messages = [user("first"), user("second")];
 
-      render(<AgentMessageList tabId="tab-scroll-btn-hidden" isActive messages={messages} />);
+      render(<AgentMessageList tabId="tab-scroll-btn-hidden" isActive presentation={{ rows: messages }} />);
 
       const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
       Object.defineProperties(scrollContainer, {
@@ -645,13 +393,9 @@ describe("AgentMessageList", () => {
       });
       vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-      const messages: AgentMessageType[] = [
-        { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Line 1" }] },
-        { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Line 2" }] },
-        { id: "assistant-3", role: "assistant", content: [{ type: "text", text: "Line 3" }] },
-      ];
+      const messages = [user("first"), user("second")];
 
-      render(<AgentMessageList tabId="tab-scroll-btn-visible" isActive messages={messages} />);
+      render(<AgentMessageList tabId="tab-scroll-btn-visible" isActive presentation={{ rows: messages }} />);
 
       const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
       Object.defineProperties(scrollContainer, {
@@ -671,12 +415,11 @@ describe("AgentMessageList", () => {
       });
       vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-      const messages: AgentMessageType[] = [
-        { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Line 1" }] },
-        { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Line 2" }] },
-      ];
+      const messages = [user("first"), user("second")];
 
-      const { rerender } = render(<AgentMessageList tabId="tab-scroll-btn-click" isActive messages={messages} />);
+      const { rerender } = render(
+        <AgentMessageList tabId="tab-scroll-btn-click" isActive presentation={{ rows: messages }} />,
+      );
 
       const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
       Object.defineProperties(scrollContainer, {
@@ -698,10 +441,7 @@ describe("AgentMessageList", () => {
         <AgentMessageList
           tabId="tab-scroll-btn-click"
           isActive
-          messages={[
-            ...messages,
-            { id: "assistant-3", role: "assistant", content: [{ type: "text", text: "Line 3" }] },
-          ]}
+          presentation={{ rows: [...messages, user("third")] }}
         />,
       );
       expect(scrollContainer.scrollTop).toBe(500);
@@ -714,12 +454,9 @@ describe("AgentMessageList", () => {
       });
       vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-      const messages: AgentMessageType[] = [
-        { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Line 1" }] },
-        { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Line 2" }] },
-      ];
+      const messages = [user("first"), user("second")];
 
-      render(<AgentMessageList tabId="tab-scroll-manual-back" isActive messages={messages} />);
+      render(<AgentMessageList tabId="tab-scroll-manual-back" isActive presentation={{ rows: messages }} />);
 
       const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
       Object.defineProperties(scrollContainer, {
@@ -736,7 +473,7 @@ describe("AgentMessageList", () => {
     });
 
     it("is not rendered when there are no messages", () => {
-      render(<AgentMessageList tabId="tab-scroll-btn-empty" isActive messages={[]} />);
+      render(<AgentMessageList tabId="tab-scroll-btn-empty" isActive presentation={{ rows: [] }} />);
 
       expect(screen.queryByTestId("scroll-to-bottom-button")).toBeNull();
     });
