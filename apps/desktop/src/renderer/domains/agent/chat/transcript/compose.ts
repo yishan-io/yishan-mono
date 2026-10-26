@@ -173,7 +173,10 @@ export function composeTranscript(previous: TranscriptState, snapshot: Transcrip
 }
 
 /** Elapsed time uses an explicit caller clock, never Date.now(). */
-export function getLiveElapsedMs(turn: TranscriptTurn, nowMs: number): number | null {
+export function getLiveElapsedMs(
+  turn: Pick<TranscriptTurn, "isWorking" | "startedAtMs" | "startTimestampMs">,
+  nowMs: number,
+): number | null {
   const start = turn.startedAtMs ?? turn.startTimestampMs;
   return turn.isWorking && start !== undefined && Number.isFinite(start) ? Math.max(0, nowMs - start) : null;
 }

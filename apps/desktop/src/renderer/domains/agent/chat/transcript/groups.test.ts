@@ -11,6 +11,42 @@ const assistant = (blocks: AssistantObservation["blocks"]): AssistantObservation
 });
 
 describe("structure groups", () => {
+  it("keeps consecutive tool-only messages in one ordered group", () => {
+    const content = buildTurnContent([
+      assistant([{ kind: "tool", callId: "one" }]),
+      { ...assistant([{ kind: "tool", callId: "two" }]), source: { ...source, id: "b" } },
+      { ...assistant([{ kind: "text", text: "done" }]), source: { ...source, id: "c" } },
+    ]);
+    expect(content.blocks).toHaveLength(1);
+    expect(content.blocks[0]).toMatchObject({
+      kind: "toolGroup",
+      callCount: 2,
+      members: [
+        { kind: "tool", callId: "one" },
+        { kind: "tool", callId: "two" },
+      ],
+    });
+    expect(content.summary?.text).toBe("done");
+  });
+
+  it("splits on a standalone thinking message and keeps it as the next tool preamble", () => {
+    const content = buildTurnContent([
+      assistant([{ kind: "tool", callId: "one" }]),
+      { ...assistant([{ kind: "thinking", text: "next plan" }]), source: { ...source, id: "b" } },
+      { ...assistant([{ kind: "tool", callId: "two" }]), source: { ...source, id: "c" } },
+    ]);
+    expect(content.blocks).toHaveLength(2);
+    expect(content.blocks[0]).toMatchObject({ kind: "toolGroup", members: [{ kind: "tool", callId: "one" }] });
+    expect(content.blocks[1]).toMatchObject({
+      kind: "toolGroup",
+      callCount: 1,
+      members: [
+        { kind: "thinking", text: "next plan" },
+        { kind: "tool", callId: "two" },
+      ],
+    });
+  });
+
   it("holds working thinking across narration, splits on text, and leaves trailing thoughts standalone", () => {
     const content = buildTurnContent([
       assistant([

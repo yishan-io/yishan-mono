@@ -2,6 +2,7 @@ import { Box, CircularProgress, IconButton, Paper, Typography } from "@mui/mater
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
+import { getLiveElapsedMs } from "../../../chat/transcript/compose";
 import type { TurnDisplay } from "../../../chat/transcript/presentation.types";
 import { AgentToolCallGroup } from "../tool-calls/AgentToolCallGroup";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
@@ -31,8 +32,8 @@ export function AgentTurn({ turn, workspacePath, onOpenCompletedSubagent }: Agen
   const isExpanded = open || turn.isWorking;
   const workedDurationMs = turn.workedDurationMs;
   const startedAtMs = turn.startedAtMs ?? turn.startTimestampMs;
-  const now = useLiveNow(turn.isWorking && startedAtMs !== undefined);
-  const liveElapsedMs = turn.isWorking && startedAtMs !== undefined ? Math.max(0, now - startedAtMs) : null;
+  const now = useLiveNow(turn.isWorking && Number.isFinite(startedAtMs));
+  const liveElapsedMs = getLiveElapsedMs(turn, now);
   const collapseLabel = isExpanded ? t("agentChat.turn.collapse") : t("agentChat.turn.expand");
   const handleToggle = () => {
     if (turn.isWorking) {

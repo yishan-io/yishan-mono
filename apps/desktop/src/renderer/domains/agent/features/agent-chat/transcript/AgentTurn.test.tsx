@@ -33,6 +33,27 @@ describe("AgentTurn display", () => {
     renderWithAppTheme(<AgentTurn turn={turn} />);
     expect(screen.queryByText("Body")).toBeNull();
   });
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    "does not format a non-finite start (%s) as elapsed time",
+    (startedAtMs) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(10000);
+      renderWithAppTheme(
+        <AgentTurn turn={{ ...turn, id: `invalid-clock-${startedAtMs}`, isWorking: true, startedAtMs }} />,
+      );
+      expect(screen.getByTestId("agent-turn-header").textContent).toBe("working…");
+      act(() => vi.advanceTimersByTime(1000));
+      expect(screen.getByTestId("agent-turn-header").textContent).toBe("working…");
+    },
+  );
+  it("uses the explicit user timestamp when no assistant start is available", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10000);
+    renderWithAppTheme(
+      <AgentTurn turn={{ ...turn, id: "timestamp-clock", isWorking: true, startTimestampMs: 8000 }} />,
+    );
+    expect(screen.getByTestId("agent-turn-header").textContent).toBe("working 2s");
+  });
   it("ticks only from explicit start and preserves absent timing", () => {
     vi.useFakeTimers();
     vi.setSystemTime(10000);
