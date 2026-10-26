@@ -37,6 +37,68 @@ function trackEmptyEntries(count: number) {
 }
 
 describe("identity allocation", () => {
+  it("visits only linear old candidates for 1000 stable-anchor allocations", () => {
+    const count = 1000;
+    let kindVisits = 0;
+    let anchorVisits = 0;
+    const anchors = Array.from({ length: count }, (_, index) => sourceAnchor(`stable-${index}`));
+    const registrations = anchors.map((anchor, index) =>
+      Object.freeze({
+        id: `old-${index}`,
+        get kind() {
+          kindVisits++;
+          return "user";
+        },
+        scope: "session",
+        get anchors() {
+          anchorVisits++;
+          return Object.freeze([anchor]);
+        },
+      }),
+    );
+    const state = previous(registrations);
+    const allocator = createIdentityAllocator(state, new Set(anchors));
+    const ids = anchors.map((anchor) => allocator.allocate("user", "session", [anchor]));
+    console.info("identity stable-candidate counters", { kindVisits, anchorVisits });
+    expect(ids).toEqual(anchors.map((_, index) => `old-${index}`));
+    expect(allocator.finish().counter).toBe(0);
+    expect(allocator.finish().registry).toEqual(
+      anchors.map((anchor, index) => ({ id: `old-${index}`, kind: "user", scope: "session", anchors: [anchor] })),
+    );
+    expect(state.counter).toBe(0);
+    expect(state.registry).toEqual(registrations);
+    expect(Object.isFrozen(state.registry)).toBe(true);
+    expect(kindVisits).toBeLessThanOrEqual(count * 2);
+    expect(anchorVisits).toBeLessThanOrEqual(count * 3);
+  });
+
+  it("isolates collision-prone kinds/scopes and deduplicates anchors without caching eligibility", () => {
+    const state = previous([
+      entry("collision", ["c"], "a", "b"),
+      entry("duplicate", ["b", "b", "c"], "a", ""),
+      entry("same-id", ["c"], "a", ""),
+      entry("same-id", ["d"], "a", ""),
+      entry("other-scope", ["c"], "a", "other"),
+    ]);
+    const eligible = new Set(["b", "c", "d"]);
+    const allocator = createIdentityAllocator(state, eligible);
+    expect(allocator.allocate("a", "", ["c", "c"])).toBe("same-id");
+    eligible.delete("b");
+    expect(allocator.allocate("a", "", ["c", "c"])).toBe("duplicate");
+    expect(allocator.allocate("a", "", ["d"])).toBe(JSON.stringify(["test", "s", 0]));
+    expect(allocator.allocate("a", "b", ["c"])).toBe("collision");
+    expect(allocator.allocate("a", "other", ["c"])).toBe("other-scope");
+    expect(allocator.allocate("a", "", [])).toBe(JSON.stringify(["test", "s", 1]));
+    expect(allocator.finish().counter).toBe(2);
+    expect(state.registry.map((registration) => registration.anchors)).toEqual([
+      ["c"],
+      ["b", "b", "c"],
+      ["c"],
+      ["d"],
+      ["c"],
+    ]);
+  });
+
   it("does not repeatedly visit old entries for 1000 anchorless allocations or stable candidates", () => {
     const count = 1000;
     const tracked = trackEmptyEntries(count);
