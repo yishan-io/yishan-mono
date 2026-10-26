@@ -2,28 +2,17 @@ import { Box, IconButton, Typography } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronRight, LuLayers } from "react-icons/lu";
-import type { AgentToolCallLifecycleState } from "../../../chat/agentChatSubagents";
+import type { GroupDisplay, GroupSummaryItem } from "../../../chat/transcript/presentation.types";
 import { ThinkingBlock } from "../transcript/ThinkingBlock";
-import type { TurnWorkingBlock } from "../transcript/turnModel";
 import { AgentToolCallCard } from "./AgentToolCallCard";
-import { type CompletedSubagentOpenTarget, type ToolCallSummaryItem, summarizeToolCalls } from "./summary";
+import type { CompletedSubagentOpenTarget } from "./summary";
 
 /** Persists expanded tool-run groups across virtualized row unmounts (mirrors savedScrollTopByTabId). */
 const expandedToolRunIds = new Set<string>();
 
 type AgentToolCallGroupProps = {
-  /** Stable identity for this tool run, used for collapse-state persistence. */
-  id: string;
-  /** All working blocks of the turn (thinking + tool calls) in original order. */
-  blocks: TurnWorkingBlock[];
-  /**
-   * Whether the owning turn is still working; while true, the collapsed group
-   * shows the blocks that are still running (tool calls awaiting results,
-   * streaming thoughts) under the summary header.
-   */
+  group: GroupDisplay;
   showRunningBlocks: boolean;
-  /** Composer lifecycle states keyed by Agent tool-call ID. */
-  agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>;
   workspacePath?: string;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
@@ -36,41 +25,15 @@ type AgentToolCallGroupProps = {
  * finished runs show only the summary header.
  */
 export function AgentToolCallGroup({
-  id,
-  blocks,
+  group,
   showRunningBlocks,
-  agentToolCallStates,
   workspacePath,
   onOpenCompletedSubagent,
 }: AgentToolCallGroupProps) {
   const { t } = useTranslation();
+  const { id, members: blocks } = group;
   const [open, setOpen] = useState(() => expandedToolRunIds.has(id));
-  if (blocks.length === 0) {
-    return null;
-  }
-
-  const toolCalls = blocks.filter((block): block is Extract<TurnWorkingBlock, { kind: "toolCall" }> => {
-    return block.kind === "toolCall";
-  });
-  if (toolCalls.length === 0) {
-    // No tool calls in this section — render the thinking blocks standalone
-    // (full width, no stack chrome) so they never read as part of the tool stack.
-    const thinkingBlocks = blocks.filter((block): block is Extract<TurnWorkingBlock, { kind: "thinking" }> => {
-      return block.kind === "thinking";
-    });
-    return (
-      <Box data-testid="agent-tool-call-group" sx={{ mb: 0.5, display: "flex", flexDirection: "column" }}>
-        {thinkingBlocks.map((block) => (
-          <ThinkingBlock
-            key={block.id}
-            thinking={block.thinking}
-            thinkingSignature={block.thinkingSignature}
-            isStreaming={block.isStreaming}
-          />
-        ))}
-      </Box>
-    );
-  }
+  if (blocks.length === 0) return null;
 
   const toggleOpen = () => {
     setOpen((prev) => {
@@ -84,14 +47,9 @@ export function AgentToolCallGroup({
     });
   };
 
-  const summary = formatToolCallSummary(
-    summarizeToolCalls(toolCalls.map((block) => ({ toolCall: block.toolCall, result: block.result }))),
-    t,
-  );
-  const collapsedBlocks = blocks.filter((block) => isCollapsedBlock(block, agentToolCallStates));
-  // Pending Agent cards remain visible, but only an actively running card makes
-  // the header live. Non-Agent calls retain their result-based live behavior.
-  const isLive = showRunningBlocks && blocks.some((block) => isLiveBlock(block, agentToolCallStates));
+  const summary = formatToolCallSummary(group.summaryItems, t);
+  const collapsedBlocks = group.pendingMembers;
+  const isLive = showRunningBlocks && group.isLive;
 
   return (
     <Box data-testid="agent-tool-call-group" sx={{ mb: 0.5 }}>
@@ -166,18 +124,11 @@ export function AgentToolCallGroup({
         >
           {blocks.map((block) =>
             block.kind === "thinking" ? (
-              <ThinkingBlock
-                key={block.id}
-                thinking={block.thinking}
-                thinkingSignature={block.thinkingSignature}
-                isStreaming={block.isStreaming}
-              />
+              <ThinkingBlock key={block.key} model={block} />
             ) : (
               <AgentToolCallCard
-                key={block.id}
-                toolCall={block.toolCall}
-                result={block.result}
-                agentLifecycleState={agentToolCallStates?.get(block.toolCall.id)}
+                key={block.callId}
+                {...block}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
@@ -199,18 +150,11 @@ export function AgentToolCallGroup({
         >
           {collapsedBlocks.map((block) =>
             block.kind === "thinking" ? (
-              <ThinkingBlock
-                key={block.id}
-                thinking={block.thinking}
-                thinkingSignature={block.thinkingSignature}
-                isStreaming={block.isStreaming}
-              />
+              <ThinkingBlock key={block.key} model={block} />
             ) : (
               <AgentToolCallCard
-                key={block.id}
-                toolCall={block.toolCall}
-                result={block.result}
-                agentLifecycleState={agentToolCallStates?.get(block.toolCall.id)}
+                key={block.callId}
+                {...block}
                 workspacePath={workspacePath}
                 onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
@@ -222,40 +166,8 @@ export function AgentToolCallGroup({
   );
 }
 
-function isCollapsedBlock(
-  block: TurnWorkingBlock,
-  agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>,
-): boolean {
-  if (block.kind === "toolCall") {
-    if (block.toolCall.name !== "Agent") {
-      return block.result === null;
-    }
-
-    const lifecycleState = agentToolCallStates?.get(block.toolCall.id);
-    return lifecycleState === undefined ? block.result === null : lifecycleState !== "completed";
-  }
-
-  return block.isStreaming;
-}
-
-function isLiveBlock(
-  block: TurnWorkingBlock,
-  agentToolCallStates?: ReadonlyMap<string, AgentToolCallLifecycleState>,
-): boolean {
-  if (block.kind === "toolCall") {
-    if (block.toolCall.name !== "Agent") {
-      return block.result === null;
-    }
-
-    const lifecycleState = agentToolCallStates?.get(block.toolCall.id);
-    return lifecycleState === undefined ? block.result === null : lifecycleState === "running";
-  }
-
-  return block.isStreaming;
-}
-
 function formatToolCallSummary(
-  items: ToolCallSummaryItem[],
+  items: readonly GroupSummaryItem[],
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
   return items

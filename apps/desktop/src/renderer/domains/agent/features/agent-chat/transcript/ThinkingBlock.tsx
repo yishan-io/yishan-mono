@@ -1,20 +1,14 @@
 import { Box, Collapse, IconButton, Typography } from "@mui/material";
 import { useState } from "react";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
-import type { AgentThinkingSignature } from "../../../../../domains/agent/chat/agentChatTypes";
+import type { ThinkingDisplay } from "../../../chat/transcript/presentation.types";
 
-type ThinkingBlockProps = {
-  thinking: string;
-  thinkingSignature?: string | AgentThinkingSignature;
-  isStreaming: boolean;
-};
+type ThinkingBlockProps = { model: ThinkingDisplay };
 
 /** Renders one assistant thinking block with summary-first disclosure. */
-export function ThinkingBlock({ thinking, thinkingSignature, isStreaming }: ThinkingBlockProps) {
+export function ThinkingBlock({ model }: ThinkingBlockProps) {
   const [open, setOpen] = useState(false);
-  const summaryText = getThinkingSummaryText(thinkingSignature);
-  const hasExpandableDetails = hasExpandableThinkingDetails(thinking, summaryText);
-  const visibleText = summaryText ? formatThinkingSummaryText(summaryText) : null;
+  const { text: thinking, summary: visibleText, hasDetails: hasExpandableDetails, isStreaming } = model;
 
   return (
     <Box sx={{ mb: 0.5 }}>
@@ -90,62 +84,4 @@ export function ThinkingBlock({ thinking, thinkingSignature, isStreaming }: Thin
       ) : null}
     </Box>
   );
-}
-
-function getThinkingSummaryText(thinkingSignature: string | AgentThinkingSignature | undefined): string | null {
-  const parsedSignature = parseThinkingSignature(thinkingSignature);
-  const summaryItems = parsedSignature?.summary;
-  if (!summaryItems || summaryItems.length === 0) {
-    return null;
-  }
-
-  const summaryText = summaryItems
-    .map((summaryItem) => summaryItem.text.trim())
-    .filter((text) => text.length > 0)
-    .join(", ")
-    .trim();
-  return summaryText.length > 0 ? summaryText : null;
-}
-
-function parseThinkingSignature(
-  thinkingSignature: string | AgentThinkingSignature | undefined,
-): AgentThinkingSignature | null {
-  if (!thinkingSignature) {
-    return null;
-  }
-
-  if (typeof thinkingSignature === "string") {
-    try {
-      const parsedSignature = JSON.parse(thinkingSignature) as AgentThinkingSignature;
-      return typeof parsedSignature === "object" && parsedSignature !== null ? parsedSignature : null;
-    } catch {
-      return null;
-    }
-  }
-
-  return thinkingSignature;
-}
-
-function formatThinkingSummaryText(summaryText: string): string {
-  return summaryText.replaceAll("**", "");
-}
-
-function hasExpandableThinkingDetails(thinking: string, summaryText: string | null): boolean {
-  const normalizedThinking = normalizeThinkingComparisonText(thinking);
-  if (!normalizedThinking) {
-    return false;
-  }
-
-  if (!summaryText) {
-    return true;
-  }
-
-  return normalizedThinking !== normalizeThinkingComparisonText(summaryText);
-}
-
-function normalizeThinkingComparisonText(value: string): string {
-  return value
-    .replace(/[,*_`#>\-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }

@@ -48,12 +48,15 @@ export async function startAgentChatSession(opts: {
     const childSessionId = opts.sessionId?.trim() || opts.tabId;
     const parentTabId = opts.subagentParentSessionId ? findTabWithSession(opts.subagentParentSessionId) : undefined;
     const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
-    const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
-    const isChildFinished = parentSession?.finishedSubagents.some(
-      (subagent) => subagent.childSessionId === childSessionId,
-    );
+    const cachedActivity = parentSession?.subagentSnapshots[childSessionId]?.activity;
+    const isChildFinished =
+      parentSession?.transcript.childRuns?.get(childSessionId)?.isComplete ||
+      parentSession?.finishedSubagents.some((subagent) => subagent.childSessionId === childSessionId);
     const isParentTrackingChild =
       !isChildFinished &&
+      cachedActivity !== "terminal" &&
+      cachedActivity !== "interrupted" &&
+      parentSession?.state !== "error" &&
       Boolean(
         parentSession?.subagentLiveTranscripts[childSessionId] ||
           parentSession?.subagentProgressTargets.some((target) => target.childSessionId === childSessionId),
@@ -61,7 +64,11 @@ export async function startAgentChatSession(opts: {
 
     if (isParentTrackingChild) {
       agentChatStore.getState().initSession(opts.tabId, childSessionId);
-      agentChatStore.getState().replaceMessages(opts.tabId, initialMessages);
+      if (parentTabId && parentSession?.subagentSnapshots[childSessionId]) {
+        agentChatStore.getState().applySubagentDetailSnapshot(opts.tabId, parentTabId, childSessionId);
+      } else {
+        agentChatStore.getState().replaceMessages(opts.tabId, []);
+      }
       agentChatStore.getState().setAvailableModels(opts.tabId, []);
       agentChatStore.getState().markStateLoaded(opts.tabId);
       return;

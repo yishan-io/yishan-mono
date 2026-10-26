@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AgentContentBlock, AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
-import { AgentToolCallCard } from "./AgentToolCallCard";
+import { ToolCardFixture as AgentToolCallCard } from "./__tests__/toolCardFixtures";
 
 const CODEGRAPH_TOOLS = [
   "codegraph_search",

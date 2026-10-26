@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import { useState } from "react";
 import { LuBookOpen } from "react-icons/lu";
 import { SkillUsageMarker } from "../SkillUsageMarker";
+import { DefaultToolCard } from "./DefaultToolCard";
 import { ToolLineRange } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
@@ -20,12 +21,13 @@ function getSkillName(readPath: string): string | null {
 }
 
 /** Renders the specialized read tool-call card. */
-export function ReadToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {
+export function ReadToolCard(props: AgentToolCallCardProps) {
+  const { toolCall, result = null, workspacePath, renderer, isError } = props;
   const [open, setOpen] = useState(false);
-  const readPath = typeof toolCall.arguments.path === "string" ? toolCall.arguments.path : null;
-  if (!readPath) {
-    return null;
+  if (renderer.kind !== "read") {
+    return <DefaultToolCard {...props} />;
   }
+  const readPath = renderer.path;
 
   const readSummary = buildReadSummary(readPath, toolCall.arguments.offset, toolCall.arguments.limit, workspacePath);
   const skillName = getSkillName(readPath);
@@ -40,7 +42,7 @@ export function ReadToolCard({ toolCall, result = null, workspacePath }: AgentTo
   );
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
           {skillName ? (
@@ -53,7 +55,7 @@ export function ReadToolCard({ toolCall, result = null, workspacePath }: AgentTo
           )}
         </ToolExpandableSummary>
       </ToolSummaryPanel>
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} label="contents" />
+      <ToolOutputSection open={open} resultText={resultText} isError={isError} label="contents" />
     </ToolCardShell>
   );
 }

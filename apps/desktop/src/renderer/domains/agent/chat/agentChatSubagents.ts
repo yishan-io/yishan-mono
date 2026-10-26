@@ -1,3 +1,4 @@
+import { matchLifecycleRunsToToolCalls } from "./agentChatSubagentMatching";
 import type { AgentMessage } from "./agentChatTypes";
 import { type AgentChatBilledUsage, parseAgentChatBilledUsage } from "./agentChatUsageSummary";
 
@@ -226,42 +227,6 @@ export function resolveAgentToolCallLifecycleStates(
   return states;
 }
 
-function matchLifecycleRunsToToolCalls(
-  lifecycleRuns: Map<string, LifecycleRun>,
-  toolCalls: Array<Omit<RunningSubagentSummary, "state">>,
-  completedForegroundToolCallSourceIndexes: Map<string, number>,
-): Map<string, LifecycleRun> {
-  const lifecycleByToolCallId = new Map<string, LifecycleRun>();
-  const matchedLegacyToolCallIds = new Set<string>();
-
-  for (const lifecycleRun of lifecycleRuns.values()) {
-    if (lifecycleRun.parentToolCallId) {
-      lifecycleByToolCallId.set(lifecycleRun.parentToolCallId, lifecycleRun);
-    }
-  }
-
-  for (const lifecycleRun of lifecycleRuns.values()) {
-    if (lifecycleRun.parentToolCallId) continue;
-    // Legacy lifecycle entries lack a stable parent call ID. Pair each run with
-    // the next unmatched invocation for the same agent; title/summary metadata
-    // is optional and cannot disqualify that deterministic pairing.
-    const matchingToolCall = toolCalls.find((toolCall) => {
-      return (
-        !lifecycleByToolCallId.has(toolCall.rowId) &&
-        !matchedLegacyToolCallIds.has(toolCall.rowId) &&
-        shouldMatchLegacyToolCall(lifecycleRun, toolCall.rowId, completedForegroundToolCallSourceIndexes) &&
-        toolCall.agentName === lifecycleRun.agentName
-      );
-    });
-    if (matchingToolCall) {
-      lifecycleByToolCallId.set(matchingToolCall.rowId, lifecycleRun);
-      matchedLegacyToolCallIds.add(matchingToolCall.rowId);
-    }
-  }
-
-  return lifecycleByToolCallId;
-}
-
 type LifecycleRun = {
   event: AgentSubagentLifecycleEvent;
   agentId: string;
@@ -319,7 +284,8 @@ function collectBackgroundAcceptedToolCallIds(messages: AgentMessage[]): Set<str
       message.role === "toolResult" &&
       message.toolName === "Agent" &&
       message.toolCallId &&
-      message.details?.mode === "background"
+      message.details?.mode === "background" &&
+      message.isError !== true
     ) {
       toolCallIds.add(message.toolCallId);
     }
@@ -334,21 +300,12 @@ function collectCompletedForegroundToolCallIds(messages: AgentMessage[]): Map<st
       message.role === "toolResult" &&
       message.toolName === "Agent" &&
       message.toolCallId &&
-      message.details?.mode !== "background"
+      (message.details?.mode !== "background" || message.isError === true)
     ) {
       toolCallSourceIndexes.set(message.toolCallId, sourceIndex);
     }
   }
   return toolCallSourceIndexes;
-}
-
-function shouldMatchLegacyToolCall(
-  lifecycleRun: LifecycleRun,
-  toolCallId: string,
-  completedForegroundToolCallSourceIndexes: Map<string, number>,
-): boolean {
-  const terminalResultSourceIndex = completedForegroundToolCallSourceIndexes.get(toolCallId);
-  return terminalResultSourceIndex === undefined || terminalResultSourceIndex > lifecycleRun.sourceIndex;
 }
 
 function buildRunningSubagent(lifecycleRun: LifecycleRun): RunningSubagentSummary {

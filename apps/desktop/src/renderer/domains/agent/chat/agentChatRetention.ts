@@ -6,6 +6,7 @@ import {
   countMessageUtf8Bytes,
 } from "./agentChatBudget";
 import type { AgentMessage } from "./agentChatTypes";
+import { removeIncompleteAssociations } from "./transcript/associations";
 
 /** Maximum messages retained per chat tab transcript. */
 export const MAX_MESSAGES_PER_TAB = 1000;
@@ -326,8 +327,9 @@ function getSubagentChildSessionId(message: AgentMessage): string | undefined {
 /**
  * Trims session messages to fit within MAX_MESSAGES_PER_TAB and the aggregate
  * UTF-8 byte budget. Keeps newest messages; a single oversized message is
- * retained rather than leaving the transcript empty. Transient retained tool
- * results are removed when trimming evicts their matching assistant tool call.
+ * retained rather than leaving the transcript empty, unless it belongs to a
+ * known owner/result component split by the suffix. Split components are removed
+ * without refilling. Transient tool results also require a retained owner.
  */
 export function trimSessionMessages(
   messages: AgentMessage[],
@@ -354,10 +356,11 @@ export function trimSessionMessages(
       break;
     }
   }
-  if (!transientToolResultIds || transientToolResultIds.size === 0) return kept;
+  const associated = removeIncompleteAssociations(messages, messages.length - kept.length);
+  if (!transientToolResultIds || transientToolResultIds.size === 0) return associated;
 
-  const retainedToolCallIds = getToolCallIds(kept);
-  return kept.filter(
+  const retainedToolCallIds = getToolCallIds(associated);
+  return associated.filter(
     (message) =>
       !transientToolResultIds.has(message.id) ||
       message.role !== "toolResult" ||
@@ -395,7 +398,10 @@ export function trimSubagentLiveTranscripts(
   for (const childId of cappedChildIds) {
     const messages = transcripts[childId];
     if (!messages) continue;
-    perChildCapped[childId] = messages.slice(-MAX_SUBAGENT_MESSAGES_PER_CHILD);
+    perChildCapped[childId] = removeIncompleteAssociations(
+      messages,
+      Math.max(0, messages.length - MAX_SUBAGENT_MESSAGES_PER_CHILD),
+    );
   }
 
   // 3. Apply aggregate byte budget across children (keep newest = last in sorted order).

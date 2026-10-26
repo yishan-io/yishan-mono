@@ -14,10 +14,9 @@ import type { AgentToolCallCardProps } from "./summary";
  * (server + diagnostic totals or fix outcome) with the raw result text
  * expandable below.
  */
-export function LspToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function LspToolCard({ toolCall, result = null, isError }: AgentToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const resultText = extractResultText(result);
-  const isError = result?.isError === true;
   const isDiagnostics = toolCall.name === "lsp_diagnostics";
 
   const summary = useMemo(

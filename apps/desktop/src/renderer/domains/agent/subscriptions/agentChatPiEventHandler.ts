@@ -23,6 +23,7 @@ import {
   truncateMessageContent,
   truncateUtf8Bytes,
 } from "./agentChatPiEventShared";
+import { parseToolExecution } from "./agentChatToolExecution";
 
 // ─── Pi event handler ─────────────────────────────────────────────────────────
 
@@ -62,6 +63,9 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       break;
 
     case "session_end":
+      flushAgentChatStreamBuffer(tabId);
+      agentChatStore.getState().finalizeStreamingMessage(tabId);
+      agentChatStore.getState().settleToolExecutions(tabId, "interrupted");
       // The owning Pi process exited. The whole tab is invalid: surface the
       // error immediately and treat every previously running sub-agent row as
       // interrupted history (they died with the process). Preserve the partially
@@ -69,7 +73,6 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       // inactive, so a dead process never leaves the turn looking working.
       agentChatStore.getState().setSessionError(tabId, "Agent session ended unexpectedly");
       agentChatStore.getState().setSubagentSessionEndedAt(tabId, Date.now());
-      agentChatStore.getState().finalizeStreamingMessage(tabId);
       agentChatStore.getState().setTurnActive(tabId, false);
       break;
 
@@ -79,6 +82,8 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 
     case "agent_settled":
       flushAgentChatStreamBuffer(tabId);
+      agentChatStore.getState().finalizeStreamingMessage(tabId);
+      agentChatStore.getState().settleToolExecutions(tabId, "settled");
       agentChatStore.getState().clearPendingUiRequest(tabId);
       agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       agentChatStore.getState().setCompactionReason(tabId, null);
@@ -197,8 +202,11 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 
     case "tool_execution_start":
     case "tool_execution_update":
-    case "tool_execution_end":
+    case "tool_execution_end": {
+      const execution = parseToolExecution(event);
+      if (execution) agentChatStore.getState().applyToolExecution(tabId, execution);
       break;
+    }
 
     case "queue_update": {
       const queue = event as unknown as AgentQueueState;
@@ -248,6 +256,9 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       break;
 
     case "turn_end":
+      flushAgentChatStreamBuffer(tabId);
+      agentChatStore.getState().finalizeStreamingMessage(tabId);
+      agentChatStore.getState().settleToolExecutions(tabId, "settled");
       agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       // Extend the bound assistant through all foreground tool work before the
       // turn is marked inactive; a payload-free turn_end still finalizes it.

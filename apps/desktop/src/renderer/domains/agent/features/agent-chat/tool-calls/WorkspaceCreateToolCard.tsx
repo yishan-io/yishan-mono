@@ -9,9 +9,8 @@ import { extractResultText } from "./diff";
 import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized workspace_create tool-call card. */
-export function WorkspaceCreateToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function WorkspaceCreateToolCard({ toolCall, result = null, isError, executionState }: AgentToolCallCardProps) {
   const resultText = extractResultText(result);
-  const isError = result?.isError === true;
   const [open, setOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<"arguments" | "response">(resultText ? "response" : "arguments");
 
@@ -35,7 +34,7 @@ export function WorkspaceCreateToolCard({ toolCall, result = null }: AgentToolCa
 
   // Collapsed summary
   const summaryLabel = branch || "new workspace";
-  const resultIndicator = isError ? "✗ Failed" : resultText ? "✓ Created" : null;
+  const resultIndicator = isError ? "✗ Failed" : executionState === "succeeded" ? "✓ Created" : null;
 
   const suffix = (
     <>

@@ -112,10 +112,9 @@ function trimToolName(name: string): string {
 }
 
 /** Renders the specialized task tool-call card for all six task_* tools. */
-export function TaskToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function TaskToolCard({ toolCall, result = null, isError }: AgentToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const resultText = extractResultText(result);
-  const isError = result?.isError === true;
 
   const summary = buildTaskSummary(toolCall.name, toolCall.arguments);
   const argEntries = buildArgumentsEntries(toolCall.name, toolCall.arguments);

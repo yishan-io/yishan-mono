@@ -6,6 +6,7 @@ import { MONO_FONT_FAMILY } from "@renderer/ui/codeThemes";
 import { useMemo, useState } from "react";
 import { LuFilePlus2, LuPencil } from "react-icons/lu";
 import { useCodeTheme } from "../../../../../domains/settings";
+import { DefaultToolCard } from "./DefaultToolCard";
 import { ToolDiffStats } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
@@ -15,7 +16,8 @@ import { buildWriteToolNewFileDiff, extractResultText, getDiffStats, getToolDisp
 import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized edit/write tool-call card. */
-export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {
+export function DiffToolCard(props: AgentToolCallCardProps) {
+  const { toolCall, result = null, workspacePath, renderer, isError } = props;
   const { palette, themeName, mode } = useCodeTheme();
   const editorFontSize = editorSettingsStore((s) => s.editorFontSize);
   const diffLineHeight = Math.round(editorFontSize * 1.5);
@@ -23,8 +25,7 @@ export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentTo
   const [open, setOpen] = useState(false);
   const isEdit = toolCall.name === "edit";
   const isWrite = toolCall.name === "write";
-  const rawPath = typeof toolCall.arguments.path === "string" ? toolCall.arguments.path : null;
-  const diffToolPath = rawPath ? getToolDisplayPath(rawPath, workspacePath) : null;
+  const diffToolPath = renderer.kind === "diff" ? getToolDisplayPath(renderer.path, workspacePath) : null;
   const patchDiff =
     (typeof result?.details?.patch === "string" ? result.details.patch : "") ||
     (typeof result?.details?.diff === "string" ? result.details.diff : "");
@@ -33,12 +34,12 @@ export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentTo
   const diffStats = patchDiff ? getDiffStats(patchDiff) : null;
   const parsedPatchDiff = useMemo(() => parseToolDiff(patchDiff), [patchDiff]);
   const syntheticWriteDiff = useMemo(() => {
-    if (!isWrite || result?.isError === true || patchDiff || !diffToolPath || writeContent === null) {
+    if (!isWrite || isError || patchDiff || !diffToolPath || writeContent === null) {
       return null;
     }
 
     return buildWriteToolNewFileDiff(diffToolPath, writeContent);
-  }, [diffToolPath, isWrite, patchDiff, result?.isError, writeContent]);
+  }, [diffToolPath, isWrite, patchDiff, isError, writeContent]);
   const renderedDiff = parsedPatchDiff ?? syntheticWriteDiff;
   const rawPatchDiffLines = useMemo(() => {
     const lineCounts = new Map<string, number>();
@@ -53,17 +54,17 @@ export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentTo
   }, [patchDiff]);
   const diffCssVars = useMemo(() => getDiffCssVariablesForPalette(palette, mode), [palette, mode]);
 
-  if (!diffToolPath) {
-    return null;
+  if (renderer.kind !== "diff") {
+    return <DefaultToolCard {...props} />;
   }
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
           <ToolPathSummary
             icon={isEdit ? <LuPencil size={14} /> : <LuFilePlus2 size={14} />}
-            path={diffToolPath}
+            path={getToolDisplayPath(renderer.path, workspacePath)}
             suffix={diffStats ? <ToolDiffStats stats={diffStats} highlight={isEdit} /> : null}
           />
         </ToolExpandableSummary>
@@ -123,7 +124,7 @@ export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentTo
           </Box>
         </Collapse>
       ) : null}
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} label="response" />
+      <ToolOutputSection open={open} resultText={resultText} isError={isError} label="response" />
     </ToolCardShell>
   );
 }

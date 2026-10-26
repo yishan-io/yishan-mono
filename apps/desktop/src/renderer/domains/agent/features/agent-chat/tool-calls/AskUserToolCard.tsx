@@ -32,7 +32,7 @@ type AskUserDetails = {
 };
 
 /** Renders a compact ask_user summary in the agent transcript. */
-export function AskUserToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function AskUserToolCard({ toolCall, result = null, isError }: AgentToolCallCardProps) {
   const { t } = useTranslation();
   const [question, answer] = useMemo(() => {
     const argsQuestion = typeof toolCall.arguments.question === "string" ? toolCall.arguments.question : null;
@@ -43,7 +43,7 @@ export function AskUserToolCard({ toolCall, result = null }: AgentToolCallCardPr
   }, [result?.details, t, toolCall.arguments.question]);
 
   return (
-    <ToolCardShell isError={result?.isError === true} outlined>
+    <ToolCardShell isError={isError} outlined>
       <ToolSummaryPanel>
         <Typography variant="body2" sx={{ mb: 1 }}>
           <Typography component="span" variant="caption" sx={{ color: "text.secondary", mr: 0.75 }}>

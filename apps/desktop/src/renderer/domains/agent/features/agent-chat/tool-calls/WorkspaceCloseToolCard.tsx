@@ -8,19 +8,19 @@ import { extractResultText } from "./diff";
 import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized workspace_close tool-call card. */
-export function WorkspaceCloseToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function WorkspaceCloseToolCard({ toolCall, result = null, isError }: AgentToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const resultText = extractResultText(result);
   const workspaceId = typeof toolCall.arguments.workspaceId === "string" ? toolCall.arguments.workspaceId : "workspace";
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
           <ToolPathSummary icon={<LuFolderX size={14} />} path={workspaceId} />
         </ToolExpandableSummary>
       </ToolSummaryPanel>
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} label="workspace" />
+      <ToolOutputSection open={open} resultText={resultText} isError={isError} label="workspace" />
     </ToolCardShell>
   );
 }

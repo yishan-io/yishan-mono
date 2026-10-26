@@ -1,22 +1,16 @@
 import { Box, CircularProgress, IconButton, Typography } from "@mui/material";
 import { displaySettingsStore } from "@renderer/domains/settings";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
-import { resolveAgentToolCallLifecycleStates } from "../../../../../domains/agent/chat/agentChatSubagents";
-import type {
-  AgentMessage as AgentMessageType,
-  AgentQueueState,
-} from "../../../../../domains/agent/chat/agentChatTypes";
-import { projectSubagentCompletion } from "../../../chat/agentChatCompletion";
+import type { AgentQueueState } from "../../../chat/agentChatTypes";
+import type { TranscriptDisplay } from "../../../chat/transcript/presentation.types";
 import { AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX } from "../chat/AgentChatContentLayout";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 import { AgentChatEmptyState } from "./AgentChatEmptyState";
 import { QueuedMessageList } from "./QueuedMessageList";
 import { VirtualTranscriptRows } from "./VirtualTranscriptRows";
-import type { AgentToolResultMap } from "./helpers";
-import { buildTranscriptRows } from "./turnModel";
 
 const BOTTOM_SCROLL_THRESHOLD_PX = 48;
 const MESSAGE_ESTIMATED_HEIGHT_PX = 180;
@@ -29,13 +23,10 @@ const wasPinnedToBottomByTabId = new Map<string, boolean>();
 type AgentMessageListProps = {
   tabId: string;
   isActive: boolean;
-  messages: AgentMessageType[];
-  trailingMessage?: AgentMessageType | null;
+  presentation: TranscriptDisplay;
   workspacePath?: string;
   isWorking?: boolean;
   workingLabel?: string;
-  /** Whether the session is actively running a turn (not compacting); keeps the last turn's header as the single working indicator. */
-  isTurnRunning?: boolean;
   queuedMessages?: AgentQueueState;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
   /** Short hints shown below the empty-state logo to help users learn the system. */
@@ -44,120 +35,17 @@ type AgentMessageListProps = {
   emptyHelpPrefix?: string;
 };
 
-type DisplayMessage = {
-  message: AgentMessageType;
-  mergedToolResults: AgentToolResultMap;
-  isStreaming: boolean;
-};
-
-type ToolCallOwner = {
-  messageId: string;
-};
-
-function buildDisplayMessages(source: AgentMessageType[]): DisplayMessage[] {
-  const toolCallOwners = new Map<string, ToolCallOwner>();
-  const resultsByAssistantMessageId = new Map<string, AgentToolResultMap>();
-  const mergedResultIds = new Set<string>();
-
-  for (const message of source) {
-    if (message.role !== "assistant" || !Array.isArray(message.content)) {
-      continue;
-    }
-
-    for (const block of message.content) {
-      if (block.type === "toolCall" && !toolCallOwners.has(block.id)) {
-        toolCallOwners.set(block.id, { messageId: message.id });
-      }
-    }
-  }
-
-  for (const message of source) {
-    if (message.role !== "toolResult" || !message.toolCallId) {
-      continue;
-    }
-
-    const toolCallOwner = toolCallOwners.get(message.toolCallId);
-    if (!toolCallOwner || mergedResultIds.has(message.id)) {
-      continue;
-    }
-
-    const mergedResults = resultsByAssistantMessageId.get(toolCallOwner.messageId) ?? {};
-    if (mergedResults[message.toolCallId]) {
-      continue;
-    }
-
-    mergedResults[message.toolCallId] = message;
-    resultsByAssistantMessageId.set(toolCallOwner.messageId, mergedResults);
-    mergedResultIds.add(message.id);
-  }
-
-  return source.flatMap((message) => {
-    if (shouldHideMessage(message) || mergedResultIds.has(message.id)) {
-      return [];
-    }
-
-    return [
-      {
-        message,
-        mergedToolResults: resultsByAssistantMessageId.get(message.id) ?? {},
-        isStreaming: false,
-      },
-    ];
-  });
-}
-
 function isScrolledNearBottom(element: HTMLDivElement): boolean {
   return element.scrollHeight - element.clientHeight - element.scrollTop <= BOTTOM_SCROLL_THRESHOLD_PX;
-}
-
-function hasRenderableAssistantContent(message: AgentMessageType): boolean {
-  if (message.role !== "assistant" || !Array.isArray(message.content)) {
-    return false;
-  }
-
-  return message.content.some((block) => {
-    switch (block.type) {
-      case "text":
-        return block.text.trim().length > 0;
-      case "thinking":
-        return block.thinking.trim().length > 0;
-      case "toolCall":
-        return true;
-    }
-  });
-}
-
-function shouldHideAssistantErrorMessage(message: AgentMessageType): boolean {
-  return (
-    message.role === "assistant" &&
-    message.stopReason === "error" &&
-    typeof message.errorMessage === "string" &&
-    message.errorMessage.trim().length > 0 &&
-    !hasRenderableAssistantContent(message)
-  );
-}
-
-function shouldHideMessage(message: AgentMessageType): boolean {
-  if (shouldHideAssistantErrorMessage(message)) {
-    return true;
-  }
-
-  if (message.role === "custom") {
-    return projectSubagentCompletion(message) === null;
-  }
-
-  return false;
 }
 
 function AgentMessageListComponent({
   tabId,
   isActive,
-  messages,
-  trailingMessage = null,
+  presentation,
   workspacePath,
   isWorking = false,
   workingLabel,
-  isTurnRunning = false,
   queuedMessages,
   onOpenCompletedSubagent,
   emptyHelpLines,
@@ -169,26 +57,9 @@ function AgentMessageListComponent({
   const wasActiveRef = useRef(false);
   const hasRenderedTranscriptRef = useRef(false);
   const programmaticScrollRef = useRef(false);
-  const displayMessages = useMemo(() => {
-    const source = trailingMessage ? [...messages, trailingMessage] : messages;
-    const display = buildDisplayMessages(source);
-    if (trailingMessage) {
-      const trailingDisplayMessage = display.find((displayMessage) => displayMessage.message.id === trailingMessage.id);
-      if (trailingDisplayMessage) {
-        trailingDisplayMessage.isStreaming = true;
-      }
-    }
-    return display;
-  }, [messages, trailingMessage]);
-  const rows = useMemo(() => buildTranscriptRows(displayMessages, isTurnRunning), [displayMessages, isTurnRunning]);
-  const agentToolCallStates = useMemo(
-    () => resolveAgentToolCallLifecycleStates(messages, trailingMessage),
-    [messages, trailingMessage],
-  );
+  const rows = presentation.rows;
   const rowIdsRef = useRef<string[]>([]);
-  rowIdsRef.current = rows.map((row) =>
-    row.kind === "turn" ? row.turn.id : row.kind === "user" ? `user:${row.message.id}` : `completion:${row.id}`,
-  );
+  rowIdsRef.current = rows.map((row) => (row.kind === "turn" ? row.turn.id : row.id));
   const getVirtualMessageKey = useCallback((index: number) => rowIdsRef.current[index] ?? index, []);
   const queuedCount = (queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0);
   const hasWorkingTurn = rows.some((row) => row.kind === "turn" && row.turn.isWorking);
@@ -229,10 +100,10 @@ function AgentMessageListComponent({
 
     // Programmatic pins always land at the bottom, so they never drive the
     // scroll-to-bottom button; only user scrolls do.
-    if (!isProgrammaticScroll && displayMessages.length > 0) {
+    if (!isProgrammaticScroll && rows.length > 0) {
       setIsScrollToBottomVisible(!isScrolledNearBottom(element));
     }
-  }, [displayMessages.length, renderedItemCount, tabId]);
+  }, [rows.length, renderedItemCount, tabId]);
   const scrollToLatestMessage = useCallback(() => {
     const element = scrollRef.current;
     if (!element || renderedItemCount === 0) {
@@ -288,7 +159,7 @@ function AgentMessageListComponent({
   }, [isActive, renderedItemCount, scrollToLatestMessage, tabId]);
 
   useEffect(() => {
-    if (displayMessages.length === 0) {
+    if (presentation.rows.length === 0) {
       setIsScrollToBottomVisible(false);
       return;
     }
@@ -309,7 +180,7 @@ function AgentMessageListComponent({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [displayMessages.length, scrollToLatestMessage, tabId, isActive]);
+  }, [presentation, scrollToLatestMessage, tabId, isActive]);
 
   useEffect(() => {
     const previousRenderedItemCount = previousRenderedItemCountRef.current;
@@ -346,7 +217,7 @@ function AgentMessageListComponent({
     };
   }, [isActive, scrollToLatestMessage, tabId, virtualMessageTotalSize]);
 
-  if (displayMessages.length === 0 && queuedCount === 0) {
+  if (rows.length === 0 && queuedCount === 0) {
     return <AgentChatEmptyState helpLines={emptyHelpLines} helpPrefix={emptyHelpPrefix} />;
   }
 
@@ -388,7 +259,6 @@ function AgentMessageListComponent({
             totalSize={virtualMessageTotalSize}
             measureElement={virtualizer.measureElement}
             workspacePath={workspacePath}
-            agentToolCallStates={agentToolCallStates}
             onOpenCompletedSubagent={onOpenCompletedSubagent}
           />
           {isWorking && !hasWorkingTurn && (
@@ -420,7 +290,7 @@ function AgentMessageListComponent({
           <Box ref={bottomSentinelRef} aria-hidden sx={{ height: 1, flexShrink: 0 }} />
         </Box>
       </Box>
-      {isScrollToBottomVisible && displayMessages.length > 0 && (
+      {isScrollToBottomVisible && rows.length > 0 && (
         <IconButton
           data-testid="scroll-to-bottom-button"
           aria-label={t("agentChat.scrollToBottom")}

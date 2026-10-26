@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { useMemo, useState } from "react";
 import { LuSearch } from "react-icons/lu";
+import { DefaultToolCard } from "./DefaultToolCard";
 import { ToolSummaryBadge } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
@@ -11,19 +12,20 @@ import { parseMemorySearchMatches } from "./memorySearch";
 import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized memory_search tool-call card. */
-export function MemorySearchToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function MemorySearchToolCard(props: AgentToolCallCardProps) {
+  const { result = null, renderer, isError } = props;
   const [open, setOpen] = useState(false);
-  const memorySearchQuery = typeof toolCall.arguments.query === "string" ? toolCall.arguments.query : null;
   const memorySearchCount = typeof result?.details?.count === "number" ? result.details.count : null;
   const resultText = extractResultText(result);
   const memorySearchMatches = useMemo(() => parseMemorySearchMatches(resultText), [resultText]);
 
-  if (!memorySearchQuery) {
-    return null;
+  if (renderer.kind !== "memorySearch") {
+    return <DefaultToolCard {...props} />;
   }
+  const memorySearchQuery = renderer.query;
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
           <ToolPathSummary
@@ -37,7 +39,7 @@ export function MemorySearchToolCard({ toolCall, result = null }: AgentToolCallC
           />
         </ToolExpandableSummary>
       </ToolSummaryPanel>
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} label="results">
+      <ToolOutputSection open={open} resultText={resultText} isError={isError} label="results">
         {memorySearchMatches.length > 0 ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {memorySearchMatches.map((match) => (

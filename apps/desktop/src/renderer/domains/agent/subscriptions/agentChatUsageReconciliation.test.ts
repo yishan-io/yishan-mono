@@ -32,8 +32,10 @@ const parentStats = {
 };
 
 function deliverHistory(): void {
+  agentChatStore.getState().recordHistoryRequest(tabId, sessionId, "history-fixture");
   handlePiResponse(tabId, sessionId, {
     command: "get_messages",
+    id: "history-fixture",
     success: true,
     data: {
       messages: [
@@ -173,8 +175,10 @@ describe("agent-chat usage reconciliation", () => {
   it("gives a live same-ID stream precedence over stale partial history", () => {
     agentChatStore.getState().initSession(tabId, sessionId);
     handleAgentPiEvent({ tabId, sessionId, workspaceId: "workspace", event: { type: "turn_start" } });
+    agentChatStore.getState().recordHistoryRequest(tabId, sessionId, "history-fixture");
     handlePiResponse(tabId, sessionId, {
       command: "get_messages",
+      id: "history-fixture",
       success: true,
       data: {
         messages: [

@@ -1,6 +1,6 @@
 import { getSingularPatch, parseDiffFromFile } from "@pierre/diffs";
 import type { FileDiffMetadata } from "@pierre/diffs";
-import type { AgentContentBlock, AgentMessage } from "../../../chat/agentChatTypes";
+import type { ResultDisplay } from "../../../chat/transcript/presentation.types";
 
 /** Simple line-change counts derived from a unified diff patch. */
 export type DiffStats = {
@@ -14,35 +14,9 @@ export type ReadSummary = {
   lineRange: string | null;
 };
 
-/** Extracts plain text content from a merged tool result message. */
-export function extractResultText(message: AgentMessage | null | undefined): string {
-  if (!message) {
-    return "";
-  }
-  const { content } = message;
-  if (typeof content === "string") {
-    return content;
-  }
-  if (!Array.isArray(content)) {
-    return "";
-  }
-
-  return content
-    .filter(isTextContentBlock)
-    .map((block) => block.text)
-    .join("\n");
-}
-
-function isTextContentBlock(block: unknown): block is Extract<AgentContentBlock, { type: "text" }> {
-  return (
-    typeof block === "object" &&
-    block !== null &&
-    !Array.isArray(block) &&
-    "type" in block &&
-    "text" in block &&
-    block.type === "text" &&
-    typeof block.text === "string"
-  );
+/** Reads already-projected result text without interpreting protocol content. */
+export function extractResultText(result: ResultDisplay | null | undefined): string {
+  return result?.text ?? "";
 }
 
 /** Returns the final path segment for compact labels. */

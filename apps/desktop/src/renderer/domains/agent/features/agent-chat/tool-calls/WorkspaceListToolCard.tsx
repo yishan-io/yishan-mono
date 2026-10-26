@@ -10,7 +10,7 @@ import { parseWorkspaceListCount } from "./lsp";
 import type { AgentToolCallCardProps } from "./summary";
 
 /** Renders the specialized workspace_list tool-call card. */
-export function WorkspaceListToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function WorkspaceListToolCard({ toolCall, result = null, isError }: AgentToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const resultText = extractResultText(result);
   const workspaceCount = useMemo(() => parseWorkspaceListCount(resultText), [resultText]);
@@ -31,13 +31,13 @@ export function WorkspaceListToolCard({ toolCall, result = null }: AgentToolCall
   const suffix = projectId !== null ? <ToolSummaryBadge label={projectId} color="primary.main" /> : null;
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
           <ToolPathSummary icon={<LuLayoutGrid size={14} />} path={summaryLabel} suffix={suffix} />
         </ToolExpandableSummary>
       </ToolSummaryPanel>
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} label="workspaces" />
+      <ToolOutputSection open={open} resultText={resultText} isError={isError} label="workspaces" />
     </ToolCardShell>
   );
 }

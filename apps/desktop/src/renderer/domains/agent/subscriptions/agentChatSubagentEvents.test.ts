@@ -186,6 +186,8 @@ describe("parseSubagentLiveTranscripts", () => {
           },
         ],
         thinkingLevel: "low",
+        status: "running",
+        coverage: { completeness: "unknown", omittedMessages: 0, reasons: [] },
       },
     ]);
   });
@@ -346,6 +348,7 @@ describe("parseSubagentLiveTranscripts", () => {
 
 describe("applySubagentLiveTranscripts", () => {
   function seedSubagentDetailTab(): void {
+    agentChatStore.getState().initSession("parent-tab", "parent-session");
     tabStore.setState(
       {
         ...tabStore.getState(),

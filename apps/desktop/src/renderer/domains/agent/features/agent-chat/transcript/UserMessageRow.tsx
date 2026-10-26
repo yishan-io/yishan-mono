@@ -2,9 +2,8 @@ import { Box, IconButton, Paper, Typography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuChevronUp } from "react-icons/lu";
-import type { AgentMessage } from "../../../../../domains/agent/chat/agentChatTypes";
+import type { DisplayRow } from "../../../chat/transcript/presentation.types";
 import { UserMessageContent } from "./UserMessageContent";
-import { extractMessageText } from "./helpers";
 
 /** Collapsed height cap for long user messages; taller content gets a gradient + expand overlay. */
 const MAX_COLLAPSED_HEIGHT_PX = 160;
@@ -15,7 +14,7 @@ const FADE_HEIGHT_PX = 56;
 const expandedUserMessageIds = new Set<string>();
 
 type UserMessageRowProps = {
-  message: AgentMessage;
+  row: Pick<Extract<DisplayRow, { kind: "user" }>, "id" | "text" | "timestampMs">;
 };
 
 /**
@@ -25,24 +24,24 @@ type UserMessageRowProps = {
  * messages are clamped to a max height with a bottom gradient and an overlay
  * expand button; clicking it reveals the full text.
  */
-export function UserMessageRow({ message }: UserMessageRowProps) {
+export function UserMessageRow({ row }: UserMessageRowProps) {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(() => expandedUserMessageIds.has(message.id));
+  const [expanded, setExpanded] = useState(() => expandedUserMessageIds.has(row.id));
   const handleToggleExpanded = () => {
     setExpanded((prev) => {
       const next = !prev;
       if (next) {
-        expandedUserMessageIds.add(message.id);
+        expandedUserMessageIds.add(row.id);
       } else {
-        expandedUserMessageIds.delete(message.id);
+        expandedUserMessageIds.delete(row.id);
       }
       return next;
     });
   };
   const contentRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
-  const messageText = extractMessageText(message.content);
-  const humanTimestamp = typeof message.timestamp === "number" ? formatHumanMessageTime(message.timestamp) : null;
+  const messageText = row.text;
+  const humanTimestamp = typeof row.timestampMs === "number" ? formatHumanMessageTime(row.timestampMs) : null;
 
   useEffect(() => {
     const element = contentRef.current;

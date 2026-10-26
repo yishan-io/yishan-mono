@@ -11,7 +11,7 @@ import type { AgentToolCallCardProps } from "./summary";
 const MEMORY_STORE_PREFIX = "Stored memory entry in ";
 
 /** Renders the specialized memory_store tool-call card. */
-export function MemoryStoreToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function MemoryStoreToolCard({ toolCall, result = null, isError }: AgentToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const resultText = extractResultText(result);
   const memoryStoreSection =
@@ -29,7 +29,7 @@ export function MemoryStoreToolCard({ toolCall, result = null }: AgentToolCallCa
   const memoryStoreFileLabel = memoryStoreFilePath ? getPathBaseName(memoryStoreFilePath) : "MEMORY.md";
 
   return (
-    <ToolCardShell isError={result?.isError === true}>
+    <ToolCardShell isError={isError}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
           <ToolPathSummary
@@ -39,7 +39,7 @@ export function MemoryStoreToolCard({ toolCall, result = null }: AgentToolCallCa
           />
         </ToolExpandableSummary>
       </ToolSummaryPanel>
-      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} />
+      <ToolOutputSection open={open} resultText={resultText} isError={isError} />
     </ToolCardShell>
   );
 }

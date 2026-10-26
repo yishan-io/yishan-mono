@@ -3,18 +3,20 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPanelRightOpen } from "react-icons/lu";
-import type { SubagentCompletion } from "../../../chat/agentChatCompletion";
+import type { CompletionContent } from "../../../chat/transcript/types";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/summary";
 
 type SubagentCompletionRowProps = {
-  completion: SubagentCompletion;
+  completion: CompletionContent;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
 /** A quiet terminal notice linking to the existing child record, never to prose-derived paths. */
 export function SubagentCompletionRow({ completion, onOpenCompletedSubagent }: SubagentCompletionRowProps) {
   const { t } = useTranslation();
-  const { agentId, agentName, status, sessionId } = completion;
+  const { agentId, childSessionId: sessionId, outcome } = completion;
+  const agentName = completion.agentName ?? agentId ?? "agent";
+  const status = outcome === "succeeded" ? "completed" : outcome === "interrupted" ? "cancelled" : outcome;
   const canOpen = Boolean(sessionId && onOpenCompletedSubagent);
   const handleOpen = useCallback(async () => {
     if (!sessionId || !onOpenCompletedSubagent) return;

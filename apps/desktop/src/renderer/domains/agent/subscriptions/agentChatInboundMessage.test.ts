@@ -410,6 +410,8 @@ describe("agentChatInboundMessage — bounded normalization behavior", () => {
       const sessionId = "session-history-large";
       agentChatStore.getState().initSession(tabId, sessionId);
 
+      agentChatStore.getState().recordHistoryRequest(tabId, sessionId, "history-fixture");
+
       // 50 KiB is under the 64 KiB PER_MESSAGE_UTF8_BYTES budget — retained as-is.
       const largeText = largeAsciiText(50 * 1024);
 
@@ -420,6 +422,7 @@ describe("agentChatInboundMessage — bounded normalization behavior", () => {
         event: {
           type: "response",
           command: "get_messages",
+          id: "history-fixture",
           success: true,
           data: {
             messages: [
