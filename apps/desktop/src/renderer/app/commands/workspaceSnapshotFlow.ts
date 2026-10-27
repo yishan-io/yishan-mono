@@ -1,6 +1,11 @@
 import { listOrganizations } from "@renderer/domains/organization";
 import type { ProjectRecord } from "@renderer/domains/project";
-import { hydrateProjectFilter, listProjectsByOrg, projectStore } from "@renderer/domains/project";
+import {
+  captureProjectSnapshotFence,
+  hydrateProjectFilter,
+  listProjectsByOrg,
+  projectStore,
+} from "@renderer/domains/project";
 
 import { sessionStore } from "@renderer/domains/session";
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
@@ -50,6 +55,7 @@ export async function loadWorkspaceSnapshot(options?: {
   diagnostics?: boolean;
   throwOnError?: boolean;
 }): Promise<void> {
+  const isMutationFenceCurrent = captureProjectSnapshotFence();
   const requestId = ++latestWorkspaceSnapshotRequestId;
   let outcome: "applied" | "error" | "skipped" = "skipped";
   let stage = "organizations";
@@ -78,6 +84,10 @@ export async function loadWorkspaceSnapshot(options?: {
       reason = "request-superseded";
       return false;
     }
+    if (!isMutationFenceCurrent()) {
+      reason = "project-mutation";
+      return false;
+    }
     return true;
   };
   const projectIdsAtRequestStart = new Set(projectStore.getState().projects.map((project) => project.id));
@@ -85,6 +95,7 @@ export async function loadWorkspaceSnapshot(options?: {
   const previousSelectedWorkspaceId = workbenchNavigationStore.getState().activeWorkspaceId;
 
   try {
+    if (!isCurrentRequest()) return;
     const organizations =
       sessionState.organizations.length > 0 ? sessionState.organizations : await listOrganizations();
     if (!isCurrentRequest()) return;
@@ -115,6 +126,7 @@ export async function loadWorkspaceSnapshot(options?: {
 
       stage = "sync-tabs";
       await syncTabStoreWithWorkspace(previousWorkspaces);
+      if (!isCurrentRequest()) return;
       outcome = "applied";
       stage = "complete";
       reason = "local-folders-only";
@@ -201,13 +213,16 @@ export async function loadWorkspaceSnapshot(options?: {
       .reconcileHydratedWorkspaceCreateProgress(workspaceStore.getState().workspaces);
     stage = "sync-tabs";
     await syncTabStoreWithWorkspace(previousWorkspaces);
+    if (!isCurrentRequest()) return;
 
     // Warm up workspaces for currently pinned projects so the daemon has them
     // open and indexed for restart recovery. Already-open workspaces are skipped.
     stage = "warmup";
     const pinnedProjectIds = projectStore.getState().displayProjectIds;
     if (pinnedProjectIds.length > 0) {
-      void warmupWorkspacesForProjects(pinnedProjectIds);
+      // Keep the scope tracker alive through RPC acquisition; warmup handles best-effort errors.
+      await warmupWorkspacesForProjects(pinnedProjectIds, isCurrentRequest);
+      if (!isCurrentRequest()) return;
     }
     outcome = "applied";
     stage = "complete";

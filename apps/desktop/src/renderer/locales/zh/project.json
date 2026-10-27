@@ -35,6 +35,14 @@
       "delete": "\u5220\u9664\u9879\u76ee",
       "register": "\u6ce8\u518c\u9879\u76ee"
     },
+    "config": {
+      "localPath": "本地路径",
+      "worktreeLocation": "工作区创建位置",
+      "chooseLocalFolder": "选择本地文件夹",
+      "chooseWorktreeFolder": "选择工作区文件夹",
+      "openLocalPath": "在 Finder 中打开本地路径",
+      "saveFailed": "保存项目配置失败：{{message}}"
+    },
     "delete": {
       "confirm": "\u786e\u8ba4\u5220\u9664\u9879\u76ee '{{name}}' \u53ca\u5176\u6240\u6709\u5b50\u5de5\u4f5c\u533a\uff1f"
     },

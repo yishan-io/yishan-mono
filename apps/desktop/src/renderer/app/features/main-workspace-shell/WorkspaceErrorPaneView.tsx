@@ -19,6 +19,7 @@ export function WorkspaceErrorPaneView({ workspace }: WorkspaceErrorPaneViewProp
   const {
     pendingProjectDeletion,
     isDeletingProject,
+    projectDeletionError,
     handleRequestProjectDeletion,
     handleCancelProjectDeletion,
     handleConfirmProjectDeletion,
@@ -37,6 +38,7 @@ export function WorkspaceErrorPaneView({ workspace }: WorkspaceErrorPaneViewProp
         open={Boolean(pendingProjectDeletion)}
         repoName={pendingProjectDeletion?.projectName ?? ""}
         isDeleting={isDeletingProject}
+        errorMessage={projectDeletionError}
         onCancel={handleCancelProjectDeletion}
         onConfirm={handleConfirmProjectDeletion}
       />

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
@@ -19,7 +20,10 @@ type UseProjectDeletionFlowInput = {
 export function useProjectDeletionFlow({ projects, deleteProject }: UseProjectDeletionFlowInput) {
   const [pendingProjectDeletion, setPendingProjectDeletion] = useState<PendingProjectDeletion | null>(null);
 
+  const [projectDeletionError, setProjectDeletionError] = useState<string>();
+
   const deleteProjectMutation = useMutation({
+    onMutate: () => setProjectDeletionError(undefined),
     mutationFn: async (projectId: string) => {
       await deleteProject(projectId);
     },
@@ -28,6 +32,7 @@ export function useProjectDeletionFlow({ projects, deleteProject }: UseProjectDe
     },
     onError: (error) => {
       console.error("Failed to delete project", error);
+      setProjectDeletionError(getErrorMessage(error));
     },
   });
 
@@ -40,6 +45,7 @@ export function useProjectDeletionFlow({ projects, deleteProject }: UseProjectDe
         return;
       }
 
+      setProjectDeletionError(undefined);
       setPendingProjectDeletion({
         projectId,
         projectName: project.name,
@@ -66,6 +72,7 @@ export function useProjectDeletionFlow({ projects, deleteProject }: UseProjectDe
 
   return {
     pendingProjectDeletion,
+    projectDeletionError,
     isDeletingProject,
     handleRequestProjectDeletion,
     handleCancelProjectDeletion,

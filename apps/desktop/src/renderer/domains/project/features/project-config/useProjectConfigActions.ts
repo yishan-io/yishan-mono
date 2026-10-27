@@ -1,7 +1,8 @@
 import { openEntryInExternalApp } from "@renderer/domains/files";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "@renderer/domains/files";
+import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useMutation } from "@tanstack/react-query";
-import type { Dispatch, SetStateAction } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useEffectEvent } from "react";
 import { updateProjectConfig } from "../../commands/projectCommands";
 import { openLocalFolderDialog } from "../../host/folderPicker";
 import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../ui/projectIcons";
@@ -13,6 +14,7 @@ type ProjectLike = {
 };
 
 type UseProjectConfigActionsInput = {
+  open: boolean;
   repo?: ProjectLike;
   draft: ProjectConfigDraft;
   setDraft: Dispatch<SetStateAction<ProjectConfigDraft>>;
@@ -21,6 +23,7 @@ type UseProjectConfigActionsInput = {
 };
 
 export function useProjectConfigActions({
+  open,
   repo,
   draft,
   setDraft,
@@ -32,6 +35,7 @@ export function useProjectConfigActions({
       projectId: string;
       config: {
         name: string;
+        localPath: string;
         worktreePath: string;
         contextEnabled?: boolean;
         icon?: string;
@@ -50,6 +54,25 @@ export function useProjectConfigActions({
       console.error("Failed to update project config", error);
     },
   });
+
+  const { reset } = updateProjectConfigMutation;
+  const dismissSaveError = useEffectEvent(() => {
+    // Resetting a pending mutation detaches its observer and loses the eventual error.
+    if (!updateProjectConfigMutation.isPending) {
+      reset();
+    }
+  });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Effect Events are non-reactive; reset only at dialog/project session boundaries.
+  useEffect(() => {
+    dismissSaveError();
+  }, [open, repo?.id]);
+
+  const handlePickLocalFolder = async () => {
+    const selectedPath = await openLocalFolderDialog(draft.localPath || undefined);
+    if (selectedPath) {
+      setDraft((previous) => ({ ...previous, localPath: selectedPath }));
+    }
+  };
 
   const handlePickWorktreeFolder = async () => {
     const selectedPath = await openLocalFolderDialog(draft.worktreePath || undefined);
@@ -74,7 +97,7 @@ export function useProjectConfigActions({
   };
 
   const handleSave = () => {
-    if (!repo) {
+    if (!repo || updateProjectConfigMutation.isPending) {
       return;
     }
 
@@ -83,6 +106,7 @@ export function useProjectConfigActions({
       projectId: repo.id,
       config: {
         name: draft.name.trim() || repo.name,
+        localPath: draft.localPath,
         worktreePath: draft.worktreePath.trim(),
         contextEnabled: draft.contextEnabled,
         icon: findProjectIconOption(draft.icon)?.id ?? DEFAULT_PROJECT_ICON_ID,
@@ -101,6 +125,8 @@ export function useProjectConfigActions({
 
   return {
     isSaving: updateProjectConfigMutation.isPending,
+    saveError: updateProjectConfigMutation.isError ? getErrorMessage(updateProjectConfigMutation.error) : null,
+    handlePickLocalFolder,
     handlePickWorktreeFolder,
     handleOpenRepoLocalPath,
     handleSave,

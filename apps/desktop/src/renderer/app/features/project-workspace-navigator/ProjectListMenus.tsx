@@ -73,6 +73,7 @@ type ProjectListMenusProps = {
   setPendingWorkspaceDeletion: Dispatch<SetStateAction<PendingWorkspaceDeletion | null>>;
   pendingProjectDeletion: PendingProjectDeletion;
   isDeletingProject: boolean;
+  projectDeletionError?: string;
   handleCancelProjectDeletion: () => void;
   handleConfirmProjectDeletion: () => void;
   isWorkspaceInfoOpen: boolean;
@@ -171,6 +172,7 @@ export function ProjectListMenus(props: ProjectListMenusProps) {
         setPendingWorkspaceDeletion={props.setPendingWorkspaceDeletion}
         pendingProjectDeletion={props.pendingProjectDeletion}
         isDeletingProject={props.isDeletingProject}
+        projectDeletionError={props.projectDeletionError}
         handleCancelProjectDeletion={props.handleCancelProjectDeletion}
         handleConfirmProjectDeletion={props.handleConfirmProjectDeletion}
         isWorkspaceInfoOpen={props.isWorkspaceInfoOpen}

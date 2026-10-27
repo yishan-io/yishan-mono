@@ -42,6 +42,9 @@ export const createProjectBodySchema = z.object({
 
 export const updateProjectBodySchema = z
   .object({
+    localPath: nonEmptyStringSchema.optional(),
+    workspaceId: nonEmptyStringSchema.optional(),
+    nodeId: nonEmptyStringSchema.optional(),
     name: nonEmptyStringSchema.optional(),
     icon: nonEmptyStringSchema.optional(),
     color: nonEmptyStringSchema.optional(),
@@ -58,6 +61,12 @@ export const updateProjectBodySchema = z
     contextEnabled: z.boolean().optional(),
   })
   .strict()
+  .refine(
+    ({ localPath, workspaceId, nodeId }) =>
+      [localPath, workspaceId, nodeId].every((field) => field === undefined) ||
+      [localPath, workspaceId, nodeId].every((field) => field !== undefined),
+    { message: "localPath, workspaceId and nodeId must be provided together" },
+  )
   .refine((value) => Object.values(value).some((item) => item !== undefined), {
     message: "At least one field must be provided",
   });

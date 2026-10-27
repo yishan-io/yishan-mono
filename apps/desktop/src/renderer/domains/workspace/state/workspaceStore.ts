@@ -12,6 +12,15 @@ export const workspaceStore = create<WorkspaceStoreState>()(
     immer((set, get) => ({
       workspaces: initialWorkspaceState.workspaces,
       orderedWorkspaceIds: [],
+      applyPrimaryWorkspacePath: ({ workspaceId, worktreePath }) => {
+        set((state) => {
+          const workspace = state.workspaces.find((candidate) => candidate.id === workspaceId);
+          if (!workspace || workspace.kind !== "local") return;
+          workspace.worktreePath = worktreePath;
+          workspace.state = "active";
+          workspace.health = undefined;
+        });
+      },
       ...createWorkspaceStoreActions(set, get),
     })),
     {

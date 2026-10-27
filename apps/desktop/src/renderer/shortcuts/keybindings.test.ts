@@ -99,6 +99,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       removeWorkspace: vi.fn(),
       renameWorkspace: vi.fn(),
       renameWorkspaceBranch: vi.fn(),
+      applyPrimaryWorkspacePath: vi.fn(),
       reorderWorkspace: vi.fn(),
       setWorkspaceGitChangesCount: vi.fn(),
       setWorkspaceGitChangeTotals: vi.fn(),

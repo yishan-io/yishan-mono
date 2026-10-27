@@ -6,6 +6,7 @@ type ProjectDeleteDialogViewProps = {
   open: boolean;
   repoName: string;
   isDeleting: boolean;
+  errorMessage?: string;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -15,6 +16,7 @@ export function ProjectDeleteDialogView({
   open,
   repoName,
   isDeleting,
+  errorMessage,
   onCancel,
   onConfirm,
 }: ProjectDeleteDialogViewProps) {
@@ -24,6 +26,7 @@ export function ProjectDeleteDialogView({
   return (
     <ConfirmationDialog
       open={open}
+      errorMessage={errorMessage}
       title={t("project.actions.delete")}
       description={t("project.delete.confirm", { name: repoName })}
       confirmLabel={

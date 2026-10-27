@@ -4,7 +4,6 @@ import {
   Button,
   FormControlLabel,
   IconButton,
-  InputAdornment,
   Stack,
   Switch,
   TextField,
@@ -12,9 +11,10 @@ import {
   Typography,
 } from "@mui/material";
 import type { Dispatch, SetStateAction } from "react";
-import { LuCircleHelp, LuExternalLink, LuFolderOpen } from "react-icons/lu";
+import { LuCircleHelp } from "react-icons/lu";
 import { renderProjectIcon } from "../../../ui/projectIcons";
 import type { ProjectConfigDraft } from "../useProjectConfigFormState";
+import { ProjectConfigPathSection } from "./ProjectConfigPathSection";
 import { PROJECT_CONFIG_ICON_BG_COLOR_PRESETS } from "./projectConfigDialogConstants";
 
 type ProjectConfigGeneralSectionProps = {
@@ -22,7 +22,6 @@ type ProjectConfigGeneralSectionProps = {
   isSaving: boolean;
   repoGitUrl: string;
   repoKey: string;
-  repoLocalPath: string;
   taskPrefix: string | null;
   taskPrefixError: string | null;
   isEnsuringTaskPrefix: boolean;
@@ -30,6 +29,7 @@ type ProjectConfigGeneralSectionProps = {
   setIconAnchorEl: Dispatch<SetStateAction<HTMLElement | null>>;
   trimmedRepoLocalPath: string;
   onOpenRepoLocalPath: () => Promise<void>;
+  onPickLocalFolder: () => Promise<void>;
   onPickWorktreeFolder: () => Promise<void>;
   onEnsureTaskPrefix: () => Promise<void>;
   onCopyTaskPrefix: () => Promise<void>;
@@ -40,7 +40,6 @@ export function ProjectConfigGeneralSection({
   isSaving,
   repoGitUrl,
   repoKey,
-  repoLocalPath,
   taskPrefix,
   taskPrefixError,
   isEnsuringTaskPrefix,
@@ -48,6 +47,7 @@ export function ProjectConfigGeneralSection({
   setIconAnchorEl,
   trimmedRepoLocalPath,
   onOpenRepoLocalPath,
+  onPickLocalFolder,
   onPickWorktreeFolder,
   onEnsureTaskPrefix,
   onCopyTaskPrefix,
@@ -55,13 +55,7 @@ export function ProjectConfigGeneralSection({
   return (
     <Stack spacing={2}>
       <Box>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mb: 1,
-          }}
-        >
+        <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
           Repo name
         </Typography>
         <TextField
@@ -78,13 +72,7 @@ export function ProjectConfigGeneralSection({
         />
       </Box>
       <Box>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mb: 1,
-          }}
-        >
+        <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
           Git URL
         </Typography>
         <Stack
@@ -106,13 +94,7 @@ export function ProjectConfigGeneralSection({
         </Stack>
       </Box>
       <Box>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mb: 1,
-          }}
-        >
+        <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
           Repo key
         </Typography>
         <Stack
@@ -134,13 +116,7 @@ export function ProjectConfigGeneralSection({
         </Stack>
       </Box>
       <Box>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mb: 1,
-          }}
-        >
+        <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
           Task prefix
         </Typography>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
@@ -173,45 +149,15 @@ export function ProjectConfigGeneralSection({
           </Alert>
         ) : null}
       </Box>
-      <Box>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mb: 1,
-          }}
-        >
-          Local path
-        </Typography>
-        <Stack
-          direction="row"
-          spacing={0.5}
-          sx={{
-            alignItems: "center",
-            justifyContent: "space-between",
-            minHeight: 40,
-            px: 1.5,
-            border: 1,
-            borderColor: "divider",
-            borderRadius: 1,
-          }}
-        >
-          <Typography variant="body2" sx={{ color: repoLocalPath ? "text.primary" : "text.disabled" }}>
-            {repoLocalPath || "-"}
-          </Typography>
-          <Tooltip title="Open in Finder">
-            <span>
-              <IconButton
-                aria-label="Open local path in Finder"
-                disabled={!trimmedRepoLocalPath}
-                onClick={() => void onOpenRepoLocalPath()}
-              >
-                <LuExternalLink size={14} />
-              </IconButton>
-            </span>
-          </Tooltip>
-        </Stack>
-      </Box>
+      <ProjectConfigPathSection
+        kind="local"
+        draft={draft}
+        isSaving={isSaving}
+        setDraft={setDraft}
+        trimmedRepoLocalPath={trimmedRepoLocalPath}
+        onOpenRepoLocalPath={onOpenRepoLocalPath}
+        onPickFolder={onPickLocalFolder}
+      />
       <Box>
         <Stack
           direction="row"
@@ -262,42 +208,13 @@ export function ProjectConfigGeneralSection({
           Toggling applies to all current workspaces and future ones.
         </Typography>
       </Box>
-      <Box>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mb: 1,
-          }}
-        >
-          Worktree location
-        </Typography>
-        <TextField
-          value={draft.worktreePath}
-          disabled={isSaving}
-          fullWidth
-          slotProps={{
-            input: {
-              readOnly: true,
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Tooltip title="Choose folder">
-                    <IconButton
-                      size="medium"
-                      edge="end"
-                      aria-label="Choose worktree folder"
-                      disabled={isSaving}
-                      onClick={() => void onPickWorktreeFolder()}
-                    >
-                      <LuFolderOpen size={18} />
-                    </IconButton>
-                  </Tooltip>
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-      </Box>
+      <ProjectConfigPathSection
+        kind="worktree"
+        draft={draft}
+        isSaving={isSaving}
+        setDraft={setDraft}
+        onPickFolder={onPickWorktreeFolder}
+      />
       <Stack direction="row" spacing={2}>
         <Box sx={{ flex: 1 }}>
           <Typography

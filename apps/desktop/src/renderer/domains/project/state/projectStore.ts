@@ -144,7 +144,15 @@ type CreatedProjectInput = {
 
 type RepoConfigUpdate = Pick<
   WorkspaceProjectRecord,
-  "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript" | "commands"
+  | "localPath"
+  | "name"
+  | "worktreePath"
+  | "contextEnabled"
+  | "icon"
+  | "color"
+  | "setupScript"
+  | "postScript"
+  | "commands"
 >;
 
 /** Normalizes one create-project input into trimmed path/gitUrl plus a resolved source path. */
@@ -173,6 +181,10 @@ function applyUpdatedRepoConfigState(
     return;
   }
 
+  if (config.localPath !== undefined && config.localPath !== null) {
+    project.localPath = config.localPath;
+    project.path = config.localPath;
+  }
   project.name = config.name;
   project.worktreePath = config.worktreePath ?? project.worktreePath;
   project.contextEnabled = config.contextEnabled ?? project.contextEnabled;

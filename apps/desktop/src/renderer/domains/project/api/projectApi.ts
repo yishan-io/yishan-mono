@@ -74,6 +74,9 @@ export async function updateProject(
   orgId: string,
   projectId: string,
   input: {
+    localPath?: string;
+    workspaceId?: string;
+    nodeId?: string;
     name?: string;
     icon?: string;
     color?: string;

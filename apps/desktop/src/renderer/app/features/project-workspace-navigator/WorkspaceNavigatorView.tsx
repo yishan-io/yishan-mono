@@ -109,6 +109,7 @@ export function WorkspaceNavigatorView() {
   const {
     pendingProjectDeletion,
     isDeletingProject,
+    projectDeletionError,
     handleRequestProjectDeletion,
     handleCancelProjectDeletion,
     handleConfirmProjectDeletion,
@@ -444,6 +445,7 @@ export function WorkspaceNavigatorView() {
         setPendingWorkspaceDeletion={setPendingWorkspaceDeletion}
         pendingProjectDeletion={pendingProjectDeletion}
         isDeletingProject={isDeletingProject}
+        projectDeletionError={projectDeletionError}
         handleCancelProjectDeletion={handleCancelProjectDeletion}
         handleConfirmProjectDeletion={handleConfirmProjectDeletion}
         isWorkspaceInfoOpen={isWorkspaceInfoOpen}

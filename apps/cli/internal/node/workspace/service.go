@@ -8,6 +8,7 @@ package workspace
 import (
 	"context"
 	"database/sql"
+	"sync"
 
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
@@ -83,6 +84,9 @@ type Deps struct {
 // because the bare "list" method is the workspace list.
 type Service struct {
 	deps Deps
+
+	// openProjectMu serializes only openProject reconciliations, not legacy Open/create.
+	openProjectMu sync.Mutex
 
 	// app is the application service for workspace create/close orchestration.
 	app *application.Service

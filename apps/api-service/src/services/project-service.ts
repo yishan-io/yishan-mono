@@ -2,7 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
 import { projectLocalTaskKeyAllocations, projectLocalTaskKeyCounters, projects, workspaces } from "@/db/schema";
-import type { ProjectSourceType, WorkspaceStatus } from "@/db/schema";
+import type { ProjectSourceType } from "@/db/schema";
 import {
   LocalTaskKeyAllocationFailedError,
   ProjectAlreadyExistsError,
@@ -18,75 +18,18 @@ import { newId } from "@/lib/id";
 import { inferRepoSource } from "@/lib/repo";
 import { buildLegacyTaskPrefixCandidates } from "@/services/local-task-key-prefix";
 import type { OrganizationService } from "@/services/organization-service";
+import { persistProjectConfig } from "@/services/project-config-persistence";
+import type {
+  CreateProjectInput,
+  ProjectView,
+  ProjectWithWorkspacesView,
+  UpdateProjectInput,
+} from "@/services/project-types";
 import { assertNodeOwnedByActor } from "@/services/shared/assertNodeOwnedByActor";
 import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
 import { fetchLatestPrByWorkspaceId } from "@/services/workspace-pull-request-service";
-import type { WorkspacePullRequestSummary } from "@/services/workspace-service";
 
-export type ProjectView = {
-  id: string;
-  name: string;
-  sourceType: ProjectSourceType;
-  repoProvider: string | null;
-  repoUrl: string | null;
-  repoKey: string | null;
-  icon: string;
-  color: string;
-  setupScript: string;
-  postScript: string;
-  commands: Array<{ name: string; command: string }>;
-  contextEnabled: boolean;
-  taskPrefix: string | null;
-  organizationId: string;
-  createdByUserId: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type ProjectWithWorkspacesView = ProjectView & {
-  workspaces: Array<{
-    id: string;
-    organizationId: string;
-    projectId: string;
-    userId: string;
-    nodeId: string;
-    kind: "primary" | "worktree";
-    status: WorkspaceStatus;
-    branch: string | null;
-    sourceBranch: string | null;
-    localPath: string;
-    latestPullRequest: WorkspacePullRequestSummary | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
-};
-
-type CreateProjectInput = {
-  organizationId: string;
-  actorUserId: string;
-  name: string;
-  taskPrefix: string;
-  sourceTypeHint?: "unknown" | "git-local" | "git";
-  repoUrl?: string;
-  nodeId?: string;
-  localPath?: string;
-  contextEnabled?: boolean;
-  icon?: string;
-  color?: string;
-};
-
-type UpdateProjectInput = {
-  organizationId: string;
-  projectId: string;
-  actorUserId: string;
-  name?: string;
-  icon?: string;
-  color?: string;
-  setupScript?: string;
-  postScript?: string;
-  commands?: Array<{ name: string; command: string }>;
-  contextEnabled?: boolean;
-};
+export type { ProjectView, ProjectWithWorkspacesView } from "@/services/project-types";
 
 type PostgresErrorDetails = {
   code?: unknown;
@@ -542,26 +485,7 @@ export class ProjectService {
   }
 
   async updateProject(input: UpdateProjectInput): Promise<ProjectView> {
-    const { organizationId, actorUserId, projectId, ...updates } = input;
-    await assertOrganizationMember(this.organizationService, organizationId, actorUserId);
-
-    const filteredUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([, value]) => value !== undefined),
-    ) as Partial<
-      Pick<ProjectView, "name" | "icon" | "color" | "setupScript" | "postScript" | "commands" | "contextEnabled">
-    >;
-
-    const updatedRows = await this.db
-      .update(projects)
-      .set({ ...filteredUpdates, updatedAt: new Date() })
-      .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId)))
-      .returning();
-
-    const project = updatedRows[0];
-    if (!project) {
-      throw new ProjectNotFoundError(projectId);
-    }
-
-    return project;
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
+    return await persistProjectConfig(this.db, input);
   }
 }

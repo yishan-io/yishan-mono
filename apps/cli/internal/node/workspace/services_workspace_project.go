@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -41,41 +42,77 @@ func shouldSkipWorkspaceOpenProject(existing workspace.Workspace, entry rpc.Work
 
 // openProjectWorkspace opens one entry from a workspace.openProject request.
 // Returns the workspace id, whether it was newly opened, and any error.
-func (s *Service) openProjectWorkspace(entry rpc.WorkspaceOpenProjectEntry) (string, bool, error) {
+func (s *Service) openProjectWorkspace(ctx context.Context, entry rpc.WorkspaceOpenProjectEntry) (string, bool, error) {
 	workspaceID := strings.TrimSpace(entry.WorkspaceID)
 	workspacePath := strings.TrimSpace(entry.WorktreePath)
 	if workspaceID == "" || workspacePath == "" {
 		return "", false, fmt.Errorf("missing workspaceId or worktreePath")
 	}
-	if existingWorkspace, err := s.GetWorkspace(workspaceID); err == nil {
-		if shouldSkipWorkspaceOpenProject(existingWorkspace, entry) {
-			// The workspace is already open (for example restored from the local
-			// DB at daemon boot). Watch registration is idempotent per worktree
-			// path, so ensure the filesystem watcher exists even on the skip
-			// path; otherwise file-change events never flow for this workspace.
-			if existingWorkspace.State == workspace.StateActive && strings.TrimSpace(existingWorkspace.Path) != "" {
-				s.WatchAndTrack(existingWorkspace)
-			}
-			return workspaceID, false, nil
-		}
-		if workspaceOpenProjectKind(entry.Kind) == workspace.KindFolder && existingWorkspace.Kind != workspace.KindFolder {
-			if err := s.stopGitMonitoringForFolder(existingWorkspace); err != nil {
-				return workspaceID, false, err
-			}
-		}
-	}
-	openedWorkspace, err := s.Open(workspace.OpenRequest{
-		ID:        workspaceID,
-		Path:      workspacePath,
-		ProjectID: entry.ProjectID,
-		OrgID:     entry.OrgID,
-		Kind:      workspaceOpenProjectKind(entry.Kind),
-	})
+	openedWorkspace, didOpen, err := s.reconcileProjectWorkspace(ctx, entry)
 	if err != nil {
 		return workspaceID, false, err
 	}
-	s.WatchAndTrack(openedWorkspace)
-	return openedWorkspace.ID, true, nil
+	// Availability callbacks must not extend the path claim.
+	if didOpen && s.deps.WorkspaceAvailabilityChanged != nil {
+		s.deps.WorkspaceAvailabilityChanged()
+	}
+	return openedWorkspace.ID, didOpen, nil
+}
+
+// reconcileProjectWorkspace holds an operation-scoped claim through the fresh
+// read, validation, ownership checks, persistence, runtime registration and monitoring.
+// Legacy Open/create do not participate; this is not a global reservation.
+func (s *Service) reconcileProjectWorkspace(ctx context.Context, entry rpc.WorkspaceOpenProjectEntry) (workspace.Workspace, bool, error) {
+	s.openProjectMu.Lock()
+	defer s.openProjectMu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return workspace.Workspace{}, false, err
+	}
+	opened, err := s.GetWorkspace(strings.TrimSpace(entry.WorkspaceID))
+	didOpen := false
+	if err != nil || !shouldSkipWorkspaceOpenProject(opened, entry) {
+		opened, err = s.reopenProjectWorkspace(ctx, entry)
+		didOpen = err == nil
+	}
+	if err == nil && opened.State == workspace.StateActive && strings.TrimSpace(opened.Path) != "" {
+		s.WatchAndTrack(opened)
+	}
+	return opened, didOpen, err
+}
+
+// reopenProjectWorkspace validates and persists before replacing any runtime state.
+func (s *Service) reopenProjectWorkspace(ctx context.Context, entry rpc.WorkspaceOpenProjectEntry) (workspace.Workspace, error) {
+	req := workspace.OpenRequest{ID: strings.TrimSpace(entry.WorkspaceID), Path: strings.TrimSpace(entry.WorktreePath),
+		ProjectID: entry.ProjectID, OrgID: entry.OrgID, Kind: workspaceOpenProjectKind(entry.Kind)}
+	existing, hasExisting := s.deps.Registry.Get(req.ID)
+	if hasExisting && req.Kind != workspace.KindFolder {
+		req.Kind = existing.Kind
+	}
+	absPath, err := validateWorkspaceOpen(req)
+	if err != nil {
+		return workspace.Workspace{}, err
+	}
+	if err := s.reconcileOpenedProjectIdentity(ctx, &req, absPath); err != nil {
+		return workspace.Workspace{}, err
+	}
+	if err := s.persistOpenedProjectPath(ctx, req.ID, absPath); err != nil {
+		return workspace.Workspace{}, err
+	}
+	if hasExisting {
+		if req.Kind == workspace.KindFolder && existing.Kind != workspace.KindFolder {
+			if err := s.stopGitMonitoringForFolder(existing); err != nil {
+				return workspace.Workspace{}, err
+			}
+		} else if existing.Path != absPath {
+			if s.deps.Watchers != nil {
+				s.deps.Watchers.Unwatch(existing.Path)
+			}
+			if s.deps.PRTracker != nil {
+				s.deps.PRTracker.StopTracking(existing.ID)
+			}
+		}
+	}
+	return s.registerOpenWorkspaceState(req, absPath), nil
 }
 
 // stopGitMonitoringForFolder tears down Git-specific runtime state before a
@@ -92,6 +129,9 @@ func (s *Service) stopGitMonitoringForFolder(existing workspace.Workspace) error
 // workspaceOpenProjectKind maps the wire kind to the supported runtime kinds.
 // Unknown and absent kinds retain the historic Git-workspace behavior.
 func workspaceOpenProjectKind(kind string) workspace.Kind {
+	if strings.TrimSpace(kind) == string(workspace.KindPrimary) {
+		return workspace.KindPrimary
+	}
 	if strings.TrimSpace(kind) == string(workspace.KindFolder) {
 		return workspace.KindFolder
 	}

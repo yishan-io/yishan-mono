@@ -150,6 +150,7 @@ export async function listGitCommitsToTarget(params: {
 /** Inspects a workspace for git repository metadata including the current branch. */
 export async function inspectGitRepository(params: { workspaceId: string }): Promise<{
   isGitRepository: boolean;
+  repositoryRoot?: string;
   remoteUrl?: string;
   currentBranch?: string;
 }> {
@@ -167,6 +168,7 @@ export async function inspectGitRepository(params: { workspaceId: string }): Pro
 /** Inspects a local path (not a workspace) for git repository metadata. */
 export async function inspectGitRepositoryPath(params: { path: string }): Promise<{
   isGitRepository: boolean;
+  repositoryRoot?: string;
   remoteUrl?: string;
   currentBranch?: string;
 }> {

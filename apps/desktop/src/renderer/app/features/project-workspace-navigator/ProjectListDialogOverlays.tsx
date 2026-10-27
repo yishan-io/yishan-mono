@@ -27,6 +27,7 @@ type ProjectListDialogOverlaysProps = {
   setPendingWorkspaceDeletion: Dispatch<SetStateAction<PendingWorkspaceDeletion | null>>;
   pendingProjectDeletion: { projectName: string } | null;
   isDeletingProject: boolean;
+  projectDeletionError?: string;
   handleCancelProjectDeletion: () => void;
   handleConfirmProjectDeletion: () => void;
   isWorkspaceInfoOpen: boolean;
@@ -58,6 +59,7 @@ export function ProjectListDialogOverlays({
   setPendingWorkspaceDeletion,
   pendingProjectDeletion,
   isDeletingProject,
+  projectDeletionError,
   handleCancelProjectDeletion,
   handleConfirmProjectDeletion,
   isWorkspaceInfoOpen,
@@ -118,6 +120,7 @@ export function ProjectListDialogOverlays({
         open={Boolean(pendingProjectDeletion)}
         repoName={pendingProjectDeletion?.projectName ?? ""}
         isDeleting={isDeletingProject}
+        errorMessage={projectDeletionError}
         onCancel={handleCancelProjectDeletion}
         onConfirm={() => void handleConfirmProjectDeletion()}
       />

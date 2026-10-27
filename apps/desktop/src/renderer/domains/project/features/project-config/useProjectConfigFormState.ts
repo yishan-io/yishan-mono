@@ -1,5 +1,5 @@
 import { generateId } from "@shared/ids/generateId";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../ui/projectIcons";
 
 export type ProjectConfigCommandDraft = {
@@ -10,6 +10,7 @@ export type ProjectConfigCommandDraft = {
 
 export type ProjectConfigDraft = {
   name: string;
+  localPath: string;
   worktreePath: string;
   contextEnabled: boolean;
   icon: string;
@@ -51,6 +52,7 @@ export function createProjectConfigCommandDraft(name: string, command: string): 
 function getDefaultDraft(): ProjectConfigDraft {
   return {
     name: "",
+    localPath: "",
     worktreePath: "",
     contextEnabled: true,
     icon: DEFAULT_PROJECT_ICON_ID,
@@ -83,62 +85,66 @@ export function useProjectConfigFormState({
   const repoKey = repo?.key ?? repo?.repoKey ?? "";
   const trimmedRepoLocalPath = repoLocalPath.trim();
 
-  useEffect(() => {
-    if (!open || !repo) {
+  const initializeDraft = useEffectEvent(() => {
+    if (!repo) {
       return;
     }
 
     let cancelled = false;
-
-    const loadDraft = async () => {
-      let worktreePath = repo.worktreePath ?? "";
-      if (!worktreePath) {
-        try {
-          worktreePath = await getDefaultWorktreeLocation();
-        } catch {
-          worktreePath = "";
-        }
-      }
-
-      if (cancelled) {
-        return;
-      }
-
-      setDraft({
-        name: repo.name,
-        worktreePath,
-        contextEnabled: repo.contextEnabled ?? true,
-        icon: findProjectIconOption(repo.icon ?? undefined)?.id ?? DEFAULT_PROJECT_ICON_ID,
-        color: repo.color ?? DEFAULT_ICON_BG_COLOR,
-        setupScript: repo.setupScript ?? "",
-        postScript: repo.postScript ?? "",
-        commands: Array.isArray(repo.commands)
-          ? repo.commands
-              .map((item) => {
-                if (typeof item === "string") {
-                  const command = item.trim();
-                  if (!command) {
-                    return null;
-                  }
-                  return createProjectConfigCommandDraft(command, command);
-                }
-                const command = item.command?.trim() || "";
-                const name = item.name?.trim() || command;
-                if (!command || !name) {
+    const worktreePath = repo.worktreePath ?? "";
+    setDraft({
+      name: repo.name,
+      localPath: repo.localPath ?? repo.path ?? "",
+      worktreePath,
+      contextEnabled: repo.contextEnabled ?? true,
+      icon: findProjectIconOption(repo.icon ?? undefined)?.id ?? DEFAULT_PROJECT_ICON_ID,
+      color: repo.color ?? DEFAULT_ICON_BG_COLOR,
+      setupScript: repo.setupScript ?? "",
+      postScript: repo.postScript ?? "",
+      commands: Array.isArray(repo.commands)
+        ? repo.commands
+            .map((item) => {
+              if (typeof item === "string") {
+                const command = item.trim();
+                if (!command) {
                   return null;
                 }
-                return createProjectConfigCommandDraft(name, command);
-              })
-              .filter((item): item is ProjectConfigCommandDraft => item !== null)
-          : [],
-      });
-    };
-
-    void loadDraft();
+                return createProjectConfigCommandDraft(command, command);
+              }
+              const command = item.command?.trim() || "";
+              const name = item.name?.trim() || command;
+              if (!command || !name) {
+                return null;
+              }
+              return createProjectConfigCommandDraft(name, command);
+            })
+            .filter((item): item is ProjectConfigCommandDraft => item !== null)
+        : [],
+    });
+    if (!worktreePath) {
+      // fire-and-forget: fill only the untouched default field for this open session.
+      void getDefaultWorktreeLocation().then(
+        (defaultPath) => {
+          if (!cancelled) {
+            setDraft((previous) => (previous.worktreePath ? previous : { ...previous, worktreePath: defaultPath }));
+          }
+        },
+        () => {
+          /* No default is available; keep the editable path empty. */
+        },
+      );
+    }
     return () => {
       cancelled = true;
     };
-  }, [getDefaultWorktreeLocation, open, repo]);
+  });
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: The Effect Event reads fresh project data without resetting drafts on store refresh.
+  useEffect(() => {
+    if (open && repo?.id) {
+      return initializeDraft();
+    }
+  }, [open, repo?.id]);
 
   return {
     repo,

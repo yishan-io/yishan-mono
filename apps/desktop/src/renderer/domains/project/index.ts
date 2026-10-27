@@ -45,3 +45,5 @@ export { renderProjectIcon } from "./ui/projectIcons";
 export { useGitLocalProjectPromotion } from "./hooks/useGitLocalProjectPromotion";
 
 export { hydrateProjectFilter, writeProjectFilter } from "./commands/projectFilterCommands";
+
+export { captureProjectSnapshotFence } from "./state/projectMutationStore";

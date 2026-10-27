@@ -15,7 +15,6 @@ import {
   getWorkspaceRpc,
   openWorkspaceEntries,
   syncTabStoreWithWorkspace,
-  syncWorkspaceContextLinks,
   workspaceSettingsStore,
   workspaceStore,
 } from "@renderer/domains/workspace";
@@ -27,7 +26,9 @@ import {
   promoteGitLocalProject as promoteGitLocalProjectFromApi,
   updateProject as updateProjectFromApi,
 } from "../api/projectApi";
+import { beginProjectMutation } from "../state/projectMutationStore";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
+import { createProjectConfigScope, prepareProjectPathChange, syncProjectPathChange } from "./projectConfigPath";
 import { writeProjectFilter } from "./projectFilterCommands";
 
 /** Records the last external application used within one organization. */
@@ -278,30 +279,47 @@ export async function copyProjectTaskPrefix(projectId: string): Promise<void> {
 
 /** Deletes one project in backend and then removes it from local store state. */
 export async function deleteProject(projectId: string): Promise<void> {
-  if (!projectId) {
-    return;
-  }
+  if (!projectId.trim()) throw new Error("A project ID is required to delete a project");
+  const scope = createProjectConfigScope();
+  const finishMutation = beginProjectMutation();
+  try {
+    const selectedOrganizationId = scope.organizationId;
+    if (!selectedOrganizationId) throw new Error("An organization is required to delete a project");
+    await deleteProjectFromApi(selectedOrganizationId, projectId);
+    if (!scope.isCurrent()) return;
 
-  const previousWorkspaces = workspaceStore.getState().workspaces;
-  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
-  if (selectedOrganizationId) {
-    try {
-      await deleteProjectFromApi(selectedOrganizationId, projectId);
-    } catch (error) {
-      console.error("Failed to delete backend project", error);
-      throw new Error(getErrorMessage(error));
+    const previousWorkspaces = workspaceStore.getState().workspaces;
+    for (const workspace of previousWorkspaces) {
+      if ((workspace.projectId ?? workspace.repoId) === projectId) {
+        workspaceStore.getState().removeWorkspace({ projectId, workspaceId: workspace.id });
+      }
     }
+    projectStore.getState().deleteProject(projectId);
+    const navigation = workbenchNavigationStore.getState();
+    if (navigation.activeProjectId === projectId) {
+      navigation.setActiveProjectId("");
+    }
+    if (
+      previousWorkspaces.some(
+        (workspace) =>
+          workspace.id === navigation.activeWorkspaceId && (workspace.projectId ?? workspace.repoId) === projectId,
+      )
+    ) {
+      navigation.setActiveWorkspaceId("");
+    }
+    await syncTabStoreWithWorkspace(previousWorkspaces);
+  } finally {
+    scope.dispose();
+    finishMutation();
   }
-
-  projectStore.getState().deleteProject(projectId);
-  await syncTabStoreWithWorkspace(previousWorkspaces);
 }
 
 /** Persists project config to backend and updates local config state when successful. */
 export async function updateProjectConfig(
   projectId: string,
-  config: {
+  input: {
     name: string;
+    localPath?: string;
     worktreePath?: string;
     contextEnabled?: boolean;
     icon?: string;
@@ -316,51 +334,70 @@ export async function updateProjectConfig(
     return;
   }
 
+  const { localPath, ...config } = input;
   const previousContextEnabled = project.contextEnabled ?? true;
 
-  const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
-  if (selectedOrganizationId) {
-    try {
-      const updatedProject = await updateProjectFromApi(selectedOrganizationId, projectId, {
-        name: config.name,
-        icon: config.icon,
-        color: config.color,
-        setupScript: config.setupScript,
-        postScript: config.postScript,
-        commands: config.commands,
-        contextEnabled: config.contextEnabled,
-      });
-
-      const persistedConfig = {
-        ...config,
-        name: updatedProject.name,
-        contextEnabled: updatedProject.contextEnabled,
-        icon: updatedProject.icon,
-        color: updatedProject.color,
-        setupScript: updatedProject.setupScript,
-        postScript: updatedProject.postScript,
-        commands: updatedProject.commands ?? config.commands,
-      };
-
-      projectStore.getState().updateProjectConfig(projectId, persistedConfig);
-      incrementFileTreeRefreshVersion();
-
-      if (config.contextEnabled !== undefined && updatedProject.contextEnabled !== previousContextEnabled) {
-        await syncProjectContextLinks({
-          projectId,
-          repoKey: updatedProject.repoKey ?? project.repoKey ?? project.key ?? null,
-          enabled: updatedProject.contextEnabled,
+  const finishMutation = beginProjectMutation();
+  const scope = createProjectConfigScope();
+  const selectedOrganizationId = scope.organizationId;
+  try {
+    const pathChange = await prepareProjectPathChange(project, localPath, selectedOrganizationId);
+    if (!scope.isCurrent()) return;
+    if (selectedOrganizationId) {
+      try {
+        const updatedProject = await updateProjectFromApi(selectedOrganizationId, projectId, {
+          ...pathChange,
+          name: config.name,
+          icon: config.icon,
+          color: config.color,
+          setupScript: config.setupScript,
+          postScript: config.postScript,
+          commands: config.commands,
+          contextEnabled: config.contextEnabled,
         });
-      }
-      return;
-    } catch (error) {
-      console.error("Failed to update backend project", error);
-      throw new Error(getErrorMessage(error));
-    }
-  }
 
-  projectStore.getState().updateProjectConfig(projectId, config);
-  incrementFileTreeRefreshVersion();
+        if (!scope.isCurrent()) return;
+        if (pathChange) await syncProjectPathChange(projectId, selectedOrganizationId, pathChange, scope.isCurrent);
+        if (!scope.isCurrent()) return;
+
+        const persistedConfig = {
+          ...(pathChange ? { localPath: pathChange.localPath } : {}),
+          ...config,
+          name: updatedProject.name,
+          contextEnabled: updatedProject.contextEnabled,
+          icon: updatedProject.icon,
+          color: updatedProject.color,
+          setupScript: updatedProject.setupScript,
+          postScript: updatedProject.postScript,
+          commands: updatedProject.commands ?? config.commands,
+        };
+
+        projectStore.getState().updateProjectConfig(projectId, persistedConfig);
+        incrementFileTreeRefreshVersion();
+
+        if (config.contextEnabled !== undefined && updatedProject.contextEnabled !== previousContextEnabled) {
+          await syncProjectContextLinks(
+            {
+              projectId,
+              repoKey: updatedProject.repoKey ?? project.repoKey ?? project.key ?? null,
+              enabled: updatedProject.contextEnabled,
+            },
+            scope.isCurrent,
+          );
+        }
+        return;
+      } catch (error) {
+        console.error("Failed to update backend project", error);
+        throw new Error(getErrorMessage(error));
+      }
+    }
+
+    projectStore.getState().updateProjectConfig(projectId, config);
+    incrementFileTreeRefreshVersion();
+  } finally {
+    scope.dispose();
+    finishMutation();
+  }
 }
 
 /**
@@ -371,11 +408,14 @@ export async function updateProjectConfig(
  * Failures are logged but do not throw so the user-facing project update is
  * still considered successful.
  */
-async function syncProjectContextLinks(input: {
-  projectId: string;
-  repoKey: string | null;
-  enabled: boolean;
-}): Promise<void> {
+async function syncProjectContextLinks(
+  input: {
+    projectId: string;
+    repoKey: string | null;
+    enabled: boolean;
+  },
+  isCurrentScope: () => boolean = () => true,
+): Promise<void> {
   const project = projectStore.getState().projects.find((item) => item.id === input.projectId);
   const isNonGit = project?.sourceType === "unknown";
   const repoKey = isNonGit ? "" : (input.repoKey?.trim() ?? "");
@@ -411,7 +451,10 @@ async function syncProjectContextLinks(input: {
   }
 
   try {
-    await syncWorkspaceContextLinks({
+    if (!isCurrentScope()) return;
+    const workspaceRpc = await getWorkspaceRpc();
+    if (!isCurrentScope()) return;
+    await workspaceRpc.syncContextLink({
       repoKey,
       projectId: input.projectId,
       nonGit: isNonGit,

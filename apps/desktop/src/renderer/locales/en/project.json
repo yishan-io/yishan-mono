@@ -35,6 +35,14 @@
       "delete": "Delete project",
       "register": "Register project"
     },
+    "config": {
+      "localPath": "Local path",
+      "worktreeLocation": "Worktree location",
+      "chooseLocalFolder": "Choose local folder",
+      "chooseWorktreeFolder": "Choose worktree folder",
+      "openLocalPath": "Open local path in Finder",
+      "saveFailed": "Could not save project config: {{message}}"
+    },
     "delete": {
       "confirm": "Delete project '{{name}}' and all child workspaces?"
     },

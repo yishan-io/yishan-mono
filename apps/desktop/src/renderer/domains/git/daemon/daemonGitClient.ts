@@ -86,6 +86,7 @@ export type GitStatusOperationResponse = {
 
 export type GitInspectResponse = {
   isGitRepository: boolean;
+  repositoryRoot?: string;
   remoteUrl?: string;
   currentBranch?: string;
 };
