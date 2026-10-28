@@ -68,6 +68,34 @@ describe("createProjectBodySchema", () => {
 });
 
 describe("updateProjectBodySchema", () => {
+  it("accepts a path only with primary workspace and host identities", () => {
+    expect(updateProjectBodySchema.parse({ localPath: " /new/path ", workspaceId: "ws-1", nodeId: "node-1" })).toEqual({
+      localPath: "/new/path",
+      workspaceId: "ws-1",
+      nodeId: "node-1",
+    });
+  });
+
+  it.each([
+    { localPath: "/new/path" },
+    { localPath: "/new/path", workspaceId: "ws-1" },
+    { localPath: "/new/path", nodeId: "node-1" },
+    { workspaceId: "ws-1", nodeId: "node-1" },
+    { localPath: "  ", workspaceId: "ws-1", nodeId: "node-1" },
+    { localPath: "/new/path", workspaceId: "", nodeId: "node-1" },
+    { localPath: "/new/path", workspaceId: "ws-1", nodeId: "" },
+  ])("rejects incomplete or empty path selection %j", (body) => {
+    expect(updateProjectBodySchema.safeParse(body).success).toBe(false);
+  });
+
+  it("keeps config-only saves valid", () => {
+    expect(updateProjectBodySchema.parse({ name: "Renamed", contextEnabled: false })).toEqual({
+      name: "Renamed",
+      contextEnabled: false,
+    });
+    expect(updateProjectBodySchema.safeParse({}).success).toBe(false);
+  });
+
   it("rejects taskPrefix so project prefixes cannot change after creation", () => {
     expect(updateProjectBodySchema.safeParse({ taskPrefix: "NEW" }).success).toBe(false);
   });

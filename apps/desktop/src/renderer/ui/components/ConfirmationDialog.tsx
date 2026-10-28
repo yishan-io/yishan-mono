@@ -1,9 +1,19 @@
-import { Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
+import {
+  Alert,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography,
+} from "@mui/material";
 
 export type ConfirmationDialogProps = {
   open: boolean;
   title: string;
   description: string;
+  errorMessage?: string;
   confirmLabel: string;
   cancelLabel?: string;
   confirmColor?: "error" | "warning" | "primary" | "secondary";
@@ -22,6 +32,7 @@ export function ConfirmationDialog({
   open,
   title,
   description,
+  errorMessage,
   confirmLabel,
   cancelLabel = "Cancel",
   confirmColor = "primary",
@@ -51,6 +62,11 @@ export function ConfirmationDialog({
         >
           {description}
         </Typography>
+        {errorMessage && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {errorMessage}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel} disabled={isSubmitting}>

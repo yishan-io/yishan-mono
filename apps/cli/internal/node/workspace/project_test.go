@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -33,7 +34,7 @@ func TestServices_OpenProjectWorkspaceRegistersWatcherOnSkipPath(t *testing.T) {
 		t.Fatalf("open workspace: %v", err)
 	}
 
-	workspaceID, didOpen, err := handler.openProjectWorkspace(rpc.WorkspaceOpenProjectEntry{
+	workspaceID, didOpen, err := handler.openProjectWorkspace(context.Background(), rpc.WorkspaceOpenProjectEntry{
 		WorkspaceID:  "workspace-1",
 		WorktreePath: root,
 		ProjectID:    "project-1",

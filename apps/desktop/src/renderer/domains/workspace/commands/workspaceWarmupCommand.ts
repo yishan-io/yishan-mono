@@ -46,13 +46,18 @@ export function buildWorkspaceOpenProjectEntries(
   });
 }
 
-export async function openWorkspaceEntries(entries: WorkspaceOpenProjectEntry[]): Promise<void> {
+/** Opens workspace entries only while the caller's optional request fence remains current. */
+export async function openWorkspaceEntries(
+  entries: WorkspaceOpenProjectEntry[],
+  isCurrent: () => boolean = () => true,
+): Promise<void> {
   if (entries.length === 0) {
     return;
   }
 
   try {
     const workspaceRpc = await getWorkspaceRpc();
+    if (!isCurrent()) return;
     await workspaceRpc.openProject({ workspaces: entries });
   } catch (error) {
     console.error("[warmup] workspace.openProject failed", error);
@@ -65,7 +70,10 @@ export async function openWorkspaceEntries(entries: WorkspaceOpenProjectEntry[])
  * daemon restarts restore them via DB hydration. Already-open workspaces
  * are skipped (idempotent on the daemon).
  */
-export async function warmupWorkspacesForProjects(projectIds: string[]): Promise<void> {
+export async function warmupWorkspacesForProjects(
+  projectIds: string[],
+  isCurrent: () => boolean = () => true,
+): Promise<void> {
   if (projectIds.length === 0) {
     return;
   }
@@ -81,7 +89,7 @@ export async function warmupWorkspacesForProjects(projectIds: string[]): Promise
     orgId,
   );
 
-  await openWorkspaceEntries(entries);
+  await openWorkspaceEntries(entries, isCurrent);
 }
 
 /**

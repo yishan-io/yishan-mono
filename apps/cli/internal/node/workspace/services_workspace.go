@@ -111,7 +111,7 @@ func (s *Service) Health(ctx context.Context, req rpc.WorkspaceHealthParams) (an
 func (s *Service) OpenProject(ctx context.Context, req rpc.WorkspaceOpenProjectParams) (any, error) {
 	opened, skipped, openErrors := []string{}, []string{}, []string{}
 	for _, entry := range req.Workspaces {
-		workspaceID, didOpenWorkspace, err := s.openProjectWorkspace(entry)
+		workspaceID, didOpenWorkspace, err := s.openProjectWorkspace(ctx, entry)
 		if err != nil {
 			if workspaceID != "" {
 				log.Warn().Err(err).Str("workspaceId", workspaceID).Str("path", strings.TrimSpace(entry.WorktreePath)).

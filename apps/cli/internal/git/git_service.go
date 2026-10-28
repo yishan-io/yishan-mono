@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,28 +54,31 @@ func (s *GitService) Inspect(ctx context.Context, path string) (GitInspectResult
 	if candidatePath == "" {
 		return GitInspectResult{}, NewError(ErrCodeInvalidParams, "path is required")
 	}
-
 	absPath, err := filepath.Abs(candidatePath)
 	if err != nil {
 		return GitInspectResult{}, err
 	}
-
 	statInfo, err := os.Stat(absPath)
 	if err == nil && !statInfo.IsDir() {
 		absPath = filepath.Dir(absPath)
 	}
-
 	topLevel, err := gitCommand(ctx, absPath, "rev-parse", "--show-toplevel")
 	if err != nil || strings.TrimSpace(topLevel) == "" {
 		return GitInspectResult{IsGitRepository: false}, nil
 	}
-
-	repoRoot := strings.TrimSpace(topLevel)
+	repoRoot, err := filepath.Abs(strings.TrimSpace(topLevel))
+	if err != nil {
+		return GitInspectResult{}, fmt.Errorf("resolve repository root: %w", err)
+	}
+	repoRoot, err = filepath.EvalSymlinks(repoRoot)
+	if err != nil {
+		return GitInspectResult{}, fmt.Errorf("canonicalize repository root: %w", err)
+	}
 	remoteURL, _ := gitCommand(ctx, repoRoot, "config", "--get", "remote.origin.url")
 	currentBranch, _ := gitCommand(ctx, repoRoot, "rev-parse", "--abbrev-ref", "HEAD")
-
 	return GitInspectResult{
 		IsGitRepository: true,
+		RepositoryRoot:  repoRoot,
 		RemoteURL:       strings.TrimSpace(remoteURL),
 		CurrentBranch:   strings.TrimSpace(currentBranch),
 	}, nil

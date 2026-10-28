@@ -109,6 +109,7 @@ type GitBranchList struct {
 }
 
 type GitInspectResult struct {
+	RepositoryRoot  string `json:"repositoryRoot,omitempty"`
 	IsGitRepository bool   `json:"isGitRepository"`
 	RemoteURL       string `json:"remoteUrl,omitempty"`
 	CurrentBranch   string `json:"currentBranch,omitempty"`

@@ -1,4 +1,14 @@
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+} from "@mui/material";
 import { useDialogRegistration } from "@renderer/domains/workbench";
 import { isFolderWorkspace, workspaceStore } from "@renderer/domains/workspace";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
@@ -29,24 +39,17 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
   const { t } = useTranslation();
   const projects = projectStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
-  const {
-    repo,
-    draft,
-    setDraft,
-    iconAnchorEl,
-    setIconAnchorEl,
-    repoLocalPath,
-    repoGitUrl,
-    repoKey,
-    trimmedRepoLocalPath,
-  } = useProjectConfigFormState({ open, repoId, projects, getDefaultWorktreeLocation });
-  const { isSaving, handlePickWorktreeFolder, handleOpenRepoLocalPath, handleSave } = useProjectConfigActions({
-    repo,
-    draft,
-    setDraft,
-    trimmedRepoLocalPath,
-    onClose,
-  });
+  const { repo, draft, setDraft, iconAnchorEl, setIconAnchorEl, repoGitUrl, repoKey, trimmedRepoLocalPath } =
+    useProjectConfigFormState({ open, repoId, projects, getDefaultWorktreeLocation });
+  const { isSaving, saveError, handlePickLocalFolder, handlePickWorktreeFolder, handleOpenRepoLocalPath, handleSave } =
+    useProjectConfigActions({
+      open,
+      repo,
+      draft,
+      setDraft,
+      trimmedRepoLocalPath,
+      onClose,
+    });
   const [activeSection, setActiveSection] = useState<ProjectConfigSectionId>("general");
   const [isEnsuringTaskPrefix, setIsEnsuringTaskPrefix] = useState(false);
   const [taskPrefixError, setTaskPrefixError] = useState<string | null>(null);
@@ -94,7 +97,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
   return (
     <Dialog
       open={open}
-      onClose={(_event, reason) => {
+      onClose={() => {
         if (isSaving) {
           return;
         }
@@ -114,7 +117,6 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                 isSaving={isSaving}
                 repoGitUrl={repoGitUrl}
                 repoKey={repoKey}
-                repoLocalPath={repoLocalPath}
                 taskPrefix={repo?.taskPrefix ?? null}
                 taskPrefixError={taskPrefixError}
                 isEnsuringTaskPrefix={isEnsuringTaskPrefix}
@@ -122,6 +124,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                 setIconAnchorEl={setIconAnchorEl}
                 trimmedRepoLocalPath={trimmedRepoLocalPath}
                 onOpenRepoLocalPath={handleOpenRepoLocalPath}
+                onPickLocalFolder={handlePickLocalFolder}
                 onPickWorktreeFolder={handlePickWorktreeFolder}
                 onEnsureTaskPrefix={handleEnsureTaskPrefix}
                 onCopyTaskPrefix={handleCopyTaskPrefix}
@@ -142,6 +145,11 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
         setDraft={setDraft}
         setIconAnchorEl={setIconAnchorEl}
       />
+      {saveError !== null && (
+        <Alert severity="error" sx={{ mx: 2.5, mt: 1 }}>
+          {t("project.config.saveFailed", { message: saveError })}
+        </Alert>
+      )}
       <DialogActions>
         <Button onClick={onClose} disabled={isSaving}>
           {t("common.actions.cancel")}

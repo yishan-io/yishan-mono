@@ -173,34 +173,46 @@ func isLiveWorkspaceStatus(status string) bool {
 // validates it is a directory, ensures the context-link git exclude, and lets
 // the registry preserve runtime fields and replace same-path instances.
 func (s *Service) Open(req workspace.OpenRequest) (workspace.Workspace, error) {
+	absPath, err := validateWorkspaceOpen(req)
+	if err != nil {
+		return workspace.Workspace{}, err
+	}
+	return s.registerOpenWorkspace(req, absPath), nil
+}
+
+func validateWorkspaceOpen(req workspace.OpenRequest) (string, error) {
 	if req.ID == "" || req.Path == "" {
-		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeInvalidParams, "id and path are required")
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "id and path are required")
 	}
 
 	absPath := canonicalizeWorkspacePath(req.Path)
 
 	info, err := os.Stat(absPath)
 	if err != nil {
-		return workspace.Workspace{}, err
+		return "", err
 	}
 	if !info.IsDir() {
-		return workspace.Workspace{}, rpc.NewRPCError(rpc.CodeInvalidParams, "workspace path must be a directory")
+		return "", rpc.NewRPCError(rpc.CodeInvalidParams, "workspace path must be a directory")
 	}
 
-	workspace.EnsureGitExclude(absPath, workspace.ContextLinkName)
+	return absPath, nil
+}
 
-	openedWorkspace := s.deps.Registry.Open(workspace.Workspace{
-		ID:        req.ID,
-		Path:      absPath,
-		OrgID:     req.OrgID,
-		ProjectID: req.ProjectID,
-		Kind:      openWorkspaceKind(req.Kind),
-		State:     workspace.StateActive,
-	})
+func (s *Service) registerOpenWorkspace(req workspace.OpenRequest, absPath string) workspace.Workspace {
+	openedWorkspace := s.registerOpenWorkspaceState(req, absPath)
 	if s.deps.WorkspaceAvailabilityChanged != nil {
 		s.deps.WorkspaceAvailabilityChanged()
 	}
-	return openedWorkspace, nil
+	return openedWorkspace
+}
+
+// registerOpenWorkspaceState registers without invoking availability callbacks.
+func (s *Service) registerOpenWorkspaceState(req workspace.OpenRequest, absPath string) workspace.Workspace {
+	workspace.EnsureGitExclude(absPath, workspace.ContextLinkName)
+	return s.deps.Registry.Open(workspace.Workspace{
+		ID: req.ID, Path: absPath, OrgID: req.OrgID, ProjectID: req.ProjectID,
+		Kind: openWorkspaceKind(req.Kind), State: workspace.StateActive,
+	})
 }
 
 // ---- PR persistence (moved from the workspace.Manager facade) ----

@@ -3,6 +3,7 @@ package workspace
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"yishan/apps/cli/internal/adapter/sqlite"
@@ -86,6 +87,22 @@ func (s *Service) MarkClosed(ctx context.Context, workspaceID string) error {
 	// still carries the org/project ids after the status update.
 	if record, err := workspaceStore.Get(ctx, workspaceID); err == nil {
 		s.CloseRecord(ctx, record.OrganizationID, record.ProjectID, workspaceID, string(workspace.StatusClosed))
+	}
+	return nil
+}
+
+// persistOpenedProjectPath updates only the local overlay and recovered health.
+// Snapshot-only entries may not have a local row yet.
+func (s *Service) persistOpenedProjectPath(ctx context.Context, workspaceID, path string) error {
+	if s.deps.Database == nil {
+		return nil
+	}
+	state, health := string(workspace.StateActive), ""
+	err := sqlite.NewWorkspaceStore(s.deps.Database).Update(ctx, workspaceID, sqlite.WorkspaceUpdate{
+		LocalPath: &path, State: &state, Health: &health,
+	})
+	if err != nil && !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
+		return fmt.Errorf("persist opened workspace path: %w", err)
 	}
 	return nil
 }

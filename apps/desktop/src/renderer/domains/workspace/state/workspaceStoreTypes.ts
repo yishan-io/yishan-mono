@@ -15,6 +15,8 @@ import type { DaemonLocalFolder } from "../local-folder/snapshotTypes";
 import type { AddWorkspaceInput, WorkspaceItem } from "../workspaceTypes";
 
 export type WorkspaceStoreState = {
+  /** Applies a successfully reconciled primary path without replacing workspace identity. */
+  applyPrimaryWorkspacePath: (input: { workspaceId: string; worktreePath: string }) => void;
   workspaces: WorkspaceItem[];
   orderedWorkspaceIds: string[];
   load: (organizationId: string, workspaces: WorkspaceItem[]) => void;
