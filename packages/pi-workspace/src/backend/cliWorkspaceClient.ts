@@ -154,10 +154,9 @@ function parseWorkspaceCloseResult(stdout: string): WorkspaceCloseResult {
 }
 
 function parseWorkspaceCreateResult(stdout: string): WorkspaceCreateResult {
-  const createdLine = stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => line.startsWith("Created:"));
+  const lines = stdout.replace(/\r\n/g, "\n").split("\n");
+  const createdIndex = lines.map((line) => line.startsWith("Created:")).lastIndexOf(true);
+  const createdLine = lines[createdIndex];
   if (!createdLine) {
     throw new Error("Invalid yishan workspace create output: missing Created line");
   }
@@ -173,7 +172,24 @@ function parseWorkspaceCreateResult(stdout: string): WorkspaceCreateResult {
   }
 
   const localPath = match[2]?.trim() || undefined;
-  return { workspaceId, localPath, stdout };
+  // Only the final completion block is authoritative. Reject malformed or duplicate
+  // fields rather than combining progress text (including multiline titles) with it.
+  const completion = lines.slice(createdIndex + 1).join("\n");
+  const metadata =
+    /^Task run: (started|failed)(?:\nTask run session: ([^\n]+))?(?:\nTask run title: ([^\n]+))?\n*$/.exec(completion);
+  const status = metadata?.[1];
+  return {
+    workspaceId,
+    localPath,
+    stdout,
+    ...(status === "started" || status === "failed"
+      ? {
+          taskRunStatus: status,
+          taskRunSessionId: metadata?.[2]?.trim(),
+          taskRunTitle: metadata?.[3]?.trim(),
+        }
+      : {}),
+  };
 }
 
 function parseJson(stdout: string, commandName: string): unknown {

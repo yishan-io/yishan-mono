@@ -10,6 +10,7 @@ import type {
   LocalTaskContextDetails,
   LocalTaskSearchResult,
   LocalTaskTemplatesResult,
+  LocalTaskWorkspaceLink,
 } from "../backend/localTaskTypes";
 import { type LocalTaskToolBackend, registerTaskTools } from "./registerTaskTools";
 
@@ -22,6 +23,7 @@ type RegisteredTool = {
 
 const TOOL_NAMES = [
   "task_start",
+  "task_link_workspace",
   "task_list",
   "task_search",
   "task_read",
@@ -46,11 +48,16 @@ afterEach(async () => {
 });
 
 describe("registerTaskTools", () => {
-  it("registers exactly nine strict daemon-backed tools with the locked schemas", () => {
+  it("registers exactly ten strict daemon-backed tools with the locked schemas", () => {
     const tools = collectTools(createBackend());
 
     expect(tools.map((tool) => tool.name)).toEqual(TOOL_NAMES);
     for (const tool of tools) expect(tool.parameters.additionalProperties).toBe(false);
+    expect(properties(tools, "task_link_workspace")).toEqual({
+      id: { type: "string", minLength: 1 },
+      workspaceId: { type: "string", minLength: 1 },
+    });
+    expect(requireTool(tools, "task_link_workspace").parameters).toMatchObject({ required: ["id", "workspaceId"] });
     expect(properties(tools, "task_start")).not.toHaveProperty("id");
     expect(properties(tools, "task_start")).not.toHaveProperty("ticket");
     expect(properties(tools, "task_start")).not.toHaveProperty("date");
@@ -157,6 +164,150 @@ describe("registerTaskTools", () => {
     await expect(access(join(projectDirectory, ".my-context", "tasks", "state.json"))).rejects.toThrow();
     await expect(access(join(projectDirectory, ".my-context", "tasks", "active"))).rejects.toThrow();
     await expect(access(join(projectDirectory, ".my-context", "tasks", "completed"))).rejects.toThrow();
+  });
+
+  it.each(["imported/task-id", "TASK-438"])("links %s with canonical identity and cancellation only", async (id) => {
+    const canonicalTask = task({ id: "imported/task-id", key: "TASK-438" });
+    const backend = createBackend({ getResult: canonicalTask, searchResult: canonicalTask });
+    if (id === "TASK-438") backend.get = vi.fn().mockRejectedValue(new LocalTaskRPCError(-32004, "not found"));
+    const link: LocalTaskWorkspaceLink = {
+      id: "link-1",
+      localTaskId: canonicalTask.id,
+      workspaceId: "workspace-1",
+      status: "new",
+      linkedAt: "2026-11-03",
+      unlinkedAt: null,
+    };
+    vi.mocked(backend.linkWorkspace).mockResolvedValue(link);
+    const signal = new AbortController().signal;
+
+    const response = await requireTool(collectTools(backend), "task_link_workspace").execute(
+      "call",
+      { id, workspaceId: "workspace-1" } as never,
+      signal,
+      undefined,
+      { cwd: projectDirectory },
+    );
+
+    expect(backend.get).toHaveBeenCalledWith(id, { signal });
+    if (id === "TASK-438") expect(backend.search).toHaveBeenCalledWith(id, { projectId: "project-a" }, { signal });
+    else expect(backend.search).not.toHaveBeenCalled();
+    expect(backend.linkWorkspace).toHaveBeenCalledExactlyOnceWith(canonicalTask.id, "workspace-1", { signal });
+    expect(response.details).toMatchObject({ id: canonicalTask.id, workspaceId: "workspace-1", link });
+    expect(response.content[0]?.text).toContain(canonicalTask.id);
+    expect(backend.create).not.toHaveBeenCalled();
+    expect(backend.update).not.toHaveBeenCalled();
+    expect(backend.getContextDetails).not.toHaveBeenCalled();
+    await expect(access(join(contextDirectory, "notes.md"))).rejects.toThrow();
+  });
+
+  it.each([
+    ["project-a", "other-project"],
+    ["project-a", null],
+    ["", "project-a"],
+  ])("rejects linking outside scope %s to %s", async (scope, projectId) => {
+    vi.stubEnv("YISHAN_PROJECT_ID", scope);
+    const backend = createBackend({ getResult: task({ projectId }) });
+    await expect(
+      execute(collectTools(backend), "task_link_workspace", {
+        id: "imported/task-id",
+        workspaceId: "workspace-1",
+      }),
+    ).rejects.toThrow("configured project scope");
+    expect(backend.linkWorkspace).not.toHaveBeenCalled();
+    expect(backend.search).not.toHaveBeenCalled();
+  });
+
+  it("resolves only an exact in-scope key before linking", async () => {
+    const backend = createBackend({ searchResult: task({ key: "TASK-438-extra" }) });
+    backend.get = vi.fn().mockRejectedValue(new LocalTaskRPCError(-32004, "not found"));
+    const tools = collectTools(backend);
+    await expect(execute(tools, "task_link_workspace", { id: "TASK-438", workspaceId: "ws" })).rejects.toThrow(
+      "not found",
+    );
+    vi.mocked(backend.search).mockResolvedValue([{ ...task({ key: "TASK-438", projectId: "other" }), rank: 1 }]);
+    await expect(execute(tools, "task_link_workspace", { id: "TASK-438", workspaceId: "ws" })).rejects.toThrow(
+      "not found",
+    );
+    expect(backend.linkWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("keeps a global task and its context on link failure and retries only the same association", async () => {
+    vi.stubEnv("YISHAN_PROJECT_ID", "");
+    const backend = createBackend({ getResult: task({ projectId: null }) });
+    const failure = new Error("link unavailable");
+    const link: LocalTaskWorkspaceLink = {
+      id: "link-1",
+      localTaskId: "imported/task-id",
+      workspaceId: "ws",
+      status: "new",
+      linkedAt: "2026-11-03",
+      unlinkedAt: null,
+    };
+    vi.mocked(backend.linkWorkspace).mockRejectedValueOnce(failure).mockResolvedValue(link);
+    const tools = collectTools(backend);
+    await expect(execute(tools, "task_link_workspace", { id: "imported/task-id", workspaceId: "ws" })).rejects.toBe(
+      failure,
+    );
+    expect(backend.linkWorkspace).toHaveBeenCalledTimes(1);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await expect(
+        execute(tools, "task_link_workspace", { id: "imported/task-id", workspaceId: "ws" }),
+      ).resolves.toMatchObject({
+        details: { id: "imported/task-id", workspaceId: "ws", link },
+      });
+    }
+    expect(backend.linkWorkspace).toHaveBeenCalledTimes(3);
+    expect(backend.linkWorkspace).toHaveBeenLastCalledWith("imported/task-id", "ws");
+    expect(backend.create).not.toHaveBeenCalled();
+    expect(backend.update).not.toHaveBeenCalled();
+    expect(backend.getContextDetails).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["project-a", "project-a", true],
+    ["", "project-a", false],
+    ["project-a", "project-b", false],
+  ])("reads the original controller task from target scope %s → %s: %s", async (source, target, canRead) => {
+    vi.stubEnv("YISHAN_PROJECT_ID", source);
+    const backend = createBackend();
+    const controller = collectTools(backend);
+    const originalTask = task({ projectId: source || null, description: "Original requirements and context" });
+    vi.mocked(backend.create).mockResolvedValue(originalTask);
+    vi.mocked(backend.get).mockResolvedValue(originalTask);
+    await execute(controller, "task_start", { title: "Task", description: originalTask.description });
+    await execute(controller, "task_write", { id: originalTask.id, document: "notes", content: "Original notes" });
+    await execute(controller, "task_write", { id: originalTask.id, document: "plan", content: "Frozen plan" });
+    vi.mocked(backend.getContextDetails).mockClear();
+
+    // The launched Pi inherits the workspace project, not the controller's task scope.
+    vi.stubEnv("YISHAN_PROJECT_ID", target);
+    const targetTools = collectTools(backend);
+    if (canRead) {
+      const brief = await execute(targetTools, "task_read", { id: originalTask.id });
+      expect(brief.content[0]?.text).toContain(originalTask.description);
+      expect(brief.content[0]?.text).toContain(`**Project:** ${target}`);
+      for (const [document, content] of [
+        ["notes", "Original notes"],
+        ["plan", "Frozen plan"],
+      ]) {
+        const response = await execute(targetTools, "task_read", { id: originalTask.id, document });
+        expect(response.content[0]?.text).toBe(content);
+      }
+    } else {
+      for (const document of ["task", "notes", "plan"]) {
+        await expect(execute(targetTools, "task_read", { id: originalTask.id, document })).rejects.toThrow(
+          "configured project scope",
+        );
+      }
+      expect(backend.getContextDetails).not.toHaveBeenCalled();
+    }
+    expect(backend.create).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ description: originalTask.description, ...(source ? { projectId: source } : {}) }),
+    );
+    if (!source) expect(vi.mocked(backend.create).mock.calls[0]?.[0]).not.toHaveProperty("projectId");
+    expect(backend.linkWorkspace).not.toHaveBeenCalled();
+    expect(backend.update).not.toHaveBeenCalled();
   });
 
   it("reads task metadata by stable key and returns its canonical task ID", async () => {

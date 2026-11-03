@@ -97,6 +97,19 @@ export class LocalTaskOperations {
     return task;
   }
 
+  /** Associates an existing scoped task with a workspace without changing metadata or context. */
+  async linkWorkspace(
+    id: string,
+    workspaceId: string,
+    options: LocalTaskOperationOptions = {},
+  ): Promise<LocalTaskWorkspaceLink> {
+    const requestedWorkspaceId = requireWorkspaceId(workspaceId);
+    const task = await this.get(id, options);
+    return options.signal === undefined
+      ? this.client.linkWorkspace(task.id, requestedWorkspaceId)
+      : this.client.linkWorkspace(task.id, requestedWorkspaceId, options);
+  }
+
   /** Lists metadata tasks within the configured project or the global-only scope. */
   async list(input: TaskListInput = {}, options: LocalTaskOperationOptions = {}): Promise<LocalTask[]> {
     assertRuntimeTags(input.tags);

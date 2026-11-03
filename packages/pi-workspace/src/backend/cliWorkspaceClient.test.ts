@@ -165,4 +165,112 @@ describe("createCliWorkspaceClient", () => {
     );
     expect(result).toEqual({ workspace: { id: "ws-env", status: "closed" } });
   });
+  it.each(["started", "failed", undefined])("preserves workspace ID with optional run status %s", async (status) => {
+    const stdout = [
+      "Created: ws-run  /tmp/ws-run",
+      ...(status ? [`Task run: ${status}`, "Task run session: session-1", "Task run title: Task reference"] : []),
+    ].join("\n");
+    execFileMock.mockImplementation((_cmd, _args, _options, callback) => callback(null, stdout, ""));
+    const result = await createCliWorkspaceClient().create({ projectId: "proj-1", branch: "feature/run" });
+    expect(result).toEqual({
+      workspaceId: "ws-run",
+      localPath: "/tmp/ws-run",
+      stdout,
+      ...(status ? { taskRunStatus: status, taskRunSessionId: "session-1", taskRunTitle: "Task reference" } : {}),
+    });
+  });
+  it.each([
+    {
+      name: "progress started cannot override final failed metadata",
+      lines: [
+        "Task run: started",
+        "Task run session: stale",
+        "Task run title: stale",
+        "Created: ws-final  /tmp/final",
+        "Task run: failed",
+        "Task run session: final-session",
+        "Task run title: Final title",
+      ],
+      metadata: { taskRunStatus: "failed", taskRunSessionId: "final-session", taskRunTitle: "Final title" },
+    },
+    {
+      name: "selects the final Created block instead of a progress copy",
+      lines: [
+        "Created: ws-stale  /tmp/stale",
+        "Task run: started",
+        "Task run session: stale",
+        "Task run title: stale",
+        "Creating workspace...",
+        "Created: ws-final  /tmp/final",
+        "Task run: failed",
+      ],
+      metadata: { taskRunStatus: "failed" },
+    },
+    {
+      name: "does not borrow optional fields from progress",
+      lines: ["Task run session: stale", "Task run title: stale", "Created: ws-final  /tmp/final", "Task run: started"],
+      metadata: { taskRunStatus: "started" },
+    },
+    {
+      name: "old CLI with injected progress has no real metadata",
+      lines: ["Task run: started", "Task run session: stale", "Task run title: stale", "Created: ws-final  /tmp/final"],
+      metadata: {},
+    },
+    {
+      name: "does not cross a progress block after Created",
+      lines: ["Created: ws-final  /tmp/final", "  repo complete", "Task run: started", "Task run session: stale"],
+      metadata: {},
+    },
+    ...["Task run: failed", "Task run session: duplicate", "Task run title: duplicate"].map((duplicate) => ({
+      name: `rejects duplicate completion field ${duplicate}`,
+      lines: [
+        "Created: ws-final  /tmp/final",
+        "Task run: started",
+        "Task run session: final-session",
+        "Task run title: Final title",
+        duplicate,
+      ],
+      metadata: {},
+    })),
+    {
+      name: "multiline progress title cannot inject completion metadata",
+      lines: [
+        "  task running Task run title: First line",
+        "Task run: started",
+        "Task run session: stale",
+        "Task run title: Second line",
+        "Created: ws-final  /tmp/final",
+        "Task run: failed",
+        "Task run title: Final title",
+      ],
+      metadata: { taskRunStatus: "failed", taskRunTitle: "Final title" },
+    },
+    {
+      name: "rejects multiline completion title with injected status",
+      lines: [
+        "Created: ws-final  /tmp/final",
+        "Task run: started",
+        "Task run title: First line",
+        "Second line",
+        "Task run: failed",
+      ],
+      metadata: {},
+    },
+    {
+      name: "accepts CRLF completion with a normalized title",
+      lines: [
+        "Created: ws-final  /tmp/final\r",
+        "Task run: started\r",
+        "Task run session: final-session\r",
+        "Task run title: First line Second line\r",
+        "",
+      ],
+      metadata: { taskRunStatus: "started", taskRunSessionId: "final-session", taskRunTitle: "First line Second line" },
+    },
+  ])("$name", async ({ lines, metadata }) => {
+    const stdout = `${lines.join("\n")}\n`;
+    execFileMock.mockImplementation((_cmd, _args, _options, callback) => callback(null, stdout, ""));
+    const result = await createCliWorkspaceClient().create({ projectId: "proj-1", branch: "feature/run" });
+    expect(result).toEqual({ workspaceId: "ws-final", localPath: "/tmp/final", stdout, ...metadata });
+  });
 });

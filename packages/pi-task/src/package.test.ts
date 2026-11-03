@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 const PACKAGE_ROOT = resolve(import.meta.dirname, "..");
 const TOOL_NAMES = [
   "task_start",
+  "task_link_workspace",
   "task_list",
   "task_search",
   "task_read",
@@ -66,7 +67,7 @@ describe("pi-task package contract", () => {
     await Promise.all(SKILL_NAMES.map((name) => access(resolve(PACKAGE_ROOT, "skills", name, "SKILL.md"))));
   });
 
-  it("documents exactly nine tools and four consistent daemon-backed skills", async () => {
+  it("documents exactly ten tools and four consistent daemon-backed skills", async () => {
     const readme = await readFile(resolve(PACKAGE_ROOT, "README.md"), "utf8");
     const skillDirectory = resolve(PACKAGE_ROOT, "skills");
     const skillFiles = await readdir(skillDirectory, { withFileTypes: true });
@@ -87,6 +88,55 @@ describe("pi-task package contract", () => {
       expect(skill).toContain("task_update");
       expect(skill).toContain("task_finish");
       expect(skill).toMatch(/only when the user explicitly/i);
+    }
+  });
+
+  it("documents persist-first delegation and safe association recovery", async () => {
+    const documents = await Promise.all([
+      readFile(resolve(PACKAGE_ROOT, "README.md"), "utf8"),
+      ...["starting-task", "context-task"].map((name) =>
+        readFile(resolve(PACKAGE_ROOT, "skills", name, "SKILL.md"), "utf8"),
+      ),
+    ]);
+    for (const document of documents) {
+      expect(document).toMatch(/task_start[\s\S]*notes[\s\S]*plan[\s\S]*workspace_create[\s\S]*task_link_workspace/);
+      expect(document).toContain("taskRunPrompt");
+      expect(document).toContain("Task ID");
+      expect(document).toMatch(/task_read[\s\S]*without waiting for (?:the )?association/);
+      expect(document).toContain("Do not create a replacement task");
+      expect(document).toContain("does not remove earlier associations");
+      expect(document).toContain("not an atomic rebind");
+      expect(document).toMatch(/same Task ID and known workspace ID/);
+      expect(document).toContain("Do not recreate the workspace or launch another run");
+      expect(document).toMatch(/timeout[\s\S]*run failure[\s\S]*inspect/);
+      expect(document).toContain("primary workspace");
+    }
+  });
+
+  it("requires same-project scope preflight before workspace launch in every handoff guide", async () => {
+    const documents = await Promise.all([
+      readFile(resolve(PACKAGE_ROOT, "README.md"), "utf8"),
+      ...["starting-task", "context-task"].map((name) =>
+        readFile(resolve(PACKAGE_ROOT, "skills", name, "SKILL.md"), "utf8"),
+      ),
+      readFile(resolve(PACKAGE_ROOT, "../pi-workspace/README.md"), "utf8"),
+      readFile(resolve(PACKAGE_ROOT, "../pi-workspace/src/tools/registerWorkspaceTools.ts"), "utf8"),
+    ]);
+    for (const document of documents) {
+      expect(document).toMatch(/task_read[\s\S]*projectId[\s\S]*non-null[\s\S]*target project[\s\S]*workspace_create/);
+      const instructions = document.replaceAll("`", "");
+      const preflight = instructions.indexOf("Use task_read with the original Task ID");
+      const launch = instructions.indexOf("Use workspace_create with a short intent-first");
+      expect(preflight).toBeGreaterThanOrEqual(0);
+      expect(launch).toBeGreaterThan(preflight);
+      expect(document).toContain("explicit projectId override");
+      expect(document).toContain("YISHAN_PROJECT_ID");
+      expect(document).toContain("Do not create a workspace or start a run");
+      expect(document).toContain("not a retryable association failure");
+      expect(document).toContain("Global tasks remain usable and linkable in global scope");
+      expect(document).toContain("Execute Task <Task ID>; first use task_read to read its requirements and context.");
+      expect(document).not.toMatch(/only (?:an? existing |that )?(?:Task ID|a Task ID) reference/);
+      expect(document).toMatch(/task_read[\s\S]*notes[\s\S]*plan[\s\S]*without waiting for association/);
     }
   });
 

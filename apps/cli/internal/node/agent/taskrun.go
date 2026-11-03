@@ -6,11 +6,9 @@ import (
 	"strings"
 	"yishan/apps/cli/internal/events"
 
-	agentcmd "yishan/apps/cli/internal/agent/command"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/agent/session"
 	"yishan/apps/cli/internal/rpc"
-	term "yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 
@@ -18,8 +16,7 @@ import (
 )
 
 // taskRunSessionInfo describes a task run started as a Pi RPC session (agent
-// chat tab). Non-nil only when the chat-tab path was taken; the desktop uses
-// it to open the agent chat tab for the run.
+// chat tab). The desktop uses it to open the agent chat tab for the run.
 type taskRunSessionInfo struct {
 	sessionID string
 	title     string
@@ -43,19 +40,13 @@ func (s *Service) PublishWorkspaceCreateCompleted(prepared application.CreatePla
 
 // maybeStartTaskRun starts the task run attached to a workspace create.
 //
-// When a desktop UI is connected to this daemon, the run executes as a Pi RPC
-// session so the desktop can show it as an agent chat tab. Otherwise (headless
-// daemon, remote service node) the run executes in a terminal via the agent
-// CLI, matching the pre-existing behavior.
+// Every task run uses a Pi RPC session, including on headless nodes.
 func (s *Service) maybeStartTaskRun(prepared application.CreatePlan, created workspace.Workspace) (string, *taskRunSessionInfo) {
 	if prepared.LocalCreate == nil || prepared.LocalCreate.TaskRun == nil {
 		return "", nil
 	}
 	taskRun := prepared.LocalCreate.TaskRun
-	if s.HasDesktopUI() {
-		return s.startTaskRunChatSession(created, taskRun)
-	}
-	return s.startTaskRunTerminal(created, taskRun), nil
+	return s.startTaskRunChatSession(created, taskRun)
 }
 
 func (s *Service) startTaskRunChatSession(created workspace.Workspace, taskRun *workspace.TaskRunConfig) (string, *taskRunSessionInfo) {
@@ -69,6 +60,11 @@ func (s *Service) startTaskRunChatSession(created workspace.Workspace, taskRun *
 
 func (s *Service) startAdmittedTaskRun(created workspace.Workspace, taskRun *workspace.TaskRunConfig, admission *session.Admission) (string, *taskRunSessionInfo) {
 	defer s.piSessions.ReleaseAdmission(admission)
+	// Exited processes leave task run metadata behind; completion must not
+	// restart an already registered run or deliver its prompt again.
+	if registered, exists := s.piSessions.Get("task-" + created.ID); exists && registered.TaskRun {
+		return "failed", nil
+	}
 	session, sessionID, tabID, ok := s.startTaskRunPiProcess(created, taskRun)
 	if !ok {
 		return "failed", nil
@@ -148,34 +144,6 @@ func (s *Service) cleanupTaskRunSession(sessionID string) {
 	}
 }
 
-func (s *Service) startTaskRunTerminal(created workspace.Workspace, taskRun *workspace.TaskRunConfig) string {
-	cmd, buildErr := agentcmd.BuildRunCommand(taskRun.AgentKind, taskRun.Prompt, taskRun.Model, true)
-	if buildErr != nil {
-		log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to build agent command")
-		return "failed"
-	}
-	resp, startErr := s.deps.Terminals.Start(context.Background(), created.Path, term.StartRequest{
-		WorkspaceID: created.ID,
-		ProjectID:   created.ProjectID,
-		OrgID:       created.OrgID,
-		TabID:       "task-" + created.ID,
-		PaneID:      "pane-task-" + created.ID,
-		Title:       buildTaskRunTerminalTitle(taskRun.Prompt, taskRun.AgentKind),
-		AgentKind:   taskRun.AgentKind,
-	})
-	if startErr != nil {
-		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to start terminal session")
-		return "failed"
-	}
-	_, sendErr := s.deps.Terminals.Send(term.SendRequest{SessionID: resp.SessionID, Input: shellCommandLine(cmd.Binary, cmd.Args) + "\r"})
-	if sendErr != nil {
-		log.Warn().Err(sendErr).Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to send agent command")
-		return "failed"
-	}
-	log.Info().Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", taskRun.AgentKind).Str("prompt", taskRun.Prompt).Msg("task run: terminal session started")
-	return "started"
-}
-
 func buildTaskRunTerminalTitle(prompt string, agentKind string) string {
 	trimmedPrompt := strings.TrimSpace(prompt)
 	if trimmedPrompt != "" {
@@ -200,20 +168,4 @@ func truncateRunes(value string, limit int) string {
 		return value
 	}
 	return string(runes[:limit])
-}
-
-func shellCommandLine(binary string, args []string) string {
-	var b strings.Builder
-	b.WriteString(binary)
-	for _, arg := range args {
-		b.WriteByte(' ')
-		if strings.ContainsAny(arg, " \t\n\r'\"") {
-			b.WriteByte('\'')
-			b.WriteString(strings.ReplaceAll(arg, "'", "'\\''"))
-			b.WriteByte('\'')
-		} else {
-			b.WriteString(arg)
-		}
-	}
-	return b.String()
 }

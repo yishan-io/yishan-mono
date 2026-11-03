@@ -25,10 +25,10 @@ const updateStatusSchema = StringEnum(["new", "progressing", "cancelled"] as con
 const readDocumentSchema = StringEnum(["task", "notes", "plan", "outcome"] as const);
 const writeDocumentSchema = StringEnum(["notes", "plan", "outcome"] as const);
 
-/** The complete daemon surface needed by the nine Pi task tools. */
+/** The complete daemon surface needed by the ten Pi task tools. */
 export type LocalTaskToolBackend = LocalTaskMetadataClient & LocalTaskDocumentBackend & LocalTaskTemplateClient;
 type BackendResolver = () => LocalTaskToolBackend;
-/** Registers the nine daemon-backed Local Task tools for a Pi session. */
+/** Registers the ten daemon-backed Local Task tools for a Pi session. */
 export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBackend): void {
   const getBackend = createBackendResolver(backend);
 
@@ -55,6 +55,23 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
       const operations = createLocalTaskOperations(getBackend());
       const task = await operations.start(params, { signal });
       return result(`Started task ${task.id}.`, task);
+    },
+  });
+
+  pi.registerTool({
+    name: "task_link_workspace",
+    label: "Link Task Workspace",
+    description: "Associate an existing Local Task with a workspace in the current scope without starting a run.",
+    parameters: Type.Object({ id: taskIdSchema, workspaceId: taskIdSchema }, { additionalProperties: false }),
+    async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
+      const link = await createLocalTaskOperations(getBackend()).linkWorkspace(params.id, params.workspaceId, {
+        signal,
+      });
+      return result(`Linked task ${link.localTaskId} to workspace ${link.workspaceId}.`, {
+        id: link.localTaskId,
+        workspaceId: link.workspaceId,
+        link,
+      });
     },
   });
 

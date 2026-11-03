@@ -11,7 +11,7 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-// LinkWorkspace creates a progressing Local Task workspace link.
+// LinkWorkspace reuses an active pair or creates a progressing workspace link.
 func (s *Service) LinkWorkspace(ctx context.Context, req rpc.LocalTaskLinkWorkspaceParams) (any, error) {
 	taskID, workspaceID, err := s.validateTaskWorkspace(ctx, req.TaskID, req.WorkspaceID)
 	if err != nil {
@@ -96,34 +96,49 @@ func (s *Service) validateTaskWorkspace(ctx context.Context, taskID string, work
 	if err != nil {
 		return "", "", err
 	}
-	if err := s.requireLocalWorkspace(ctx, resolvedWorkspaceID); err != nil {
+	localWorkspace, err := s.resolveLocalWorkspace(ctx, resolvedWorkspaceID)
+	if err != nil {
 		return "", "", err
 	}
-	if _, err := s.deps.Repository.Get(ctx, resolvedTaskID); err != nil {
+	task, err := s.deps.Repository.Get(ctx, resolvedTaskID)
+	if err != nil {
 		return "", "", err
+	}
+	if task.ProjectID != nil && *task.ProjectID != "" && *task.ProjectID != localWorkspace.ProjectID {
+		return "", "", fmt.Errorf("task and workspace projects differ: %w", domain.ErrInvalidLink)
+	}
+	if task.OrganizationID != nil && *task.OrganizationID != "" && *task.OrganizationID != localWorkspace.OrganizationID {
+		return "", "", fmt.Errorf("task and workspace organizations differ: %w", domain.ErrInvalidLink)
 	}
 	return resolvedTaskID, resolvedWorkspaceID, nil
 }
 
 func (s *Service) requireLocalWorkspace(ctx context.Context, workspaceID string) error {
+	_, err := s.resolveLocalWorkspace(ctx, workspaceID)
+	return err
+}
+
+func (s *Service) resolveLocalWorkspace(ctx context.Context, workspaceID string) (workspace.StoredWorkspace, error) {
 	if s.deps.Registry != nil {
-		if _, ok := s.deps.Registry.Get(workspaceID); ok {
-			return nil
+		if localWorkspace, ok := s.deps.Registry.Get(workspaceID); ok {
+			return workspace.StoredWorkspace{
+				ID: localWorkspace.ID, ProjectID: localWorkspace.ProjectID, OrganizationID: localWorkspace.OrgID,
+			}, nil
 		}
 	}
 	if s.deps.WorkspaceStore == nil {
-		return workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
+		return workspace.StoredWorkspace{}, workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
 	}
 	workspaces, err := s.deps.WorkspaceStore.List(ctx)
 	if err != nil {
-		return fmt.Errorf("list local workspaces: %w", err)
+		return workspace.StoredWorkspace{}, fmt.Errorf("list local workspaces: %w", err)
 	}
 	for _, localWorkspace := range workspaces {
 		if localWorkspace.ID == workspaceID {
-			return nil
+			return localWorkspace, nil
 		}
 	}
-	return workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
+	return workspace.StoredWorkspace{}, workspace.NewError(workspace.ErrCodeNotFound, "workspace not found")
 }
 
 // UnlinkWorkspaceAssociations removes every active Local Task association for

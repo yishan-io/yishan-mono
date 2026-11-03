@@ -25,7 +25,9 @@ const workspaceCreateSchema = Type.Object({
   ),
   name: Type.Optional(Type.String({ description: "Workspace name used for the local worktree path." })),
   targetNode: Type.Optional(Type.String({ description: "Optional target node id for workspace creation." })),
-  taskRunPrompt: Type.Optional(Type.String({ description: "Optional short prompt for the launched agent." })),
+  taskRunPrompt: Type.Optional(
+    Type.String({ description: "Optional Task ID reference for the launched Pi agent chat." }),
+  ),
   taskRunModel: Type.Optional(Type.String({ description: "Optional model override for the launched agent." })),
 });
 
@@ -87,8 +89,14 @@ export function registerWorkspaceTools(pi: ExtensionAPI, client: WorkspaceBacken
     promptGuidelines: [
       "Use workspace_create when the user wants a fresh worktree workspace for isolated feature work.",
       "After workspace_create, do not inspect or modify the new workspace from the current session unless the user explicitly asks to move there.",
-      "New-workspace task runs use the Pi CLI automatically; do not pass a Pi subagent definition such as `builder`.",
-      "When launching an agent task run, pass a short stable prompt that points at an existing task file instead of embedding the full task description.",
+      "Only same-project Task delegation is supported. The target Pi inherits the workspace project. Global tasks remain usable and linkable in global scope; linking does not grant target read access.",
+      "Persist complete requirements with task_start (or reuse the existing Task ID), then save notes and a controller-frozen plan before workspace_create; afterwards use task_link_workspace with the original Task ID and returned workspace ID.",
+      "Use task_read with the original Task ID. Make sure its projectId is non-null and equals the target project before workspace_create. Resolve the target from an explicit projectId override, otherwise from the current YISHAN_PROJECT_ID. If either project is unknown, the task is global, the projects differ, or the read fails, stop. Do not create a workspace or start a run. This is not a retryable association failure. Do not recreate the Task or change scope to bypass the check.",
+      "New-workspace runs use fixed Pi through agent chat; do not pass an agent kind or a Pi subagent definition such as `builder`.",
+      "Use workspace_create with a short intent-first taskRunPrompt, such as `Execute Task <Task ID>; first use task_read to read its requirements and context.`, not the full requirements or context.",
+      "The target agent must use task_read for that Task ID and existing notes/plan without waiting for association. Do not create a replacement task.",
+      "Only after the scope check passes and workspace creation succeeds, use association recovery. If association fails, keep the original task/context and retry only task_link_workspace with the same Task ID and known workspace ID. Do not recreate the workspace or launch another run.",
+      "After a creation timeout or a run failure, inspect workspace and run state before any retry; do not retry automatically or treat workspace creation as proof that chat started.",
     ],
     parameters: workspaceCreateSchema,
     async execute(_toolCallId, params) {
@@ -102,14 +110,31 @@ export function registerWorkspaceTools(pi: ExtensionAPI, client: WorkspaceBacken
         taskRunPrompt: params.taskRunPrompt,
         taskRunModel: params.taskRunModel,
       });
+      const runText = result.taskRunStatus
+        ? ` Task run: ${result.taskRunStatus}.${result.taskRunSessionId ? ` Session: ${result.taskRunSessionId}.` : ""}${result.taskRunTitle ? ` Title: ${result.taskRunTitle}.` : ""}`
+        : "";
+      const warning =
+        result.taskRunStatus === "failed"
+          ? " Workspace creation succeeded, but the task run failed. Inspect workspace and run state before retrying; do not recreate the workspace or automatically launch another run."
+          : "";
       return {
         content: [
           {
             type: "text",
-            text: `Created workspace ${result.workspaceId}${result.localPath ? ` at ${result.localPath}` : ""}.`,
+            text: `Created workspace ${result.workspaceId}${result.localPath ? ` at ${result.localPath}` : ""}.${runText}${warning}`,
           },
         ],
-        details: { workspaceId: result.workspaceId, localPath: result.localPath },
+        details: {
+          workspaceId: result.workspaceId,
+          localPath: result.localPath,
+          ...(result.taskRunStatus
+            ? {
+                taskRunStatus: result.taskRunStatus,
+                taskRunSessionId: result.taskRunSessionId,
+                taskRunTitle: result.taskRunTitle,
+              }
+            : {}),
+        },
       };
     },
   });

@@ -12,91 +12,9 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/rpc"
-	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/application"
 )
-
-func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t *testing.T) {
-	root := t.TempDir()
-	handler := newTestService(t, nil, "node-1")
-
-	subscriptionID, events := handler.deps.Events.Subscribe()
-	defer handler.deps.Events.Unsubscribe(subscriptionID)
-
-	handler.PublishWorkspaceCreateCompleted(
-		application.CreatePlan{
-			LocalCreate: &workspace.CreateRequest{
-				TaskRun: &workspace.TaskRunConfig{
-					AgentKind: "opencode",
-					Prompt:    "investigate bug",
-				},
-			},
-		},
-		workspace.Workspace{ID: "ws-1", Path: root},
-		nil,
-	)
-	defer stopAllTerminalSessions(handler)
-
-	var terminalPayload map[string]any
-	var completionPayload map[string]any
-	deadline := time.After(3 * time.Second)
-	for terminalPayload == nil || completionPayload == nil {
-		select {
-		case event := <-events:
-			switch event.Topic {
-			case "terminalSessionChanged":
-				payload, ok := event.Payload.(map[string]any)
-				if !ok {
-					t.Fatalf("terminalSessionChanged payload type = %T, want map[string]any", event.Payload)
-				}
-				if payload["action"] == "created" {
-					terminalPayload = payload
-				}
-			case "workspaceCreateCompleted":
-				payload, ok := event.Payload.(map[string]any)
-				if !ok {
-					t.Fatalf("workspaceCreateCompleted payload type = %T, want map[string]any", event.Payload)
-				}
-				completionPayload = payload
-			}
-		case <-deadline:
-			t.Fatal("timed out waiting for terminalSessionChanged + workspaceCreateCompleted events")
-		}
-	}
-
-	if terminalPayload["workspaceId"] != "ws-1" {
-		t.Fatalf("terminal workspaceId = %#v, want %q", terminalPayload["workspaceId"], "ws-1")
-	}
-	if terminalPayload["tabId"] != "task-ws-1" {
-		t.Fatalf("terminal tabId = %#v, want %q", terminalPayload["tabId"], "task-ws-1")
-	}
-	if terminalPayload["paneId"] != "pane-task-ws-1" {
-		t.Fatalf("terminal paneId = %#v, want %q", terminalPayload["paneId"], "pane-task-ws-1")
-	}
-	if terminalPayload["title"] != "Task: investigate bug" {
-		t.Fatalf("terminal title = %#v, want %q", terminalPayload["title"], "Task: investigate bug")
-	}
-	if terminalPayload["agentKind"] != "opencode" {
-		t.Fatalf("terminal agentKind = %#v, want %q", terminalPayload["agentKind"], "opencode")
-	}
-
-	if completionPayload["workspaceId"] != "ws-1" {
-		t.Fatalf("completion workspaceId = %#v, want %q", completionPayload["workspaceId"], "ws-1")
-	}
-	if completionPayload["worktreePath"] != root {
-		t.Fatalf("completion worktreePath = %#v, want %q", completionPayload["worktreePath"], root)
-	}
-	if completionPayload["taskRunStatus"] != "started" {
-		t.Fatalf("completion taskRunStatus = %#v, want %q", completionPayload["taskRunStatus"], "started")
-	}
-	if _, ok := completionPayload["taskRunSessionId"]; ok {
-		t.Fatalf("completion payload unexpectedly included taskRunSessionId: %+v", completionPayload)
-	}
-	if _, ok := completionPayload["taskRunTabId"]; ok {
-		t.Fatalf("completion payload unexpectedly included taskRunTabId: %+v", completionPayload)
-	}
-}
 
 func TestBuildTaskRunTerminalTitle(t *testing.T) {
 	tests := []struct {
@@ -131,13 +49,6 @@ func TestBuildTaskRunTerminalTitle(t *testing.T) {
 				t.Fatalf("buildTaskRunTerminalTitle(%q, %q) = %q, want %q", tt.prompt, tt.agentKind, got, tt.want)
 			}
 		})
-	}
-}
-
-func stopAllTerminalSessions(handler *Service) {
-	sessions := handler.deps.Terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true})
-	for _, session := range sessions {
-		_, _ = handler.deps.Terminals.Stop(terminal.StopRequest{SessionID: session.SessionID})
 	}
 }
 
@@ -197,9 +108,43 @@ func TestPiStart_TaskRunSessionEndedBeforeAttachFailsClosed(t *testing.T) {
 	}
 }
 
-func TestPublishWorkspaceCreateCompleted_TaskRunUsesChatSessionWhenDesktopConnected(t *testing.T) {
+func TestPublishWorkspaceCreateCompleted_TaskRunUsesChatSession(t *testing.T) {
+	for _, hasDesktop := range []bool{true, false} {
+		t.Run(fmt.Sprintf("desktop=%t", hasDesktop), func(t *testing.T) {
+			testTaskRunChatSession(t, hasDesktop)
+		})
+	}
+}
+
+func testTaskRunChatSession(t *testing.T, hasDesktop bool) {
+	s, homeDir, markerPath := prepareTaskRunChatSession(t, hasDesktop)
+	completionPayload := publishTaskRunChatSession(t, s)
+
+	if completionPayload["taskRunStatus"] != "started" {
+		t.Fatalf("completion taskRunStatus = %#v, want %q", completionPayload["taskRunStatus"], "started")
+	}
+	if completionPayload["taskRunSessionId"] != "task-ws-1" {
+		t.Fatalf("completion taskRunSessionId = %#v, want %q", completionPayload["taskRunSessionId"], "task-ws-1")
+	}
+	if completionPayload["taskRunTitle"] != "Task: investigate bug" {
+		t.Fatalf("completion taskRunTitle = %#v, want %q", completionPayload["taskRunTitle"], "Task: investigate bug")
+	}
+
+	// The run must be a Pi session, not a terminal session.
+	if _, ok := s.deps.AgentMgr.Session("task-ws-1"); !ok {
+		t.Fatal("expected pi session task-ws-1 to be active")
+	}
+	assertTaskRunChatEnv(t, homeDir, markerPath)
+}
+
+func prepareTaskRunChatSession(t *testing.T, hasDesktop bool) (*Service, string, string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script test is unix-only")
+	}
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	t.Setenv("YISHAN_DAEMON_WS_URL", "stale")
 
 	// Route "pi" to a fake binary so the test never spawns the real agent.
 	fakePiDir := t.TempDir()
@@ -207,10 +152,12 @@ func TestPublishWorkspaceCreateCompleted_TaskRunUsesChatSessionWhenDesktopConnec
 	markerPath := filepath.Join(homeDir, "pi-task-run-env.txt")
 	fakePiScript := fmt.Sprintf(`#!/bin/sh
 env > %q.tmp && mv %q.tmp %q
+printf '%%s\n' "$@" > %q.tmp && mv %q.tmp %q
 while IFS= read -r line; do
+  printf '%%s\n' "$line" > %q.tmp && mv %q.tmp %q
   printf '%%s\n' '{"type":"session_info","name":"fake-pi-task-run"}'
 done
-`, markerPath, markerPath, markerPath)
+`, markerPath, markerPath, markerPath, markerPath+".args", markerPath+".args", markerPath+".args", markerPath+".prompt", markerPath+".prompt", markerPath+".prompt")
 	if err := os.WriteFile(fakePi, []byte(fakePiScript), 0o755); err != nil {
 		t.Fatalf("write fake pi binary: %v", err)
 	}
@@ -218,9 +165,17 @@ done
 
 	s := newTestHandler(t)
 	s.deps.DaemonWSEndpoint = "ws://127.0.0.1:4312/ws"
-	// Simulate a connected Yishan desktop UI: task runs switch to chat mode.
-	registerTestDesktopConn(s)
+	s.deps.Terminals = nil // Any terminal Start or Send would panic, even if it failed.
+	if hasDesktop {
+		registerTestDesktopConn(s)
+	}
+	t.Cleanup(func() { s.cleanupTaskRunSession("task-ws-1") })
 
+	return s, homeDir, markerPath
+}
+
+func publishTaskRunChatSession(t *testing.T, s *Service) map[string]any {
+	t.Helper()
 	subscriptionID, events := s.deps.Events.Subscribe()
 	defer s.deps.Events.Unsubscribe(subscriptionID)
 
@@ -229,7 +184,8 @@ done
 		application.CreatePlan{
 			LocalCreate: &workspace.CreateRequest{
 				TaskRun: &workspace.TaskRunConfig{
-					AgentKind: "pi",
+					AgentKind: "opencode",
+					Model:     " provider/model ",
 					Prompt:    "investigate bug",
 				},
 			},
@@ -251,24 +207,11 @@ done
 		}
 	}
 
-	if completionPayload["taskRunStatus"] != "started" {
-		t.Fatalf("completion taskRunStatus = %#v, want %q", completionPayload["taskRunStatus"], "started")
-	}
-	if completionPayload["taskRunSessionId"] != "task-ws-1" {
-		t.Fatalf("completion taskRunSessionId = %#v, want %q", completionPayload["taskRunSessionId"], "task-ws-1")
-	}
-	if completionPayload["taskRunTitle"] != "Task: investigate bug" {
-		t.Fatalf("completion taskRunTitle = %#v, want %q", completionPayload["taskRunTitle"], "Task: investigate bug")
-	}
+	return completionPayload
+}
 
-	// The run must be a Pi session, not a terminal session.
-	if _, ok := s.deps.AgentMgr.Session("task-ws-1"); !ok {
-		t.Fatal("expected pi session task-ws-1 to be active")
-	}
-	if sessions := s.deps.Terminals.ListSessions(terminal.ListSessionsRequest{IncludeExited: true}); len(sessions) != 0 {
-		t.Fatalf("chat-mode task run started terminal sessions: %#v", sessions)
-	}
-
+func assertTaskRunChatEnv(t *testing.T, homeDir, markerPath string) {
+	t.Helper()
 	env := strings.Split(waitForFileContent(t, markerPath), "\n")
 	assertEnvValue(t, env, "YISHAN_WORKSPACE_ID", "ws-1")
 	assertEnvValue(t, env, "YISHAN_PROJECT_ID", "project-1")
@@ -277,38 +220,13 @@ done
 	assertEnvValue(t, env, "YISHAN_PANE_ID", "pane-task-ws-1")
 	assertEnvValue(t, env, "PI_CODING_AGENT_DIR", filepath.Join(homeDir, ".yishan", "pi", "agent"))
 	assertEnvValue(t, env, "YISHAN_DAEMON_WS_URL", "ws://127.0.0.1:4312/ws")
-}
-
-func TestPublishWorkspaceCreateCompleted_HeadlessTaskRunInjectsEndpointAndOwnership(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("shell script test is unix-only")
+	args := waitForFileContent(t, markerPath+".args")
+	if args != "--mode\nrpc\n--name\ntask-ws-1\n--approve\n--session-id\ntask-ws-1\n--model\nprovider/model\n" {
+		t.Fatalf("pi args = %q", args)
+	}
+	prompt := waitForFileContent(t, markerPath+".prompt")
+	if strings.TrimSpace(prompt) != `{"message":"investigate bug","type":"prompt"}` {
+		t.Fatalf("prompt = %q", prompt)
 	}
 
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
-	t.Setenv("YISHAN_DAEMON_WS_URL", "stale")
-	markerPath := filepath.Join(homeDir, "headless-task-run-env.txt")
-	fakePiDir := t.TempDir()
-	fakePi := filepath.Join(fakePiDir, "pi")
-	fakePiScript := fmt.Sprintf("#!/bin/sh\nenv > %q.tmp && mv %q.tmp %q\n", markerPath, markerPath, markerPath)
-	if err := os.WriteFile(fakePi, []byte(fakePiScript), 0o755); err != nil {
-		t.Fatalf("write fake pi binary: %v", err)
-	}
-	t.Setenv("PATH", fakePiDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-
-	s := newTestHandler(t)
-	endpoint := "ws://127.0.0.1:4312/ws"
-	s.deps.DaemonWSEndpoint = endpoint
-	s.deps.Terminals.SetDaemonWSEndpoint(endpoint)
-	workspacePath := t.TempDir()
-	s.PublishWorkspaceCreateCompleted(application.CreatePlan{
-		LocalCreate: &workspace.CreateRequest{TaskRun: &workspace.TaskRunConfig{AgentKind: "pi", Prompt: "investigate bug"}},
-	}, workspace.Workspace{ID: "ws-headless", Path: workspacePath, ProjectID: "project-headless", OrgID: "org-headless"}, nil)
-	defer stopAllTerminalSessions(s)
-
-	env := strings.Split(waitForFileContent(t, markerPath), "\n")
-	assertEnvValue(t, env, "YISHAN_DAEMON_WS_URL", endpoint)
-	assertEnvValue(t, env, "YISHAN_WORKSPACE_ID", "ws-headless")
-	assertEnvValue(t, env, "YISHAN_PROJECT_ID", "project-headless")
-	assertEnvValue(t, env, "YISHAN_ORG_ID", "org-headless")
 }

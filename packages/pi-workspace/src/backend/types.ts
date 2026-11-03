@@ -69,6 +69,9 @@ export interface WorkspaceCreateResult {
   workspaceId: string;
   localPath?: string;
   stdout: string;
+  taskRunStatus?: "started" | "failed";
+  taskRunSessionId?: string;
+  taskRunTitle?: string;
 }
 
 /**

@@ -245,7 +245,7 @@ func hydrateLocalTaskSearchResultTags(ctx context.Context, queryer localTaskQuer
 	return hydrateLocalTaskTags(ctx, queryer, taskPointers)
 }
 
-// LinkWorkspace creates a historical link from a Local Task to a local workspace.
+// LinkWorkspace reuses an active pair or creates a new historical link.
 func (store *LocalTaskStore) LinkWorkspace(ctx context.Context, link localtask.WorkspaceLink) (localtask.WorkspaceLink, error) {
 	if link.ID == "" {
 		link.ID = uuid.NewString()
@@ -257,13 +257,43 @@ func (store *LocalTaskStore) LinkWorkspace(ctx context.Context, link localtask.W
 }
 
 func (store *LocalTaskStore) insertWorkspaceLink(ctx context.Context, link localtask.WorkspaceLink) (localtask.WorkspaceLink, error) {
-	_, err := store.database.ExecContext(ctx, `INSERT INTO local_task_workspace_links (`+localTaskLinkColumns+`)
-		VALUES (?, ?, ?, ?, datetime('now'), ?)`, link.ID, link.LocalTaskID, link.WorkspaceID,
+	transaction, err := store.database.BeginTx(ctx, nil)
+	if err != nil {
+		return localtask.WorkspaceLink{}, fmt.Errorf("begin link workspace: %w", err)
+	}
+	defer transaction.Rollback() // best-effort cleanup; commit or the operation error is authoritative
+	linked, err := insertWorkspaceLinkInTx(ctx, transaction, link)
+	if err != nil {
+		return localtask.WorkspaceLink{}, err
+	}
+	if err := transaction.Commit(); err != nil {
+		return localtask.WorkspaceLink{}, fmt.Errorf("commit link workspace: %w", err)
+	}
+	return linked, nil
+}
+
+func insertWorkspaceLinkInTx(ctx context.Context, transaction *sql.Tx, link localtask.WorkspaceLink) (localtask.WorkspaceLink, error) {
+	result, err := transaction.ExecContext(ctx, `INSERT INTO local_task_workspace_links (`+localTaskLinkColumns+`)
+		VALUES (?, ?, ?, ?, datetime('now'), ?)
+		ON CONFLICT(local_task_id, workspace_id) WHERE unlinked_at IS NULL DO NOTHING`, link.ID, link.LocalTaskID, link.WorkspaceID,
 		link.Status, link.UnlinkedAt)
 	if err != nil {
 		return localtask.WorkspaceLink{}, fmt.Errorf("link local task to workspace: %w", err)
 	}
-	return store.getWorkspaceLink(ctx, link.ID)
+	inserted, err := result.RowsAffected()
+	if err != nil {
+		return localtask.WorkspaceLink{}, fmt.Errorf("read inserted workspace link rows: %w", err)
+	}
+	if inserted == 0 {
+		existing, err := scanWorkspaceLink(transaction.QueryRowContext(ctx,
+			`SELECT `+localTaskLinkColumns+` FROM local_task_workspace_links
+			WHERE local_task_id = ? AND workspace_id = ? AND unlinked_at IS NULL`, link.LocalTaskID, link.WorkspaceID))
+		if err != nil {
+			return localtask.WorkspaceLink{}, fmt.Errorf("get active workspace link: %w", err)
+		}
+		return existing, nil
+	}
+	return getWorkspaceLinkInTx(ctx, transaction, link.ID)
 }
 
 // UnlinkWorkspace keeps link history while removing the current association.

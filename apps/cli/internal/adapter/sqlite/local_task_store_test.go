@@ -145,7 +145,7 @@ func TestLocalTaskStore_UpdatesUniformLinkLifecycle(t *testing.T) {
 	}
 }
 
-func TestLocalTaskStore_RejectsDuplicateActivePairAndPreservesHistory(t *testing.T) {
+func TestLocalTaskStore_ReusesActivePairAndPreservesHistory(t *testing.T) {
 	ctx := context.Background()
 	store, workspaceStore := openTestLocalTaskStore(t)
 	task := createTestLocalTask(t, store, "Pair task")
@@ -154,14 +154,16 @@ func TestLocalTaskStore_RejectsDuplicateActivePairAndPreservesHistory(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusCancelled}); err == nil {
-		t.Fatal("expected duplicate active pair error")
+	repeated, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusCancelled})
+	if err != nil || repeated != link {
+		t.Fatalf("repeat link = %#v, %v; want %#v", repeated, err, link)
 	}
 	if err := store.UnlinkWorkspace(ctx, link.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusProgressing}); err != nil {
-		t.Fatalf("relink after unlink: %v", err)
+	relinked, err := store.LinkWorkspace(ctx, localtask.WorkspaceLink{LocalTaskID: task.ID, WorkspaceID: "workspace-1", Status: localtask.StatusProgressing})
+	if err != nil || relinked.ID == link.ID || relinked.UnlinkedAt != nil {
+		t.Fatalf("relink after unlink = %#v, %v", relinked, err)
 	}
 	links, err := store.ListTaskLinks(ctx, task.ID)
 	if err != nil || len(links) != 2 || !hasUnlinkedWorkspaceLink(links) {

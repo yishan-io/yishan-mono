@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/daemon"
-	"yishan/apps/cli/internal/rpc"
 	daemonclient "yishan/apps/cli/internal/daemon/client"
+	"yishan/apps/cli/internal/rpc"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/spf13/cobra"
@@ -21,6 +21,7 @@ import (
 
 type persistentDaemonRPCClient interface {
 	Call(method string, params any, out any) error
+	CallContext(context.Context, string, any, any) error
 	SetNotificationHandler(handler func(method string, params json.RawMessage))
 	Close() error
 }
@@ -45,6 +46,9 @@ type workspaceCreateCompletedEvent struct {
 	WorkspaceID             string `json:"workspaceId"`
 	WorktreePath            string `json:"worktreePath"`
 	LifecycleScriptWarnings []any  `json:"lifecycleScriptWarnings,omitempty"`
+	TaskRunStatus           string `json:"taskRunStatus,omitempty"`
+	TaskRunSessionID        string `json:"taskRunSessionId,omitempty"`
+	TaskRunTitle            string `json:"taskRunTitle,omitempty"`
 }
 
 type workspaceCreateFailedEvent struct {
@@ -79,6 +83,10 @@ func runWorkspaceCreateViaDaemon(cmd *cobra.Command) error {
 	}
 	defer client.Close()
 
+	return createWorkspaceWithDaemonClient(cmd, client, request)
+}
+
+func createWorkspaceWithDaemonClient(cmd *cobra.Command, client persistentDaemonRPCClient, request workspaceCreateRPCRequest) error {
 	watcher := newWorkspaceCreateWatcher(cmd.OutOrStdout())
 	client.SetNotificationHandler(watcher.handleNotification)
 	defer client.SetNotificationHandler(nil)
@@ -99,22 +107,18 @@ func runWorkspaceCreateViaDaemon(cmd *cobra.Command) error {
 
 	watcher.setWorkspaceID(accepted.ID)
 
-	result, err := watcher.wait(cmd.Context())
+	result, err := watcher.waitForCompletion(cmd.Context(), client)
 	if err != nil {
 		return err
 	}
 	if result.failed != nil {
-		return fmt.Errorf("failed to create workspace: %s", strings.TrimSpace(result.failed.Message))
+		return fmt.Errorf("workspace %s creation failed: %s; inspect workspace and run state before retrying", accepted.ID, strings.TrimSpace(result.failed.Message))
 	}
 	if result.completed == nil {
-		return fmt.Errorf("workspace creation finished without a completion event")
+		return fmt.Errorf("workspace %s was accepted but finished without a completion event; inspect workspace and run state before retrying", accepted.ID)
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "\nCreated: %s", accepted.ID)
-	if path := strings.TrimSpace(result.completed.WorktreePath); path != "" {
-		fmt.Fprintf(cmd.OutOrStdout(), "  %s", path)
-	}
-	fmt.Fprintln(cmd.OutOrStdout())
+	renderWorkspaceCreateCompletion(cmd.OutOrStdout(), accepted.ID, result.completed)
 
 	return nil
 }
@@ -322,4 +326,47 @@ func renderWorkspaceCreateProgress(event workspace.CreateProgressEvent) string {
 		line += "  " + message
 	}
 	return line
+}
+
+func renderWorkspaceCreateCompletion(out io.Writer, workspaceID string, completed *workspaceCreateCompletedEvent) {
+	fmt.Fprintf(out, "\nCreated: %s", workspaceID)
+	if path := strings.TrimSpace(completed.WorktreePath); path != "" {
+		fmt.Fprintf(out, "  %s", path)
+	}
+	fmt.Fprintln(out)
+	if status := strings.TrimSpace(completed.TaskRunStatus); status != "" {
+		fmt.Fprintln(out, "Task run:", status)
+		if sessionID := strings.TrimSpace(completed.TaskRunSessionID); sessionID != "" {
+			fmt.Fprintln(out, "Task run session:", sessionID)
+		}
+		if title := strings.TrimSpace(completed.TaskRunTitle); title != "" {
+			fmt.Fprintln(out, "Task run title:", strings.Join(strings.Fields(title), " "))
+		}
+	}
+}
+
+func (w *workspaceCreateWatcher) waitForCompletion(ctx context.Context, client interface {
+	CallContext(context.Context, string, any, any) error
+}) (workspaceCreateWaitResult, error) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		var err error
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		case result := <-w.resultCh:
+			if result.err == nil {
+				return result, nil
+			}
+			err = result.err
+		case <-ticker.C:
+			pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			err = client.CallContext(pingCtx, rpc.MethodDaemonPing, nil, nil)
+			cancel()
+		}
+		if err != nil {
+			return workspaceCreateWaitResult{}, fmt.Errorf("workspace %s was accepted; completion is unknown: %w; inspect workspace and run state before retrying", w.workspaceID, err)
+		}
+	}
 }
