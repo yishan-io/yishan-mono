@@ -107,6 +107,7 @@ describe("LocalTaskRpcClient", () => {
       );
       await expect(request).resolves.toEqual(fixtureRequest.result);
       expect(socket?.close).toHaveBeenCalledOnce();
+      expect(socket?.close).toHaveBeenCalledWith(1000);
     }
   });
 

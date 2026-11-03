@@ -133,7 +133,7 @@ export class LocalTaskRpcClient {
           socket.removeEventListener("error", handleError);
           socket.removeEventListener("close", handleClose);
           try {
-            socket.close();
+            socket.close(1000);
           } catch {
             /* best-effort cleanup */
           }
