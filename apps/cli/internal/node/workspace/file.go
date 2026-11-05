@@ -26,7 +26,14 @@ func (s *Service) List(ctx context.Context, req rpc.FileListParams) (any, error)
 	if err != nil {
 		return nil, err
 	}
-	return handle.FileList(req.Path, req.Recursive)
+	listCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stop := context.AfterFunc(s.serverContext(), cancel)
+	defer stop()
+	if err := s.serverContext().Err(); err != nil {
+		cancel()
+	}
+	return handle.FileList(listCtx, req.Path, req.Recursive)
 }
 
 func (s *Service) Search(ctx context.Context, req rpc.FileSearchParams) (any, error) {

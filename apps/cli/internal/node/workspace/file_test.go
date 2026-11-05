@@ -3,6 +3,7 @@ package workspace
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,5 +46,35 @@ func TestFile_Search(t *testing.T) {
 	}
 	if len(results) != 1 || results[0].Path != "alpha-search.ts" {
 		t.Fatalf("unexpected search results: %+v", results)
+	}
+}
+
+func TestFile_ListCancellation(t *testing.T) {
+	for _, source := range []string{"caller", "server"} {
+		t.Run(source, func(t *testing.T) {
+			handler := newTestService(t, nil, "node-1")
+			opened, err := handler.Open(workspace.OpenRequest{ID: "ws-1", Path: t.TempDir()})
+			if err != nil {
+				t.Fatal(err)
+			}
+			caller, cancelCaller := context.WithCancel(context.Background())
+			server, cancelServer := context.WithCancel(context.Background())
+			defer cancelCaller()
+			defer cancelServer()
+			handler.deps.ServerCtx = server
+			if source == "caller" {
+				cancelCaller()
+			} else {
+				cancelServer()
+			}
+			params, err := json.Marshal(rpc.FileListParams{WorkspaceID: opened.ID, Recursive: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries, err := handler.callRPCForTest(caller, rpc.MethodFileList, params)
+			if !errors.Is(err, context.Canceled) {
+				t.Fatalf("entries=%v err=%v", entries, err)
+			}
+		})
 	}
 }

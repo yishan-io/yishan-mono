@@ -1,6 +1,8 @@
 package instance
 
 import (
+	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -22,7 +24,7 @@ func TestHandle_FileOperationsScopedToInstancePath(t *testing.T) {
 	if _, err := handle.FileWrite("notes.txt", "hello", 0); err != nil {
 		t.Fatalf("write through handle: %v", err)
 	}
-	entries, err := handle.FileList("", false)
+	entries, err := handle.FileList(context.Background(), "", false)
 	if err != nil {
 		t.Fatalf("list through handle: %v", err)
 	}
@@ -49,5 +51,15 @@ func TestHandle_InstanceReturnsScopedWorkspace(t *testing.T) {
 	inst := handle.Instance()
 	if inst.ID != "ws-1" || inst.ProjectID != "project-1" {
 		t.Fatalf("instance = %#v, want ws-1/project-1", inst)
+	}
+}
+
+func TestHandle_FileListPreservesCancellation(t *testing.T) {
+	handle := NewHandle(workspace.Workspace{ID: "ws-1", Path: t.TempDir()}, files.NewFileService(), nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	entries, err := handle.FileList(ctx, "", true)
+	if !errors.Is(err, context.Canceled) || entries != nil {
+		t.Fatalf("entries=%v err=%v", entries, err)
 	}
 }

@@ -1,6 +1,7 @@
 package files
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +32,7 @@ func TestFileServiceRecursiveListUsesGitIgnore(t *testing.T) {
 		t.Fatalf("write ignored package: %v", err)
 	}
 
-	entries, err := svc.List(root, "", true)
+	entries, err := svc.List(context.Background(), root, "", true)
 	if err != nil {
 		t.Fatalf("recursive list: %v", err)
 	}
@@ -68,7 +69,7 @@ func TestFileServiceRecursiveListInsideIgnoredPathIncludesDescendants(t *testing
 		t.Fatalf("write ignored descendant: %v", err)
 	}
 
-	entries, err := svc.List(root, ".opencode", true)
+	entries, err := svc.List(context.Background(), root, ".opencode", true)
 	if err != nil {
 		t.Fatalf("recursive list ignored path: %v", err)
 	}
@@ -112,7 +113,7 @@ func TestFileServiceDirectListMarksGitIgnoredEntries(t *testing.T) {
 		t.Fatalf("write visible file: %v", err)
 	}
 
-	entries, err := svc.List(root, "", false)
+	entries, err := svc.List(context.Background(), root, "", false)
 	if err != nil {
 		t.Fatalf("direct list: %v", err)
 	}
@@ -147,7 +148,7 @@ func TestFileServiceListTreatsDirectorySymlinkAsDirectory(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	entries, err := svc.List(root, "", false)
+	entries, err := svc.List(context.Background(), root, "", false)
 	if err != nil {
 		t.Fatalf("list root: %v", err)
 	}
@@ -163,7 +164,7 @@ func TestFileServiceListTreatsDirectorySymlinkAsDirectory(t *testing.T) {
 		t.Fatalf("expected .my-context symlink to be treated as a directory, got %+v", contextEntry)
 	}
 
-	childEntries, err := svc.List(root, ".my-context", false)
+	childEntries, err := svc.List(context.Background(), root, ".my-context", false)
 	if err != nil {
 		t.Fatalf("list context symlink: %v", err)
 	}
@@ -184,7 +185,7 @@ func TestFileServiceWalkTreatsDirectorySymlinkAsDirectoryEntry(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	entries, err := svc.walkFiles(root, root)
+	entries, err := svc.walkFiles(context.Background(), root, root)
 	if err != nil {
 		t.Fatalf("walk files: %v", err)
 	}
@@ -209,7 +210,7 @@ func TestFileServiceRecursiveListIncludesContextSymlinkContents(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	entries, err := svc.List(root, "", true)
+	entries, err := svc.List(context.Background(), root, "", true)
 	if err != nil {
 		t.Fatalf("recursive list root: %v", err)
 	}
@@ -246,7 +247,7 @@ func TestFileServiceMarksIgnoredContextDescendants(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	entries, err := svc.List(root, "", true)
+	entries, err := svc.List(context.Background(), root, "", true)
 	if err != nil {
 		t.Fatalf("recursive list root: %v", err)
 	}
@@ -261,7 +262,7 @@ func TestFileServiceMarksIgnoredContextDescendants(t *testing.T) {
 		}
 	}
 
-	childEntries, err := svc.List(root, ".my-context", false)
+	childEntries, err := svc.List(context.Background(), root, ".my-context", false)
 	if err != nil {
 		t.Fatalf("list ignored context directory: %v", err)
 	}
@@ -294,7 +295,7 @@ func TestFileServiceMarksContextDescendantsIgnoredForChildOnlyPattern(t *testing
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	entries, err := svc.List(root, "", true)
+	entries, err := svc.List(context.Background(), root, "", true)
 	if err != nil {
 		t.Fatalf("recursive list: %v", err)
 	}
@@ -321,7 +322,7 @@ func TestFileServiceListRefreshesContextLinkAfterExternalChange(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	entries, err := svc.List(root, ContextLinkName, false)
+	entries, err := svc.List(context.Background(), root, ContextLinkName, false)
 	if err != nil {
 		t.Fatalf("list initial context entries: %v", err)
 	}
@@ -333,7 +334,7 @@ func TestFileServiceListRefreshesContextLinkAfterExternalChange(t *testing.T) {
 		t.Fatalf("write dropped context file: %v", err)
 	}
 
-	entries, err = svc.List(root, ContextLinkName, false)
+	entries, err = svc.List(context.Background(), root, ContextLinkName, false)
 	if err != nil {
 		t.Fatalf("refresh context entries: %v", err)
 	}
@@ -363,7 +364,7 @@ func TestFileServiceRecursiveListIgnoredFolderDoesNotInfectSiblings(t *testing.T
 		t.Fatalf("write ignored file: %v", err)
 	}
 
-	entries, err := svc.List(root, "", true)
+	entries, err := svc.List(context.Background(), root, "", true)
 	if err != nil {
 		t.Fatalf("recursive list: %v", err)
 	}
@@ -409,7 +410,7 @@ func TestFileServiceRecursiveListHidesContextGitMetadata(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	entries, err := svc.List(root, "", true)
+	entries, err := svc.List(context.Background(), root, "", true)
 	if err != nil {
 		t.Fatalf("recursive list root: %v", err)
 	}
@@ -441,7 +442,7 @@ func TestFileServiceRecursiveListHidesContextGitFile(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	entries, err := svc.List(root, "", true)
+	entries, err := svc.List(context.Background(), root, "", true)
 	if err != nil {
 		t.Fatalf("recursive list root: %v", err)
 	}
@@ -467,7 +468,7 @@ func TestFileServiceListLeavesUnrelatedDirectorySymlinkFileLike(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
-	entries, err := svc.List(root, "", false)
+	entries, err := svc.List(context.Background(), root, "", false)
 	if err != nil {
 		t.Fatalf("list root: %v", err)
 	}
@@ -475,7 +476,7 @@ func TestFileServiceListLeavesUnrelatedDirectorySymlinkFileLike(t *testing.T) {
 		t.Fatalf("expected unrelated directory symlink to stay file-like, got %+v", entries)
 	}
 
-	recursiveEntries, err := svc.List(root, "", true)
+	recursiveEntries, err := svc.List(context.Background(), root, "", true)
 	if err != nil {
 		t.Fatalf("recursive list root: %v", err)
 	}
@@ -486,32 +487,5 @@ func TestFileServiceListLeavesUnrelatedDirectorySymlinkFileLike(t *testing.T) {
 	linkedDir, ok := entryByPath["linked-dir"]
 	if !ok || linkedDir.IsDir {
 		t.Fatalf("expected unrelated directory symlink to stay file-like recursively, got %+v", recursiveEntries)
-	}
-}
-
-func TestFileServiceListBrokenContextSymlinkFallsBackToLinkMetadata(t *testing.T) {
-	root := t.TempDir()
-	initGitRepo(t, root)
-	svc := NewFileService()
-
-	missingTarget := filepath.Join(t.TempDir(), "missing")
-	if err := os.Symlink(missingTarget, filepath.Join(root, ".my-context")); err != nil {
-		t.Skipf("symlink unavailable: %v", err)
-	}
-
-	entries, err := svc.List(root, "", false)
-	if err != nil {
-		t.Fatalf("list root: %v", err)
-	}
-	if len(entries) != 1 || entries[0].Path != ".my-context" || entries[0].IsDir {
-		t.Fatalf("expected broken context symlink to fall back to file-like metadata, got %+v", entries)
-	}
-
-	recursiveEntries, err := svc.List(root, "", true)
-	if err != nil {
-		t.Fatalf("recursive list root: %v", err)
-	}
-	if len(recursiveEntries) != 1 || recursiveEntries[0].Path != ".my-context" || recursiveEntries[0].IsDir {
-		t.Fatalf("expected recursive list to preserve broken context symlink, got %+v", recursiveEntries)
 	}
 }

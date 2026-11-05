@@ -1,6 +1,7 @@
 package files
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +15,7 @@ func TestFileServiceListUsesCachedDirectoryEntriesUntilInvalidated(t *testing.T)
 		t.Fatalf("seed file: %v", err)
 	}
 
-	entries, err := svc.List(root, "", false)
+	entries, err := svc.List(context.Background(), root, "", false)
 	if err != nil {
 		t.Fatalf("initial list: %v", err)
 	}
@@ -26,7 +27,7 @@ func TestFileServiceListUsesCachedDirectoryEntriesUntilInvalidated(t *testing.T)
 		t.Fatalf("write uncached file: %v", err)
 	}
 
-	entries, err = svc.List(root, "", false)
+	entries, err = svc.List(context.Background(), root, "", false)
 	if err != nil {
 		t.Fatalf("cached list: %v", err)
 	}
@@ -35,7 +36,7 @@ func TestFileServiceListUsesCachedDirectoryEntriesUntilInvalidated(t *testing.T)
 	}
 
 	svc.InvalidateWorkspacePaths(root, []string{"b.txt"})
-	entries, err = svc.List(root, "", false)
+	entries, err = svc.List(context.Background(), root, "", false)
 	if err != nil {
 		t.Fatalf("list after invalidation: %v", err)
 	}
@@ -69,7 +70,7 @@ func TestFileServiceWriteInvalidatesParentDirectoryCache(t *testing.T) {
 	if err := svc.Mkdir(root, "dir", true, 0); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if _, err := svc.List(root, "dir", false); err != nil {
+	if _, err := svc.List(context.Background(), root, "dir", false); err != nil {
 		t.Fatalf("prime cache: %v", err)
 	}
 
@@ -77,7 +78,7 @@ func TestFileServiceWriteInvalidatesParentDirectoryCache(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	entries, err := svc.List(root, "dir", false)
+	entries, err := svc.List(context.Background(), root, "dir", false)
 	if err != nil {
 		t.Fatalf("list after write: %v", err)
 	}
@@ -99,10 +100,10 @@ func TestFileServiceMoveInvalidatesSourceAndDestinationCaches(t *testing.T) {
 	if _, err := svc.Write(root, "from/item.txt", "hello", 0); err != nil {
 		t.Fatalf("write seed: %v", err)
 	}
-	if _, err := svc.List(root, "from", false); err != nil {
+	if _, err := svc.List(context.Background(), root, "from", false); err != nil {
 		t.Fatalf("prime from cache: %v", err)
 	}
-	if _, err := svc.List(root, "to", false); err != nil {
+	if _, err := svc.List(context.Background(), root, "to", false); err != nil {
 		t.Fatalf("prime to cache: %v", err)
 	}
 
@@ -110,7 +111,7 @@ func TestFileServiceMoveInvalidatesSourceAndDestinationCaches(t *testing.T) {
 		t.Fatalf("move: %v", err)
 	}
 
-	fromEntries, err := svc.List(root, "from", false)
+	fromEntries, err := svc.List(context.Background(), root, "from", false)
 	if err != nil {
 		t.Fatalf("list from after move: %v", err)
 	}
@@ -118,7 +119,7 @@ func TestFileServiceMoveInvalidatesSourceAndDestinationCaches(t *testing.T) {
 		t.Fatalf("expected empty source dir after move, got %+v", fromEntries)
 	}
 
-	toEntries, err := svc.List(root, "to", false)
+	toEntries, err := svc.List(context.Background(), root, "to", false)
 	if err != nil {
 		t.Fatalf("list to after move: %v", err)
 	}

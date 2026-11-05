@@ -1,6 +1,7 @@
 package files
 
 import (
+	"context"
 	"sort"
 	"strings"
 )
@@ -30,7 +31,7 @@ func (s *FileService) Search(root string, rawQuery string, limit int, includeDir
 		limit = defaultFileSearchLimit
 	}
 
-	entries, err := s.List(root, "", true)
+	entries, err := s.List(context.Background(), root, "", true)
 	if err != nil {
 		return nil, err
 	}

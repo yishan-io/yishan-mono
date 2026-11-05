@@ -3,39 +3,61 @@ package files
 import (
 	"bytes"
 	"context"
-	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
-	"sync"
 	"time"
-
-	gitexec "yishan/apps/cli/internal/git/exec"
 )
 
-func (s *FileService) List(root string, path string, recursive bool) ([]FileEntry, error) {
+const recursiveListTimeout = 8 * time.Second
+
+// List cooperatively checks cancellation between filesystem operations. It cannot
+// interrupt blocked kernel I/O; ownership remains with the caller until return.
+func (s *FileService) List(ctx context.Context, root string, path string, recursive bool) ([]FileEntry, error) {
+	if recursive {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, recursiveListTimeout)
+		defer cancel()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	dir, err := safeJoinOptional(root, path, false)
 	if err != nil {
 		return nil, err
 	}
 
-	if recursive {
-		if entries, ok, err := s.listGitFiles(root, path); ok || err != nil {
-			if err != nil {
-				return entries, err
-			}
-			return withContextLinkEntries(root, path, entries)
-		}
-
-		entries, err := s.walkFiles(root, dir)
-		if err != nil {
-			return nil, err
-		}
-		return withContextLinkEntries(root, path, entries)
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
+	if recursive {
+		return s.listRecursiveFiles(ctx, root, path, dir)
+	}
+	return s.listDirectory(ctx, root, path, dir)
+}
 
+func (s *FileService) listRecursiveFiles(ctx context.Context, root, path, dir string) ([]FileEntry, error) {
+	entries, isGit, err := s.listGitFiles(ctx, root, path)
+	if err != nil {
+		return nil, err
+	}
+	if !isGit {
+		entries, err = s.walkFiles(ctx, root, dir)
+	}
+	if err != nil {
+		return nil, err
+	}
+	entries, err = s.withContextLinkEntries(ctx, root, path, entries)
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+func (s *FileService) listDirectory(ctx context.Context, root, path, dir string) ([]FileEntry, error) {
 	// .my-context is a symlink to a shared directory outside the workspace.
 	// Files copied there do not reliably produce a workspace watcher event, so
 	// serving a cached listing leaves the tree stale after a drop or refresh.
@@ -44,11 +66,33 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 	if cacheable {
 		cachedEntries, isCached, generation := s.cachedDirectoryEntries(root, path)
 		if isCached {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 			return cachedEntries, nil
 		}
 		cacheGeneration = generation
 	}
 
+	out, err := readDirectoryEntries(ctx, root, dir)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err = s.markIgnoredEntries(ctx, root, path, out)
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if cacheable {
+		s.storeCachedDirectoryEntries(root, path, out, cacheGeneration)
+	}
+	return out, nil
+}
+
+func readDirectoryEntries(ctx context.Context, root, dir string) ([]FileEntry, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -56,118 +100,143 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 
 	out := make([]FileEntry, 0, len(entries))
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if entry.Name() == ".git" {
 			continue
 		}
-		fullPath := filepath.Join(dir, entry.Name())
-		info, isDir, err := fileInfoForDirectoryEntry(entry, fullPath)
+		listed, err := directoryEntry(root, filepath.Join(dir, entry.Name()), entry)
 		if err != nil {
 			return nil, err
 		}
-		relPath, err := filepath.Rel(root, fullPath)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, FileEntry{
-			Path:       filepath.ToSlash(relPath),
-			Name:       entry.Name(),
-			IsDir:      isDir,
-			Size:       info.Size(),
-			Mode:       uint32(info.Mode()),
-			ModifiedAt: formatModifiedAt(info),
-		})
+		out = append(out, listed)
 	}
 
-	out = markIgnoredEntries(root, path, out)
-	if cacheable {
-		s.storeCachedDirectoryEntries(root, path, out, cacheGeneration)
-	}
-	return out, nil
+	return out, ctx.Err()
 }
 
-func (s *FileService) walkFiles(root string, dir string) ([]FileEntry, error) {
+func directoryEntry(root, fullPath string, entry os.DirEntry) (FileEntry, error) {
+	info, isDir, err := fileInfoForDirectoryEntry(entry, fullPath)
+	if err != nil {
+		return FileEntry{}, err
+	}
+	relPath, err := filepath.Rel(root, fullPath)
+	if err != nil {
+		return FileEntry{}, err
+	}
+	return FileEntry{Path: filepath.ToSlash(relPath), Name: entry.Name(), IsDir: isDir,
+		Size: info.Size(), Mode: uint32(info.Mode()), ModifiedAt: formatModifiedAt(info)}, nil
+}
+
+func (s *FileService) walkFiles(ctx context.Context, root string, dir string) ([]FileEntry, error) {
 	out := []FileEntry{}
-	if err := filepath.WalkDir(dir, func(fullPath string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			if os.IsNotExist(walkErr) {
-				return nil
-			}
-			return walkErr
-		}
-		if fullPath == dir {
-			return nil
-		}
-		if entry.Name() == ".git" {
-			if entry.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		info, isDir, err := fileInfoForDirectoryEntry(entry, fullPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil
-			}
-			return err
-		}
-		relPath, err := filepath.Rel(root, fullPath)
-		if err != nil {
-			return err
-		}
-		out = append(out, FileEntry{
-			Path:       filepath.ToSlash(relPath),
-			Name:       entry.Name(),
-			IsDir:      isDir,
-			Size:       info.Size(),
-			Mode:       uint32(info.Mode()),
-			ModifiedAt: formatModifiedAt(info),
-		})
-
-		return nil
-	}); err != nil {
+	walk := s.walkDir
+	if walk == nil {
+		walk = filepath.WalkDir
+	}
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-
+	err := walk(dir, func(fullPath string, entry os.DirEntry, walkErr error) error {
+		return appendWalkEntry(ctx, root, dir, fullPath, entry, walkErr, &out)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
-func markIgnoredEntries(root string, listedPath string, entries []FileEntry) []FileEntry {
-	if len(entries) == 0 {
-		return entries
+func appendWalkEntry(ctx context.Context, root, dir, fullPath string, entry os.DirEntry, walkErr error, out *[]FileEntry) error {
+	if err := ctx.Err(); err != nil {
+		return err
 	}
+	if os.IsNotExist(walkErr) {
+		return nil
+	}
+	if walkErr != nil {
+		return walkErr
+	}
+	if fullPath == dir {
+		return nil
+	}
+	if entry.Name() == ".git" {
+		if entry.IsDir() {
+			return filepath.SkipDir
+		}
+		return nil
+	}
+	listed, err := directoryEntry(root, fullPath, entry)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	*out = append(*out, listed)
+	return ctx.Err()
+}
 
-	// .my-context is personal workspace state and must never be presented as a
-	// tracked file. Git cannot evaluate child-only ignore patterns through its
-	// symlink, so classify the link and every descendant directly.
+func (s *FileService) markIgnoredEntries(ctx context.Context, root string, listedPath string, entries []FileEntry) ([]FileEntry, error) {
+	if len(entries) == 0 {
+		return entries, ctx.Err()
+	}
+	markContextEntries(entries)
+	ignoredPathSet, err := s.gitIgnoredPathSet(ctx, root, entries)
+	if err != nil {
+		return nil, err
+	}
+	ignoredDirectoryPaths := make([]string, 0, len(entries)+1)
+	ignoredListedPath := filepath.ToSlash(strings.TrimSuffix(listedPath, "/"))
+	listedPathIsIgnored, err := s.isGitIgnoredPath(ctx, root, listedPath)
+	if err != nil {
+		return nil, err
+	}
+	if listedPathIsIgnored {
+		ignoredDirectoryPaths = append(ignoredDirectoryPaths, ignoredListedPath)
+	}
+	ignoredDirectoryPaths = collectIgnoredDirectories(ctx, entries, ignoredPathSet, ignoredDirectoryPaths)
+	return applyIgnoredPaths(ctx, entries, ignoredPathSet, ignoredDirectoryPaths, ignoredListedPath, listedPathIsIgnored), ctx.Err()
+}
+
+func markContextEntries(entries []FileEntry) {
+	// Git cannot evaluate child-only ignore patterns through the context symlink.
 	for index := range entries {
 		if usesContextLinkPath(entries[index].Path) {
 			entries[index].IsIgnored = true
 		}
 	}
+}
 
-	ignoredPathSet, ok := gitIgnoredPathSet(root, entries)
-	ignoredDirectoryPaths := make([]string, 0, len(entries)+1)
-	ignoredListedPath := filepath.ToSlash(strings.TrimSuffix(listedPath, "/"))
-	listedPathIsIgnored := isGitIgnoredPath(root, listedPath)
-	if listedPathIsIgnored {
-		ignoredDirectoryPaths = append(ignoredDirectoryPaths, ignoredListedPath)
-	}
-
+func collectIgnoredDirectories(ctx context.Context, entries []FileEntry, ignoredPathSet map[string]bool, ignoredDirectoryPaths []string) []string {
 	for index := range entries {
+		if ctx.Err() != nil {
+			return ignoredDirectoryPaths
+		}
 		normalizedPath := filepath.ToSlash(strings.TrimSuffix(entries[index].Path, "/"))
 		if entries[index].IsDir && entries[index].IsIgnored {
 			ignoredDirectoryPaths = append(ignoredDirectoryPaths, normalizedPath)
 			continue
 		}
-		if entries[index].IsDir && ok && ignoredPathSet[normalizedPath] {
+		if entries[index].IsDir && ignoredPathSet[normalizedPath] {
 			ignoredDirectoryPaths = append(ignoredDirectoryPaths, normalizedPath)
 		}
 	}
 
+	return ignoredDirectoryPaths
+}
+
+func applyIgnoredPaths(ctx context.Context, entries []FileEntry, ignoredPathSet map[string]bool, ignoredDirectoryPaths []string, ignoredListedPath string, listedPathIsIgnored bool) []FileEntry {
+
 	for index := range entries {
+		if ctx.Err() != nil {
+			return entries
+		}
 		normalizedPath := filepath.ToSlash(strings.TrimSuffix(entries[index].Path, "/"))
-		entries[index].IsIgnored = entries[index].IsIgnored || (ok && ignoredPathSet[normalizedPath])
+		entries[index].IsIgnored = entries[index].IsIgnored || ignoredPathSet[normalizedPath]
 		if !entries[index].IsIgnored && listedPathIsIgnored && normalizedPath == ignoredListedPath {
 			entries[index].IsIgnored = true
 		}
@@ -189,189 +258,59 @@ func hasIgnoredAncestor(path string, ignoredDirectoryPaths []string) bool {
 	return false
 }
 
-func isGitIgnoredPath(root string, path string) bool {
-	normalizedPath := filepath.ToSlash(strings.TrimSuffix(strings.TrimSpace(path), "/"))
+func (s *FileService) isGitIgnoredPath(ctx context.Context, root string, path string) (bool, error) {
+	normalizedPath := filepath.ToSlash(strings.TrimSuffix(path, "/"))
+	if usesContextLinkPath(normalizedPath) {
+		return true, ctx.Err()
+	}
 	if normalizedPath == "" {
-		return false
+		return false, ctx.Err()
 	}
-
-	cmd, ok := gitexec.DefaultRunner().Command("-C", root, "check-ignore", "--quiet", "--", normalizedPath)
-	if !ok {
-		return false
+	repository, err := findListingRepository(ctx, root, filepath.Dir(filepath.Join(root, filepath.FromSlash(normalizedPath))))
+	if err != nil {
+		return false, err
 	}
-	err := cmd.Run()
-	if err == nil {
-		return true
+	relative, err := filepath.Rel(repository, filepath.Join(root, filepath.FromSlash(normalizedPath)))
+	if err != nil {
+		return false, err
 	}
-
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
-		return false
-	}
-
-	return false
+	_, isIgnored, err := s.runCheckIgnore(ctx, nil, "-C", repository, "check-ignore", "--quiet", "--", filepath.ToSlash(relative))
+	return isIgnored, err
 }
 
-func gitIgnoredPathSet(root string, entries []FileEntry) (map[string]bool, bool) {
-	input := bytes.Buffer{}
-	for _, entry := range entries {
-		input.WriteString(entry.Path)
-		input.WriteByte(0)
+func (s *FileService) gitIgnoredPathSet(ctx context.Context, root string, entries []FileEntry) (map[string]bool, error) {
+	groups, err := groupListingIgnorePaths(ctx, root, entries)
+	if err != nil {
+		return nil, err
 	}
-
-	cmd, ok := gitexec.DefaultRunner().Command("-C", root, "check-ignore", "-z", "--stdin")
-	if !ok {
-		return nil, false
-	}
-	cmd.Stdin = &input
-	output, err := cmd.Output()
-	if err != nil && len(output) == 0 {
-		return nil, false
-	}
-
-	ignoredPathSet := map[string]bool{}
-	for _, rawPath := range bytes.Split(output, []byte{0}) {
-		path := string(rawPath)
-		if path == "" {
-			continue
-		}
-		normalizedPath := filepath.ToSlash(strings.TrimSuffix(path, "/"))
-		if normalizedPath == "" {
-			continue
-		}
-		ignoredPathSet[normalizedPath] = true
-	}
-
-	return ignoredPathSet, true
-}
-
-func (s *FileService) listGitFiles(root string, path string) ([]FileEntry, bool, error) {
-	const gitListTimeout = 8 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), gitListTimeout)
-	defer cancel()
-
-	args := []string{"-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--"}
-	if strings.TrimSpace(path) != "" {
-		args = append(args, filepath.ToSlash(path))
-	}
-	ignoredArgs := []string{
-		"-C",
-		root,
-		"ls-files",
-		"--others",
-		"--ignored",
-		"--exclude-standard",
-	}
-	if strings.TrimSpace(path) == "" {
-		ignoredArgs = append(ignoredArgs, "--directory", "--no-empty-directory")
-	}
-	ignoredArgs = append(ignoredArgs, "-z", "--")
-	if strings.TrimSpace(path) != "" {
-		ignoredArgs = append(ignoredArgs, filepath.ToSlash(path))
-	}
-
-	var (
-		normalOutput  []byte
-		normalErr     error
-		ignoredOutput []byte
-		ignoredErr    error
-	)
-
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(2)
-	go func() {
-		defer waitGroup.Done()
-		gitCmd, ok := gitexec.DefaultRunner().CommandContext(ctx, args...)
-		if !ok {
-			// git unavailable: fall through to the walkFiles fallback in List,
-			// matching the old bare-`git` exec error path.
-			normalErr = errors.New("git executable not found")
-			return
-		}
-		normalOutput, normalErr = gitCmd.Output()
-	}()
-	go func() {
-		defer waitGroup.Done()
-		gitCmd, ok := gitexec.DefaultRunner().CommandContext(ctx, ignoredArgs...)
-		if !ok {
-			// Fail closed (same as the normal listing) instead of treating
-			// "git unavailable" as "git reports no ignored files".
-			ignoredErr = errors.New("git executable not found")
-			return
-		}
-		ignoredOutput, ignoredErr = gitCmd.Output()
-	}()
-	waitGroup.Wait()
-
-	if normalErr != nil {
-		return nil, false, nil
-	}
-
-	ignoredPathSet := map[string]bool{}
-	if ignoredErr == nil {
-		for _, rawPath := range strings.Split(string(ignoredOutput), "\x00") {
-			relPath := strings.TrimSpace(rawPath)
-			if relPath == "" {
-				continue
-			}
-			normalizedRelPath := filepath.ToSlash(strings.TrimSuffix(relPath, "/"))
-			if normalizedRelPath == "" {
-				continue
-			}
-			ignoredPathSet[normalizedRelPath] = true
-		}
-		normalOutput = append(normalOutput, ignoredOutput...)
-	}
-
-	entryByPath := map[string]FileEntry{}
-	for _, rawPath := range strings.Split(string(normalOutput), "\x00") {
-		relPath := strings.TrimSpace(rawPath)
-		if relPath == "" {
-			continue
-		}
-		normalizedRelPath := filepath.ToSlash(strings.TrimSuffix(relPath, "/"))
-		if normalizedRelPath == "" {
-			continue
-		}
-		for _, directoryPath := range parentDirectoryPaths(relPath) {
-			normalizedDirectoryPath := filepath.ToSlash(strings.TrimSuffix(directoryPath, "/"))
-			if _, exists := entryByPath[normalizedDirectoryPath]; exists {
-				continue
-			}
-			entry, err := fileEntryForRelativePath(root, directoryPath)
-			if err != nil {
-				if os.IsNotExist(err) {
-					continue
-				}
-				return nil, true, err
-			}
-			if ignoredPathSet[normalizedDirectoryPath] {
-				entry.IsIgnored = true
-			}
-			entryByPath[normalizedDirectoryPath] = entry
-		}
-		entry, err := fileEntryForRelativePath(root, relPath)
+	ignored := map[string]bool{}
+	for repository, input := range groups {
+		output, _, err := s.runCheckIgnore(ctx, input, "-C", repository, "check-ignore", "-z", "--stdin")
 		if err != nil {
-			if os.IsNotExist(err) {
-				continue
+			return nil, err
+		}
+		for path := range parseIgnoredPaths(ctx, output) {
+			relative, err := filepath.Rel(root, filepath.Join(repository, filepath.FromSlash(path)))
+			if err != nil {
+				return nil, err
 			}
-			return nil, true, err
+			ignored[filepath.ToSlash(relative)] = true
 		}
-		if ignoredPathSet[normalizedRelPath] {
-			entry.IsIgnored = true
+	}
+	return ignored, ctx.Err()
+}
+
+func parseIgnoredPaths(ctx context.Context, output []byte) map[string]bool {
+	ignoredPaths := map[string]bool{}
+	for _, rawPath := range bytes.Split(output, []byte{0}) {
+		if ctx.Err() != nil {
+			return nil
 		}
-		entryByPath[normalizedRelPath] = entry
+		if path := normalizeListedPath(string(rawPath)); path != "" {
+			ignoredPaths[path] = true
+		}
 	}
-
-	out := make([]FileEntry, 0, len(entryByPath))
-	for _, entry := range entryByPath {
-		out = append(out, entry)
-	}
-	sort.Slice(out, func(left, right int) bool {
-		return out[left].Path < out[right].Path
-	})
-
-	return out, true, nil
+	return ignoredPaths
 }
 
 func parentDirectoryPaths(path string) []string {

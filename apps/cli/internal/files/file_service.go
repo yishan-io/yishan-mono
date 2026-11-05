@@ -1,7 +1,10 @@
 package files
 
 import (
+	"context"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -26,6 +29,8 @@ type FileEntry struct {
 }
 
 type FileService struct {
+	gitCommand            func(context.Context, ...string) (*exec.Cmd, bool)
+	walkDir               func(string, fs.WalkDirFunc) error
 	mu                    sync.Mutex
 	cache                 fileCacheStore
 	cacheGenerationByRoot map[string]uint64

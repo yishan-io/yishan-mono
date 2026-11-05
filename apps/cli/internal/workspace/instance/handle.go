@@ -30,8 +30,8 @@ func (h Handle) Instance() workspace.Workspace {
 	return h.instance
 }
 
-func (h Handle) FileList(path string, recursive bool) ([]files.FileEntry, error) {
-	return h.files.List(h.instance.Path, path, recursive)
+func (h Handle) FileList(ctx context.Context, path string, recursive bool) ([]files.FileEntry, error) {
+	return h.files.List(ctx, h.instance.Path, path, recursive)
 }
 
 func (h Handle) FileSearch(query string, limit int, includeDirectories bool) ([]files.FileSearchResult, error) {
