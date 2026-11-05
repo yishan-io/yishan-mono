@@ -1,8 +1,10 @@
 package watchers
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -56,6 +58,19 @@ type worktreeWatcher struct {
 	onGitChanged            func(worktreePath string)
 	ignoredPaths            map[string]bool
 	gitIgnoreUsable         *bool
+	ignoreGeneration        uint64
+	ignoreProbeDone         chan struct{}
+	gitCancel               context.CancelFunc
+	isClosed                bool
+	ordinaryPending         map[string]bool
+	ordinaryOrder           []string
+	hasPendingGit           bool
+	ordinaryInflight        map[string]bool
+	ordinaryTimer           *time.Timer
+	isOrdinaryActive        bool
+	hasOrdinaryOverflow     bool
+	gitContext              context.Context
+	gitCommandContext       func(context.Context, ...string) (*exec.Cmd, bool)
 	gitRunner               gitexec.Runner
 	backend                 *fswatch.Watcher
 }
@@ -119,6 +134,7 @@ func (ws *Watchers) newWorktreeWatcher(workspaceID string, worktreePath string) 
 		OnError:       func(err error) { log.Warn().Err(err).Str("path", worktreePath).Msg("workspace watcher error") },
 	})
 	if err != nil {
+		entry.close()
 		log.Warn().Err(err).Str("path", worktreePath).Msg("failed to create workspace watcher")
 		return nil, fmt.Errorf("create workspace watcher: %w", err)
 	}
@@ -127,11 +143,14 @@ func (ws *Watchers) newWorktreeWatcher(workspaceID string, worktreePath string) 
 }
 
 func (ws *Watchers) buildWorktreeWatcher(workspaceID string, worktreePath string) *worktreeWatcher {
+	gitContext, cancelGit := context.WithCancel(context.Background())
 	entry := &worktreeWatcher{
+		gitContext: gitContext, gitCancel: cancelGit,
 		workspaceID: workspaceID, path: worktreePath, resolvedGitDir: ResolveGitDir(worktreePath), sink: ws.sink,
 		readyAt: time.Now().Add(watcherStartupLag), done: make(chan struct{}), onGitChanged: ws.onGitChanged,
 		ignoredPaths: make(map[string]bool), gitRunner: gitexec.DefaultRunner(),
 	}
+
 	contextLinkPath := filepath.Join(worktreePath, workspace.ContextLinkName)
 	if target, err := filepath.EvalSymlinks(contextLinkPath); err == nil {
 		if info, statErr := os.Stat(target); statErr == nil && info.IsDir() {
@@ -191,54 +210,6 @@ func (ws *Watchers) handleSharedContextPathChanged(contextDir string, changedPat
 
 	for _, watcher := range watchers {
 		watcher.handleChangedPath(changedPath)
-	}
-}
-
-func (ws *Watchers) unregisterContextWatcher(entry *worktreeWatcher) {
-	if entry.contextDir == "" {
-		return
-	}
-
-	registration, ok := ws.contexts[entry.contextDir]
-	if !ok {
-		return
-	}
-
-	delete(registration.workspacePaths, entry.path)
-	if len(registration.workspacePaths) > 0 {
-		return
-	}
-
-	registration.watcher.Close()
-	delete(ws.contexts, entry.contextDir)
-}
-
-func (ws *Watchers) Unwatch(worktreePath string) {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-
-	entry, ok := ws.entries[worktreePath]
-	if !ok {
-		return
-	}
-
-	ws.unregisterContextWatcher(entry)
-	entry.close()
-	delete(ws.entries, worktreePath)
-}
-
-func (ws *Watchers) Close() {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-
-	for contextDir, registration := range ws.contexts {
-		registration.watcher.Close()
-		delete(ws.contexts, contextDir)
-	}
-
-	for path, entry := range ws.entries {
-		entry.close()
-		delete(ws.entries, path)
 	}
 }
 

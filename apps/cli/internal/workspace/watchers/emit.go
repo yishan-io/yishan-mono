@@ -1,7 +1,6 @@
 package watchers
 
 import (
-	"context"
 	"strings"
 	"time"
 )
@@ -10,17 +9,26 @@ func (w *worktreeWatcher) scheduleFileEmit(relPath string) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	w.appendFileChangeLocked(relPath)
+}
+
+func (w *worktreeWatcher) appendFileChangeLocked(relPath string) {
+	if w.isClosed {
+		return
+	}
+	for _, path := range w.changedPaths {
+		if path == relPath {
+			return
+		}
+	}
 	if len(w.changedPaths) < maxChangedPathsPerEvent {
 		w.changedPaths = append(w.changedPaths, relPath)
 	} else {
 		w.hasChangedPathsOverflow = true
 	}
-
-	if w.fileTimer != nil {
-		w.fileTimer.Stop()
+	if w.fileTimer == nil {
+		w.fileTimer = time.AfterFunc(watcherDebounce, w.emitFilesChanged)
 	}
-
-	w.fileTimer = time.AfterFunc(watcherDebounce, w.emitFilesChanged)
 }
 
 func (w *worktreeWatcher) emitFilesChanged() {
@@ -29,10 +37,10 @@ func (w *worktreeWatcher) emitFilesChanged() {
 	hasOverflow := w.hasChangedPathsOverflow
 	w.changedPaths = nil
 	w.hasChangedPathsOverflow = false
-	w.fileTimer = nil
 	w.mu.Unlock()
+	defer w.finishFileEmit()
 
-	if !w.hasWorktreeDirectory() {
+	if !w.canNotify() {
 		return
 	}
 
@@ -75,7 +83,7 @@ func dedupePaths(paths []string) map[string]bool {
 }
 
 func (w *worktreeWatcher) readCurrentBranch() string {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := w.ignoreContext(w.commandParent())
 	defer cancel()
 	out, err, ok := w.gitRunner.Run(ctx, w.path, "rev-parse", "--abbrev-ref", "HEAD")
 	if !ok || err != nil {
@@ -87,25 +95,28 @@ func (w *worktreeWatcher) readCurrentBranch() string {
 func (w *worktreeWatcher) scheduleGitEmit(affectsBranch bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.isClosed {
+		return
+	}
 
+	w.hasPendingGit = true
 	if affectsBranch {
 		w.pendingAffectsBranch = true
 	}
-	if w.gitTimer != nil {
-		w.gitTimer.Stop()
+	if w.gitTimer == nil {
+		w.gitTimer = time.AfterFunc(watcherDebounce, w.emitGitChanged)
 	}
-
-	w.gitTimer = time.AfterFunc(watcherDebounce, w.emitGitChanged)
 }
 
 func (w *worktreeWatcher) emitGitChanged() {
 	w.mu.Lock()
-	w.gitTimer = nil
+	w.hasPendingGit = false
 	affects := w.pendingAffectsBranch
 	w.pendingAffectsBranch = false
 	w.mu.Unlock()
+	defer w.finishGitEmit()
 
-	if !w.hasWorktreeDirectory() {
+	if !w.canNotify() {
 		return
 	}
 
@@ -118,7 +129,7 @@ func (w *worktreeWatcher) emitGitChanged() {
 		event.CurrentBranch = w.readCurrentBranch()
 	}
 
-	if !w.hasWorktreeDirectory() {
+	if !w.canNotify() {
 		return
 	}
 	if w.sink != nil {
@@ -128,33 +139,27 @@ func (w *worktreeWatcher) emitGitChanged() {
 }
 
 func (w *worktreeWatcher) notifyGitChanged() {
-	if w.onGitChanged == nil {
-		return
+	if w.onGitChanged != nil && w.canNotify() {
+		w.onGitChanged(w.path)
 	}
-
-	go func() {
-		if w.hasWorktreeDirectory() {
-			w.onGitChanged(w.path)
-		}
-	}()
 }
 
-func (w *worktreeWatcher) close() {
-	close(w.done)
-	if w.backend != nil {
-		w.backend.Close()
-	}
-
+// Keep the timer occupied through sink execution: slow sinks cannot spawn an
+// unbounded number of concurrent timer callbacks under sustained input.
+func (w *worktreeWatcher) finishFileEmit() {
 	w.mu.Lock()
-	if w.fileTimer != nil {
-		w.fileTimer.Stop()
-		w.fileTimer = nil
+	defer w.mu.Unlock()
+	w.fileTimer = nil
+	if !w.isClosed && (len(w.changedPaths) > 0 || w.hasChangedPathsOverflow) {
+		w.fileTimer = time.AfterFunc(watcherDebounce, w.emitFilesChanged)
 	}
-	if w.gitTimer != nil {
-		w.gitTimer.Stop()
-		w.gitTimer = nil
+}
+
+func (w *worktreeWatcher) finishGitEmit() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.gitTimer = nil
+	if !w.isClosed && w.hasPendingGit {
+		w.gitTimer = time.AfterFunc(watcherDebounce, w.emitGitChanged)
 	}
-	w.changedPaths = nil
-	w.hasChangedPathsOverflow = false
-	w.mu.Unlock()
 }

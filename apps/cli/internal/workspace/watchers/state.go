@@ -1,14 +1,11 @@
 package watchers
 
 import (
-	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -27,7 +24,7 @@ func (w *worktreeWatcher) hasWorktreeDirectory() bool {
 }
 
 func (w *worktreeWatcher) handleChangedPath(changedPath string) {
-	if !w.hasWorktreeDirectory() || time.Now().Before(w.readyAt) {
+	if !w.canNotify() || time.Now().Before(w.readyAt) {
 		return
 	}
 
@@ -46,30 +43,16 @@ func (w *worktreeWatcher) handleChangedPath(changedPath string) {
 		return
 	}
 
-	if !w.shouldEmitWorkspacePath(changedPath) {
+	if !w.shouldWatchWorkspaceDirWithoutGitIgnore(changedPath) {
 		return
 	}
 
-	w.scheduleFileEmit(w.relativeWorkspacePath(changedPath))
-}
-
-func (w *worktreeWatcher) shouldEmitWorkspacePath(changedPath string) bool {
 	relPath := w.relativeWorkspacePath(changedPath)
-	if relPath == "" {
-		return true
-	}
-	if w.isGitRelativePath(relPath) {
-		return false
-	}
-
-	absPath := filepath.Join(w.path, filepath.FromSlash(relPath))
-	if !w.shouldWatchWorkspaceDirWithoutGitIgnore(absPath) {
-		return false
-	}
 	if w.shouldAlwaysWatchRelativePath(relPath) {
-		return true
+		w.scheduleFileEmit(relPath)
+		return
 	}
-	return !w.isGitIgnoredPath(relPath)
+	w.enqueueOrdinaryPath(relPath)
 }
 
 func (w *worktreeWatcher) isGitPath(changedPath string) bool {
@@ -151,76 +134,17 @@ func (w *worktreeWatcher) shouldWatchWorkspaceDirWithoutGitIgnore(path string) b
 	return true
 }
 
-func (w *worktreeWatcher) isGitIgnoredPath(path string) bool {
-	if !w.isGitIgnoreUsable() {
-		return false
-	}
-
-	relPath := path
-	if filepath.IsAbs(path) {
-		relPath = w.relativeWorkspacePath(path)
-	}
-	if relPath == "" {
-		return false
-	}
-
-	w.mu.Lock()
-	if ignored, ok := w.ignoredPaths[relPath]; ok {
-		w.mu.Unlock()
-		return ignored
-	}
-	if w.hasCachedIgnoredAncestor(relPath) {
-		w.ignoredPaths[relPath] = true
-		w.mu.Unlock()
-		return true
-	}
-	w.mu.Unlock()
-
-	ignored := w.gitCheckIgnore(relPath)
-
-	w.mu.Lock()
-	w.ignoredPaths[relPath] = ignored
-	w.mu.Unlock()
-	return ignored
-}
-
-func (w *worktreeWatcher) hasCachedIgnoredAncestor(relativePath string) bool {
-	parentPath := relativePath
-	for {
-		separatorIndex := strings.LastIndex(parentPath, "/")
-		if separatorIndex <= 0 {
-			return false
-		}
-		parentPath = parentPath[:separatorIndex]
-		if w.ignoredPaths[parentPath] {
-			return true
-		}
-	}
-}
-
-func (w *worktreeWatcher) isGitIgnoreUsable() bool {
-	w.mu.Lock()
-	if w.gitIgnoreUsable != nil {
-		usable := *w.gitIgnoreUsable
-		w.mu.Unlock()
-		return usable
-	}
-	w.mu.Unlock()
-
-	usable := w.gitWorktreeReady()
-
-	w.mu.Lock()
-	w.gitIgnoreUsable = &usable
-	w.mu.Unlock()
-	return usable
-}
-
 func (w *worktreeWatcher) clearIgnoreCacheIfNeeded(changedPath string) {
 	if !w.isGitIgnoreConfigPath(changedPath) {
 		return
 	}
 
 	w.mu.Lock()
+	if w.isClosed {
+		w.mu.Unlock()
+		return
+	}
+	w.ignoreGeneration++
 	w.ignoredPaths = make(map[string]bool)
 	w.gitIgnoreUsable = nil
 	w.mu.Unlock()
@@ -236,30 +160,6 @@ func (w *worktreeWatcher) isGitIgnoreConfigPath(changedPath string) bool {
 	return relPath == gitInfoExcludeRel
 }
 
-func (w *worktreeWatcher) gitCheckIgnore(relativePath string) bool {
-	if strings.TrimSpace(relativePath) == "" {
-		return false
-	}
-
-	command, ok := w.gitCommand("-C", w.path, "check-ignore", "-q", relativePath)
-	if !ok {
-		return false
-	}
-
-	err := command.Run()
-	if err == nil {
-		return true
-	}
-
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
-		return false
-	}
-
-	log.Debug().Err(err).Str("path", relativePath).Msg("git check-ignore failed")
-	return false
-}
-
 func (w *worktreeWatcher) shouldAlwaysWatchRelativePath(relativePath string) bool {
 	for part := range strings.SplitSeq(relativePath, "/") {
 		if part == workspace.ContextLinkName {
@@ -268,22 +168,6 @@ func (w *worktreeWatcher) shouldAlwaysWatchRelativePath(relativePath string) boo
 	}
 
 	return false
-}
-
-func (w *worktreeWatcher) gitWorktreeReady() bool {
-	command, ok := w.gitCommand("-C", w.path, "rev-parse", "--is-inside-work-tree")
-	if !ok {
-		return false
-	}
-	return command.Run() == nil
-}
-
-func (w *worktreeWatcher) gitCommand(args ...string) (*exec.Cmd, bool) {
-	return w.gitRunner.Command(args...)
-}
-
-func (w *worktreeWatcher) isGitRelativePath(relativePath string) bool {
-	return relativePath == ".git" || strings.HasPrefix(relativePath, ".git/")
 }
 
 func (w *worktreeWatcher) isBranchRelevantGitPath(changedPath string) bool {
