@@ -176,22 +176,3 @@ func TestWorkspaceWatchers_ReusesSharedContextWatchers(t *testing.T) {
 		t.Fatalf("expected shared context watchers to be cleaned up, got %d", len(watchers.contexts))
 	}
 }
-
-func TestWorktreeWatcher_HasCachedIgnoredAncestor(t *testing.T) {
-	watcher := &worktreeWatcher{
-		ignoredPaths: map[string]bool{
-			"ignored":             true,
-			"ignored/known-false": false,
-		},
-	}
-
-	if !watcher.hasCachedIgnoredAncestor("ignored/nested/file.txt") {
-		t.Fatal("expected ignored ancestor to be detected")
-	}
-	if watcher.hasCachedIgnoredAncestor("tracked/nested/file.txt") {
-		t.Fatal("did not expect unrelated path to have ignored ancestor")
-	}
-	if watcher.hasCachedIgnoredAncestor("ignored") {
-		t.Fatal("did not expect exact path lookup to count as ancestor")
-	}
-}

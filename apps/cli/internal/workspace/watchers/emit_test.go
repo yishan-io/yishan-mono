@@ -1,12 +1,12 @@
 package watchers
 
 import (
+	"context"
 	"encoding/json"
+	"os/exec"
 	"strconv"
 	"testing"
 	"time"
-
-	gitexec "yishan/apps/cli/internal/git/exec"
 )
 
 func TestBoundChangedPaths_OverflowSignalsFullRefresh(t *testing.T) {
@@ -102,7 +102,6 @@ func TestWorktreeWatcher_ScheduleGitEmitSkipsMissingWorktree(t *testing.T) {
 				workspaceID: "workspace-1",
 				path:        worktreePath,
 				sink:        eventHubWatcherSink{events: hub},
-				gitRunner:   gitexec.DefaultRunner(),
 				onGitChanged: func(path string) {
 					callbackPaths <- path
 				},
@@ -147,5 +146,52 @@ func TestBoundChangedPaths_KeepsSmallBatches(t *testing.T) {
 	got := boundChangedPaths(paths)
 	if len(got) != len(paths) {
 		t.Fatalf("boundChangedPaths() = %d paths, want %d", len(got), len(paths))
+	}
+}
+
+// Exercise the delegated branch operation with real Git, including detached HEAD.
+func TestReadCurrentBranch_HeadNameAndErrors(t *testing.T) {
+	w := newIgnoreTestWatcher(t)
+	args := []string{"-C", w.path, "-c", "user.name=Watcher Test", "-c", "user.email=watcher@example.test", "commit", "--allow-empty", "-m", "initial"}
+	if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+		t.Fatalf("commit: %s: %v", out, err)
+	}
+	if out, err := exec.Command("git", "-C", w.path, "checkout", "-b", "watcher-branch").CombinedOutput(); err != nil {
+		t.Fatalf("checkout: %s: %v", out, err)
+	}
+	if branch := w.readCurrentBranch(); branch != "watcher-branch" {
+		t.Fatalf("branch = %q", branch)
+	}
+	if out, err := exec.Command("git", "-C", w.path, "checkout", "--detach").CombinedOutput(); err != nil {
+		t.Fatalf("detach: %s: %v", out, err)
+	}
+	if branch := w.readCurrentBranch(); branch != "HEAD" {
+		t.Fatalf("detached branch = %q", branch)
+	}
+	w.path = t.TempDir()
+	if branch := w.readCurrentBranch(); branch != "" {
+		t.Fatalf("non-worktree branch = %q", branch)
+	}
+}
+
+func TestReadCurrentBranch_BoundedContext(t *testing.T) {
+	for _, shouldCancel := range []bool{false, true} {
+		w := newIgnoreTestWatcher(t)
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+		w.gitContext = ctx
+		if shouldCancel {
+			cancel()
+		}
+		installGitCommand(w, func(commandCtx context.Context, args ...string) (*exec.Cmd, bool) {
+			if deadline, ok := commandCtx.Deadline(); !ok || time.Until(deadline) > gitIgnoreCommandTimeout {
+				t.Error("unbounded branch lookup")
+			}
+			<-commandCtx.Done()
+			return defaultGitCommand(commandCtx, args...)
+		})
+		if branch := w.readCurrentBranch(); branch != "" || ctx.Err() == nil {
+			t.Errorf("branch=%q context error=%v", branch, ctx.Err())
+		}
+		cancel()
 	}
 }

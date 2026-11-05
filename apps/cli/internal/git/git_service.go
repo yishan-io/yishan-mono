@@ -22,6 +22,7 @@ import (
 //   - git_exec.go     — gitCommand, gitCommandCombined, ghCommand, ghJSON, parseNumstat,
 //     parseStatusOutput, helper functions
 type GitService struct {
+	runner                 CommandRunner
 	mu                     sync.RWMutex
 	branchCache            map[string]branchCacheEntry
 	branchPullRequestCache map[string]branchPullRequestCacheEntry
@@ -39,6 +40,14 @@ func NewGitService() *GitService {
 		branchCache:            make(map[string]branchCacheEntry),
 		branchPullRequestCache: make(map[string]branchPullRequestCacheEntry),
 	}
+}
+
+// NewGitServiceWithRunner injects command creation for worktree readiness,
+// ignore checks, and head names (including CurrentBranch). Nil uses the shared runner.
+func NewGitServiceWithRunner(runner CommandRunner) *GitService {
+	s := NewGitService()
+	s.runner = runner
+	return s
 }
 
 func (s *GitService) Status(ctx context.Context, root string) (GitStatusResponse, error) {
