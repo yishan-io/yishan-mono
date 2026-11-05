@@ -20,12 +20,15 @@ func (w *worktreeWatcher) canNotify() bool {
 	return !isClosed && w.hasWorktreeDirectory()
 }
 
-func (w *worktreeWatcher) close() {
+// seal closes admission under the same lock used to register notifications.
+func (w *worktreeWatcher) seal(shared *fswatch.Watcher) {
 	w.mu.Lock()
+	defer w.mu.Unlock()
 	if w.isClosed {
-		w.mu.Unlock()
 		return
 	}
+	w.closeDone = make(chan struct{})
+	w.sharedBackend = shared
 	w.isClosed = true
 	if w.gitCancel != nil {
 		w.gitCancel()
@@ -45,28 +48,52 @@ func (w *worktreeWatcher) close() {
 	w.pendingAffectsBranch, w.hasPendingGit = false, false
 	w.ignoredPaths = nil
 	w.ignoreGeneration++
-	w.mu.Unlock()
-	if w.backend != nil {
-		w.backend.Close()
-	}
 }
 
-// Detach under the registry lock; backend shutdown may wait for callbacks that
-// need that lock. Never call a backend or user callback while holding it.
+func (w *worktreeWatcher) close() {
+	w.seal(nil)
+	w.closeOnce.Do(func() {
+		if w.backend != nil {
+			w.backend.Close()
+		}
+		if w.sharedBackend != nil {
+			w.sharedBackend.Close()
+		}
+		w.notifications.Wait()
+		close(w.closeDone)
+	})
+	<-w.closeDone
+}
+
+func (w *worktreeWatcher) isClosing() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.isClosed
+}
+
+// Unwatch seals and drains notifications, including an already-closing entry.
+// Owning callbacks must not call this synchronously.
 func (ws *Watchers) Unwatch(worktreePath string) {
 	ws.mu.Lock()
 	entry := ws.entries[worktreePath]
-	delete(ws.entries, worktreePath)
-	var shared *fswatch.Watcher
 	if entry != nil {
-		shared = ws.detachContextWatcher(entry)
+		entry.seal(ws.detachContextWatcher(entry))
 	}
 	ws.mu.Unlock()
 	if entry != nil {
 		entry.close()
+		if entry.beforeRegistryCleanup != nil {
+			entry.beforeRegistryCleanup()
+		}
+		ws.removeClosedEntry(entry)
 	}
-	if shared != nil {
-		shared.Close()
+}
+
+func (ws *Watchers) removeClosedEntry(entry *worktreeWatcher) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	if ws.entries[entry.path] == entry {
+		delete(ws.entries, entry.path)
 	}
 }
 
@@ -83,16 +110,22 @@ func (ws *Watchers) detachContextWatcher(entry *worktreeWatcher) *fswatch.Watche
 	return registration.watcher
 }
 
+// Close seals all entries captured under the registry lock before draining any.
+// It also joins already-closing entries, but does not disable future Watch calls.
+// Owning callbacks must not call this synchronously.
 func (ws *Watchers) Close() {
 	ws.mu.Lock()
-	entries, contexts := ws.entries, ws.contexts
-	ws.entries = make(map[string]*worktreeWatcher)
-	ws.contexts = make(map[string]*contextWatchRegistration)
+	entries := make([]*worktreeWatcher, 0, len(ws.entries))
+	for _, entry := range ws.entries {
+		entry.seal(ws.detachContextWatcher(entry))
+		entries = append(entries, entry)
+	}
 	ws.mu.Unlock()
 	for _, entry := range entries {
 		entry.close()
-	}
-	for _, registration := range contexts {
-		registration.watcher.Close()
+		if entry.beforeRegistryCleanup != nil {
+			entry.beforeRegistryCleanup()
+		}
+		ws.removeClosedEntry(entry)
 	}
 }

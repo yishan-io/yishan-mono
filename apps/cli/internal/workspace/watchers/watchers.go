@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
-	gitexec "yishan/apps/cli/internal/git/exec"
+	"yishan/apps/cli/internal/git"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/watchers/fswatch"
 )
@@ -36,13 +35,28 @@ type GitChangedEvent struct {
 	CurrentBranch string
 }
 
+// Sink callbacks must not synchronously call Watch, Unwatch, or Close on their
+// owning Watchers. Request lifecycle work asynchronously without waiting.
 type Sink interface {
 	PublishWorkspaceFilesChanged(FilesChangedEvent)
 	PublishGitChanged(GitChangedEvent)
 }
 
+// watcherGit leaves command protocol to Git and scheduling policy to the watcher.
+type watcherGit interface {
+	WorktreeReady(context.Context, string) error
+	CheckIgnoredPaths(context.Context, string, []string) (map[string]bool, error)
+	HeadName(context.Context, string) (string, error)
+}
+
 type worktreeWatcher struct {
-	mu                      sync.Mutex
+	mu            sync.Mutex
+	notifications sync.WaitGroup
+	closeOnce     sync.Once
+	closeDone     chan struct{}
+	// beforeRegistryCleanup is an optional drain-to-registry handoff barrier.
+	beforeRegistryCleanup   func()
+	sharedBackend           *fswatch.Watcher
 	workspaceID             string
 	path                    string
 	contextDir              string
@@ -70,8 +84,7 @@ type worktreeWatcher struct {
 	isOrdinaryActive        bool
 	hasOrdinaryOverflow     bool
 	gitContext              context.Context
-	gitCommandContext       func(context.Context, ...string) (*exec.Cmd, bool)
-	gitRunner               gitexec.Runner
+	gitService              watcherGit
 	backend                 *fswatch.Watcher
 }
 
@@ -88,6 +101,8 @@ type Watchers struct {
 	onGitChanged func(worktreePath string)
 }
 
+// New registers sinks and a Git callback. Callbacks must not synchronously call
+// owning Watchers lifecycle methods; asynchronous requests must not wait.
 func New(sink Sink, onGitChanged func(worktreePath string)) *Watchers {
 	return &Watchers{
 		entries:      make(map[string]*worktreeWatcher),
@@ -102,23 +117,34 @@ func New(sink Sink, onGitChanged func(worktreePath string)) *Watchers {
 func (ws *Watchers) IsWatching(worktreePath string) bool {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
-	_, ok := ws.entries[worktreePath]
-	return ok
+	entry := ws.entries[worktreePath]
+	return entry != nil && !entry.isClosing()
 }
 
+// Watch registers a workspace, waiting for any closing same-path entry first.
+// Owning callbacks must not call this synchronously.
 func (ws *Watchers) Watch(workspaceID string, worktreePath string) error {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-	if _, exists := ws.entries[worktreePath]; exists {
-		return nil
-	}
-	entry, err := ws.newWorktreeWatcher(workspaceID, worktreePath)
-	if err != nil {
+	for {
+		ws.mu.Lock()
+		previous := ws.entries[worktreePath]
+		if previous != nil && previous.isClosing() {
+			ws.mu.Unlock()
+			<-previous.closeDone
+			ws.removeClosedEntry(previous)
+			continue
+		}
+		if previous != nil {
+			ws.mu.Unlock()
+			return nil
+		}
+		entry, err := ws.newWorktreeWatcher(workspaceID, worktreePath)
+		if err == nil {
+			ws.entries[worktreePath] = entry
+			ws.registerContextWatcher(entry)
+		}
+		ws.mu.Unlock()
 		return err
 	}
-	ws.entries[worktreePath] = entry
-	ws.registerContextWatcher(entry)
-	return nil
 }
 
 func (ws *Watchers) newWorktreeWatcher(workspaceID string, worktreePath string) (*worktreeWatcher, error) {
@@ -134,7 +160,7 @@ func (ws *Watchers) newWorktreeWatcher(workspaceID string, worktreePath string) 
 		OnError:       func(err error) { log.Warn().Err(err).Str("path", worktreePath).Msg("workspace watcher error") },
 	})
 	if err != nil {
-		entry.close()
+		entry.seal(nil)
 		log.Warn().Err(err).Str("path", worktreePath).Msg("failed to create workspace watcher")
 		return nil, fmt.Errorf("create workspace watcher: %w", err)
 	}
@@ -148,7 +174,7 @@ func (ws *Watchers) buildWorktreeWatcher(workspaceID string, worktreePath string
 		gitContext: gitContext, gitCancel: cancelGit,
 		workspaceID: workspaceID, path: worktreePath, resolvedGitDir: ResolveGitDir(worktreePath), sink: ws.sink,
 		readyAt: time.Now().Add(watcherStartupLag), done: make(chan struct{}), onGitChanged: ws.onGitChanged,
-		ignoredPaths: make(map[string]bool), gitRunner: gitexec.DefaultRunner(),
+		ignoredPaths: make(map[string]bool), gitService: git.NewGitService(),
 	}
 
 	contextLinkPath := filepath.Join(worktreePath, workspace.ContextLinkName)

@@ -2,13 +2,17 @@
 
 ## Status
 
-This document describes the current worktree implementation. The ignore batching change is not fully accepted yet.
-Native Git classification passed scoped review. Queue integration passed focused tests, but a shutdown race remains open.
-Full CLI validation and final review are pending. These changes do not prove that the reported macOS CPU/RPC incident is resolved.
+This document describes the watcher ignore-batching implementation.
+Native Git classification, queue integration, notification shutdown, and GitService integration passed scoped and combined code review.
+Git and watcher tests passed normally and under the race detector. Full CLI tests and vet passed. Scoped gopls reported no diagnostics.
+These checks do not prove that the reported macOS CPU/RPC incident is resolved.
 
 ## Ownership and platforms
 
-`Watchers` owns workspace registrations and shared context watchers. Each `worktreeWatcher` owns its queue, ignore cache, timers, and command cancellation.
+`Watchers` owns workspace registrations and shared context watchers. Each `worktreeWatcher` owns its queue, ignore cache, timers, and command cancellation policy.
+`internal/git.GitService` owns command arguments, NUL stdin/output, exit-code interpretation, readiness and HEAD reads.
+The watcher consumes only `WorktreeReady`, `CheckIgnoredPaths`, and `HeadName`; it owns caching, generations,
+serialized readiness, 128-path chunks, and deadlines. Manual fixtures use a non-mutating nil-service fallback.
 
 The macOS backend uses FSEvents, not per-directory kqueue watches. The non-Darwin backend uses fsnotify and retains synchronous directory filtering.
 Event-path batching does not replace that synchronous traversal contract. Backend code lives in `fswatch/`.
@@ -50,7 +54,7 @@ An ignored parent cache entry does not suppress descendants. Git can contain a f
 Only exact cache entries are reused. Git decides uncached descendant paths.
 
 Each classification call has a two-second deadline shared by its readiness probe and chunks.
-Commands use `internal/git/exec.Runner.CommandContext` and watcher lifecycle cancellation.
+GitService executes context-bound commands with watcher deadlines and lifecycle cancellation.
 On non-cancellation errors, ordinary events fail open: paths remain visible instead of being permanently cached as non-ignored.
 
 ## Ignore configuration changes
@@ -77,16 +81,26 @@ File notifications retain at most 250 distinct paths. Larger bursts publish a no
 The empty array means a full refresh. Queue overflow and repeated rule invalidation use the same contract.
 Git notifications retain branch-affecting information and read the current branch when required.
 
-## Shutdown limitation
+## Notification shutdown contract
 
-`lifecycle.go` marks a watcher closed, cancels Git commands, stops timers, clears pending work, and advances the cache generation.
-Backend shutdown occurs outside registry locks. Shared context registrations remain until their last workspace detaches.
+File notifications register admission under the entry state mutex before invoking a sink, then complete their registration afterward.
+Closure seals admission under that same mutex. Git branch lookup runs before admission with watcher command cancellation.
+Cancelled or closed watchers reject admission. Once admitted, the entire Git sink → `onGitChanged` sequence can continue during shutdown.
+Directory availability is still checked before delivery and before the Git callback.
 
-Strict notification shutdown is not yet guaranteed. `canNotify()` releases the state mutex before sink or `onGitChanged` invocation.
-`Close()` can return between that check and the invocation. A callback can therefore start after `Close()` returns.
+`Close` and `Unwatch` cancel commands, stop timers, clear pending work, advance the cache generation, and wait for all admitted sequences.
+Repeated and overlapping callers join the same completion, including entries already closing.
+Every targeted entry is sealed before waiting for the first drain. Callbacks and completion waits run outside state and registry mutexes.
+This is a notification completion guarantee, not a worker/backend goroutine join guarantee.
 
-Do not treat passing race tests as proof that this ordering race is fixed.
-The remaining design must define notification admission and callback-reentrant close behavior without holding watcher mutexes across user callbacks.
+Closing entries stay discoverable until completion. Same-path `Watch` waits outside the registry lock before replacement;
+old drains cannot remove replacements. `Close` captures active and closing registrations at its registry-lock linearization point.
+It does not permanently disable later `Watch` calls. Shared context backends detach under that lock and close outside it;
+a shared registration remains while another workspace uses it.
+
+Sink callbacks and `onGitChanged` must not synchronously call `Watch`, `Unwatch`, or `Close`
+on their owning `Watchers`. They can request lifecycle work asynchronously, but must not wait for it inside the callback.
+A callback that never returns also prevents notification shutdown from completing. No goroutine identity detection or public stop/wait API is provided.
 
 ## Source and tests
 
@@ -94,19 +108,34 @@ The remaining design must define notification admission and callback-reentrant c
 | --- | --- |
 | `watchers.go` | Registration, per-workspace state, shared context routing |
 | `state.go` | Event classification, path predicates, cache invalidation |
-| `ignore.go` | Native Git batching, readiness, cache generation checks |
+| `ignore.go` | Git operation batching, readiness policy, cache generation checks |
 | `ingress.go` | Ordinary queue, serialization, overflow and retry fallback |
 | `emit.go` | Bounded notification scheduling and payloads |
 | `lifecycle.go` | Cancellation, detach, and close |
+| `notification.go` | Atomic sequence admission and completion registration |
+| `lifecycle_test.go` | Notification drains, overlapping closure, cancellation and replacement |
 | `ignore_test.go` | Counts, filenames, tracked descendants, failures, invalidation, readiness |
 | `ingress_test.go` | Deduplication, arrivals during checks, invalidation, sustained publication, cancellation |
 
 From `apps/cli`, run the focused checks:
 
 ```sh
-go test ./internal/workspace/watchers/...
-go test -race ./internal/workspace/watchers/...
+go test ./internal/git/... ./internal/workspace/watchers/...
+go test -race ./internal/git/... ./internal/workspace/watchers/...
 ```
 
-Existing close-cancellation coverage does not close the notification check/invocation gap described above.
-The task handoff records completed checks separately from the pending full CLI test, vet, performance report, and final review.
+Full CLI verification also passed with `go test ./...` and `go vet ./...` from `apps/cli`.
+`workload_test.go` records the following deterministic process counts, excluding branch reads and directory discovery:
+
+| Workload | Readiness | check-ignore | Total |
+| --- | --- | --- | --- |
+| 257 distinct cold paths | 1 | 3 | 4 |
+| Same 257 exact warm paths | 0 | 0 | 0 |
+| 1,000 events across two paths, with in-flight arrivals | 1 | 2 | 3 |
+
+The cold workload uses batch sizes 128, 128, and 1 instead of the old modeled 257 per-miss checks.
+The repeated workload observes peak asynchronous classification concurrency of one per workspace.
+These are subprocess-count results, not measurements of incident-time CPU usage.
+
+Known nonblocking test gaps: queue-overflow and repeated-generation fallback branches lack direct full-refresh regression tests.
+Lifecycle join tests also depend on test-only runtime stack formatting. Production code does not inspect goroutine identities.

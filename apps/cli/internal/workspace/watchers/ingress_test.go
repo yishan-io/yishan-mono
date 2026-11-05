@@ -131,7 +131,7 @@ func TestIngress_CloseCancelsActualCommandAndPreventsNotifications(t *testing.T)
 }
 
 func installIngressGate(w *worktreeWatcher, entered chan struct{}, release <-chan struct{}, checks, active, peak *atomic.Int32) {
-	w.gitCommandContext = func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
+	installGitCommand(w, func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
 		if args[2] == "check-ignore" {
 			n := active.Add(1)
 			defer active.Add(-1)
@@ -146,12 +146,12 @@ func installIngressGate(w *worktreeWatcher, entered chan struct{}, release <-cha
 				}
 			}
 		}
-		return w.gitRunner.CommandContext(ctx, args...)
-	}
+		return defaultGitCommand(ctx, args...)
+	})
 }
 
 func installInvalidationGate(w *worktreeWatcher, entered chan struct{}, release <-chan struct{}, checks *atomic.Int32) {
-	w.gitCommandContext = func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
+	installGitCommand(w, func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
 		if args[2] == "check-ignore" && checks.Add(1) == 1 {
 			close(entered)
 			select {
@@ -159,13 +159,13 @@ func installInvalidationGate(w *worktreeWatcher, entered chan struct{}, release 
 			case <-ctx.Done():
 			}
 		}
-		return w.gitRunner.CommandContext(ctx, args...)
-	}
+		return defaultGitCommand(ctx, args...)
+	})
 }
 
 func installCancellationCommand(t *testing.T, w *worktreeWatcher, entered, exited chan struct{}) {
 	t.Helper()
-	w.gitCommandContext = func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
+	installGitCommand(w, func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
 		if _, ok := ctx.Deadline(); !ok {
 			t.Error("missing command deadline")
 		}
@@ -188,6 +188,6 @@ func installCancellationCommand(t *testing.T, w *worktreeWatcher, entered, exite
 			}()
 			return cmd, true
 		}
-		return w.gitRunner.CommandContext(ctx, args...)
-	}
+		return defaultGitCommand(ctx, args...)
+	})
 }

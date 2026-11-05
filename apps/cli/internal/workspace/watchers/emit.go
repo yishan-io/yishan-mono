@@ -1,7 +1,6 @@
 package watchers
 
 import (
-	"strings"
 	"time"
 )
 
@@ -40,9 +39,10 @@ func (w *worktreeWatcher) emitFilesChanged() {
 	w.mu.Unlock()
 	defer w.finishFileEmit()
 
-	if !w.canNotify() {
+	if !w.hasWorktreeDirectory() || !w.admitNotification() {
 		return
 	}
+	defer w.finishNotification()
 
 	changedPaths := boundChangedPaths(paths)
 	if hasOverflow {
@@ -85,11 +85,11 @@ func dedupePaths(paths []string) map[string]bool {
 func (w *worktreeWatcher) readCurrentBranch() string {
 	ctx, cancel := w.ignoreContext(w.commandParent())
 	defer cancel()
-	out, err, ok := w.gitRunner.Run(ctx, w.path, "rev-parse", "--abbrev-ref", "HEAD")
-	if !ok || err != nil {
+	branch, err := w.gitOperations().HeadName(ctx, w.path)
+	if ctx.Err() != nil || err != nil {
 		return ""
 	}
-	return strings.TrimSpace(string(out))
+	return branch
 }
 
 func (w *worktreeWatcher) scheduleGitEmit(affectsBranch bool) {
@@ -129,17 +129,26 @@ func (w *worktreeWatcher) emitGitChanged() {
 		event.CurrentBranch = w.readCurrentBranch()
 	}
 
-	if !w.canNotify() {
+	if !w.hasWorktreeDirectory() || !w.admitNotification() {
 		return
 	}
+	defer w.finishNotification()
 	if w.sink != nil {
 		w.sink.PublishGitChanged(event)
 	}
-	w.notifyGitChanged()
+	w.invokeGitChanged()
 }
 
 func (w *worktreeWatcher) notifyGitChanged() {
-	if w.onGitChanged != nil && w.canNotify() {
+	if !w.hasWorktreeDirectory() || !w.admitNotification() {
+		return
+	}
+	defer w.finishNotification()
+	w.invokeGitChanged()
+}
+
+func (w *worktreeWatcher) invokeGitChanged() {
+	if w.onGitChanged != nil && w.hasWorktreeDirectory() {
 		w.onGitChanged(w.path)
 	}
 }

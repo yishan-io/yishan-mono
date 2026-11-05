@@ -3,12 +3,11 @@ package watchers
 import (
 	"context"
 	"errors"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/git"
 )
 
 const (
@@ -17,7 +16,6 @@ const (
 )
 
 var errIgnoreGenerationChanged = errors.New("git ignore configuration changed")
-var errGitIgnoreUnavailable = errors.New("git ignore unavailable")
 
 func (w *worktreeWatcher) isGitIgnoredPath(path string) bool {
 	if filepath.IsAbs(path) {
@@ -46,7 +44,7 @@ func (w *worktreeWatcher) classifyGitIgnoredPaths(ctx context.Context, paths []s
 		}
 		for start := 0; start < len(uncached); start += gitIgnoreBatchSize {
 			end := min(start+gitIgnoreBatchSize, len(uncached))
-			matches, err := w.gitCheckIgnore(ctx, uncached[start:end])
+			matches, err := w.gitOperations().CheckIgnoredPaths(ctx, w.path, uncached[start:end])
 			if err != nil {
 				return nil, err
 			}
@@ -128,7 +126,7 @@ func (w *worktreeWatcher) isGitIgnoreUsable(ctx context.Context, generation uint
 		pending := make(chan struct{})
 		w.ignoreProbeDone = pending
 		w.mu.Unlock()
-		err := w.gitWorktreeReady(ctx)
+		err := w.gitOperations().WorktreeReady(ctx, w.path)
 		return w.completeIgnoreProbe(ctx, generation, pending, err)
 	}
 }
@@ -151,53 +149,10 @@ func (w *worktreeWatcher) completeIgnoreProbe(ctx context.Context, generation ui
 	return err
 }
 
-func (w *worktreeWatcher) gitWorktreeReady(ctx context.Context) error {
-	command, ok := w.ignoreCommand(ctx, "-C", w.path, "rev-parse", "--is-inside-work-tree")
-	if !ok {
-		return errGitIgnoreUnavailable
+// Manual fixtures may omit the service. Never assign here: callers can overlap.
+func (w *worktreeWatcher) gitOperations() watcherGit {
+	if w.gitService != nil {
+		return w.gitService
 	}
-	output, err := command.Output()
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	if err != nil {
-		return err
-	}
-	if strings.TrimSpace(string(output)) != "true" {
-		return errGitIgnoreUnavailable
-	}
-	return nil
-}
-
-func (w *worktreeWatcher) gitCheckIgnore(ctx context.Context, paths []string) (map[string]bool, error) {
-	command, ok := w.ignoreCommand(ctx, "-C", w.path, "check-ignore", "-z", "--stdin")
-	if !ok {
-		return nil, errGitIgnoreUnavailable
-	}
-	command.Stdin = strings.NewReader(strings.Join(paths, "\x00") + "\x00")
-	output, err := command.Output()
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-	var exitErr *exec.ExitError
-	if err != nil && !(errors.As(err, &exitErr) && exitErr.ExitCode() == 1) {
-		return nil, err
-	}
-	ignored := make(map[string]bool, len(paths))
-	for _, path := range paths {
-		ignored[path] = false
-	}
-	for _, path := range strings.Split(string(output), "\x00") {
-		if _, exists := ignored[path]; exists {
-			ignored[path] = true
-		}
-	}
-	return ignored, nil
-}
-
-func (w *worktreeWatcher) ignoreCommand(ctx context.Context, args ...string) (*exec.Cmd, bool) {
-	if w.gitCommandContext != nil {
-		return w.gitCommandContext(ctx, args...)
-	}
-	return w.gitRunner.CommandContext(ctx, args...)
+	return git.NewGitService()
 }

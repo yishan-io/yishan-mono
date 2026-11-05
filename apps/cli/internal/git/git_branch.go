@@ -39,15 +39,23 @@ func (s *GitService) BranchStatus(ctx context.Context, root string) (GitBranchSt
 }
 
 func (s *GitService) CurrentBranch(ctx context.Context, root string) (string, error) {
-	out, err := gitCommand(ctx, root, "rev-parse", "--abbrev-ref", "HEAD")
+	branch, err := s.HeadName(ctx, root)
 	if err != nil {
 		return "", err
 	}
-	branch := strings.TrimSpace(out)
 	if branch == "" || branch == "HEAD" {
 		return "", NewError(ErrCodeToolUnavailable, "workspace is not on a branch")
 	}
 	return branch, nil
+}
+
+// HeadName returns the branch name or literal HEAD for a detached checkout.
+func (s *GitService) HeadName(ctx context.Context, root string) (string, error) {
+	out, err := s.runReadCommand(ctx, root, "", false, "rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
 }
 
 func (s *GitService) AuthorName(ctx context.Context, root string) (string, error) {

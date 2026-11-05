@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	gitexec "yishan/apps/cli/internal/git/exec"
+	"yishan/apps/cli/internal/git"
 )
 
 type ignoreClassifier interface {
@@ -26,7 +26,7 @@ func newIgnoreTestWatcher(t *testing.T) *worktreeWatcher {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git init: %s: %v", output, err)
 	}
-	return &worktreeWatcher{path: root, ignoredPaths: make(map[string]bool), gitRunner: gitexec.DefaultRunner()}
+	return &worktreeWatcher{path: root, ignoredPaths: make(map[string]bool), gitService: git.NewGitService()}
 }
 
 func TestGitIgnore_TrackedDescendantAndFilenameSemantics(t *testing.T) {
@@ -72,14 +72,14 @@ func TestGitIgnore_BatchContract(t *testing.T) {
 // The seam counts command construction separately from Git's filename parsing.
 func countIgnoreCommands(w *worktreeWatcher) (*atomic.Int32, *atomic.Int32) {
 	readiness, checks := new(atomic.Int32), new(atomic.Int32)
-	w.gitCommandContext = func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
+	installGitCommand(w, func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
 		if args[2] == "rev-parse" {
 			readiness.Add(1)
 		} else {
 			checks.Add(1)
 		}
-		return w.gitRunner.CommandContext(ctx, args...)
-	}
+		return defaultGitCommand(ctx, args...)
+	})
 	return readiness, checks
 }
 
@@ -121,12 +121,12 @@ func TestGitIgnore_TransientFailuresRetryWithoutCaching(t *testing.T) {
 		t.Run(phase, func(t *testing.T) {
 			w := newIgnoreTestWatcher(t)
 			var failures atomic.Int32
-			w.gitCommandContext = func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
+			installGitCommand(w, func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
 				if args[2] == phase && failures.Add(1) == 1 {
-					return w.gitRunner.CommandContext(ctx, "-C", filepath.Join(w.path, "missing"), "status")
+					return defaultGitCommand(ctx, "-C", filepath.Join(w.path, "missing"), "status")
 				}
-				return w.gitRunner.CommandContext(ctx, args...)
-			}
+				return defaultGitCommand(ctx, args...)
+			})
 			if err := os.WriteFile(filepath.Join(w.path, ".gitignore"), []byte("ignored\n"), 0644); err != nil {
 				t.Fatal(err)
 			}
@@ -152,7 +152,7 @@ func TestGitIgnore_InvalidationFencesReadinessAndSynchronousResults(t *testing.T
 			}
 			entered, release := make(chan struct{}), make(chan struct{})
 			var calls atomic.Int32
-			w.gitCommandContext = func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
+			installGitCommand(w, func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
 				if args[2] == phase && calls.Add(1) == 1 {
 					close(entered)
 					select {
@@ -160,8 +160,8 @@ func TestGitIgnore_InvalidationFencesReadinessAndSynchronousResults(t *testing.T
 					case <-ctx.Done():
 					}
 				}
-				return w.gitRunner.CommandContext(ctx, args...)
-			}
+				return defaultGitCommand(ctx, args...)
+			})
 			result := make(chan bool, 1)
 			go func() { result <- w.isGitIgnoredPath("ignored") }()
 			<-entered
@@ -186,7 +186,7 @@ func TestGitIgnore_CancellationAndDeadlineAreRetryable(t *testing.T) {
 			w := newIgnoreTestWatcher(t)
 			entered := make(chan struct{})
 			ctx, cancel := context.WithCancel(context.Background())
-			w.gitCommandContext = func(commandCtx context.Context, args ...string) (*exec.Cmd, bool) {
+			installGitCommand(w, func(commandCtx context.Context, args ...string) (*exec.Cmd, bool) {
 				if _, ok := commandCtx.Deadline(); !ok {
 					t.Error("unbounded Git command")
 				}
@@ -194,8 +194,8 @@ func TestGitIgnore_CancellationAndDeadlineAreRetryable(t *testing.T) {
 					close(entered)
 					<-commandCtx.Done()
 				}
-				return w.gitRunner.CommandContext(commandCtx, args...)
-			}
+				return defaultGitCommand(commandCtx, args...)
+			})
 			result := make(chan error, 1)
 			go func() { _, err := w.classifyGitIgnoredPaths(ctx, []string{"visible"}); result <- err }()
 			<-entered
@@ -218,7 +218,7 @@ func TestGitIgnore_ConcurrentReadinessIsShared(t *testing.T) {
 	w := newIgnoreTestWatcher(t)
 	entered, release := make(chan struct{}), make(chan struct{})
 	var probes atomic.Int32
-	w.gitCommandContext = func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
+	installGitCommand(w, func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
 		if args[2] == "rev-parse" {
 			if probes.Add(1) == 1 {
 				close(entered)
@@ -228,8 +228,8 @@ func TestGitIgnore_ConcurrentReadinessIsShared(t *testing.T) {
 			case <-ctx.Done():
 			}
 		}
-		return w.gitRunner.CommandContext(ctx, args...)
-	}
+		return defaultGitCommand(ctx, args...)
+	})
 	var group sync.WaitGroup
 	for index := 0; index < 8; index++ {
 		group.Add(1)
