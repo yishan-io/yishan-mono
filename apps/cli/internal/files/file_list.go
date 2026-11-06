@@ -11,13 +11,11 @@ import (
 
 const recursiveListTimeout = 8 * time.Second
 
-// List cooperatively checks cancellation between filesystem operations. It cannot
-// interrupt blocked kernel I/O; ownership remains with the caller until return.
+// List checks cancellation between filesystem operations. Recursive callers
+// share executor ownership, which survives canceled waiters until actual return.
 func (s *FileService) List(ctx context.Context, root string, path string, recursive bool) ([]FileEntry, error) {
 	if recursive {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, recursiveListTimeout)
-		defer cancel()
+		return s.ListWithProgress(ctx, root, path, nil)
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -26,12 +24,8 @@ func (s *FileService) List(ctx context.Context, root string, path string, recurs
 	if err != nil {
 		return nil, err
 	}
-
 	if err := ctx.Err(); err != nil {
 		return nil, err
-	}
-	if recursive {
-		return s.listRecursiveFiles(ctx, root, path, dir)
 	}
 	return s.listDirectory(ctx, root, path, dir)
 }
@@ -58,18 +52,40 @@ func (s *FileService) listRecursiveFiles(ctx context.Context, root, path, dir st
 }
 
 func (s *FileService) listDirectory(ctx context.Context, root, path, dir string) ([]FileEntry, error) {
+	key, identity, err := identifyRecursiveScan(root, path)
+	if err != nil {
+		return nil, err
+	}
+	dir, err = safeJoinOptional(key.root, path, false)
+	if err != nil {
+		return nil, err
+	}
+	validate := func() error {
+		currentKey, currentIdentity, err := identifyRecursiveScan(root, path)
+		if err != nil {
+			return err
+		}
+		if currentKey != key || !identity.matches(currentIdentity) {
+			return changedListingLifecycle()
+		}
+		return nil
+	}
+	return s.listDirectorySnapshot(ctx, key.root, path, dir, validate)
+}
+
+func (s *FileService) listDirectorySnapshot(ctx context.Context, root, path, dir string, validate func() error) ([]FileEntry, error) {
 	// .my-context is a symlink to a shared directory outside the workspace.
 	// Files copied there do not reliably produce a workspace watcher event, so
 	// serving a cached listing leaves the tree stale after a drop or refresh.
 	cacheable := !usesContextLinkPath(path)
 	cacheGeneration := uint64(0)
 	if cacheable {
-		cachedEntries, isCached, generation := s.cachedDirectoryEntries(root, path)
+		cachedEntries, isCached, generation := s.cachedCanonicalDirectoryEntries(root, path)
 		if isCached {
 			if err := ctx.Err(); err != nil {
 				return nil, err
 			}
-			return cachedEntries, nil
+			return cachedEntries, validate()
 		}
 		cacheGeneration = generation
 	}
@@ -86,8 +102,11 @@ func (s *FileService) listDirectory(ctx context.Context, root, path, dir string)
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	if err := validate(); err != nil {
+		return nil, err
+	}
 	if cacheable {
-		s.storeCachedDirectoryEntries(root, path, out, cacheGeneration)
+		s.storeCanonicalDirectoryEntries(root, path, out, cacheGeneration)
 	}
 	return out, nil
 }

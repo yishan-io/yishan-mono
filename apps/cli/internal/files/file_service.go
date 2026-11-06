@@ -34,16 +34,22 @@ type FileService struct {
 	mu                    sync.Mutex
 	cache                 fileCacheStore
 	cacheGenerationByRoot map[string]uint64
+	recursiveScans        map[recursiveScanKey]*recursiveScan
 }
 
 func NewFileService() *FileService {
 	return &FileService{
 		cache:                 newFileCacheStore(),
 		cacheGenerationByRoot: make(map[string]uint64),
+		recursiveScans:        make(map[recursiveScanKey]*recursiveScan),
 	}
 }
 
 func (s *FileService) cachedDirectoryEntries(root string, path string) ([]FileEntry, bool, uint64) {
+	return s.cachedCanonicalDirectoryEntries(canonicalListingRoot(root), path)
+}
+
+func (s *FileService) cachedCanonicalDirectoryEntries(root string, path string) ([]FileEntry, bool, uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	entries, isCached := s.cache.getDirectory(root, path)
@@ -51,6 +57,10 @@ func (s *FileService) cachedDirectoryEntries(root string, path string) ([]FileEn
 }
 
 func (s *FileService) storeCachedDirectoryEntries(root string, path string, entries []FileEntry, generation uint64) {
+	s.storeCanonicalDirectoryEntries(canonicalListingRoot(root), path, entries, generation)
+}
+
+func (s *FileService) storeCanonicalDirectoryEntries(root string, path string, entries []FileEntry, generation uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.cacheGenerationByRoot[root] != generation {
@@ -60,6 +70,7 @@ func (s *FileService) storeCachedDirectoryEntries(root string, path string, entr
 }
 
 func (s *FileService) InvalidateWorkspacePaths(root string, paths []string) {
+	root = canonicalListingRoot(root)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.cacheGenerationByRoot[root]++

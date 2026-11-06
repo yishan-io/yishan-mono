@@ -156,7 +156,7 @@ func TestFileServiceList_DeadlineStopsSubprocessWithoutWalking(t *testing.T) {
 	}
 }
 
-func TestFileServiceList_FallbackKeepsCallerDeadline(t *testing.T) {
+func TestFileServiceList_FallbackHasIndependentBoundedDeadline(t *testing.T) {
 	svc := NewFileService()
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
@@ -168,8 +168,8 @@ func TestFileServiceList_FallbackKeepsCallerDeadline(t *testing.T) {
 	svc.walkDir = func(root string, visit fs.WalkDirFunc) error {
 		deadline, hasDeadline := scanCtx.Deadline()
 		callerDeadline, _ := ctx.Deadline()
-		if !hasDeadline || !deadline.Equal(callerDeadline) {
-			t.Error("fallback lost caller deadline")
+		if !hasDeadline || !deadline.After(callerDeadline) {
+			t.Error("fallback inherited first waiter deadline")
 		}
 		<-scanCtx.Done()
 		return filepath.WalkDir(root, visit)
@@ -196,16 +196,23 @@ func TestFileServiceList_CancellationRetainsWorkerOwnership(t *testing.T) {
 	go func() { _, err := svc.List(ctx, root, "", true); completed <- err }()
 	<-entered
 	cancel()
-	select {
-	case err := <-completed:
-		close(release)
-		t.Fatalf("released ownership before filesystem work completed: %v", err)
-	case <-time.After(20 * time.Millisecond):
-	}
-	close(release)
 	if err := <-completed; !errors.Is(err, context.Canceled) {
 		t.Fatalf("err=%v", err)
 	}
+	// The canceled waiter returns, but the coordinator must retain ownership.
+	svc.mu.Lock()
+	active := len(svc.recursiveScans)
+	var scan *recursiveScan
+	for _, owned := range svc.recursiveScans {
+		scan = owned
+	}
+	svc.mu.Unlock()
+	if active != 1 {
+		t.Fatalf("active scans=%d", active)
+	}
+
+	close(release)
+	<-scan.done
 }
 
 func TestFileServiceList_RecursiveScanHasNamedTotalDeadline(t *testing.T) {
@@ -226,5 +233,61 @@ func TestFileServiceList_RecursiveScanHasNamedTotalDeadline(t *testing.T) {
 	}
 	if duration := deadline.Sub(started); duration <= 0 || duration > recursiveListTimeout+time.Second {
 		t.Fatalf("unexpected deadline: %v", duration)
+	}
+}
+
+func prepareRetargetedDirectoryRoots(t *testing.T) (string, string) {
+	t.Helper()
+	base := t.TempDir()
+	first, second := filepath.Join(base, "a"), filepath.Join(base, "b")
+	for _, root := range []string{first, second} {
+		if err := os.Mkdir(root, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if output, err := exec.Command("git", "init", root).CombinedOutput(); err != nil {
+			t.Fatalf("git init: %v: %s", err, output)
+		}
+	}
+	for root, name := range map[string]string{first: "a.txt", second: "b.txt"} {
+		if err := os.WriteFile(filepath.Join(root, name), nil, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	alias := filepath.Join(base, "alias")
+	if err := os.Symlink(first, alias); err != nil {
+		t.Fatal(err)
+	}
+	return alias, second
+}
+
+func TestListDirectory_RetargetedRootDoesNotPolluteCache(t *testing.T) {
+	alias, second := prepareRetargetedDirectoryRoots(t)
+	service := NewFileService()
+	didRetarget := false
+	service.gitCommand = func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
+		if !didRetarget {
+			didRetarget = true
+			if err := os.Remove(alias); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(second, alias); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return exec.CommandContext(ctx, "git", args...), true
+	}
+	_, listErr := service.List(context.Background(), alias, "", false)
+	entries, err := service.List(context.Background(), second, "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name != "b.txt" {
+		t.Fatalf("B listing contains A entries: %+v", entries)
+	}
+	if !didRetarget {
+		t.Fatal("listing did not reach retarget hook")
+	}
+	if listErr == nil {
+		t.Fatal("lifecycle-changed listing was published")
 	}
 }
