@@ -2,6 +2,8 @@ package git
 
 import "time"
 
+const listChangesTimeout = 15 * time.Second
+const branchDiffSummaryTimeout = 10 * time.Second
 const fetchTimeout = 30 * time.Second
 const branchCacheTTL = 30 * time.Second
 const branchPullRequestCacheTTL = 30 * time.Second

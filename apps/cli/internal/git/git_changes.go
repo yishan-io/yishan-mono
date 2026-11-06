@@ -6,19 +6,25 @@ import (
 )
 
 func (s *GitService) ListChanges(ctx context.Context, root string) (GitChangesBySection, error) {
-	porcelain, err := gitCommand(ctx, root, "status", "--porcelain", "--untracked-files=all")
+	ctx, cancel := context.WithTimeout(ctx, listChangesTimeout)
+	defer cancel()
+	porcelain, err := s.runReadCommand(ctx, root, "", false, "status", "--porcelain", "--untracked-files=all")
 	if err != nil {
 		return GitChangesBySection{}, err
 	}
-	unstagedNumstat, err := gitCommand(ctx, root, "diff", "--numstat")
+	unstagedNumstat, err := s.runReadCommand(ctx, root, "", false, "diff", "--numstat")
 	if err != nil {
 		return GitChangesBySection{}, err
 	}
-	stagedNumstat, err := gitCommand(ctx, root, "diff", "--cached", "--numstat")
+	stagedNumstat, err := s.runReadCommand(ctx, root, "", false, "diff", "--cached", "--numstat")
 	if err != nil {
 		return GitChangesBySection{}, err
 	}
 
+	return parseChangesSections(porcelain, unstagedNumstat, stagedNumstat), nil
+}
+
+func parseChangesSections(porcelain, unstagedNumstat, stagedNumstat string) GitChangesBySection {
 	unstagedStats := parseNumstat(unstagedNumstat)
 	stagedStats := parseNumstat(stagedNumstat)
 
@@ -29,37 +35,32 @@ func (s *GitService) ListChanges(ctx context.Context, root string) (GitChangesBy
 	}
 
 	for line := range strings.SplitSeq(porcelain, "\n") {
-		line = strings.TrimRight(line, "\r")
-		if strings.TrimSpace(line) == "" || len(line) < 3 {
-			continue
-		}
-
-		indexStatus := line[0]
-		worktreeStatus := line[1]
-		path := strings.TrimSpace(line[3:])
-		path = normalizeStatusPath(path)
-		if path == "" {
-			continue
-		}
-
-		if indexStatus == '?' && worktreeStatus == '?' {
-			sections.Untracked = append(sections.Untracked, gitChange{Path: path, Kind: "added"})
-			continue
-		}
-
-		if indexStatus != ' ' && indexStatus != '?' {
-			add, del := statValue(stagedStats[path])
-			sections.Staged = append(sections.Staged, gitChange{Path: path, Kind: mapStatusToKind(indexStatus), Additions: add, Deletions: del})
-		}
-		if worktreeStatus != ' ' && worktreeStatus != '?' {
-			add, del := statValue(unstagedStats[path])
-			sections.Unstaged = append(sections.Unstaged, gitChange{Path: path, Kind: mapStatusToKind(worktreeStatus), Additions: add, Deletions: del})
-		}
+		appendStatusChanges(&sections, strings.TrimRight(line, "\r"), unstagedStats, stagedStats)
 	}
+	return reconcileUnstagedDeleteUntrackedAddPairs(sections)
+}
 
-	sections = reconcileUnstagedDeleteUntrackedAddPairs(sections)
-
-	return sections, nil
+func appendStatusChanges(sections *GitChangesBySection, line string, unstagedStats, stagedStats map[string][2]int) {
+	if strings.TrimSpace(line) == "" || len(line) < 3 {
+		return
+	}
+	indexStatus, worktreeStatus := line[0], line[1]
+	path := normalizeStatusPath(strings.TrimSpace(line[3:]))
+	if path == "" {
+		return
+	}
+	if indexStatus == '?' && worktreeStatus == '?' {
+		sections.Untracked = append(sections.Untracked, gitChange{Path: path, Kind: "added"})
+		return
+	}
+	if indexStatus != ' ' && indexStatus != '?' {
+		add, del := statValue(stagedStats[path])
+		sections.Staged = append(sections.Staged, gitChange{Path: path, Kind: mapStatusToKind(indexStatus), Additions: add, Deletions: del})
+	}
+	if worktreeStatus != ' ' && worktreeStatus != '?' {
+		add, del := statValue(unstagedStats[path])
+		sections.Unstaged = append(sections.Unstaged, gitChange{Path: path, Kind: mapStatusToKind(worktreeStatus), Additions: add, Deletions: del})
+	}
 }
 
 func reconcileUnstagedDeleteUntrackedAddPairs(input GitChangesBySection) GitChangesBySection {

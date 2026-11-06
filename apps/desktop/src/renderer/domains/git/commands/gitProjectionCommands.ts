@@ -91,7 +91,7 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
     const [sections, branchSummary] = await Promise.all([
       gitRpc.listChanges({ workspaceId }),
       targetBranch
-        ? gitRpc.getBranchDiffSummary({ workspaceId, targetBranch }).catch(() => null)
+        ? gitRpc.getBranchDiffSummary({ workspaceId, targetBranch })
         : Promise.resolve(null),
     ]);
 

@@ -298,7 +298,9 @@ func (s *GitService) BranchDiffSummary(ctx context.Context, root string, targetB
 		return GitBranchDiffSummary{}, NewError(ErrCodeInvalidParams, "targetBranch is required")
 	}
 
-	numstat, err := gitCommand(ctx, root, "diff", "--numstat", fmt.Sprintf("%s...HEAD", targetBranch))
+	ctx, cancel := context.WithTimeout(ctx, branchDiffSummaryTimeout)
+	defer cancel()
+	numstat, err := s.runReadCommand(ctx, root, "", false, "diff", "--numstat", fmt.Sprintf("%s...HEAD", targetBranch))
 	if err != nil {
 		return GitBranchDiffSummary{}, err
 	}

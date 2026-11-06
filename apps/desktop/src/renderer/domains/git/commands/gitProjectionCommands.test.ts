@@ -120,6 +120,7 @@ describe("gitProjectionCommands", () => {
     expect(rpcMocks.listGitChanges).toHaveBeenCalledWith({
       workspaceId: "workspace-1",
     });
+    expect(rpcMocks.getBranchDiffSummary).not.toHaveBeenCalled();
     expect(setWorkspaceGitChangesCount).toHaveBeenCalledWith("workspace-1", 3);
     expect(setWorkspaceGitChangeTotals).toHaveBeenCalledWith("workspace-1", {
       additions: 3,
@@ -295,42 +296,44 @@ describe("gitProjectionCommands", () => {
     expect(setWorkspaceGitChangesCount).toHaveBeenCalledWith("workspace-1", 4);
   });
 
-  it("falls back to uncommitted-only count when branch diff summary fails", async () => {
-    const setWorkspaceGitChangesCount = vi.fn();
-    const setWorkspaceGitChangeTotals = vi.fn();
+  it.each(["list", "summary"])("preserves prior aggregates on %s failure and recovers later", async (failedRead) => {
     workspaceStore.setState({
-      workspaces: [
-        {
-          id: "workspace-1",
-          repoId: "repo-1",
-          name: "Feature A",
-          title: "Feature A",
-          summaryId: "",
-          sourceBranch: "main",
-          branch: "feature-a",
-          worktreePath: "/tmp/worktrees/feature-a",
-        },
-      ],
+      workspaces: [{
+        id: "workspace-1", repoId: "repo-1", name: "Feature A", title: "Feature A",
+        summaryId: "", sourceBranch: "main", branch: "feature-a", worktreePath: "/tmp/worktrees/feature-a",
+      }],
     });
-    gitProjectionStore.setState({
-      setWorkspaceGitChangesCount,
-      setWorkspaceGitChangeTotals,
-    });
-    rpcMocks.listGitChanges.mockResolvedValueOnce({
-      staged: [],
-      unstaged: [{ path: "b.ts", kind: "modified", additions: 2, deletions: 1 }],
-      untracked: [],
-    });
-    rpcMocks.getBranchDiffSummary.mockRejectedValueOnce(new Error("target branch not found"));
+    gitProjectionStore.getState().setWorkspaceGitChangesCount("workspace-1", 7);
+    gitProjectionStore.getState().setWorkspaceGitChangeTotals("workspace-1", { additions: 50, deletions: 20 });
+    const sections = {
+      staged: [], unstaged: [{ path: "b.ts", kind: "modified", additions: 2, deletions: 1 }], untracked: [],
+    };
+    const summary = { fileCount: 1, files: ["a.ts"], additions: 10, deletions: 3 };
+    const timeout = new Error("context deadline exceeded");
+    rpcMocks.listGitChanges.mockResolvedValueOnce(sections);
+    rpcMocks.getBranchDiffSummary.mockResolvedValueOnce(summary);
+    if (failedRead === "list") {
+      rpcMocks.listGitChanges.mockReset().mockRejectedValueOnce(timeout);
+    } else {
+      rpcMocks.getBranchDiffSummary.mockReset().mockRejectedValueOnce(timeout);
+    }
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      await refreshWorkspaceGitChanges("workspace-1");
+      expect(gitProjectionStore.getState().gitChangesCountByWorkspaceId["workspace-1"]).toBe(7);
+      expect(gitProjectionStore.getState().gitChangeTotalsByWorkspaceId["workspace-1"]).toEqual({ additions: 50, deletions: 20 });
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to refresh workspace git changes", timeout);
+      expect(rpcMocks.listGitChanges).toHaveBeenCalledTimes(1);
+      expect(rpcMocks.getBranchDiffSummary).toHaveBeenCalledTimes(1);
 
-    await refreshWorkspaceGitChanges("workspace-1");
-
-    // Should fall back to uncommitted-only count
-    expect(setWorkspaceGitChangesCount).toHaveBeenCalledWith("workspace-1", 1);
-    expect(setWorkspaceGitChangeTotals).toHaveBeenCalledWith("workspace-1", {
-      additions: 2,
-      deletions: 1,
-    });
+      rpcMocks.listGitChanges.mockResolvedValueOnce(sections);
+      rpcMocks.getBranchDiffSummary.mockResolvedValueOnce(summary);
+      await refreshWorkspaceGitChanges("workspace-1");
+      expect(gitProjectionStore.getState().gitChangesCountByWorkspaceId["workspace-1"]).toBe(2);
+      expect(gitProjectionStore.getState().gitChangeTotalsByWorkspaceId["workspace-1"]).toEqual({ additions: 12, deletions: 4 });
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it("silently ignores transient workspace-not-found git refresh errors", async () => {
