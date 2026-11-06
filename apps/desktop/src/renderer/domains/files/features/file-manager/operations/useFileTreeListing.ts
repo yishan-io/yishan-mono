@@ -1,8 +1,7 @@
 import { workbenchNavigationStore } from "@renderer/domains/workbench";
-import { workspaceStore } from "@renderer/domains/workspace";
+import { type WorkspaceItem, workspaceStore } from "@renderer/domains/workspace";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { fileTreeStore } from "../../../state/fileTreeStore";
-import type { WorkspaceItem } from "@renderer/domains/workspace/workspaceTypes";
 import type { WorkspaceFileEntry } from "../../../externalApps";
 import { mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "../fileTreeEntries";
 import { FileTreeRefreshCancelledError, FileTreeRefreshRuntime, type FileTreeSnapshot } from "./fileTreeRefreshRuntime";
