@@ -177,6 +177,23 @@ func (s *FileService) leaveRecursiveScan(scan *recursiveScan) {
 }
 
 func (s *FileService) waitRecursiveScan(ctx context.Context, key recursiveScanKey, scan *recursiveScan, interim func([]FileEntry)) ([]FileEntry, bool, error) {
+	entries, isDirty, err := s.waitRecursiveSnapshot(ctx, key, scan)
+	if ctx.Err() != nil {
+		return nil, false, ctx.Err()
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return nil, true, nil
+	}
+	if isDirty && err == nil {
+		if interim != nil {
+			interim(entries)
+		}
+		return nil, true, nil
+	}
+	return entries, false, err
+}
+
+func (s *FileService) waitRecursiveSnapshot(ctx context.Context, key recursiveScanKey, scan *recursiveScan) ([]FileEntry, bool, error) {
 	defer s.leaveRecursiveScan(scan)
 	select {
 	case <-ctx.Done():
@@ -197,7 +214,7 @@ func (s *FileService) waitRecursiveScan(ctx context.Context, key recursiveScanKe
 		// A new waiter may have joined an already canceled executor. Retry only
 		// after its actual termination; the waiter's total deadline still applies.
 		if errors.Is(scan.err, context.Canceled) || errors.Is(scan.err, context.DeadlineExceeded) {
-			return nil, true, nil
+			return nil, true, scan.err
 		}
 		return nil, false, scan.err
 	}
@@ -205,11 +222,5 @@ func (s *FileService) waitRecursiveScan(ctx context.Context, key recursiveScanKe
 	isDirty := s.cacheGenerationByRoot[key.root] != scan.generation
 	s.mu.Unlock()
 	entries := slices.Clone(scan.entries)
-	if isDirty {
-		if interim != nil {
-			interim(entries)
-		}
-		return nil, true, nil
-	}
-	return entries, false, nil
+	return entries, isDirty, nil
 }

@@ -24,7 +24,10 @@ import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength, resolveWorkspaceAbs
 import type { FileTreeUndoAction } from "../operations/useFileTreeUndo";
 import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "../rightPaneDelete";
 
+const alwaysCurrent = () => true;
+
 type UseFileTreeCrudInput = {
+  isCurrentListing?: () => boolean;
   selectedWorkspaceWorktreePath: string | undefined;
   selectedWorkspaceId: string | undefined;
   tabs: WorkbenchTab[];
@@ -40,6 +43,7 @@ type UseFileTreeCrudInput = {
 };
 
 export function useFileTreeCrud({
+  isCurrentListing = alwaysCurrent,
   selectedWorkspaceWorktreePath,
   selectedWorkspaceId,
   tabs,
@@ -56,7 +60,7 @@ export function useFileTreeCrud({
 
   const openWorkspaceFile = useCallback(
     async (path: string, options?: { temporary?: boolean }) => {
-      if (!selectedWorkspaceWorktreePath) {
+      if (!isCurrentListing() || !selectedWorkspaceWorktreePath) {
         return;
       }
 
@@ -128,6 +132,7 @@ export function useFileTreeCrud({
           workspaceId: selectedWorkspaceId ?? "",
           relativePath: path,
         });
+        if (!isCurrentListing()) return;
 
         if (!isExcalidrawFile(path) && getUtf8ByteLength(response.content) > LARGE_FILE_OPEN_THRESHOLD_BYTES) {
           openTab({
@@ -157,12 +162,12 @@ export function useFileTreeCrud({
         console.error("Failed to load workspace workspace file", error);
       }
     },
-    [openTab, repoEntries, requestFileTreeSelection, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [isCurrentListing, openTab, repoEntries, requestFileTreeSelection, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const handleDeleteEntry = useCallback(
     async (targetPath: string) => {
-      if (!targetPath || !selectedWorkspaceWorktreePath || isDeletingEntryRef.current) {
+      if (!isCurrentListing() || !targetPath || !selectedWorkspaceWorktreePath || isDeletingEntryRef.current) {
         return;
       }
 
@@ -177,6 +182,7 @@ export function useFileTreeCrud({
               workspaceId: selectedWorkspaceId ?? "",
               relativePath: targetPath,
             });
+            if (!isCurrentListing()) return;
 
             deleteUndoAction = {
               kind: "delete-file",
@@ -192,6 +198,7 @@ export function useFileTreeCrud({
           workspaceId: selectedWorkspaceId ?? "",
           relativePath: targetPath,
         });
+        if (!isCurrentListing()) return;
 
         const tabIdsToClose = resolveTabIdsToCloseAfterDelete(tabs, targetPath, targetIsDirectory);
         for (const tabId of tabIdsToClose) {
@@ -209,12 +216,12 @@ export function useFileTreeCrud({
         isDeletingEntryRef.current = false;
       }
     },
-    [closeTab, loadAllRepoFiles, pushUndoAction, repoFiles, selectedWorkspaceId, selectedWorkspaceWorktreePath, tabs],
+    [isCurrentListing, closeTab, loadAllRepoFiles, pushUndoAction, repoFiles, selectedWorkspaceId, selectedWorkspaceWorktreePath, tabs],
   );
 
   const onCreateFile = useCallback(
     async (path: string) => {
-      if (!selectedWorkspaceWorktreePath) {
+      if (!isCurrentListing() || !selectedWorkspaceWorktreePath) {
         return;
       }
 
@@ -224,8 +231,10 @@ export function useFileTreeCrud({
           relativePath: path,
           content: "",
         });
+        if (!isCurrentListing()) return;
 
         await loadAllRepoFiles();
+        if (!isCurrentListing()) return;
 
         openTab({
           workspaceId: selectedWorkspaceId,
@@ -241,12 +250,12 @@ export function useFileTreeCrud({
         console.error("Failed to create workspace file", error);
       }
     },
-    [openTab, pushUndoAction, loadAllRepoFiles, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [isCurrentListing, openTab, pushUndoAction, loadAllRepoFiles, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const onCreateFolder = useCallback(
     async (path: string) => {
-      if (!selectedWorkspaceWorktreePath) {
+      if (!isCurrentListing() || !selectedWorkspaceWorktreePath) {
         return;
       }
 
@@ -255,6 +264,7 @@ export function useFileTreeCrud({
           workspaceId: selectedWorkspaceId ?? "",
           relativePath: path,
         });
+        if (!isCurrentListing()) return;
 
         pushUndoAction({
           kind: "create-folder",
@@ -265,12 +275,12 @@ export function useFileTreeCrud({
         console.error("Failed to create workspace folder", error);
       }
     },
-    [loadAllRepoFiles, pushUndoAction, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [isCurrentListing, loadAllRepoFiles, pushUndoAction, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const onRenameEntry = useCallback(
     async (path: string, nextName: string) => {
-      if (!selectedWorkspaceWorktreePath) {
+      if (!isCurrentListing() || !selectedWorkspaceWorktreePath) {
         return;
       }
 
@@ -288,6 +298,7 @@ export function useFileTreeCrud({
           fromRelativePath: path,
           toRelativePath: targetPath,
         });
+        if (!isCurrentListing()) return;
 
         renameTabsForEntryRename(selectedWorkspaceId ?? "", path, targetPath);
 
@@ -301,12 +312,12 @@ export function useFileTreeCrud({
         console.error("Failed to rename workspace entry", error);
       }
     },
-    [pushUndoAction, loadAllRepoFiles, renameTabsForEntryRename, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [isCurrentListing, pushUndoAction, loadAllRepoFiles, renameTabsForEntryRename, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const onCopyPath = useCallback(
     async (path: string) => {
-      if (!selectedWorkspaceWorktreePath) {
+      if (!isCurrentListing() || !selectedWorkspaceWorktreePath) {
         return;
       }
 
@@ -317,7 +328,7 @@ export function useFileTreeCrud({
         console.error("Failed to copy workspace entry path", error);
       }
     },
-    [selectedWorkspaceWorktreePath],
+    [isCurrentListing, selectedWorkspaceWorktreePath],
   );
 
   const onCopyRelativePath = useCallback(async (path: string) => {
@@ -330,7 +341,7 @@ export function useFileTreeCrud({
 
   const onOpenInFileManager = useCallback(
     async (path: string) => {
-      if (!selectedWorkspaceWorktreePath) {
+      if (!isCurrentListing() || !selectedWorkspaceWorktreePath) {
         return;
       }
 
@@ -344,12 +355,12 @@ export function useFileTreeCrud({
         console.error("Failed to open workspace entry in file manager", error);
       }
     },
-    [selectedWorkspaceWorktreePath],
+    [isCurrentListing, selectedWorkspaceWorktreePath],
   );
 
   const onOpenInExternalApp = useCallback(
     async (input: { path?: string; appId: ExternalAppId }) => {
-      if (!selectedWorkspaceWorktreePath) {
+      if (!isCurrentListing() || !selectedWorkspaceWorktreePath) {
         return;
       }
 
@@ -361,12 +372,13 @@ export function useFileTreeCrud({
           appId: input.appId,
           relativePath: input.path?.trim() || undefined,
         });
+        if (!isCurrentListing()) return;
         recordLastUsedExternalApp(selectedOrganizationId, input.appId);
       } catch (error) {
         console.error("Failed to open workspace entry in external app", error);
       }
     },
-    [selectedWorkspaceWorktreePath],
+    [isCurrentListing, selectedWorkspaceWorktreePath],
   );
 
   return {

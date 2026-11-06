@@ -89,7 +89,7 @@ export function applyDirectoryRefreshes(
   currentEntries: WorkspaceFileEntry[],
   refreshResults: Array<{ directoryPath: string; files: WorkspaceFileEntry[] }>,
   loadedDirectoryPaths: Set<string>,
-  changedRelativePaths?: string[],
+  _changedRelativePaths?: string[],
 ): WorkspaceFileEntry[] {
   let nextEntries = currentEntries;
 
@@ -97,7 +97,6 @@ export function applyDirectoryRefreshes(
     const incomingImmediateChildPaths = new Set(
       files.map((entry) => normalizeRelativePath(entry.path)).filter((path) => path.length > 0),
     );
-    const removedLoadedDirectories: string[] = [];
 
     for (const loadedDirectoryPath of [...loadedDirectoryPaths]) {
       const immediateChildPath = getImmediateChildPath(directoryPath, loadedDirectoryPath);
@@ -106,17 +105,7 @@ export function applyDirectoryRefreshes(
       }
 
       loadedDirectoryPaths.delete(loadedDirectoryPath);
-      removedLoadedDirectories.push(loadedDirectoryPath);
     }
-
-    // When specific changed paths are known, only remove direct children of
-    // this directory that (a) are in the changed-path set AND (b) are not
-    // present in the incoming refresh result. Entries that were not changed
-    // are left untouched — they will be merged by mergeWorkspaceEntries below.
-    const normalizedChangedPaths =
-      changedRelativePaths && changedRelativePaths.length > 0
-        ? new Set(changedRelativePaths.map((p) => normalizeRelativePath(p)).filter(Boolean))
-        : null;
 
     // Root fetch is always recursive and its result is authoritative for the
     // entire workspace tree — replace unconditionally regardless of whether
@@ -134,24 +123,13 @@ export function applyDirectoryRefreshes(
         return false;
       }
 
-      const isDirectChild = getParentRelativePath(normalizedEntryPath) === directoryPath;
-      if (isDirectChild) {
-        if (normalizedChangedPaths) {
-          return !shouldEvictChangedEntry(
-            directoryPath,
-            normalizedEntryPath,
-            normalizedChangedPaths,
-            incomingImmediateChildPaths,
-          );
-        }
-        // Full refresh (no specific changed paths) — replace the directory entirely.
-        return false;
-      }
+      // A shallow listing is authoritative for its immediate children. Also
+      // remove descendants of a missing child even if it was never expanded.
+      // Changed paths choose which directories to fetch, not which old entries
+      // may survive a completed listing (including a dirty interim listing).
+      const immediateChildPath = getImmediateChildPath(directoryPath, normalizedEntryPath);
+      return immediateChildPath === null || incomingImmediateChildPaths.has(immediateChildPath);
 
-      // Also evict descendants whose parent directory was removed from loadedPaths.
-      return !removedLoadedDirectories.some(
-        (removedPath) => normalizedEntryPath === removedPath || normalizedEntryPath.startsWith(`${removedPath}/`),
-      );
     });
     nextEntries = mergeWorkspaceEntries(nextEntries, files);
   }

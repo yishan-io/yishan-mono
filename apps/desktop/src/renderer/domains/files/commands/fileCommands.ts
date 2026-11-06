@@ -12,18 +12,21 @@ export async function listFiles(params: {
   workspaceId: string;
   relativePath?: string;
   recursive?: boolean;
+  includeFreshness?: boolean;
 }) {
   const fileRpc = await getFileRpc();
   return fileRpc.listFiles({
     workspaceId: params.workspaceId,
     relativePath: params.relativePath,
     recursive: params.recursive,
+    ...(params.includeFreshness ? { includeFreshness: true } : {}),
   });
 }
 
 /** Lists workspace files for multiple directory requests in one batch call. */
 export async function listFilesBatch(params: {
   workspaceId: string;
+  includeFreshness?: boolean;
   requests: Array<{
     relativePath?: string;
     recursive?: boolean;
@@ -33,6 +36,7 @@ export async function listFilesBatch(params: {
   return fileRpc.listFilesBatch({
     workspaceId: params.workspaceId,
     requests: params.requests,
+    ...(params.includeFreshness ? { includeFreshness: true } : {}),
   });
 }
 

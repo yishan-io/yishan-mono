@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"yishan/apps/cli/internal/files"
 
 	"yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
@@ -35,7 +36,7 @@ type WorkspaceService interface {
 // wire method tail; the service type already carries the namespace.
 type FileService interface {
 	Read(ctx context.Context, req FileReadParams) (any, error)
-	List(ctx context.Context, req FileListParams) (any, error)
+	List(ctx context.Context, req FileListParams) (files.ListSnapshot, error)
 	Search(ctx context.Context, req FileSearchParams) (any, error)
 	Stat(ctx context.Context, req FileReadParams) (any, error)
 	Write(ctx context.Context, req FileWriteParams) (any, error)
