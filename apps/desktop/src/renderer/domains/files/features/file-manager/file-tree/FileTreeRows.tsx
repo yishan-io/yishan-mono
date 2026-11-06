@@ -85,13 +85,15 @@ export function FileTreeRows({
       }
 
       setLoadingPaths((prev) => new Set([...prev, path]));
-      result.finally(() => {
+      const cleanup = () => {
         setLoadingPaths((prev) => {
           const next = new Set(prev);
           next.delete(path);
           return next;
         });
-      });
+      };
+      // The listing owner reports real failures; consume both branches of the row-owned promise.
+      result.then(cleanup, cleanup);
     },
     [onEnsurePathLoaded],
   );

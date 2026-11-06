@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { createOperationId, getFileOperationErrorMessage } from "./fileTreeEntries";
 
 export type FileOperationState = {
@@ -21,14 +21,23 @@ export type UseFileOperationStateResult = {
   failFileOperation: (operationId: string, error: unknown) => void;
 };
 
+const alwaysCurrent = () => true;
+
 /** Manages file-tree operation progress + failure state. */
-export function useFileOperationState(selectedWorkspaceWorktreePath: string | undefined): UseFileOperationStateResult {
+export function useFileOperationState(selectedWorkspaceWorktreePath: string | undefined, isCurrentListing = alwaysCurrent): UseFileOperationStateResult {
   const [fileOperationState, setFileOperationState] = useState<FileOperationState | null>(null);
-  const [fileOperationError, setFileOperationError] = useState<string | null>(null);
+  const [fileOperationError, writeFileOperationError] = useState<string | null>(null);
+
+  const activeOperation = useRef<string | null>(null);
+  const setFileOperationError = useCallback((value: string | null) => {
+    if (isCurrentListing()) writeFileOperationError(value);
+  }, [isCurrentListing]);
 
   const beginFileOperation = useCallback(
     (mode: FileOperationState["mode"]) => {
       const operationId = createOperationId();
+      if (!isCurrentListing()) return operationId;
+      activeOperation.current = operationId;
       setFileOperationError(null);
       setFileOperationState({
         operationId,
@@ -41,10 +50,11 @@ export function useFileOperationState(selectedWorkspaceWorktreePath: string | un
 
       return operationId;
     },
-    [selectedWorkspaceWorktreePath],
+    [selectedWorkspaceWorktreePath, isCurrentListing, setFileOperationError],
   );
 
   const completeFileOperation = useCallback((operationId: string): void => {
+    if (!isCurrentListing() || activeOperation.current !== operationId) return;
     setFileOperationState((currentState) => {
       if (!currentState || currentState.operationId !== operationId) {
         return currentState;
@@ -57,9 +67,10 @@ export function useFileOperationState(selectedWorkspaceWorktreePath: string | un
         total: 1,
       };
     });
-  }, []);
+  }, [isCurrentListing]);
 
   const failFileOperation = useCallback((operationId: string, error: unknown): void => {
+    if (!isCurrentListing() || activeOperation.current !== operationId) return;
     setFileOperationState((currentState) => {
       if (!currentState || currentState.operationId !== operationId) {
         return currentState;
@@ -71,9 +82,10 @@ export function useFileOperationState(selectedWorkspaceWorktreePath: string | un
       };
     });
     setFileOperationError(getFileOperationErrorMessage(error));
-  }, []);
+  }, [isCurrentListing, setFileOperationError]);
 
   const resetFileOperationState = useCallback((): void => {
+    activeOperation.current = null;
     setFileOperationState(null);
   }, []);
 

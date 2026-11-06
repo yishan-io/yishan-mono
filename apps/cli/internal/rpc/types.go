@@ -12,9 +12,10 @@ type FileReadParams struct {
 }
 
 type FileListParams struct {
-	WorkspaceID string `json:"workspaceId"`
-	Path        string `json:"path,omitempty"`
-	Recursive   bool   `json:"recursive,omitempty"`
+	IncludeFreshness bool   `json:"includeFreshness,omitempty"`
+	WorkspaceID      string `json:"workspaceId"`
+	Path             string `json:"path,omitempty"`
+	Recursive        bool   `json:"recursive,omitempty"`
 }
 
 type FileSearchParams struct {

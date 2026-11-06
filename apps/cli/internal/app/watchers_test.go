@@ -147,7 +147,7 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 
 	handle := instance.NewHandle(openedWorkspace, app.files, app.git, app.terminals)
 
-	entries, err := handle.FileList("", false)
+	entries, err := handle.FileList(context.Background(), "", false)
 	if err != nil {
 		t.Fatalf("prime cache: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 	})
 	time.Sleep(100 * time.Millisecond)
 
-	entries, err = handle.FileList("", false)
+	entries, err = handle.FileList(context.Background(), "", false)
 	if err != nil {
 		t.Fatalf("list after invalidation event: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestApp_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
 	})
 	time.Sleep(100 * time.Millisecond)
 
-	entries, err = handle.FileList("", false)
+	entries, err = handle.FileList(context.Background(), "", false)
 	if err != nil {
 		t.Fatalf("list after full invalidation event: %v", err)
 	}

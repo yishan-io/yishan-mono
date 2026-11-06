@@ -30,8 +30,13 @@ func (h Handle) Instance() workspace.Workspace {
 	return h.instance
 }
 
-func (h Handle) FileList(path string, recursive bool) ([]files.FileEntry, error) {
-	return h.files.List(h.instance.Path, path, recursive)
+func (h Handle) FileList(ctx context.Context, path string, recursive bool) ([]files.FileEntry, error) {
+	return h.files.List(ctx, h.instance.Path, path, recursive)
+}
+
+// FileListSnapshot returns one completed listing with explicit freshness.
+func (h Handle) FileListSnapshot(ctx context.Context, path string, recursive bool) (files.ListSnapshot, error) {
+	return h.files.ListSnapshot(ctx, h.instance.Path, path, recursive)
 }
 
 func (h Handle) FileSearch(query string, limit int, includeDirectories bool) ([]files.FileSearchResult, error) {

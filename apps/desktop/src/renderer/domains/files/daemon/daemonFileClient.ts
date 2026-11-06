@@ -21,10 +21,12 @@ export type FileListInput = {
   workspaceId: string;
   relativePath?: string;
   recursive?: boolean;
+  includeFreshness?: boolean;
 };
 
 export type FileListBatchInput = {
   workspaceId: string;
+  includeFreshness?: boolean;
   requests: Array<{
     relativePath?: string;
     recursive?: boolean;
@@ -67,6 +69,7 @@ export type FileDeleteInput = {
 
 export type FileListResponse = {
   files: DaemonFileEntry[];
+  isFresh?: boolean;
 };
 
 export type FileSearchResult = {
@@ -83,6 +86,7 @@ export type FileListBatchResponse = {
       recursive: boolean;
     };
     files: DaemonFileEntry[];
+    isFresh?: boolean;
     error?: string;
   }>;
 };
@@ -120,6 +124,23 @@ function normalizeDaemonFileEntries(files: DaemonFileEntry[]): DaemonFileEntry[]
   });
 }
 
+function isDaemonFileEntry(value: unknown): value is DaemonFileEntry {
+  const entry = asRecord(value);
+  return entry !== null && entry !== undefined && typeof entry.path === "string" &&
+    typeof entry.name === "string" && typeof entry.isDir === "boolean" &&
+    typeof entry.isIgnored === "boolean" && typeof entry.size === "number" && Number.isFinite(entry.size) &&
+    typeof entry.mode === "number" && Number.isFinite(entry.mode) && typeof entry.modifiedAt === "string";
+}
+
+function parseListingSnapshot(payload: unknown): FileListResponse {
+  const snapshot = asRecord(payload);
+  if (!snapshot || typeof snapshot.isFresh !== "boolean" || !Array.isArray(snapshot.files) ||
+    !snapshot.files.every(isDaemonFileEntry)) {
+    throw new TypeError("Invalid file.list snapshot");
+  }
+  return { files: normalizeDaemonFileEntries(snapshot.files), isFresh: snapshot.isFresh };
+}
+
 /** File namespace methods for the daemon RPC client. */
 export class DaemonFileClient {
   private readonly invoke: InvokeFn;
@@ -136,7 +157,13 @@ export class DaemonFileClient {
     }
     const relativePath = readOptionalString(record?.relativePath) || "";
     const recursive = readOptionalBoolean(record?.recursive) ?? true;
-    const files = await this.invoke("file.list", { workspaceId, path: relativePath, recursive });
+    const includeFreshness = readOptionalBoolean(record?.includeFreshness) === true;
+    const files = await this.invoke("file.list", {
+      workspaceId, path: relativePath, recursive, ...(includeFreshness ? { includeFreshness: true } : {}),
+    });
+    if (includeFreshness) {
+      return parseListingSnapshot(files);
+    }
     return {
       files: Array.isArray(files) ? normalizeDaemonFileEntries(files as FileListResponse["files"]) : [],
     };
@@ -155,11 +182,10 @@ export class DaemonFileClient {
         const relativePath = readOptionalString(requestRecord.relativePath) || "";
         const recursive = readOptionalBoolean(requestRecord.recursive) ?? false;
         try {
-          const files = await this.invoke("file.list", { workspaceId, path: relativePath, recursive });
-          return {
-            request: { relativePath, recursive },
-            files: Array.isArray(files) ? normalizeDaemonFileEntries(files as FileListResponse["files"]) : [],
-          };
+          const snapshot = await this.listFiles({ workspaceId, relativePath, recursive,
+            ...(input.includeFreshness ? { includeFreshness: true } : {}),
+          });
+          return { request: { relativePath, recursive }, ...snapshot };
         } catch (error) {
           return {
             request: { relativePath, recursive },

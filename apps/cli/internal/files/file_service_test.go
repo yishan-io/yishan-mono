@@ -2,6 +2,7 @@ package files
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,7 +44,7 @@ func TestFileServiceCRUD(t *testing.T) {
 		t.Fatalf("expected modifiedAt to be populated: %+v", entry)
 	}
 
-	entries, err := svc.List(root, "dir/sub", false)
+	entries, err := svc.List(context.Background(), root, "dir/sub", false)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestFileServiceCRUD(t *testing.T) {
 		t.Fatalf("expected modifiedAt on list entry: %+v", entries[0])
 	}
 
-	recursiveEntries, err := svc.List(root, "", true)
+	recursiveEntries, err := svc.List(context.Background(), root, "", true)
 	if err != nil {
 		t.Fatalf("recursive list: %v", err)
 	}
@@ -230,7 +231,7 @@ func TestFileServiceGitMetadataRejected(t *testing.T) {
 		t.Fatalf("expected ErrCodePathRestricted, got %q", fileErr.Code)
 	}
 
-	if _, err := svc.List(root, ".git", false); err == nil {
+	if _, err := svc.List(context.Background(), root, ".git", false); err == nil {
 		t.Fatal("expected listing .git to be rejected")
 	}
 }

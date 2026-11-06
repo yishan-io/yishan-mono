@@ -24,7 +24,7 @@ func (h *FileHandler) Call(ctx context.Context, connection *Connection, method s
 		if err := DecodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.Services.List(ctx, req)
+		return h.list(ctx, req)
 	case MethodFileSearch:
 		var req FileSearchParams
 		if err := DecodeParams(params, &req); err != nil {
@@ -70,4 +70,15 @@ func (h *FileHandler) Call(ctx context.Context, connection *Connection, method s
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "unknown file method: "+method)
 	}
+}
+
+func (h *FileHandler) list(ctx context.Context, req FileListParams) (any, error) {
+	snapshot, err := h.Services.List(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if req.IncludeFreshness {
+		return snapshot, nil
+	}
+	return snapshot.Files, nil
 }

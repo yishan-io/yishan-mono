@@ -529,10 +529,10 @@ describe("FileManagerView file loading", () => {
 
     await getFileTreeProps().onEnsurePathLoaded?.(".my-context");
 
+    // The fresh lazy listing is authoritative: omitted direct children are evicted.
     await waitFor(() => {
       expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
         ".my-context/",
-        ".my-context/old.md",
         ".my-context/sub/",
         ".my-context/sub/moved.md",
       ]);
@@ -879,6 +879,7 @@ describe("FileManagerView file loading", () => {
         workspaceId: "workspace-1",
         relativePath: "src",
         recursive: false,
+        includeFreshness: true,
       });
       expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["src/"]);
     });
@@ -924,6 +925,7 @@ describe("FileManagerView file loading", () => {
         workspaceId: "workspace-1",
         relativePath: ".opencode",
         recursive: false,
+        includeFreshness: true,
       });
       expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([".opencode/"]);
     });

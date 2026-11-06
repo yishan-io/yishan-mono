@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"yishan/apps/cli/internal/files"
 
 	"yishan/apps/cli/internal/rpc"
 )
@@ -21,12 +22,23 @@ func (s *Service) Read(ctx context.Context, req rpc.FileReadParams) (any, error)
 	return map[string]string{"content": content}, nil
 }
 
-func (s *Service) List(ctx context.Context, req rpc.FileListParams) (any, error) {
+func (s *Service) List(ctx context.Context, req rpc.FileListParams) (files.ListSnapshot, error) {
 	handle, err := s.HandleFor(req.WorkspaceID)
 	if err != nil {
-		return nil, err
+		return files.ListSnapshot{}, err
 	}
-	return handle.FileList(req.Path, req.Recursive)
+	listCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stop := context.AfterFunc(s.serverContext(), cancel)
+	defer stop()
+	if err := s.serverContext().Err(); err != nil {
+		cancel()
+	}
+	if req.IncludeFreshness {
+		return handle.FileListSnapshot(listCtx, req.Path, req.Recursive)
+	}
+	entries, err := handle.FileList(listCtx, req.Path, req.Recursive)
+	return files.ListSnapshot{Files: entries}, err
 }
 
 func (s *Service) Search(ctx context.Context, req rpc.FileSearchParams) (any, error) {

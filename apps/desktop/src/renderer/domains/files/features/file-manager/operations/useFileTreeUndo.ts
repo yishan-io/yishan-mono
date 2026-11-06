@@ -1,7 +1,7 @@
 import { createFile, deleteEntry, renameEntry } from "@renderer/domains/files/commands/fileCommands";
 import type { WorkbenchTab } from "@renderer/domains/workbench";
 import { useCallback, useRef } from "react";
-import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "../rightPaneDelete";
+import { resolveTabIdsToCloseAfterDelete } from "../rightPaneDelete";
 
 type FileTreeUndoAction =
   | { kind: "create-file"; path: string }
@@ -12,7 +12,10 @@ type FileTreeUndoAction =
 
 export type { FileTreeUndoAction };
 
+const alwaysCurrent = () => true;
+
 type UseFileTreeUndoInput = {
+  isCurrentListing?: () => boolean;
   selectedWorkspaceWorktreePath: string | undefined;
   selectedWorkspaceId: string | undefined;
   tabs: WorkbenchTab[];
@@ -26,6 +29,7 @@ type UseFileTreeUndoInput = {
 };
 
 export function useFileTreeUndo({
+  isCurrentListing = alwaysCurrent,
   selectedWorkspaceWorktreePath,
   selectedWorkspaceId,
   tabs,
@@ -41,17 +45,17 @@ export function useFileTreeUndo({
 
   const pushUndoAction = useCallback(
     (action: FileTreeUndoAction) => {
-      if (isApplyingUndoRef.current) {
+      if (!isCurrentListing() || isApplyingUndoRef.current) {
         return;
       }
 
       setUndoStack((currentStack) => [action, ...currentStack].slice(0, 30));
     },
-    [setUndoStack],
+    [isCurrentListing, setUndoStack],
   );
 
   const handleUndoLastFileTreeOperation = useCallback(async () => {
-    if (isApplyingUndoRef.current) {
+    if (!isCurrentListing() || isApplyingUndoRef.current) {
       return;
     }
 
@@ -70,6 +74,7 @@ export function useFileTreeUndo({
             workspaceId: selectedWorkspaceId ?? "",
             relativePath: latestUndoAction.path,
           });
+          if (!isCurrentListing()) return;
 
           const tabIdsToClose = resolveTabIdsToCloseAfterDelete(tabs, latestUndoAction.path, false);
           for (const tabId of tabIdsToClose) {
@@ -82,6 +87,7 @@ export function useFileTreeUndo({
             workspaceId: selectedWorkspaceId ?? "",
             relativePath: latestUndoAction.path,
           });
+          if (!isCurrentListing()) return;
 
           const tabIdsToClose = resolveTabIdsToCloseAfterDelete(tabs, latestUndoAction.path, true);
           for (const tabId of tabIdsToClose) {
@@ -95,6 +101,7 @@ export function useFileTreeUndo({
             fromRelativePath: latestUndoAction.toPath,
             toRelativePath: latestUndoAction.fromPath,
           });
+          if (!isCurrentListing()) return;
           renameTabsForEntryRename(selectedWorkspaceId ?? "", latestUndoAction.toPath, latestUndoAction.fromPath);
           break;
         }
@@ -109,6 +116,7 @@ export function useFileTreeUndo({
               fromRelativePath: reverseEntry.toPath,
               toRelativePath: reverseEntry.fromPath,
             });
+            if (!isCurrentListing()) return;
           }
           break;
         }
@@ -118,6 +126,7 @@ export function useFileTreeUndo({
             relativePath: latestUndoAction.path,
             content: latestUndoAction.content,
           });
+          if (!isCurrentListing()) return;
           break;
         }
         default: {
@@ -127,14 +136,17 @@ export function useFileTreeUndo({
       }
 
       await loadAllRepoFiles();
+      if (!isCurrentListing()) return;
       setUndoStack((currentStack) => currentStack.slice(1));
     } catch (error) {
+      if (!isCurrentListing()) return;
       setFileOperationError(getFileOperationErrorMessage(error));
       console.error("Failed to undo file tree operation", error);
     } finally {
       isApplyingUndoRef.current = false;
     }
   }, [
+    isCurrentListing,
     closeTab,
     loadAllRepoFiles,
     renameTabsForEntryRename,
