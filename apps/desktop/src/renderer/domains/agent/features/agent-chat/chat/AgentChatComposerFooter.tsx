@@ -2,6 +2,8 @@ import { Box, IconButton, Tooltip } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuArrowUp } from "react-icons/lu";
 import type { AgentModel } from "../../../chat/agentChatTypes";
+import { setDefaultAgentModel } from "../../../commands/agentConfigCommands";
+import { agentSettingsStore } from "../../../state/agentSettingsStore";
 import { AgentModelSelector } from "../../select-model/AgentModelSelector";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
 import { AgentChatVoiceButton } from "./AgentChatVoiceButton";
@@ -47,6 +49,7 @@ export function AgentChatComposerFooter({
   onVoiceText,
 }: AgentChatComposerFooterProps) {
   const { t } = useTranslation();
+  const defaultModel = agentSettingsStore((state) => state.defaultModel);
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 4, px: 1, minHeight: 18 }}>
@@ -58,6 +61,8 @@ export function AgentChatComposerFooter({
           onModelChange={onModelChange}
           onThinkingLevelSelect={onThinkingLevelSelect}
           onAddProvider={onAddProvider}
+          defaultModel={defaultModel}
+          onSetDefaultModel={setDefaultAgentModel}
         />
       )}
       <AgentChatUsageSummaryLabel

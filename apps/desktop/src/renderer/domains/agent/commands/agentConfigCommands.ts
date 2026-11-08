@@ -6,6 +6,7 @@ import {
   updateMemoryConfig as updateMemoryConfigProcedure,
 } from "../daemon/daemonAgentProcedures";
 import type { MemoryConfig } from "../daemon/daemonAgentTypes";
+import { type AgentDefaultModel, agentSettingsStore } from "../state/agentSettingsStore";
 
 /**
  * Agent configuration commands (desktop7 Phase 23/26).
@@ -39,4 +40,9 @@ export function checkAgentGlobalConfigExternalDirectoryPermission(params?: { age
 /** Ensures one agent global config grants external directory access. */
 export function ensureAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: string }) {
   return ensureAgentGlobalConfigExternalDirectoryPermissionProcedure(params ?? {});
+}
+
+/** Sets or clears the Yishan default for future fresh desktop chats, without changing any live session. */
+export function setDefaultAgentModel(model: AgentDefaultModel | undefined): void {
+  agentSettingsStore.getState().setDefaultModel(model);
 }

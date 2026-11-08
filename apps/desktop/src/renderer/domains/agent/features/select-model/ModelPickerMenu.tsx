@@ -19,7 +19,9 @@ import {
   type ModelPickerProviderGroup,
   groupModelPickerOptionsByProvider,
 } from "../../providers/modelPicker";
+import type { AgentDefaultModel } from "../../state/agentSettingsStore";
 import { ProviderMark } from "../../ui/ProviderMark";
+import { ModelPickerRow } from "./ModelPickerRow";
 
 type ModelPickerMenuProps = {
   anchorEl: HTMLElement | null;
@@ -35,6 +37,9 @@ type ModelPickerMenuProps = {
   onClearSelection?: () => void;
   /** When set, renders a pinned "Add Provider" footer entry in the provider column. */
   onAddProvider?: () => void;
+  /** Opt-in future-chat preference UI. */
+  defaultModel?: AgentDefaultModel;
+  onSetDefaultModel?: (option: ModelPickerOption) => void;
 };
 
 const PROVIDER_COLUMN_WIDTH_PX = 156;
@@ -174,8 +179,11 @@ export function ModelPickerMenu({
   clearSelectionLabel,
   onClearSelection,
   onAddProvider,
+  defaultModel,
+  onSetDefaultModel,
 }: ModelPickerMenuProps) {
   const { t } = useTranslation();
+  const defaultProviderId = defaultModel?.provider.trim().toLowerCase();
   const providerGroups = useMemo(() => groupModelPickerOptionsByProvider(options), [options]);
   const activeProviderGroup =
     providerGroups.find((group) => group.providerId === selectedProviderId) ?? providerGroups[0] ?? null;
@@ -308,20 +316,13 @@ export function ModelPickerMenu({
 
                     return (
                       <Box key={option.id} component="li">
-                        <Button
-                          fullWidth
-                          size="small"
-                          title={option.name}
-                          onClick={() => onModelSelect(option)}
-                          sx={buildModelButtonSx(isSelected)}
-                        >
-                          <Box
-                            component="span"
-                            sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                          >
-                            {option.name}
-                          </Box>
-                        </Button>
+                        <ModelPickerRow
+                          option={option}
+                          selected={isSelected}
+                          isDefault={defaultProviderId === option.providerId && defaultModel?.modelId === option.id}
+                          onSelect={onModelSelect}
+                          onSetDefault={onSetDefaultModel}
+                        />
                       </Box>
                     );
                   })}
@@ -381,20 +382,13 @@ export function ModelPickerMenu({
                             transform: `translateY(${offsetTop}px)`,
                           }}
                         >
-                          <Button
-                            fullWidth
-                            size="small"
-                            title={option.name}
-                            onClick={() => onModelSelect(option)}
-                            sx={buildModelButtonSx(isSelected)}
-                          >
-                            <Box
-                              component="span"
-                              sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                            >
-                              {option.name}
-                            </Box>
-                          </Button>
+                          <ModelPickerRow
+                            option={option}
+                            selected={isSelected}
+                            isDefault={defaultProviderId === option.providerId && defaultModel?.modelId === option.id}
+                            onSelect={onModelSelect}
+                            onSetDefault={onSetDefaultModel}
+                          />
                         </Box>
                       );
                     })}

@@ -10,6 +10,8 @@
       "close": "Close"
     },
     "modelPicker": {
+      "default": "Default",
+      "setDefault": "Set default",
       "providerListLabel": "Model providers",
       "searchAriaLabel": "Search models",
       "searchPlaceholder_one": "Search {{count}} model",
