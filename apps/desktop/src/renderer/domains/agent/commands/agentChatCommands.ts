@@ -112,12 +112,24 @@ export async function startAgentChatSession(opts: {
   }
 }
 
+/** Inline Pi image content; data is raw base64, never a data URL or local path. */
+export type AgentPromptImage = { type: "image"; data: string; mimeType: string };
+
+// Pi echoes images in JSONL events; leave ample room below the daemon's 10 MiB line limit.
+const MAX_PROMPT_IMAGE_ENCODED_BYTES = 4 * 1024 * 1024;
+
 /** Sends a prompt command to the pi session. */
 export async function sendAgentPrompt(opts: {
   tabId: string;
   sessionId: string;
   message: string;
+  images?: AgentPromptImage[];
 }): Promise<void> {
+  const imageBytes = opts.images?.reduce((total, image) => total + image.data.length, 0) ?? 0;
+  if (imageBytes > MAX_PROMPT_IMAGE_ENCODED_BYTES) {
+    throw new Error("Images exceed the 4 MiB encoded limit. Please remove an image or paste smaller images.");
+  }
+
   const tabSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
 
   const isBusy = isAgentSessionBusy(tabSession?.state);
@@ -126,6 +138,7 @@ export async function sendAgentPrompt(opts: {
     command: {
       type: "prompt",
       message: opts.message,
+      ...(opts.images?.length ? { images: opts.images } : {}),
       streamingBehavior: isBusy ? "steer" : undefined,
     },
   });

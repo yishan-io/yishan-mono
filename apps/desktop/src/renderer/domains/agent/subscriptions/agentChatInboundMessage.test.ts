@@ -447,3 +447,29 @@ describe("agentChatInboundMessage — bounded normalization behavior", () => {
     });
   });
 });
+
+
+it.each([false, true])("preserves lightweight user image markers through live and reload ingestion (history=%s)", (history) => {
+  const tabId = "image-markers";
+  const sessionId = "image-session";
+  agentChatStore.getState().initSession(tabId, sessionId);
+  const image = { type: "image", data: "secret-base64", mimeType: "image/png" };
+  const messages = [
+    { id: "image-only", role: "user", content: [image] },
+    { id: "mixed", role: "user", content: [{ type: "text", text: "Explain this" }, image, image] },
+  ];
+  if (history) {
+    agentChatStore.getState().recordHistoryRequest(tabId, sessionId, "image-history");
+    handleAgentPiEvent({ tabId, sessionId, workspaceId: "workspace", event: {
+      type: "response", command: "get_messages", id: "image-history", success: true, data: { messages },
+    } });
+  } else {
+    for (const message of messages) handleAgentPiEvent({ tabId, sessionId, workspaceId: "workspace", event: { type: "message_end", message } });
+  }
+  const stored = agentChatStore.getState().sessionsByTabId[tabId]?.messages;
+  expect(stored?.[0]?.content).toEqual([{ type: "text", text: "[Image attached]" }]);
+  expect(stored?.[1]?.content).toEqual([
+    { type: "text", text: "Explain this" }, { type: "text", text: "[Image attached]" }, { type: "text", text: "[Image attached]" },
+  ]);
+  expect(JSON.stringify(stored)).not.toContain("secret-base64");
+});

@@ -126,7 +126,7 @@ export function normalizeBoundedDetails(details: unknown, depth: number): Record
 
 // ─── Content normalization ───────────────────────────────────────────────────
 
-function normalizeMessageContent(content: unknown): string | AgentContentBlock[] {
+function normalizeMessageContent(content: unknown, isUser: boolean): string | AgentContentBlock[] {
   if (typeof content === "string") {
     return truncateUtf8Bytes(content, PER_MESSAGE_UTF8_BYTES);
   }
@@ -135,6 +135,10 @@ function normalizeMessageContent(content: unknown): string | AgentContentBlock[]
   }
 
   return content.flatMap((block) => {
+    // Retain attachment context without storing base64 in transcript state.
+    if (isUser && isRecord(block) && block.type === "image") {
+      return [{ type: "text" as const, text: "[Image attached]" }];
+    }
     const normalizedBlock = normalizeContentBlock(block);
     return normalizedBlock ? [normalizedBlock] : [];
   });
@@ -235,7 +239,7 @@ export function normalizeIncomingAgentMessage(rawMessage: unknown): AgentMessage
     return null;
   }
 
-  const content = normalizeMessageContent(rawMessage.content);
+  const content = normalizeMessageContent(rawMessage.content, rawMessage.role === "user");
   const message: AgentMessage = {
     id: typeof rawMessage.id === "string" ? rawMessage.id : generateId(),
     role: rawMessage.role,

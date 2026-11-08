@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuShrink } from "react-icons/lu";
 import { useShallow } from "zustand/react/shallow";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
-import { type AgentModel, isAgentSessionBusy } from "../../../chat/agentChatTypes";
+import { isAgentSessionBusy, type AgentModel } from "../../../chat/agentChatTypes";
 import { getCompactContextPercent } from "../../../chat/agentChatUsageSummary";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { ProviderCredentialDialog } from "../../provider-credentials/ProviderCredentialDialog";
@@ -104,6 +104,7 @@ function AgentChatComposerPaneComponent({
     handleFilesDrop,
     handleMentionFileSearch,
     handlePasteBlock,
+    handleImagesPaste,
     handleAddFile,
     handleRemoveAttachment,
     handleAbort,
@@ -218,6 +219,7 @@ function AgentChatComposerPaneComponent({
         allowEmptySubmit={attachments.length > 0}
         onFilesDrop={handleFilesDrop}
         onPasteBlock={handlePasteBlock}
+        onImagesPaste={handleImagesPaste}
         fileMentionSearch={handleMentionFileSearch}
         onMentionFile={handleAddFile}
       />

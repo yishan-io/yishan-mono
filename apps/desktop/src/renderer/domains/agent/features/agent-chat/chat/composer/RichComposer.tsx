@@ -34,6 +34,7 @@ type RichComposerProps = {
   allowEmptySubmit?: boolean;
   onFilesDrop?: (entries: FileTreeDragEntry[]) => void;
   onPasteBlock?: (text: string) => void;
+  onImagesPaste?: (files: File[]) => void;
   /** Async file search backing the @ mention menu. When omitted, the mention menu is disabled. */
   fileMentionSearch?: (query: string) => Promise<FileMentionResult[]>;
   /** Called with the selected file path when a mention is inserted. */
@@ -54,6 +55,7 @@ export const RichComposer = forwardRef<RichComposerHandle, RichComposerProps>(fu
     allowEmptySubmit = false,
     onFilesDrop,
     onPasteBlock,
+    onImagesPaste,
     fileMentionSearch,
     onMentionFile,
   },
@@ -174,6 +176,11 @@ export const RichComposer = forwardRef<RichComposerHandle, RichComposerProps>(fu
         return;
       }
       event.preventDefault();
+      const images = Array.from(event.clipboardData.files ?? []).filter((file) => file.type.startsWith("image/"));
+      if (onImagesPaste && images.length > 0) {
+        onImagesPaste(images);
+        return;
+      }
       const plainText = event.clipboardData.getData("text/plain");
       if (onPasteBlock && plainText.includes("\n") && plainText.split("\n").filter((l) => l.trim()).length >= 2) {
         onPasteBlock(plainText);
@@ -181,7 +188,7 @@ export const RichComposer = forwardRef<RichComposerHandle, RichComposerProps>(fu
       }
       insertComposerPlainText(plainText);
     },
-    [disabled, onPasteBlock],
+    [disabled, onImagesPaste, onPasteBlock],
   );
 
   return (

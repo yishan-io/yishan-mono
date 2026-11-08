@@ -4,6 +4,7 @@ import { LuClipboard, LuX } from "react-icons/lu";
 
 export type ComposerAttachment =
   | { kind: "file"; id: string; path: string; name: string; isDirectory: boolean }
+  | { kind: "image"; id: string; name: string; mimeType: string; data?: string; error?: string }
   | { kind: "paste"; id: string; content: string; lineCount: number };
 
 type ComposerAttachmentBlockProps = {
@@ -30,7 +31,7 @@ function truncate(text: string, maxLen: number): string {
   return text.length > maxLen ? `${text.slice(0, maxLen)}…` : text;
 }
 
-/** A removable chip showing either a file reference or a pasted text block. */
+/** A removable chip showing a file reference, pasted image, or text block. */
 export function ComposerAttachmentBlock({ attachment, onRemove }: ComposerAttachmentBlockProps) {
   if (attachment.kind === "file") {
     const icon = getFileTreeIcon(attachment.path, attachment.isDirectory);
@@ -51,6 +52,28 @@ export function ComposerAttachmentBlock({ attachment, onRemove }: ComposerAttach
           </IconButton>
         </Box>
       </Tooltip>
+    );
+  }
+
+  if (attachment.kind === "image") {
+    return (
+      <Box sx={CHIP_SX}>
+        {attachment.data ? (
+          <Box
+            component="img"
+            src={`data:${attachment.mimeType};base64,${attachment.data}`}
+            alt={attachment.name}
+            sx={{ width: 64, height: 64, objectFit: "contain" }}
+          />
+        ) : (
+          <Typography variant="caption" role={attachment.error ? "alert" : "status"}>
+            {attachment.error ?? `Reading ${attachment.name}…`}
+          </Typography>
+        )}
+        <IconButton size="small" onClick={() => onRemove(attachment.id)} aria-label="Remove image attachment">
+          <LuX size={12} />
+        </IconButton>
+      </Box>
     );
   }
 
