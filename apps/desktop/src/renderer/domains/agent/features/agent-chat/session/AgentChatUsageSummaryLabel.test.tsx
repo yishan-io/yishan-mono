@@ -29,7 +29,8 @@ vi.mock("react-i18next", () => ({
       const translation = translations[key] ?? key;
 
       return Object.entries(replacements ?? {}).reduce(
-        (result, [replacementKey, replacementValue]) => result.replace(`{{${replacementKey}}}`, String(replacementValue)),
+        (result, [replacementKey, replacementValue]) =>
+          result.replace(`{{${replacementKey}}}`, String(replacementValue)),
         translation,
       );
     },
@@ -105,7 +106,8 @@ describe("AgentChatUsageSummaryLabel", () => {
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip.textContent).toContain("Current context");
     expect(tooltip.textContent).toContain("2.2K / 128K (1.7%)");
-    expect(tooltip.textContent).not.toContain("Input");
+    expect(tooltip.textContent).toContain("Input");
+    expect(within(tooltip).getByRole("img", { name: "Session total (cumulative)" })).toBeTruthy();
 
     fireEvent.click(usageButton);
 

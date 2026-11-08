@@ -1,6 +1,6 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { LuArrowUp, LuShrink } from "react-icons/lu";
+import { LuArrowUp } from "react-icons/lu";
 import type { AgentModel } from "../../../chat/agentChatTypes";
 import { AgentModelSelector } from "../../select-model/AgentModelSelector";
 import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
@@ -26,7 +26,7 @@ export type AgentChatComposerFooterProps = {
   onVoiceText: (text: string) => void;
 };
 
-/** The composer action bar: model selector, usage, compact, voice, stop/submit. */
+/** The composer action bar: model selector, usage details, voice, stop/submit. */
 export function AgentChatComposerFooter({
   tabId,
   availableModels,
@@ -60,21 +60,11 @@ export function AgentChatComposerFooter({
           onAddProvider={onAddProvider}
         />
       )}
-      <AgentChatUsageSummaryLabel tabId={tabId} />
-      <Tooltip title={t("agentChat.composer.compact")} placement="top">
-        <span>
-          <IconButton
-            aria-label={t("agentChat.composer.compact")}
-            onClick={() => {
-              void onCompact();
-            }}
-            disabled={sessionState !== "idle" || !canManuallyCompact || isManualCompactPending}
-            size="small"
-          >
-            <LuShrink size={15} />
-          </IconButton>
-        </span>
-      </Tooltip>
+      <AgentChatUsageSummaryLabel
+        tabId={tabId}
+        compactDisabled={sessionState !== "idle" || !canManuallyCompact || isManualCompactPending || isSessionBusy}
+        onCompact={onCompact}
+      />
       <Box sx={{ flex: 1 }} />
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, overflow: "visible" }}>
         <AgentChatVoiceButton

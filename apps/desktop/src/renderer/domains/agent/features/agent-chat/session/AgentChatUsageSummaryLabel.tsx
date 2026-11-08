@@ -1,4 +1,4 @@
-import { Box, CircularProgress, IconButton, Popover, Tooltip, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, IconButton, Popover, Tooltip, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { COLOR_PRIMITIVES, type DesignTokenThemeMode } from "@yishan-io/design-tokens/v1";
 import { type MouseEvent, useMemo, useState } from "react";
@@ -15,20 +15,17 @@ import {
   type AgentChatUsageLedger,
   getAgentChatUsageLedgerTotal,
 } from "../../../../../domains/agent/state/agentChatUsageLedger";
+import { AgentChatTokenCompositionBar } from "./AgentChatTokenCompositionBar";
+import { AgentChatUsageDetails } from "./AgentChatUsageDetails";
 import { formatDetailedTokenCount } from "./agentChatUsageFormatting";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
 const CONTEXT_PROGRESS_SIZE_PX = 16;
 const CONTEXT_PROGRESS_THICKNESS = 5;
-const usdFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 type AgentChatUsageSummaryLabelProps = {
   tabId: string;
+  compactDisabled?: boolean;
+  onCompact?: () => void;
 };
 
 /** Returns the inline summary color based on context utilization percentage. */
@@ -65,7 +62,11 @@ export function composeAgentChatUsageSummary(
 }
 
 /** Renders the live agent-chat context/cost summary without rerendering sibling controls. */
-export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabelProps) {
+export function AgentChatUsageSummaryLabel({
+  tabId,
+  compactDisabled = true,
+  onCompact,
+}: AgentChatUsageSummaryLabelProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
@@ -111,9 +112,6 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           contextWindow: contextWindowLabel,
         }),
   });
-  const totalSessionTokens = usageSummary.totalSessionTokens;
-  const totalCostUsd = usageSummary.totalCostUsd;
-
   const contextTooltipContent = (
     <Box sx={{ display: "grid", gridTemplateColumns: "auto auto", columnGap: 2, rowGap: 0.5 }}>
       <Typography variant="caption" sx={{ color: "inherit" }}>
@@ -122,168 +120,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
       <Typography variant="caption" sx={{ color: "inherit", textAlign: "right" }}>
         {contextTooltipLabel}
       </Typography>
-    </Box>
-  );
-
-  const detailedUsageContent = (
-    <Box sx={{ display: "grid", gridTemplateColumns: "auto auto", columnGap: 2, rowGap: 0.5 }}>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-        }}
-      >
-        {t("agentChat.usageSummary.currentContext")}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-          textAlign: "right",
-        }}
-      >
-        {contextTooltipLabel}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-        }}
-      >
-        {t("agentChat.usageSummary.input")}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-          textAlign: "right",
-        }}
-      >
-        {formatDetailedTokenCount(usageSummary.inputTokens)}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-        }}
-      >
-        {t("agentChat.usageSummary.output")}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-          textAlign: "right",
-        }}
-      >
-        {formatDetailedTokenCount(usageSummary.outputTokens)}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-        }}
-      >
-        {t("agentChat.usageSummary.cacheRead")}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-          textAlign: "right",
-        }}
-      >
-        {formatDetailedTokenCount(usageSummary.cacheReadTokens)}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-        }}
-      >
-        {t("agentChat.usageSummary.cacheWrite")}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-          textAlign: "right",
-        }}
-      >
-        {formatDetailedTokenCount(usageSummary.cacheWriteTokens)}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-        }}
-      >
-        {t("agentChat.usageSummary.cacheRate")}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-          textAlign: "right",
-        }}
-      >
-        {`${usageSummary.cacheRatePercent}%`}
-      </Typography>
-      {usageSummary.reasoningTokens > 0 ? (
-        <>
-          <Typography
-            variant="caption"
-            sx={{
-              color: "inherit",
-            }}
-          >
-            {t("agentChat.usageSummary.reasoning")}
-          </Typography>
-          <Typography
-            variant="caption"
-            sx={{
-              color: "inherit",
-              textAlign: "right",
-            }}
-          >
-            {formatDetailedTokenCount(usageSummary.reasoningTokens)}
-          </Typography>
-        </>
-      ) : null}
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-        }}
-      >
-        {t("agentChat.usageSummary.sessionTotalCumulative")}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-          textAlign: "right",
-        }}
-      >
-        {formatDetailedTokenCount(totalSessionTokens)}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-        }}
-      >
-        {t("agentChat.usageSummary.cost")}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "inherit",
-          textAlign: "right",
-        }}
-      >
-        {usdFormatter.format(totalCostUsd)}
-      </Typography>
+      <AgentChatTokenCompositionBar summary={usageSummary} />
     </Box>
   );
 
@@ -329,7 +166,10 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
         slotProps={{ paper: { "aria-label": t("agentChat.usageSummary.details"), role: "dialog", sx: { p: 1.5 } } }}
         transformOrigin={{ horizontal: "center", vertical: "top" }}
       >
-        {detailedUsageContent}
+        <AgentChatUsageDetails summary={usageSummary} contextLabel={contextTooltipLabel} />
+        <Button size="small" disabled={compactDisabled || !onCompact} onClick={onCompact} sx={{ mt: 1 }}>
+          {t("agentChat.composer.compact")}
+        </Button>
       </Popover>
     </>
   );

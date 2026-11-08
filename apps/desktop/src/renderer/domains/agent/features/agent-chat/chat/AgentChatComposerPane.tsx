@@ -1,22 +1,16 @@
-import { Box, IconButton, Tooltip, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import { displaySettingsStore, keybindingSettingsStore } from "@renderer/domains/settings";
 import { TAB_FOCUS_REQUEST_EVENT, consumeTabFocus, getTabFocusRequest, tabStore } from "@renderer/domains/workbench";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { LuArrowUp, LuShrink } from "react-icons/lu";
 import { useShallow } from "zustand/react/shallow";
 import { getSupportedKeyBindings } from "../../../../../shortcuts/keybindings";
-import { isAgentSessionBusy, type AgentModel } from "../../../chat/agentChatTypes";
-import { getCompactContextPercent } from "../../../chat/agentChatUsageSummary";
+import { isAgentSessionBusy } from "../../../chat/agentChatTypes";
 import { agentChatStore } from "../../../state/agentChatStore";
 import { ProviderCredentialDialog } from "../../provider-credentials/ProviderCredentialDialog";
-import { AgentModelSelector } from "../../select-model/AgentModelSelector";
-import { AgentChatSubagentRow } from "../session/AgentChatSubagentRow";
-import { AgentChatUsageSummaryLabel } from "../session/AgentChatUsageSummaryLabel";
 import { AgentChatComposerFooter } from "./AgentChatComposerFooter";
 import { AGENT_CHAT_FIXED_CONTENT_MAX_WIDTH_PX } from "./AgentChatContentLayout";
 import { AgentChatSubagentList } from "./AgentChatSubagentList";
-import { AgentChatVoiceButton } from "./AgentChatVoiceButton";
 import { ComposerAttachmentBlock } from "./composer/ComposerAttachmentBlock";
 import { RichComposer, type RichComposerHandle } from "./composer/RichComposer";
 import { useAgentChatComposerDraft } from "./useAgentChatComposerDraft";
@@ -57,7 +51,6 @@ function AgentChatComposerPaneComponent({
     thinkingLevel,
     messageCount,
     hasStreamingMessage,
-    contextPercent,
   } = agentChatStore(
     useShallow((state) => {
       const session = state.sessionsByTabId[tabId];
@@ -71,11 +64,6 @@ function AgentChatComposerPaneComponent({
         thinkingLevel: session?.thinkingLevel ?? "medium",
         messageCount: session?.messages.length ?? 0,
         hasStreamingMessage: Boolean(session?.streamingMessage),
-        contextPercent: getCompactContextPercent(
-          session?.messages ?? [],
-          session?.currentModel ?? null,
-          session?.sessionStats ?? null,
-        ),
       };
     }),
   );
@@ -92,7 +80,7 @@ function AgentChatComposerPaneComponent({
     return shortcutLabel ? t("agentChat.composer.focusShortcut", { shortcut: shortcutLabel }) : undefined;
   }, [shortcutOverrides, t]);
   const isSessionBusy = isAgentSessionBusy(sessionState);
-  const canManuallyCompact = contextPercent >= 50;
+  const canManuallyCompact = Boolean(sessionId);
   const composerRef = useRef<RichComposerHandle | null>(null);
 
   const {
