@@ -88,7 +88,7 @@ export { fetchAgentSessionFilePath, listActivePiSessions } from "./commands/agen
 // feature through the public API (desktop7 Phase 21 — moved from Settings so
 // the settings→agent edge never evaluates this store mid-cycle).
 export { AGENT_SETTINGS_STORE_STORAGE_KEY } from "./state/agentSettingsStore";
-export { agentSettingsStore, type AgentSettingsStoreState } from "./state/agentSettingsStore";
+export { agentSettingsStore, type AgentDefaultModel, type AgentSettingsStoreState } from "./state/agentSettingsStore";
 export { AgentChatRecoveryCoordinator } from "./runtime/agentChatRecovery";
 export {
   appendChatMessages,
@@ -106,6 +106,7 @@ export {
 export { getVoiceTranscriptionUsage } from "./api/voiceTranscriptionApi";
 export type { VoiceTranscriptionResponse, VoiceTranscriptionUsageRecord } from "./api/types";
 export {
+  setDefaultAgentModel,
   checkAgentGlobalConfigExternalDirectoryPermission,
   ensureAgentGlobalConfigExternalDirectoryPermission,
 } from "./commands/agentConfigCommands";

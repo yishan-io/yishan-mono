@@ -112,7 +112,11 @@ func buildPiStartArgs(req rpc.PiStartParams) []string {
 	if req.Resume {
 		return append(args, "--session", req.SessionID)
 	}
-	return append(args, "--session-id", req.SessionID)
+	args = append(args, "--session-id", req.SessionID)
+	if req.Provider != "" && req.ModelID != "" {
+		args = append(args, "--provider", req.Provider, "--model", req.ModelID)
+	}
+	return args
 }
 
 func (s *Service) startPiProcessOnce(req rpc.PiStartParams, config piStartConfig) (*process.Session, error) {

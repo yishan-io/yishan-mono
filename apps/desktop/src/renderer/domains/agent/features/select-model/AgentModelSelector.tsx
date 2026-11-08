@@ -8,6 +8,7 @@ import {
   buildModelPickerOption,
   groupModelPickerOptionsByProvider,
 } from "../../providers/modelPicker";
+import type { AgentDefaultModel } from "../../state/agentSettingsStore";
 import { ProviderMark } from "../../ui/ProviderMark";
 import { ModelPickerMenu } from "./ModelPickerMenu";
 import { ThinkingLevelControl } from "./ThinkingLevelControl";
@@ -22,6 +23,10 @@ type AgentModelSelectorProps = {
   onThinkingLevelSelect: (level: string) => void;
   /** Invoked after the popup closes; opens the provider add flow. */
   onAddProvider?: () => void;
+  /** Saved chat preference; controls are enabled only with onSetDefaultModel. */
+  defaultModel?: AgentDefaultModel;
+  /** Updates future-chat preference without selecting a live-session model. */
+  onSetDefaultModel?: (model: AgentDefaultModel) => void;
 };
 
 const MODEL_SELECTOR_FONT_SIZE_PX = 12;
@@ -56,19 +61,28 @@ export function AgentModelSelector({
   onModelChange,
   onThinkingLevelSelect,
   onAddProvider,
+  defaultModel,
+  onSetDefaultModel,
 }: AgentModelSelectorProps) {
   const modelLabel = currentModel ? formatAgentModelLabel(currentModel) : "Select model";
   const supportedLevels = useMemo(() => getSupportedThinkingLevels(currentModel), [currentModel]);
   const modelOptions = useMemo(() => buildAgentModelOptions(models), [models]);
   const selectedModelId = currentModel?.id ?? null;
   const selectedOption = useMemo(
-    () => (selectedModelId ? (modelOptions.find((option) => option.id === selectedModelId) ?? null) : null),
-    [modelOptions, selectedModelId],
+    () =>
+      selectedModelId
+        ? (modelOptions.find(
+            (option) =>
+              option.id === selectedModelId &&
+              (!currentModel?.provider || option.providerId === currentModel.provider.trim().toLowerCase()),
+          ) ?? null)
+        : null,
+    [currentModel?.provider, modelOptions, selectedModelId],
   );
   const providerLabel = selectedOption?.providerName ?? "";
   const initialSelectedProvider = useMemo(
-    () => getInitialSelectedProvider(selectedModelId, modelOptions),
-    [modelOptions, selectedModelId],
+    () => selectedOption?.providerId ?? getInitialSelectedProvider(selectedModelId, modelOptions),
+    [modelOptions, selectedModelId, selectedOption],
   );
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedProvider, setSelectedProvider] = useState(initialSelectedProvider);
@@ -99,7 +113,11 @@ export function AgentModelSelector({
 
   const handleModelSelect = useCallback(
     (model: ModelPickerOption) => {
-      const nextModel = models.find((candidateModel) => candidateModel.id === model.id);
+      const nextModel = models.find(
+        (candidateModel) =>
+          candidateModel.id === model.id &&
+          (candidateModel.provider?.trim().toLowerCase() || model.providerId) === model.providerId,
+      );
       if (!nextModel) {
         return;
       }
@@ -108,6 +126,18 @@ export function AgentModelSelector({
       handleMenuClose();
     },
     [handleMenuClose, models, onModelChange],
+  );
+
+  const handleSetDefaultModel = useCallback(
+    (option: ModelPickerOption) => {
+      const model = models.find(
+        (candidate) => candidate.id === option.id && candidate.provider?.trim().toLowerCase() === option.providerId,
+      );
+      if (model?.provider) {
+        onSetDefaultModel?.({ provider: model.provider, modelId: model.id });
+      }
+    },
+    [models, onSetDefaultModel],
   );
 
   const handleAddProvider = useCallback(() => {
@@ -198,6 +228,8 @@ export function AgentModelSelector({
         onClose={handleMenuClose}
         onProviderChange={setSelectedProvider}
         onModelSelect={handleModelSelect}
+        defaultModel={defaultModel}
+        onSetDefaultModel={onSetDefaultModel ? handleSetDefaultModel : undefined}
         onAddProvider={onAddProvider ? handleAddProvider : undefined}
       />
       <ThinkingLevelControl

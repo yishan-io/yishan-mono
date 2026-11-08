@@ -60,6 +60,8 @@ export async function startPiSession(input: {
   workspaceId: string;
   cwd: string;
   resume?: boolean;
+  provider?: string;
+  modelId?: string;
 }): Promise<{ sessionId: string }> {
   return (await request("pi.start", input)) as { sessionId: string };
 }

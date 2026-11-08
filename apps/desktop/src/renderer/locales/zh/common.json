@@ -10,6 +10,8 @@
       "close": "\u5173\u95ed"
     },
     "modelPicker": {
+      "default": "默认",
+      "setDefault": "设为默认",
       "providerListLabel": "\u6a21\u578b\u63d0\u4f9b\u65b9",
       "searchAriaLabel": "\u641c\u7d22\u6a21\u578b",
       "searchPlaceholder_one": "\u641c\u7d22 {{count}} \u4e2a\u6a21\u578b",

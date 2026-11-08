@@ -26,6 +26,8 @@ type PiStartParams struct {
 	WorkspaceID string `json:"workspaceId"`
 	CWD         string `json:"cwd"`
 	Resume      bool   `json:"resume,omitempty"`
+	Provider    string `json:"provider,omitempty"`
+	ModelID     string `json:"modelId,omitempty"`
 }
 
 type PiAttachParams struct {

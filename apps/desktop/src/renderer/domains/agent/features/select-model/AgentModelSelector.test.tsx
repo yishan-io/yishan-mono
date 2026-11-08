@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentModel } from "../../../../domains/agent/chat/agentChatTypes";
 import { AgentModelSelector } from "./AgentModelSelector";
@@ -21,6 +22,10 @@ vi.mock("react-i18next", () => ({
           return "No models";
         case "common.modelPicker.noMatchingModels":
           return "No matching models";
+        case "common.modelPicker.default":
+          return "Default";
+        case "common.modelPicker.setDefault":
+          return "Set default";
         case "common.modelPicker.addProvider":
           return "Add Provider";
         default:
@@ -254,5 +259,94 @@ describe("AgentModelSelector", () => {
 
     expect(onAddProvider).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("searchbox", { name: "Search models" })).toBeNull();
+  });
+
+  it.each([false, true])("updates only the default preference in %s virtualized rows", async (virtualized) => {
+    const user = userEvent.setup();
+    const models: AgentModel[] = [
+      { id: "vendor/shared", provider: "openrouter", name: "Shared" },
+      { id: "vendor/shared", provider: "openai", name: "Shared" },
+      ...Array.from({ length: virtualized ? 20 : 1 }, (_, index) => ({
+        id: `vendor/other-${index}`,
+        provider: "openai",
+        name: `Other ${index}`,
+      })),
+    ];
+    const onModelChange = vi.fn();
+    const onSetDefaultModel = vi.fn();
+    const props = {
+      models,
+      currentModel: models[1] ?? null,
+      thinkingLevel: "off",
+      onModelChange,
+      onThinkingLevelSelect: vi.fn(),
+      onSetDefaultModel,
+    };
+    const { rerender } = render(
+      <AgentModelSelector {...props} defaultModel={{ provider: "openrouter", modelId: "vendor/shared" }} />,
+    );
+    await user.click(screen.getByRole("button", { name: "OpenAI/Shared" }));
+    expect(screen.queryByText("Default")).toBeNull();
+    const sharedRow = screen.getByRole("button", { name: "Shared" }).closest("li");
+    expect(sharedRow).not.toBeNull();
+    if (!sharedRow) throw new Error("Missing model row");
+    const action = within(sharedRow).getByRole("button", { name: "Set default" });
+    expect(action.closest("button button")).toBeNull();
+    screen.getByRole("button", { name: "Shared" }).focus();
+    await user.tab();
+    expect(document.activeElement).toBe(action);
+    await user.keyboard("{Enter}");
+    expect(onSetDefaultModel).toHaveBeenCalledExactlyOnceWith({ provider: "openai", modelId: "vendor/shared" });
+    expect(onModelChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("searchbox", { name: "Search models" })).toBeTruthy();
+    rerender(<AgentModelSelector {...props} defaultModel={{ provider: "openai", modelId: "vendor/shared" }} />);
+    expect(within(sharedRow).getByText("Default")).toBeTruthy();
+    expect(within(sharedRow).queryByRole("button", { name: "Set default" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Shared" }));
+    expect(onModelChange).toHaveBeenCalledExactlyOnceWith(models[1]);
+    expect(screen.queryByRole("searchbox", { name: "Search models" })).toBeNull();
+  });
+
+  it.each([false, true])("recognizes mixed-case default providers in %s virtualized rows", async (virtualized) => {
+    const models: AgentModel[] = Array.from({ length: virtualized ? 20 : 2 }, (_, index) => ({
+      id: `model-${index}`,
+      provider: "MyGateway",
+      name: `Model ${index}`,
+    }));
+    const defaultModel = { provider: "  MyGateway  ", modelId: "model-0" };
+    render(
+      <AgentModelSelector
+        models={models}
+        currentModel={models[0] ?? null}
+        thinkingLevel="off"
+        onModelChange={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
+        defaultModel={defaultModel}
+        onSetDefaultModel={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /\/Model 0$/ }));
+    const row = screen.getByRole("button", { name: "Model 0" }).closest("li");
+    if (!row) throw new Error("Missing model row");
+    expect(within(row).getByText("Default")).toBeTruthy();
+    expect(within(row).queryByRole("button", { name: "Set default" })).toBeNull();
+    expect(defaultModel.provider).toBe("  MyGateway  ");
+  });
+
+  it("does not show default controls unless opted in, even with a saved preference", async () => {
+    const models = buildModels();
+    render(
+      <AgentModelSelector
+        models={models}
+        currentModel={models[0] ?? null}
+        thinkingLevel="off"
+        onModelChange={vi.fn()}
+        onThinkingLevelSelect={vi.fn()}
+        defaultModel={{ provider: "anthropic", modelId: "anthropic/claude-sonnet-4" }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
+    expect(screen.queryByText("Default")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Set default" })).toBeNull();
   });
 });

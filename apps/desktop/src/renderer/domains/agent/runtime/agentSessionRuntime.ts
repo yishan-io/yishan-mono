@@ -28,6 +28,7 @@ import {
   stopPiSession as stopPiSessionProcedure,
 } from "../daemon/daemonAgentProcedures";
 import { agentChatStore } from "../state/agentChatStore";
+import { agentSettingsStore } from "../state/agentSettingsStore";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "../subscriptions/agentChatEventRouter";
 import { handleAgentPiEvent } from "../subscriptions/agentChatPiEventHandler";
 import { clearAgentChatSessionStatsSequence, refreshAgentSessionStats } from "../subscriptions/agentChatPiEventShared";
@@ -134,7 +135,14 @@ export async function ensurePiSession(opts: {
   // back to attaching to a process that is being killed.
   await closingSessions.get(sessionId)?.catch(() => undefined);
   const startPiSession = async (): Promise<{ sessionId: string } | { ok: boolean }> => {
+    // Unhydrated settings are not an absent preference. Keep this await within
+    // the startup promise so failures follow the same handle cleanup path.
+    if (!requestedSessionId && !agentSettingsStore.persist.hasHydrated()) {
+      await agentSettingsStore.persist.rehydrate();
+    }
+    const defaultModel = requestedSessionId ? undefined : agentSettingsStore.getState().defaultModel;
     return await startPiSessionProcedure({
+      ...defaultModel,
       sessionId,
       tabId: opts.tabId,
       paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
