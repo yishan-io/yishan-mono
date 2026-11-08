@@ -1224,3 +1224,26 @@ describe("RichComposer", () => {
     });
   });
 });
+
+describe("clipboard images", () => {
+  it("passes image files to attachments without inserting clipboard text", () => {
+    const onImagesPaste = vi.fn();
+    const onPasteBlock = vi.fn();
+    render(<RichComposer placeholder="Images" onImagesPaste={onImagesPaste} onPasteBlock={onPasteBlock} />);
+    const file = new File(["image"], "clipboard.png", { type: "image/png" });
+    fireEvent.paste(screen.getByRole("textbox"), {
+      clipboardData: { files: [file], getData: () => "fallback\ntext" },
+    });
+    expect(onImagesPaste).toHaveBeenCalledWith([file]);
+    expect(onPasteBlock).not.toHaveBeenCalled();
+  });
+
+  it("ignores image paste when disabled", () => {
+    const onImagesPaste = vi.fn();
+    render(<RichComposer placeholder="Images" disabled onImagesPaste={onImagesPaste} />);
+    fireEvent.paste(screen.getByRole("textbox"), {
+      clipboardData: { files: [new File(["image"], "x.png", { type: "image/png" })], getData: () => "" },
+    });
+    expect(onImagesPaste).not.toHaveBeenCalled();
+  });
+});

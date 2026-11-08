@@ -10,6 +10,7 @@ import {
   openChatFileTab,
   renameAgentChatSessionByTab,
   startAgentChatSession,
+  sendAgentPrompt,
 } from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
@@ -283,4 +284,31 @@ describe("renameAgentChatSessionByTab", () => {
 
     expect(renamePiSession).not.toHaveBeenCalled();
   });
+});
+
+it("sends inline raw base64 images for an empty-text prompt, including when busy", async () => {
+  const images = [{ type: "image" as const, data: "aW1hZ2U=", mimeType: "image/png" }];
+  agentChatStore.getState().initSession("image-tab", "image-session");
+  for (const state of ["idle", "running"] as const) {
+    agentChatStore.getState().setSessionState("image-tab", state);
+    await sendAgentPrompt({ tabId: "image-tab", sessionId: "image-session", message: "", images });
+    expect(mocks.send).toHaveBeenLastCalledWith({
+      sessionId: "image-session",
+      command: { type: "prompt", message: "", images, streamingBehavior: state === "running" ? "steer" : undefined },
+    });
+  }
+});
+
+
+it("rejects aggregate encoded images over 4 MiB before sending to Pi", async () => {
+  const images = [1, 2].map(() => ({ type: "image" as const, data: "a".repeat(2 * 1024 * 1024 + 4), mimeType: "image/png" }));
+  await expect(sendAgentPrompt({ tabId: "image-tab", sessionId: "session", message: "hello", images }))
+    .rejects.toThrow(/4 MiB.*remove.*smaller/i);
+  expect(mocks.send).not.toHaveBeenCalled();
+});
+
+it("allows the aggregate encoded image boundary", async () => {
+  const images = [1, 2].map(() => ({ type: "image" as const, data: "a".repeat(2 * 1024 * 1024), mimeType: "image/png" }));
+  await sendAgentPrompt({ tabId: "image-tab", sessionId: "session", message: "", images });
+  expect(mocks.send).toHaveBeenCalled();
 });
