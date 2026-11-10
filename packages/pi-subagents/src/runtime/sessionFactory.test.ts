@@ -26,6 +26,7 @@ vi.mock("@earendil-works/pi-coding-agent", () => ({
 }));
 
 vi.mock("@yishan-io/pi-lsp", () => ({ createPiLspExtension: () => {} }));
+vi.mock("@yishan-io/pi-task", () => ({ createPiTaskReadExtension: () => {} }));
 
 import { createChildAgentSession } from "./sessionFactory";
 
@@ -105,7 +106,7 @@ describe("createChildAgentSession", () => {
         noExtensions: true,
         noPromptTemplates: true,
         noThemes: true,
-        extensionFactories: [expect.any(Function)],
+        extensionFactories: [expect.any(Function), expect.any(Function)],
         appendSystemPrompt: ["Explore prompt"],
       },
     });

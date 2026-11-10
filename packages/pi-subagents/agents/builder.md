@@ -4,6 +4,7 @@ description: Implement and verify one scoped, task-sized code change from a plan
 thinking: medium
 tools:
   - read
+  - task_read
   - grep
   - glob
   - bash

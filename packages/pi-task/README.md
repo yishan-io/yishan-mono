@@ -83,3 +83,7 @@ bun run --cwd packages/pi-task lint
 bun run --cwd packages/pi-task test
 cd packages/pi-task && npm pack --dry-run
 ```
+
+## Read-only child integration
+
+`createPiTaskReadExtension` is exported from `@yishan-io/pi-task` for isolated child sessions. It registers only `task_read`, with the same schema, daemon/project scope, cancellation, and output limits as the full extension. It does not register Task mutation tools. The daemon client is created lazily on the first read.

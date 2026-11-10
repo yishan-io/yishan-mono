@@ -5,6 +5,7 @@ thinking: high
 read_only: true
 tools:
   - read
+  - task_read
   - grep
   - glob
 ---

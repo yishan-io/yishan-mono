@@ -1,4 +1,4 @@
-export { createPiTaskExtension } from "./extension";
+export { createPiTaskExtension, createPiTaskReadExtension } from "./extension";
 export { LocalTaskRpcClient, LocalTaskRPCError, validateLocalTaskDaemonURL } from "./backend/localTaskRpcClient";
 export type {
   CreateLocalTaskInput,

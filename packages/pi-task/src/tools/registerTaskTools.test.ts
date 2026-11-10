@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -12,6 +12,7 @@ import type {
   LocalTaskTemplatesResult,
   LocalTaskWorkspaceLink,
 } from "../backend/localTaskTypes";
+import { createPiTaskReadExtension } from "../index";
 import { type LocalTaskToolBackend, registerTaskTools } from "./registerTaskTools";
 
 type ToolResult = { content: Array<{ type: "text"; text: string }>; details: Record<string, unknown> };
@@ -48,6 +49,23 @@ afterEach(async () => {
 });
 
 describe("registerTaskTools", () => {
+  it("registers only the existing task_read definition through the read-only entry point", async () => {
+    const backend = createBackend();
+    const registered: RegisteredTool[] = [];
+    createPiTaskReadExtension({ registerTool: (tool: RegisteredTool) => registered.push(tool) } as never, backend);
+    expect(registered.map((tool) => tool.name)).toEqual(["task_read"]);
+    const fullRead = requireTool(collectTools(backend), "task_read");
+    const readTool = requireTool(registered, "task_read");
+    expect(readTool.parameters).toEqual(fullRead.parameters);
+    for (const document of ["task", "plan", "notes", "outcome"] as const) {
+      if (document !== "task") await writeFile(join(contextDirectory, `${document}.md`), `${document} content`);
+      const params = { id: "task-a", document } as never;
+      expect(await readTool.execute("read", params, undefined, undefined, { cwd: projectDirectory })).toEqual(
+        await fullRead.execute("read", params, undefined, undefined, { cwd: projectDirectory }),
+      );
+    }
+  });
+
   it("registers exactly ten strict daemon-backed tools with the locked schemas", () => {
     const tools = collectTools(createBackend());
 

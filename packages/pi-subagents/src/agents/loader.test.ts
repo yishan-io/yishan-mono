@@ -400,6 +400,24 @@ describe("public loader result compatibility", () => {
 });
 
 describe("loadAgentDefinitions", () => {
+  it("allows task_read in every shipped agent without adding Task mutations", () => {
+    const tempDir = createTempDir();
+    const result = loadAgentDefinitions({
+      cwd: tempDir,
+      userAgentsDir: join(tempDir, "missing-user-agents"),
+      projectAgentsDir: null,
+    });
+    expect(result.diagnostics).toEqual([]);
+    expect(result.agents).toHaveLength(5);
+    for (const agent of result.agents) {
+      if (agent.name === "general") expect(agent.tools).toBeUndefined();
+      else expect(agent.tools).toContain("task_read");
+      expect(agent.tools?.filter((name) => name.startsWith("task_")) ?? []).not.toEqual(
+        expect.arrayContaining(["task_write"]),
+      );
+    }
+  });
+
   it("does not load the retired task-reviewer built-in agent", () => {
     const tempDir = createTempDir();
     const result = loadAgentDefinitions({

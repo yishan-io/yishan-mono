@@ -124,23 +124,7 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
     },
   });
 
-  pi.registerTool({
-    name: "task_read",
-    label: "Read Task",
-    description: "Read synthetic task metadata or a daemon-derived context document.",
-    parameters: Type.Object(
-      { id: taskIdSchema, document: Type.Optional(readDocumentSchema) },
-      { additionalProperties: false },
-    ),
-    async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
-      const operations = createLocalTaskOperations(getBackend());
-      const document = params.document ?? "task";
-      if (document === "task")
-        return result(operations.formatBrief(await operations.get(params.id, { signal })), { id: params.id, document });
-      const documents = createLocalTaskDocuments(operations, getBackend());
-      return result(await documents.read(params.id, document, { signal }), { id: params.id, document });
-    },
-  });
+  registerTaskReadTool(pi, getBackend);
 
   pi.registerTool({
     name: "task_update",
@@ -224,6 +208,27 @@ export function registerTaskTools(pi: ExtensionAPI, backend?: LocalTaskToolBacke
         agentDefaultId: templatesResult.agentDefaultId,
         template: agentTemplate,
       });
+    },
+  });
+}
+
+/** Registers only task_read, using the same backend and definition as the full extension. */
+export function registerTaskReadTool(pi: ExtensionAPI, getBackend: BackendResolver): void {
+  pi.registerTool({
+    name: "task_read",
+    label: "Read Task",
+    description: "Read synthetic task metadata or a daemon-derived context document.",
+    parameters: Type.Object(
+      { id: taskIdSchema, document: Type.Optional(readDocumentSchema) },
+      { additionalProperties: false },
+    ),
+    async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
+      const operations = createLocalTaskOperations(getBackend());
+      const document = params.document ?? "task";
+      if (document === "task")
+        return result(operations.formatBrief(await operations.get(params.id, { signal })), { id: params.id, document });
+      const documents = createLocalTaskDocuments(operations, getBackend());
+      return result(await documents.read(params.id, document, { signal }), { id: params.id, document });
     },
   });
 }

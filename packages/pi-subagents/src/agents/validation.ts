@@ -13,6 +13,7 @@ const ALLOWED_THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "minimal", "lo
 /** Built-in tool names recognized by the initial MVP loader validation. */
 export const DEFAULT_ALLOWED_TOOL_NAMES = [
   "read",
+  "task_read",
   "write",
   "edit",
   "bash",

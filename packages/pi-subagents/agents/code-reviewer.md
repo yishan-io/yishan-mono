@@ -5,6 +5,7 @@ thinking: high
 read_only: false
 tools:
   - read
+  - task_read
   - grep
   - glob
   - bash

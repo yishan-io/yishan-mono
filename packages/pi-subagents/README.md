@@ -37,7 +37,7 @@ The package manifest exposes the extension from `./extensions`.
 
 ## Child-session extensions
 
-Child sessions are isolated: they load with `noExtensions: true`, so settings.json packages do not run inside sub-agents. Extension tools that should reach sub-agents are forwarded explicitly as inline factories via `resolveChildExtensionFactories()` (`src/runtime/childExtensions.ts`). Today this forwards the optional `@yishan-io/pi-lsp` factory (when installed) so `lsp_diagnostics`/`lsp_fix` work in child sessions; any future extension whose tools belong in sub-agents must be added there.
+Child sessions are isolated: they load with `noExtensions: true`, so settings.json packages do not run inside sub-agents. Extension tools that should reach sub-agents are forwarded explicitly as inline factories via `resolveChildExtensionFactories()` (`src/runtime/childExtensions.ts`). This forwards optional `@yishan-io/pi-lsp` tools (`lsp_diagnostics`/`lsp_fix`) and the `@yishan-io/pi-task` read-only factory (`task_read`). Task reads use the normal daemon/project environment and support task metadata, plan, notes, and outcome documents. No Task mutation tools are registered in children, including `general`. Missing packages or Task versions without `createPiTaskReadExtension` are skipped without blocking child startup.
 
 ## Agent definition locations
 
@@ -65,31 +65,31 @@ Override precedence:
 
 ### general
 - Purpose: general-purpose implementation and investigation
-- Default tools: unset (falls back to the user's normal Pi tool/session resolution)
+- Default tools: unset (normal Pi tool/session resolution, including optional `task_read`)
 - Default mode: writable when needed
 - Default model: unset (falls back to the user's normal Pi session/model resolution)
 
 ### explore
 - Purpose: search and understand the codebase
-- Default tools: `read`, `grep`, `find`, `ls`
+- Default tools: `read`, `task_read`, `grep`, `find`, `ls`
 - Default mode: read-only
 - Default model: unset (falls back to the user's normal Pi session/model resolution)
 
 ### builder
 - Purpose: implement one scoped task from a plan or task brief
-- Default tools: `read`, `grep`, `glob`, `bash`, `apply_patch`, `lsp_diagnostics`, `lsp_fix`
+- Default tools: `read`, `task_read`, `grep`, `glob`, `bash`, `apply_patch`, `lsp_diagnostics`, `lsp_fix`
 - Default mode: writable when needed
 - Default model: unset
 
 ### code-reviewer
 - Purpose: review code changes for bugs, regressions, and missing tests
-- Default tools: `read`, `grep`, `glob`, `bash`, `lsp_diagnostics`
+- Default tools: `read`, `task_read`, `grep`, `glob`, `bash`, `lsp_diagnostics`
 - Default mode: read-only
 - Default model: unset
 
 ### plan-reviewer
 - Purpose: review implementation plans before execution
-- Default tools: `read`, `grep`, `glob`
+- Default tools: `read`, `task_read`, `grep`, `glob`
 - Default mode: read-only
 - Default model: unset
 

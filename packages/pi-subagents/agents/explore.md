@@ -4,6 +4,7 @@ description: Read-only codebase research agent. Use for feature discovery, archi
 thinking: low
 tools:
   - read
+  - task_read
   - grep
   - find
   - ls
