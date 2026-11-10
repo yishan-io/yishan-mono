@@ -91,7 +91,7 @@ export function insertComposerLiteralSpace(editable: HTMLDivElement): void {
   if (range && editable.contains(range.startContainer)) {
     range.deleteContents();
     range.insertNode(space);
-    range.setStartAfter(space);
+    range.setStart(space, space.length);
     range.collapse(true);
     selection?.removeAllRanges();
     selection?.addRange(range);
