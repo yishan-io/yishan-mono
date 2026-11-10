@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { LuLogIn } from "react-icons/lu";
 import { openPiProviderLogin, savePiProvider } from "../../commands/piProviderCommands";
@@ -109,8 +110,11 @@ export function ProviderCredentialDialog({
     if (!providerId || isSigningIn) {
       return;
     }
-    setIsSigningIn(true);
-    setError(null);
+    // Close and restore modal focus before login can synchronously focus a terminal.
+    flushSync(() => {
+      setIsSigningIn(true);
+      setError(null);
+    });
     try {
       const tabTitle = t("settings.providers.dialog.loginTabTitle", {
         provider: getPiProviderDisplayName(providerId),
@@ -135,7 +139,7 @@ export function ProviderCredentialDialog({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open && !isSigningIn} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         {isEdit ? t("settings.providers.dialog.editTitle") : t("settings.providers.dialog.addTitle")}
       </DialogTitle>
