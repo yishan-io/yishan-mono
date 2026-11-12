@@ -111,6 +111,59 @@ func scriptedGit(probe, normal, ignored string, available bool) func(context.Con
 	}
 }
 
+func TestFileServiceList_GitPathSkipsIgnoreRecheck(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"tracked.txt", "ignored.log"} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var revParseCalls, lsFilesCalls, checkIgnoreCalls int
+	svc := NewFileService()
+	svc.gitCommand = func(ctx context.Context, args ...string) (*exec.Cmd, bool) {
+		script := "exit 1"
+		switch {
+		case len(args) > 2 && args[2] == "rev-parse":
+			revParseCalls++
+			script = "printf true"
+		case len(args) > 2 && args[2] == "ls-files":
+			lsFilesCalls++
+			script = "printf 'tracked.txt\\0'"
+			if strings.Contains(strings.Join(args, " "), "--ignored") {
+				script = "printf 'ignored.log\\0'"
+			}
+		case len(args) > 2 && args[2] == "check-ignore":
+			checkIgnoreCalls++
+		}
+		return exec.CommandContext(ctx, "/bin/sh", "-c", script), true
+	}
+
+	entries, err := svc.List(context.Background(), root, "", true)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if revParseCalls != 1 || lsFilesCalls != 2 {
+		t.Fatalf("unexpected git subprocess counts: rev-parse=%d ls-files=%d", revParseCalls, lsFilesCalls)
+	}
+	if checkIgnoreCalls != 0 {
+		t.Fatalf("recursive git listing ran %d check-ignore subprocesses, want 0", checkIgnoreCalls)
+	}
+
+	ignoredByPath := map[string]bool{}
+	for _, entry := range entries {
+		ignoredByPath[entry.Path] = entry.IsIgnored
+	}
+	if len(entries) != 2 {
+		t.Fatalf("entries=%v", entries)
+	}
+	if ignoredByPath["tracked.txt"] {
+		t.Fatalf("tracked.txt unexpectedly ignored")
+	}
+	if !ignoredByPath["ignored.log"] {
+		t.Fatalf("ignored.log not marked ignored from ls-files output")
+	}
+}
+
 func TestFileServiceList_CancellationStopsSubsequentOperations(t *testing.T) {
 	for _, stage := range []string{"before", "probe", "normal", "ignored", "walk"} {
 		t.Run(stage, func(t *testing.T) {

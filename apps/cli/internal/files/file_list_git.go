@@ -82,7 +82,7 @@ func (s *FileService) runGitListing(ctx context.Context, root, path string, igno
 }
 
 func (s *FileService) listGitFiles(ctx context.Context, root, path string) ([]FileEntry, bool, error) {
-	repository, relative, err := resolveListingRepository(ctx, root, path)
+	repository, relative, err := s.resolveListingRepository(ctx, root, path)
 	if err != nil {
 		return nil, false, err
 	}
