@@ -17,7 +17,7 @@ var setupCmd = &cobra.Command{
 	Long: `Install yishan integrations such as agent hooks, default Pi extensions,
 and shell wrappers for AI coding agents.
 
-Without a subcommand, runs all setup tasks (hook, extension).`,
+Without a subcommand, runs all setup tasks (hook, extension, Claude skills).`,
 	Example: `  yishan setup
   yishan setup hook
   yishan setup state`,
@@ -54,6 +54,35 @@ Codex, and Cursor agents. These hooks send lifecycle events
 	},
 }
 
+var setupSkillsCmd = &cobra.Command{
+	Use:   "skills",
+	Short: "Install yishan skills for Claude Code",
+	Long: `Copy the bundled yishan skills (task, memory, workspace) into ~/.claude/skills.
+Only directories that yishan installed are replaced or removed; a skill
+directory you created yourself with the same name is left untouched.`,
+	Example: `  yishan setup skills
+  yishan setup skills --remove`,
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		remove, err := cmd.Flags().GetBool("remove")
+		if err != nil {
+			return err
+		}
+		if remove {
+			result, err := setup.RemoveClaudeSkills()
+			if err != nil {
+				return err
+			}
+			return output.PrintAny(map[string]any{"action": "removed", "skills": result})
+		}
+		result, err := setup.EnsureClaudeSkills()
+		if err != nil {
+			return err
+		}
+		return output.PrintAny(map[string]any{"action": "installed", "skills": result})
+	},
+}
+
 var setupStateCmd = &cobra.Command{
 	Use:   "state",
 	Short: "Show installed yishan integrations",
@@ -80,6 +109,11 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 		allErrors = append(allErrors, "extension: "+err.Error())
 	}
 
+	if _, err := setup.EnsureClaudeSkills(); err != nil {
+		log.Warn().Err(err).Msg("setup: claude skill install failed")
+		allErrors = append(allErrors, "claude skills: "+err.Error())
+	}
+
 	if err := setup.EnsurePersonaSetup(disablePersona); err != nil {
 		log.Warn().Err(err).Msg("setup: persona template install failed")
 		allErrors = append(allErrors, "persona: "+err.Error())
@@ -95,7 +129,7 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 
 	return output.PrintAny(map[string]any{
 		"action":  "installed",
-		"message": "all setup tasks completed (hooks, extensions)",
+		"message": "all setup tasks completed (hooks, extensions, claude skills)",
 	})
 }
 
@@ -110,6 +144,11 @@ func renderSetupState(state *setup.InstalledState) output.RenderData {
 			"resource":  "hooks",
 			"installed": state.Hooks.Configured,
 			"details":   formatHookDetails(state.Hooks),
+		},
+		{
+			"resource":  "claude-skills",
+			"installed": state.ClaudeSkills.Installed,
+			"details":   strings.Join(state.ClaudeSkills.Skills, ", "),
 		},
 		{
 			"resource":  "mcp",
@@ -149,7 +188,9 @@ func formatHookDetails(h setup.HookState) string {
 func init() {
 	rootCmd.AddCommand(setupCmd)
 	setupCmd.AddCommand(setupHookCmd)
+	setupCmd.AddCommand(setupSkillsCmd)
 	setupCmd.AddCommand(setupStateCmd)
 
 	setupHookCmd.Flags().Bool("remove", false, "remove managed hook entries from all agents")
+	setupSkillsCmd.Flags().Bool("remove", false, "remove yishan-managed skills from ~/.claude/skills")
 }
