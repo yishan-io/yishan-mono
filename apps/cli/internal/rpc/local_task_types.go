@@ -221,3 +221,47 @@ func (params *LocalTaskSearchParams) UnmarshalJSON(payload []byte) error {
 	params.Query = wire.Query
 	return nil
 }
+
+// LocalTaskReadDocumentParams identifies one Task Context document to read.
+type LocalTaskReadDocumentParams struct {
+	ID       string `json:"id"`
+	Document string `json:"document"`
+}
+
+// LocalTaskWriteDocumentParams replaces one Task Context document body.
+type LocalTaskWriteDocumentParams struct {
+	ID       string `json:"id"`
+	Document string `json:"document"`
+	Content  string `json:"content"`
+}
+
+// LocalTaskAppendNoteParams appends content to a Task Context notes document.
+type LocalTaskAppendNoteParams struct {
+	ID      string `json:"id"`
+	Content string `json:"content"`
+}
+
+// LocalTaskFinishParams stores the outcome document, then marks the task done.
+type LocalTaskFinishParams struct {
+	ID      string `json:"id"`
+	Outcome string `json:"outcome"`
+}
+
+// LocalTaskDocumentResult is the body of one Task Context document.
+type LocalTaskDocumentResult struct {
+	ID       string `json:"id"`
+	Document string `json:"document"`
+	Content  string `json:"content"`
+}
+
+// LocalTaskDocumentWriteResult confirms one Task Context document mutation.
+type LocalTaskDocumentWriteResult struct {
+	ID       string `json:"id"`
+	Document string `json:"document"`
+}
+
+// LocalTaskFinishResult reports the task state persisted by a finish request.
+type LocalTaskFinishResult struct {
+	ID     string                    `json:"id"`
+	Status localtasktemplates.Status `json:"status"`
+}

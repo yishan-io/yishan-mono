@@ -177,8 +177,13 @@ func mapLocalTaskErrorCode(err error) (int, bool) {
 		errors.Is(err, localtask.ErrInvalidTagKey), errors.Is(err, localtask.ErrInvalidTagColor):
 		return CodeInvalidParams, true
 	case errors.Is(err, localtask.ErrTaskNotFound), errors.Is(err, localtask.ErrLinkNotFound),
-		errors.Is(err, localtask.ErrContextUnavailable), errors.Is(err, localtask.ErrTagNotFound):
+		errors.Is(err, localtask.ErrContextUnavailable), errors.Is(err, localtask.ErrTagNotFound),
+		errors.Is(err, localtask.ErrDocumentNotFound):
 		return CodeNotFound, true
+	case errors.Is(err, localtask.ErrInvalidDocument):
+		return CodeInvalidParams, true
+	case errors.Is(err, localtask.ErrUnsafeContextPath):
+		return CodePathRestricted, true
 	default:
 		return CodeServerError, false
 	}

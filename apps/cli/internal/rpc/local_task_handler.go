@@ -61,6 +61,14 @@ func (h *LocalTaskHandler) Call(ctx context.Context, connection *Connection, met
 		return callLocalTask(ctx, params, h.Services.ListWorkspaceLinks)
 	case MethodLocalTaskListTaskLinks:
 		return callLocalTask(ctx, params, h.Services.ListTaskLinks)
+	case MethodLocalTaskReadDocument:
+		return callLocalTask(ctx, params, h.Services.ReadDocument)
+	case MethodLocalTaskWriteDocument:
+		return callLocalTask(ctx, params, h.Services.WriteDocument)
+	case MethodLocalTaskAppendNote:
+		return callLocalTask(ctx, params, h.Services.AppendNote)
+	case MethodLocalTaskFinish:
+		return callLocalTask(ctx, params, h.Services.Finish)
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "unknown localTask method: "+method)
 	}

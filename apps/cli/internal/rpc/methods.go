@@ -48,6 +48,10 @@ const (
 	MethodLocalTaskUpdateWorkspaceLinkStatus = "localTask.updateWorkspaceLinkStatus"
 	MethodLocalTaskListWorkspaceLinks        = "localTask.listWorkspaceLinks"
 	MethodLocalTaskListTaskLinks             = "localTask.listTaskLinks"
+	MethodLocalTaskReadDocument             = "localTask.readDocument"
+	MethodLocalTaskWriteDocument            = "localTask.writeDocument"
+	MethodLocalTaskAppendNote               = "localTask.appendNote"
+	MethodLocalTaskFinish                   = "localTask.finish"
 
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
 	MethodAgentListModels            = "agent.listModels"

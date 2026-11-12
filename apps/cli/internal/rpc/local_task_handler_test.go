@@ -79,6 +79,18 @@ func (s *recordingLocalTaskService) ListWorkspaceLinks(context.Context, LocalTas
 func (s *recordingLocalTaskService) ListTaskLinks(context.Context, LocalTaskIDParams) (any, error) {
 	return s.called(MethodLocalTaskListTaskLinks)
 }
+func (s *recordingLocalTaskService) ReadDocument(context.Context, LocalTaskReadDocumentParams) (any, error) {
+	return s.called(MethodLocalTaskReadDocument)
+}
+func (s *recordingLocalTaskService) WriteDocument(context.Context, LocalTaskWriteDocumentParams) (any, error) {
+	return s.called(MethodLocalTaskWriteDocument)
+}
+func (s *recordingLocalTaskService) AppendNote(context.Context, LocalTaskAppendNoteParams) (any, error) {
+	return s.called(MethodLocalTaskAppendNote)
+}
+func (s *recordingLocalTaskService) Finish(context.Context, LocalTaskFinishParams) (any, error) {
+	return s.called(MethodLocalTaskFinish)
+}
 
 func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 	tests := []struct {
@@ -106,6 +118,10 @@ func TestLocalTaskHandler_DecodesAndCallsOneServiceMethod(t *testing.T) {
 		{MethodLocalTaskUpdateWorkspaceLinkStatus, `{"linkId":"link-1","status":"cancelled"}`},
 		{MethodLocalTaskListWorkspaceLinks, `{"workspaceId":"workspace-1"}`},
 		{MethodLocalTaskListTaskLinks, `{"id":"task-1"}`},
+		{MethodLocalTaskReadDocument, `{"id":"task-1","document":"notes"}`},
+		{MethodLocalTaskWriteDocument, `{"id":"task-1","document":"plan","content":"Plan"}`},
+		{MethodLocalTaskAppendNote, `{"id":"task-1","content":"Note"}`},
+		{MethodLocalTaskFinish, `{"id":"task-1","outcome":"Done"}`},
 	}
 	for _, test := range tests {
 		t.Run(test.method, func(t *testing.T) {
