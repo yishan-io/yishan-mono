@@ -20,7 +20,7 @@ async function openMarkdownLink(url: string): Promise<void> {
   });
 }
 
-function extractMermaidBlocks(container: HTMLElement): Array<{ id: string; code: string }> {
+export function extractMermaidBlocks(container: HTMLElement): Array<{ id: string; code: string }> {
   const mermaidPres = new Set<HTMLElement>();
   for (const pre of Array.from(container.querySelectorAll("pre.mermaid"))) {
     mermaidPres.add(pre as HTMLElement);
