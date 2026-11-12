@@ -1,8 +1,14 @@
 import { Box, Typography, useTheme } from "@mui/material";
 import { openLink } from "@renderer/domains/browser";
-import { isAbsoluteUrl, resolveRelativePath, toWorkspaceRelativePath } from "@renderer/domains/files";
-import { markdownService } from "@renderer/domains/files";
-import { useMarkdownStyles } from "@renderer/domains/files";
+import {
+  MermaidPortal,
+  extractMermaidBlocks,
+  isAbsoluteUrl,
+  markdownService,
+  resolveRelativePath,
+  toWorkspaceRelativePath,
+  useMarkdownStyles,
+} from "@renderer/domains/files";
 import { editorSettingsStore } from "@renderer/domains/settings";
 import { useCodeTheme } from "@renderer/domains/settings";
 import { openTabInOppositePane } from "@renderer/domains/workbench";
@@ -120,6 +126,7 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
   const styles = useMarkdownStyles(theme, 14, codePalette, editorFontSize, codeMode);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [html, setHtml] = useState("");
+  const [mermaidBlocks, setMermaidBlocks] = useState<Array<{ id: string; code: string }>>([]);
 
   useEffect(() => {
     if (renderMode === "streaming") {
@@ -156,6 +163,10 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
       return;
     }
     container.innerHTML = html;
+
+    // Replace mermaid fenced-code blocks with portal targets before attaching
+    // file-link handlers, so diagram source isn't mistaken for file text.
+    setMermaidBlocks(extractMermaidBlocks(container));
 
     // Make file-path-like and folder-path-like <code> elements clickable.
     if (!workspacePath) return;
@@ -204,59 +215,64 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
   }
 
   return (
-    <Box
-      ref={containerRef}
-      sx={{
-        ...styles.container,
-        fontSize: 14,
-        mb: 0.5,
-        "& .file-link": {
-          color: "primary.main",
-          textDecoration: "none",
-          textUnderlineOffset: "2px",
-          "&:hover": {
-            textDecoration: "underline",
+    <>
+      <Box
+        ref={containerRef}
+        sx={{
+          ...styles.container,
+          fontSize: 14,
+          mb: 0.5,
+          "& .file-link": {
+            color: "primary.main",
+            textDecoration: "none",
+            textUnderlineOffset: "2px",
+            "&:hover": {
+              textDecoration: "underline",
+            },
           },
-        },
-        "& .file-line-range": {
-          color: "text.disabled",
-        },
-      }}
-      onClick={(event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
-          return;
-        }
-        const link = target.closest("a");
-        const href = link?.getAttribute("href");
-        if (!href || href.startsWith("#")) {
-          return;
-        }
-        event.preventDefault();
-
-        // Detect cmd+click (macOS) or ctrl+click (Windows/Linux) for opposite-pane open
-        const isOppositeOpen = event.metaKey || event.ctrlKey;
-
-        if (isAbsoluteUrl(href)) {
-          if (isOppositeOpen) {
-            // Open external URL in a browser tab on the opposite pane
-            openTabInOppositePane({ kind: "browser", url: href });
-          } else {
-            void openLink({ url: href });
+          "& .file-line-range": {
+            color: "text.disabled",
+          },
+        }}
+        onClick={(event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) {
+            return;
           }
-        } else if (workspacePath) {
-          // Check isFile first: dotfiles like .eslintrc match both, treat as files.
-          if (looksLikeFilePath(href)) {
+          const link = target.closest("a");
+          const href = link?.getAttribute("href");
+          if (!href || href.startsWith("#")) {
+            return;
+          }
+          event.preventDefault();
+
+          // Detect cmd+click (macOS) or ctrl+click (Windows/Linux) for opposite-pane open
+          const isOppositeOpen = event.metaKey || event.ctrlKey;
+
+          if (isAbsoluteUrl(href)) {
             if (isOppositeOpen) {
-              openFileTabInOppositePane(href, workspacePath);
+              // Open external URL in a browser tab on the opposite pane
+              openTabInOppositePane({ kind: "browser", url: href });
             } else {
-              openFileTab(href, workspacePath);
+              void openLink({ url: href });
             }
-          } else if (looksLikeFolderPath(href)) {
-            openFolderInFileTree(href, workspacePath);
+          } else if (workspacePath) {
+            // Check isFile first: dotfiles like .eslintrc match both, treat as files.
+            if (looksLikeFilePath(href)) {
+              if (isOppositeOpen) {
+                openFileTabInOppositePane(href, workspacePath);
+              } else {
+                openFileTab(href, workspacePath);
+              }
+            } else if (looksLikeFolderPath(href)) {
+              openFolderInFileTree(href, workspacePath);
+            }
           }
-        }
-      }}
-    />
+        }}
+      />
+      {mermaidBlocks.map((block) => (
+        <MermaidPortal key={block.id} targetId={block.id} code={block.code} containerRef={containerRef} />
+      ))}
+    </>
   );
 }

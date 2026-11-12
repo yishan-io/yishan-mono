@@ -12,12 +12,21 @@ const mocked = vi.hoisted(() => ({
   notifyChatFileWorkspaceUnavailable: vi.fn(),
   selectFolderInFileTree: vi.fn(),
   parse: vi.fn<(content: string) => Promise<string>>(),
+  renderMermaid: vi.fn<
+    (code: string, options: { isDark: boolean; fontFamily: string }) => Promise<string>
+  >(),
   workspaceState: { workspaces: [] as Array<{ id: string; worktreePath?: string | null }>, selectedWorkspaceId: "" },
 }));
 
 vi.mock("@renderer/domains/files/features/markdown-preview/markdownService", () => ({
   markdownService: {
     parse: mocked.parse,
+  },
+}));
+
+vi.mock("@renderer/domains/files/features/markdown-preview/mermaidIframeRenderer", () => ({
+  mermaidIframeRenderer: {
+    render: mocked.renderMermaid,
   },
 }));
 
@@ -110,6 +119,27 @@ describe("AgentMarkdownContent", () => {
     await waitFor(() => {
       expect(mocked.parse).toHaveBeenCalledWith("**done**");
     });
+  });
+
+  it("renders mermaid fenced code blocks as diagrams", async () => {
+    mocked.renderMermaid.mockResolvedValueOnce(
+      '<svg data-testid="mermaid-svg" xmlns="http://www.w3.org/2000/svg"><text>diagram</text></svg>',
+    );
+    mocked.parse.mockResolvedValueOnce('<pre class="mermaid">graph TD\nA--&gt;B</pre>');
+
+    const { container } = renderWithAppTheme(
+      <AgentMarkdownContent content="```mermaid\ngraph TD\nA-->B\n```" />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-mermaid-id="mermaid-placeholder-0"]')).not.toBeNull();
+      expect(container.querySelector("svg")).not.toBeNull();
+    });
+
+    expect(mocked.renderMermaid).toHaveBeenCalledWith(
+      "graph TD\nA-->B",
+      expect.objectContaining({ isDark: expect.any(Boolean), fontFamily: expect.any(String) }),
+    );
   });
 
   it("selects a folder path ending with / in the file tree instead of opening a file tab", async () => {

@@ -97,6 +97,8 @@ export { markdownService } from "./features/markdown-preview/markdownService";
 export { useMarkdownStyles } from "./features/markdown-preview/markdownStyles";
 
 export { MarkdownPreview } from "./features/markdown-preview/MarkdownPreview";
+export { MermaidPortal } from "./features/markdown-preview/MermaidPortal";
+export { extractMermaidBlocks } from "./features/markdown-preview/markdownPreviewDom";
 export { createFileTabPlaceholder } from "./features/file-editor/fileTabPlaceholder";
 export { getFileExtension } from "./features/file-editor/monaco/editorLanguage";
 export type { GitLineChange, GitLineChangeKind } from "./features/file-editor/git-gutter/gitGutterDiff";
