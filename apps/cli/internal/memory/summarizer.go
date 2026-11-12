@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -268,7 +269,40 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
+// mergeAndWrite merges extracted knowledge into MEMORY.md under the shared
+// cross-process memory lock. The file is re-read inside the lock so a long
+// summarization run cannot overwrite entries another writer stored meanwhile.
 func mergeAndWrite(memoryPath string, existingContent string, extracted extractedKnowledge, contextRoot string) ([]string, error) {
+	var writtenPaths []string
+	err := withMemoryLock(memoryPath, func() error {
+		currentContent, err := readCurrentMemoryContent(memoryPath, existingContent)
+		if err != nil {
+			return err
+		}
+		paths, mergeErr := mergeContentAndWrite(memoryPath, currentContent, extracted, contextRoot)
+		writtenPaths = paths
+		return mergeErr
+	})
+	if err != nil {
+		return nil, err
+	}
+	return writtenPaths, nil
+}
+
+// readCurrentMemoryContent prefers the on-disk content and falls back to the
+// pre-run snapshot only when the file disappeared.
+func readCurrentMemoryContent(memoryPath string, existingContent string) (string, error) {
+	content, err := os.ReadFile(memoryPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return existingContent, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read memory file: %w", err)
+	}
+	return string(content), nil
+}
+
+func mergeContentAndWrite(memoryPath string, existingContent string, extracted extractedKnowledge, contextRoot string) ([]string, error) {
 	existing := parseMemorySections(existingContent)
 
 	for _, d := range extracted.LockedDecisions {
@@ -301,8 +335,8 @@ func mergeAndWrite(memoryPath string, existingContent string, extracted extracte
 		writtenPaths = append(writtenPaths, budget.OverflowPaths...)
 	}
 
-	if err := os.WriteFile(memoryPath, []byte(newContent), 0o644); err != nil {
-		return nil, fmt.Errorf("write memory file: %w", err)
+	if err := writeMemoryFileAtomic(memoryPath, newContent); err != nil {
+		return nil, err
 	}
 	writtenPaths = append(writtenPaths, memoryPath)
 
@@ -336,17 +370,26 @@ func parseMemorySections(content string) memorySections {
 
 		switch currentSection {
 		case "decisions":
-			if strings.HasPrefix(trimmed, "- ") {
-				sections.LockedDecisions = append(sections.LockedDecisions, strings.TrimPrefix(trimmed, "- "))
-			}
+			sections.LockedDecisions = appendSectionLine(sections.LockedDecisions, trimmed)
 		case "discoveries":
-			if strings.HasPrefix(trimmed, "- ") {
-				sections.DurableDiscoveries = append(sections.DurableDiscoveries, strings.TrimPrefix(trimmed, "- "))
-			}
+			sections.DurableDiscoveries = appendSectionLine(sections.DurableDiscoveries, trimmed)
 		}
 	}
 
 	return sections
+}
+
+// appendSectionLine adds one bullet or continues the previous bullet, so a
+// multi-line entry stored by another writer survives a summarization rebuild.
+func appendSectionLine(entries []string, trimmed string) []string {
+	if entry, ok := strings.CutPrefix(trimmed, "- "); ok {
+		return append(entries, entry)
+	}
+	if trimmed == "" || len(entries) == 0 {
+		return entries
+	}
+	entries[len(entries)-1] += "\n" + trimmed
+	return entries
 }
 
 func buildMemoryMarkdown(sections memorySections) string {

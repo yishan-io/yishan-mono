@@ -136,6 +136,10 @@ type LocalTaskService interface {
 	UpdateWorkspaceLinkStatus(ctx context.Context, req LocalTaskUpdateLinkStatusParams) (any, error)
 	ListWorkspaceLinks(ctx context.Context, req LocalTaskWorkspaceIDParams) (any, error)
 	ListTaskLinks(ctx context.Context, req LocalTaskIDParams) (any, error)
+	ReadDocument(ctx context.Context, req LocalTaskReadDocumentParams) (any, error)
+	WriteDocument(ctx context.Context, req LocalTaskWriteDocumentParams) (any, error)
+	AppendNote(ctx context.Context, req LocalTaskAppendNoteParams) (any, error)
+	Finish(ctx context.Context, req LocalTaskFinishParams) (any, error)
 }
 
 // projectService backs the project.* RPC methods. Each method is named after
