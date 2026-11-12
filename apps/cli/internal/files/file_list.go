@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const recursiveListTimeout = 8 * time.Second
+const recursiveListTimeout = 30 * time.Second
 
 // List checks cancellation between filesystem operations. Recursive callers
 // share executor ownership, which survives canceled waiters until actual return.
@@ -41,7 +41,7 @@ func (s *FileService) listRecursiveFiles(ctx context.Context, root, path, dir st
 	if err != nil {
 		return nil, err
 	}
-	entries, err = s.withContextLinkEntries(ctx, root, path, entries)
+	entries, err = s.withContextLinkEntries(ctx, root, path, entries, isGit)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (s *FileService) listDirectorySnapshot(ctx context.Context, root, path, dir
 		return nil, err
 	}
 
-	out, err = s.markIgnoredEntries(ctx, root, path, out)
+	out, err = s.markIgnoredEntries(ctx, root, path, out, false)
 	if err != nil {
 		return nil, err
 	}
@@ -199,12 +199,16 @@ func appendWalkEntry(ctx context.Context, root, dir, fullPath string, entry os.D
 	return ctx.Err()
 }
 
-func (s *FileService) markIgnoredEntries(ctx context.Context, root string, listedPath string, entries []FileEntry) ([]FileEntry, error) {
+func (s *FileService) markIgnoredEntries(ctx context.Context, root string, listedPath string, entries []FileEntry, fileIgnoreResolved bool) ([]FileEntry, error) {
 	if len(entries) == 0 {
 		return entries, ctx.Err()
 	}
 	markContextEntries(entries)
-	ignoredPathSet, err := s.gitIgnoredPathSet(ctx, root, entries)
+	classify := entries
+	if fileIgnoreResolved {
+		classify = classifyDirectories(entries)
+	}
+	ignoredPathSet, err := s.gitIgnoredPathSet(ctx, root, classify)
 	if err != nil {
 		return nil, err
 	}
@@ -228,6 +232,20 @@ func markContextEntries(entries []FileEntry) {
 			entries[index].IsIgnored = true
 		}
 	}
+}
+
+// classifyDirectories keeps only directory entries. A recursive Git listing
+// already marks file entries via `ls-files --ignored`; only directory entries
+// (parent directories of ignored descendants) still require Git classification.
+// This avoids re-running check-ignore and repository discovery once per file.
+func classifyDirectories(entries []FileEntry) []FileEntry {
+	directories := make([]FileEntry, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir {
+			directories = append(directories, entry)
+		}
+	}
+	return directories
 }
 
 func collectIgnoredDirectories(ctx context.Context, entries []FileEntry, ignoredPathSet map[string]bool, ignoredDirectoryPaths []string) []string {
@@ -285,7 +303,7 @@ func (s *FileService) isGitIgnoredPath(ctx context.Context, root string, path st
 	if normalizedPath == "" {
 		return false, ctx.Err()
 	}
-	repository, err := findListingRepository(ctx, root, filepath.Dir(filepath.Join(root, filepath.FromSlash(normalizedPath))))
+	repository, err := s.findListingRepository(ctx, root, filepath.Dir(filepath.Join(root, filepath.FromSlash(normalizedPath))))
 	if err != nil {
 		return false, err
 	}
@@ -298,7 +316,7 @@ func (s *FileService) isGitIgnoredPath(ctx context.Context, root string, path st
 }
 
 func (s *FileService) gitIgnoredPathSet(ctx context.Context, root string, entries []FileEntry) (map[string]bool, error) {
-	groups, err := groupListingIgnorePaths(ctx, root, entries)
+	groups, err := s.groupListingIgnorePaths(ctx, root, entries)
 	if err != nil {
 		return nil, err
 	}

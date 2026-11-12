@@ -29,7 +29,7 @@ func TestFileServiceList_ContextPartition(t *testing.T) {
 					entries = append(entries, FileEntry{Path: "visible.txt", IsIgnored: true})
 					path = ""
 				}
-				got, err := svc.markIgnoredEntries(context.Background(), t.TempDir(), path, entries)
+				got, err := svc.markIgnoredEntries(context.Background(), t.TempDir(), path, entries, false)
 				if (err != nil) != (ordinary && fail) {
 					t.Fatalf("entries=%v err=%v", got, err)
 				}
@@ -66,7 +66,7 @@ func TestFileServiceList_QuietFailureAfterBulkSuccess(t *testing.T) {
 		}
 		return exec.CommandContext(ctx, "/bin/sh", "-c", script), true
 	}
-	entries, err := svc.markIgnoredEntries(context.Background(), t.TempDir(), "child", []FileEntry{{Path: "child/file"}})
+	entries, err := svc.markIgnoredEntries(context.Background(), t.TempDir(), "child", []FileEntry{{Path: "child/file"}}, false)
 	if err == nil || entries != nil {
 		t.Fatalf("entries=%v err=%v", entries, err)
 	}

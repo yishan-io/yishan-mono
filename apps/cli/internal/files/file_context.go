@@ -32,7 +32,7 @@ func contextPathFileInfo(fullPath string) (os.FileInfo, bool, error) {
 	return info, info.IsDir(), nil
 }
 
-func (s *FileService) withContextLinkEntries(ctx context.Context, root string, path string, entries []FileEntry) ([]FileEntry, error) {
+func (s *FileService) withContextLinkEntries(ctx context.Context, root string, path string, entries []FileEntry, fileIgnoreResolved bool) ([]FileEntry, error) {
 	contextEntries, err := listContextLinkEntries(ctx, root, path)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (s *FileService) withContextLinkEntries(ctx context.Context, root string, p
 			return nil, err
 		}
 	}
-	entries, err = s.markIgnoredEntries(ctx, root, path, entries)
+	entries, err = s.markIgnoredEntries(ctx, root, path, entries, fileIgnoreResolved)
 	if err != nil {
 		return nil, err
 	}

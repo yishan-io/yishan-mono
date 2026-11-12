@@ -31,6 +31,7 @@ type FileEntry struct {
 type FileService struct {
 	gitCommand            func(context.Context, ...string) (*exec.Cmd, bool)
 	walkDir               func(string, fs.WalkDirFunc) error
+	gitMarkerStat         func(string) (bool, error)
 	mu                    sync.Mutex
 	cache                 fileCacheStore
 	cacheGenerationByRoot map[string]uint64
