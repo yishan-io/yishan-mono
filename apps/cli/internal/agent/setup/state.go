@@ -20,6 +20,8 @@ type InstalledState struct {
 	Hooks     HookState      `json:"hooks"`
 	Assets    AssetState     `json:"assets"`
 	Shell     ShellState     `json:"shell"`
+	// ClaudeSkills lists the yishan-managed skills in ~/.claude/skills.
+	ClaudeSkills ClaudeSkillsState `json:"claudeSkills"`
 }
 
 type ExtensionState struct {
@@ -72,6 +74,7 @@ func GetInstalledState() (*InstalledState, error) {
 	fillHookState(state, homeDir)
 	fillAssetState(state, yishanHome)
 	fillShellState(state, yishanHome)
+	fillClaudeSkillsState(state)
 
 	return state, nil
 }
