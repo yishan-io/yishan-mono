@@ -139,7 +139,7 @@ func (s *Service) AgentsUpdate(ctx context.Context, req rpc.CustomizeAgentUpdate
 	if strings.TrimSpace(req.Content) == "" {
 		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "content is required")
 	}
-	if err := setup.UpdatePiAgent(req.Name, req.Content); err != nil {
+	if err := setup.UpdatePiAgent(req.Name, req.Content, req.ExpectedOriginalContent); err != nil {
 		return nil, agentOperationError(err)
 	}
 	return map[string]any{"updated": true}, nil
@@ -184,7 +184,9 @@ func agentOperationError(err error) error {
 		errors.Is(err, setup.ErrAgentNotFound) ||
 		errors.Is(err, setup.ErrOfficialAgentCannotBeRemoved) ||
 		errors.Is(err, setup.ErrAgentNotManaged) ||
-		errors.Is(err, setup.ErrInvalidAgentThinking) {
+		errors.Is(err, setup.ErrInvalidAgentThinking) ||
+		errors.Is(err, setup.ErrInvalidAgentDefinition) ||
+		errors.Is(err, setup.ErrStaleAgentDefinition) {
 		return rpc.NewRPCError(rpc.CodeInvalidParams, err.Error())
 	}
 	return rpc.NewRPCError(rpc.CodeServerError, err.Error())

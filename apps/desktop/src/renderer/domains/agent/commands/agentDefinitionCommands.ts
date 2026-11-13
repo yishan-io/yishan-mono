@@ -116,7 +116,7 @@ export async function createAgentDefinition(input: {
 }
 
 /** Overwrites an agent definition (official or user) with full content. */
-export async function updateAgentDefinition(input: { name: string; content: string }): Promise<void> {
+export async function updateAgentDefinition(input: { name: string; content: string; expectedOriginalContent?: string }): Promise<void> {
   await updateAgentDefinitionProcedure(input);
 }
 

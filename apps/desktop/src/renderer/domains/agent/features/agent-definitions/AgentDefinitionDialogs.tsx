@@ -121,7 +121,7 @@ export function AgentDetailDialog({ agent, onClose, onChanged }: AgentDetailDial
       if (body !== initialBody) {
         content = replaceAgentBody(content, body);
       }
-      await updateAgentDefinition({ name: agent.name, content });
+      await updateAgentDefinition({ name: agent.name, content, expectedOriginalContent: detail.content });
       onChanged("settings.customize.agents.messages.updated");
       onClose();
     } catch (error) {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Agent management: pi agent definition files live in the managed pi agents
@@ -15,6 +16,8 @@ import (
 // @yishan-io/pi-subagents/agents on `yishan setup`. File I/O and path rules
 // live in agents_io.go, frontmatter parsing in agents_frontmatter.go, and the
 // official-agent policy in agents_policy.go.
+
+var agentMutationMu sync.Mutex
 
 var (
 	// ErrInvalidAgentName is returned when an agent name cannot be a safe
@@ -36,7 +39,9 @@ var (
 	ErrAgentNotManaged = errors.New("agent has no managed official source")
 	// ErrInvalidAgentThinking is returned when the thinking level is not one
 	// of the pi-supported values (off|minimal|low|medium|high|xhigh).
-	ErrInvalidAgentThinking = errors.New("invalid agent thinking level")
+	ErrInvalidAgentThinking   = errors.New("invalid agent thinking level")
+	ErrInvalidAgentDefinition = errors.New("invalid agent definition")
+	ErrStaleAgentDefinition   = errors.New("agent file changed or was removed; close and reopen the editor to reload it")
 )
 
 // PiAgentInfo is one agent definition's metadata. Name is the file basename
@@ -133,6 +138,8 @@ func GetPiAgentDetail(name string) (*PiAgentDetail, error) {
 // are frontmatter fields of the agent definition, so they travel with the
 // file.
 func CreatePiAgent(name string, description string, content string, model string, thinking string, tools []string) error {
+	agentMutationMu.Lock()
+	defer agentMutationMu.Unlock()
 	trimmedName := strings.TrimSpace(name)
 	if !agentNamePattern.MatchString(trimmedName) {
 		return fmt.Errorf("%w: %q (use lowercase letters, digits, and dashes)", ErrInvalidAgentName, trimmedName)
@@ -157,6 +164,9 @@ func CreatePiAgent(name string, description string, content string, model string
 		frontmatter += "\ntools:\n" + formatAgentToolsBlock(tools)
 	}
 	full := frontmatter + "\nread_only: false\n---\n\n" + content
+	if err := validateAgentDefinition(trimmedName, full); err != nil {
+		return err
+	}
 	return writePiAgentFile(trimmedName, full)
 }
 
@@ -181,16 +191,29 @@ func ValidateAgentThinking(thinking string) error {
 // GetPiAgentDetail. A frontmatter name that diverges from the file name is
 // rejected (pi identifies agents by file name). For official agents this is
 // the overwrite-official flow the UI gates behind a confirmation.
-func UpdatePiAgent(name string, content string) error {
+func UpdatePiAgent(name string, content string, expected ...*string) error {
+	agentMutationMu.Lock()
+	defer agentMutationMu.Unlock()
 	trimmedName := strings.TrimSpace(name)
 	if err := validateAgentPathName(trimmedName); err != nil {
 		return err
 	}
-	if _, err := piAgentFilePath(trimmedName); err != nil {
+	if len(expected) > 0 && expected[0] != nil {
+		current, err := readPiAgentFile(trimmedName)
+		if errors.Is(err, ErrAgentNotFound) || os.IsNotExist(err) {
+			return ErrStaleAgentDefinition
+		}
+		if err != nil {
+			return err
+		}
+		if string(current) != *expected[0] {
+			return ErrStaleAgentDefinition
+		}
+	} else if _, err := piAgentFilePath(trimmedName); err != nil {
 		return err
 	}
-	if frontMatterName := parseAgentFrontMatter([]byte(content)).Name; frontMatterName != "" && frontMatterName != trimmedName {
-		return fmt.Errorf("%w: frontmatter name %q does not match agent file name %q", ErrInvalidAgentName, frontMatterName, trimmedName)
+	if err := validateAgentDefinition(trimmedName, content); err != nil {
+		return err
 	}
 	return writePiAgentFile(trimmedName, content)
 }
@@ -198,6 +221,8 @@ func UpdatePiAgent(name string, content string) error {
 // RemovePiAgent deletes a user agent definition. Official managed agents are
 // rejected — restoring them is the supported flow.
 func RemovePiAgent(name string) error {
+	agentMutationMu.Lock()
+	defer agentMutationMu.Unlock()
 	trimmedName := strings.TrimSpace(name)
 	if err := validateAgentPathName(trimmedName); err != nil {
 		return err
@@ -216,6 +241,8 @@ func RemovePiAgent(name string) error {
 // agent (bypassing the sync clobber guard) and refreshes its manifest entry,
 // so a subsequent `yishan setup` no longer treats the file as user-modified.
 func RestorePiAgent(name string) error {
+	agentMutationMu.Lock()
+	defer agentMutationMu.Unlock()
 	trimmedName := strings.TrimSpace(name)
 	if err := validateAgentPathName(trimmedName); err != nil {
 		return err

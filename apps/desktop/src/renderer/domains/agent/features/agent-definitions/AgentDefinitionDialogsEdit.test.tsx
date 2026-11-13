@@ -88,6 +88,20 @@ describe("AgentDefinitionDialogsEdit", () => {
     vi.clearAllMocks();
   });
 
+  it("sends the original content and keeps a stale-save error visible", async () => {
+    mocked.listAgentDefinitions.mockResolvedValue([USER]);
+    mocked.getAgentDefinitionDetail.mockResolvedValue({ ...USER, content: USER_CONTENT });
+    mocked.updateAgentDefinition.mockRejectedValue(new Error("File changed; reopen the editor"));
+    render(<AgentsSettingsView />);
+    await screen.findByText("my-helper");
+    fireEvent.click(screen.getByText("settings.customize.agents.actions.edit"));
+    const body = await screen.findByLabelText("settings.customize.agents.dialogs.edit.contentLabel");
+    fireEvent.change(body, { target: { value: "New prompt" } });
+    fireEvent.click(screen.getByTestId("agent-detail-save"));
+    expect(await screen.findByText("File changed; reopen the editor")).toBeTruthy();
+    expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({ name: "my-helper", content: expect.any(String), expectedOriginalContent: USER_CONTENT });
+  });
+
   it("loads runtime extension tools when the edit dialog mounts", async () => {
     mocked.listAgentDefinitions.mockResolvedValue([USER]);
     mocked.getAgentDefinitionDetail.mockResolvedValue({ ...USER, content: USER_CONTENT });
@@ -174,6 +188,7 @@ describe("AgentDefinitionDialogsEdit", () => {
       expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
         name: "my-helper",
         content: "---\nname: my-helper\ndescription: My custom helper\nmodel: claude-sonnet-4-5\n---\n# body\n",
+        expectedOriginalContent: "---\nname: my-helper\ndescription: My custom helper\nmodel: claude-sonnet-4-5\n---\n# body\n",
       }),
     );
   });
@@ -308,6 +323,7 @@ describe("AgentDefinitionDialogsEdit", () => {
       expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
         name: "my-helper",
         content: "---\nname: my-helper\ndescription: My custom helper\nthinking: xhigh\n---\n# body\n",
+        expectedOriginalContent: USER_CONTENT,
       }),
     );
   });
@@ -334,6 +350,7 @@ describe("AgentDefinitionDialogsEdit", () => {
       expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
         name: "my-helper",
         content: USER_CONTENT,
+        expectedOriginalContent: USER_CONTENT,
       }),
     );
   });
@@ -367,6 +384,7 @@ describe("AgentDefinitionDialogsEdit", () => {
       expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
         name: "my-helper",
         content: '---\nname: my-helper\ndescription: "Renamed helper"\ntools:\n  - read\n---\n\n# new body\n',
+        expectedOriginalContent: USER_CONTENT,
       }),
     );
   });
@@ -394,6 +412,7 @@ describe("AgentDefinitionDialogsEdit", () => {
       expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
         name: "my-helper",
         content: "---\nname: my-helper\ndescription: Helper\nread_only: false\n---\n\n# new body\n",
+        expectedOriginalContent: "---\nname: my-helper\ndescription: Helper\nread_only: false\n---\n# old body\n",
       }),
     );
   });
@@ -423,6 +442,7 @@ describe("AgentDefinitionDialogsEdit", () => {
       expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({
         name: "general",
         content: "---\nname: general\n---\n# shipped\n",
+        expectedOriginalContent: "---\nname: general\n---\n# shipped\n",
       }),
     );
   });
@@ -462,7 +482,7 @@ describe("AgentDefinitionDialogsEdit", () => {
     fireEvent.click(screen.getByTestId("agent-detail-save"));
 
     await waitFor(() =>
-      expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({ name: "my-helper", content: USER_CONTENT }),
+      expect(mocked.updateAgentDefinition).toHaveBeenCalledWith({ name: "my-helper", content: USER_CONTENT, expectedOriginalContent: USER_CONTENT }),
     );
     expect(screen.queryByText("settings.customize.agents.dialogs.overwrite.title")).toBeNull();
   });

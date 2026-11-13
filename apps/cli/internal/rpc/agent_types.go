@@ -104,6 +104,7 @@ type CustomizeAgentCreateParams struct {
 }
 
 type CustomizeAgentUpdateParams struct {
-	Name    string `json:"name"`
-	Content string `json:"content"`
+	Name                    string  `json:"name"`
+	Content                 string  `json:"content"`
+	ExpectedOriginalContent *string `json:"expectedOriginalContent,omitempty"`
 }

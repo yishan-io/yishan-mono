@@ -235,3 +235,46 @@ func TestCustomize_RoutesAgentsMethods(t *testing.T) {
 		assertNotRPCErrorCode(t, err, rpc.CodeMethodNotFound, method)
 	}
 }
+
+func TestCustomizeAgentsUpdate_RejectsStaleContent(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	handler := newSkillTestHandler(t)
+	if err := setup.CreatePiAgent("helper", "Description", "original", "", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	original, err := setup.GetPiAgentDetail("helper")
+	if err != nil {
+		t.Fatal(err)
+	}
+	corrected := "---\nname: helper\ndescription: corrected\n---\nCorrected\n"
+	if err := setup.UpdatePiAgent("helper", corrected); err != nil {
+		t.Fatal(err)
+	}
+	_, err = handler.callRPCForTest(context.Background(), rpc.MethodCustomizeAgentsUpdate, mustMarshalSkillParams(t, map[string]any{"name": "helper", "content": original.Content, "expectedOriginalContent": original.Content}))
+	var rpcErr *rpc.Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != rpc.CodeInvalidParams || rpcErr.Message != setup.ErrStaleAgentDefinition.Error() {
+		t.Fatalf("expected stale invalid-params error, got %v", err)
+	}
+	detail, err := setup.GetPiAgentDetail("helper")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.Content != corrected {
+		t.Errorf("corrected content overwritten: %q", detail.Content)
+	}
+	result, err := handler.callRPCForTest(context.Background(), rpc.MethodCustomizeAgentsUpdate, mustMarshalSkillParams(t, map[string]any{"name": "helper", "content": original.Content, "expectedOriginalContent": corrected}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, ok := result.(map[string]any)
+	if !ok || payload["updated"] != true {
+		t.Fatalf("unexpected update result: %#v", result)
+	}
+	detail, err = setup.GetPiAgentDetail("helper")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.Content != original.Content {
+		t.Fatalf("updated content = %q", detail.Content)
+	}
+}

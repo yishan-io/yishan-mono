@@ -75,6 +75,7 @@ export type AgentDefinitionCreateInput = {
 export type AgentDefinitionUpdateInput = {
   name: string;
   content: string;
+  expectedOriginalContent?: string;
 };
 
 export type AgentDefinitionNameInput = {

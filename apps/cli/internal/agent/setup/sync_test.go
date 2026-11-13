@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestSyncManagedPiAgentFile_PreservesUserModified(t *testing.T) {
@@ -211,5 +212,24 @@ func TestSyncManagedPiAgentFile_PreservesUpdatePiAgentOverwrite(t *testing.T) {
 	}
 	if string(content) != overwrite {
 		t.Fatalf("expected RPC overwrite preserved across sync, got %q", string(content))
+	}
+}
+
+func TestSyncManagedPiAgentFilesUsesMutationLock(t *testing.T) {
+	source, target := t.TempDir(), t.TempDir()
+	agentMutationMu.Lock()
+	done := make(chan error, 1)
+	go func() { done <- syncManagedPiAgentFiles(source, target) }()
+	select {
+	case err := <-done:
+		agentMutationMu.Unlock()
+		t.Fatalf("sync completed while mutation lock held: %v", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+	agentMutationMu.Unlock()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("sync did not finish after unlock")
 	}
 }

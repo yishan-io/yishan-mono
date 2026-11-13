@@ -120,6 +120,8 @@ func removeManagedPiSetupFiles() error {
 	if err != nil {
 		return fmt.Errorf("resolve managed pi agents dir: %w", err)
 	}
+	agentMutationMu.Lock()
+	defer agentMutationMu.Unlock()
 	if err := removeManagedPiAgentFiles(targetDir); err != nil {
 		return err
 	}
@@ -139,6 +141,8 @@ func removeManagedPiRootFiles(targetDir string) error {
 }
 
 func syncManagedPiAgentFiles(sourceDir string, targetDir string) error {
+	agentMutationMu.Lock()
+	defer agentMutationMu.Unlock()
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return fmt.Errorf("create managed pi agents dir: %w", err)
 	}
