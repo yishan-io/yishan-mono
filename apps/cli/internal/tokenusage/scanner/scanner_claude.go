@@ -59,6 +59,15 @@ type parsedClaudeActivity struct {
 	CostSource         record.CostSource
 	TurnCount          int64
 	ToolCallCount      int64
+	// DedupeKey identifies one API response. Claude Code writes a streamed
+	// response as several transcript lines that all repeat the usage block,
+	// so usage must be counted once per key (last line wins).
+	DedupeKey string
+}
+
+type pendingClaudeUsage struct {
+	key      hourlyKey
+	activity parsedClaudeActivity
 }
 
 func ScanClaudeHourlyUsage(ctx context.Context, input ScanInput) ([]record.UsageRecord, error) {
@@ -67,10 +76,14 @@ func ScanClaudeHourlyUsage(ctx context.Context, input ScanInput) ([]record.Usage
 		return nil, err
 	}
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
+	pending := make(map[string]pendingClaudeUsage)
 	for _, transcriptFile := range files {
-		if err := scanClaudeTranscriptFile(ctx, transcriptFile, input, input.Worktrees, buckets); err != nil {
+		if err := scanClaudeTranscriptFile(ctx, transcriptFile, input, input.Worktrees, buckets, pending); err != nil {
 			return nil, err
 		}
+	}
+	for _, usage := range pending {
+		accumulateClaudeUsage(getAccumulator(buckets, usage.key), usage.activity)
 	}
 	return materializeHourlyRows(buckets, input), nil
 }
@@ -131,6 +144,7 @@ func scanClaudeTranscriptFile(
 	input ScanInput,
 	worktrees []record.WorktreeRef,
 	buckets map[hourlyKey]*hourlyAccumulator,
+	pending map[string]pendingClaudeUsage,
 ) error {
 	fileHandle, err := os.Open(transcriptFile)
 	if err != nil {
@@ -156,24 +170,15 @@ func scanClaudeTranscriptFile(
 		key := makeClaudeHourlyKey(activity.Timestamp, activity.Model, workspace, confidence, transcriptFile)
 		acc := getAccumulator(buckets, key)
 		if activity.Kind == claudeActivityAssistantUsage {
-			normalizedInputTokens := activity.InputTokens + activity.CacheReadTokens + activity.CacheWriteTokens
-			delta := codexUsage{
-				InputTokens:        normalizedInputTokens,
-				OutputTokens:       activity.OutputTokens,
-				CachedInputTokens:  activity.CacheReadTokens,
-				CachedWriteTokens:  activity.CacheWriteTokens,
-				ReasoningTokens:    0,
-				TotalTokens:        normalizedInputTokens + activity.OutputTokens,
-				TotalCostMicrosUSD: activity.TotalCostMicrosUSD,
-				CostSource:         activity.CostSource,
-			}
-			if delta.TotalTokens <= 0 {
+			if activity.DedupeKey == "" {
+				accumulateClaudeUsage(acc, activity)
+				accumulateEngagementCounts(acc, activity.SessionID, 0, activity.ToolCallCount)
 				continue
 			}
-			accumulateDelta(acc, delta, activity.SessionID)
-			if activity.ToolCallCount > 0 {
-				accumulateEngagementCounts(acc, activity.SessionID, 0, activity.ToolCallCount)
-			}
+			// Tool calls are spread across the streamed lines of one response,
+			// so they are counted per line; tokens are counted once per response.
+			accumulateEngagementCounts(acc, activity.SessionID, 0, activity.ToolCallCount)
+			pending[activity.DedupeKey] = pendingClaudeUsage{key: key, activity: activity}
 			continue
 		}
 		accumulateEngagementCounts(acc, activity.SessionID, activity.TurnCount, activity.ToolCallCount)
@@ -182,6 +187,35 @@ func scanClaudeTranscriptFile(
 		return fmt.Errorf("scan claude transcript file %q: %w", transcriptFile, err)
 	}
 	return nil
+}
+
+func accumulateClaudeUsage(acc *hourlyAccumulator, activity parsedClaudeActivity) {
+	normalizedInputTokens := activity.InputTokens + activity.CacheReadTokens + activity.CacheWriteTokens
+	delta := codexUsage{
+		InputTokens:        normalizedInputTokens,
+		OutputTokens:       activity.OutputTokens,
+		CachedInputTokens:  activity.CacheReadTokens,
+		CachedWriteTokens:  activity.CacheWriteTokens,
+		TotalTokens:        normalizedInputTokens + activity.OutputTokens,
+		TotalCostMicrosUSD: activity.TotalCostMicrosUSD,
+		CostSource:         activity.CostSource,
+	}
+	if delta.TotalTokens <= 0 {
+		return
+	}
+	accumulateDelta(acc, delta, activity.SessionID)
+}
+
+func claudeDedupeKey(top map[string]any) string {
+	message, ok := top["message"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	messageID := strings.TrimSpace(getString(message, "id"))
+	if messageID == "" {
+		return ""
+	}
+	return messageID + "|" + strings.TrimSpace(getString(top, "requestId"))
 }
 
 type parsedClaudeUsageRecord struct {
@@ -286,6 +320,7 @@ func parseClaudeActivity(rawLine []byte, fallbackSessionID string, catalog prici
 				TotalCostMicrosUSD: estimatedCost,
 				CostSource:         costSource,
 				ToolCallCount:      toolCalls,
+				DedupeKey:          claudeDedupeKey(top),
 			}, true
 		}
 		model, toolCalls := parseClaudeAssistantToolUse(top)

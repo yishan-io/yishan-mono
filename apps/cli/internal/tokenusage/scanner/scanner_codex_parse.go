@@ -173,10 +173,10 @@ func parseCodexTokenUsage(info map[string]any) (codexUsage, bool) {
 	if !totalOK {
 		return codexUsage{}, false
 	}
-	lastUsage, _ := usageFromAny(info["last_token_usage"])
-	if lastUsage.TotalTokens > 0 {
-		return lastUsage, true
-	}
+	// Always return the cumulative totals: the caller diffs consecutive events
+	// per session. last_token_usage is a per-call value, so diffing it would
+	// undercount, while a repeated token_count event has an identical total and
+	// correctly yields a zero delta.
 	return totalUsage, true
 }
 

@@ -302,3 +302,34 @@ func TestScanCodexCountsTurnsToolsAndSkills(t *testing.T) {
 		t.Fatalf("expected 0 skills, got %d", skills)
 	}
 }
+
+func TestScanCodexHourlyUsageUsesCumulativeTotalsAndIgnoresRepeats(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	// total_token_usage is cumulative; last_token_usage is the per-call value.
+	// The second event is emitted twice with identical totals.
+	fixture := `{"timestamp":"2026-06-08T05:08:10.774Z","type":"session_meta","payload":{"id":"s1","cwd":"/tmp/codex"}}
+{"timestamp":"2026-06-08T05:08:12.147Z","type":"turn_context","payload":{"turn_id":"t1","cwd":"/tmp/codex","model":"gpt-5.4-mini"}}
+{"timestamp":"2026-06-08T05:08:15.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"output_tokens":50,"total_tokens":1050},"last_token_usage":{"input_tokens":1000,"output_tokens":50,"total_tokens":1050}}}}
+{"timestamp":"2026-06-08T05:08:20.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":3000,"output_tokens":150,"total_tokens":3150},"last_token_usage":{"input_tokens":2000,"output_tokens":100,"total_tokens":2100}}}}
+{"timestamp":"2026-06-08T05:08:20.100Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":3000,"output_tokens":150,"total_tokens":3150},"last_token_usage":{"input_tokens":2000,"output_tokens":100,"total_tokens":2100}}}}
+{"timestamp":"2026-06-08T05:08:30.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":6000,"output_tokens":300,"total_tokens":6300},"last_token_usage":{"input_tokens":3000,"output_tokens":150,"total_tokens":3150}}}}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "rollout.jsonl"), []byte(fixture), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir}
+	rows, err := ScanCodexHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	var total int64
+	for _, row := range rows {
+		total += row.TotalTokens
+	}
+	if total != 6300 {
+		t.Fatalf("expected total tokens 6300 (final cumulative total), got %d", total)
+	}
+}

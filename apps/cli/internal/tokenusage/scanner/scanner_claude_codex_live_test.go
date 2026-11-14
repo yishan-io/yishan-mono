@@ -18,7 +18,7 @@ func TestLiveClaudeActivityCounts(t *testing.T) {
 
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
 	input := ScanInput{RunID: "live-claude", IngestedAt: time.Now().UnixMilli()}
-	if err := scanClaudeTranscriptFile(context.Background(), transcriptPath, input, nil, buckets); err != nil {
+	if err := scanClaudeTranscriptFile(context.Background(), transcriptPath, input, nil, buckets, make(map[string]pendingClaudeUsage)); err != nil {
 		t.Fatalf("scanClaudeTranscriptFile: %v", err)
 	}
 

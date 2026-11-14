@@ -102,9 +102,13 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 	}
 
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
-	err := scanClaudeTranscriptFile(context.Background(), transcriptPath, input, nil, buckets)
+	pending := make(map[string]pendingClaudeUsage)
+	err := scanClaudeTranscriptFile(context.Background(), transcriptPath, input, nil, buckets, pending)
 	if err != nil {
 		t.Fatalf("scan: %v", err)
+	}
+	for _, usage := range pending {
+		accumulateClaudeUsage(getAccumulator(buckets, usage.key), usage.activity)
 	}
 
 	if len(buckets) == 0 {
@@ -216,5 +220,48 @@ func TestScanClaudeCountsTurnsToolsAndSkills(t *testing.T) {
 	}
 	if skills != 0 {
 		t.Fatalf("expected 0 skills, got %d", skills)
+	}
+}
+
+func TestScanClaudeHourlyUsageDedupesStreamedResponses(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	// One response streamed as three lines (partial output, then final), plus the
+	// same response repeated in a second file, plus a distinct response.
+	streamed := `{"type":"assistant","sessionId":"s1","requestId":"req_1","timestamp":"2026-05-25T21:00:00.000Z","cwd":"/proj","message":{"id":"msg_1","model":"claude-sonnet-5-5","role":"assistant","content":[{"type":"text","text":"a"}],"usage":{"input_tokens":10,"cache_creation_input_tokens":0,"cache_read_input_tokens":100,"output_tokens":5}}}
+{"type":"assistant","sessionId":"s1","requestId":"req_1","timestamp":"2026-05-25T21:00:01.000Z","cwd":"/proj","message":{"id":"msg_1","model":"claude-sonnet-5-5","role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Read","input":{}}],"usage":{"input_tokens":10,"cache_creation_input_tokens":0,"cache_read_input_tokens":100,"output_tokens":5}}}
+{"type":"assistant","sessionId":"s1","requestId":"req_1","timestamp":"2026-05-25T21:00:02.000Z","cwd":"/proj","message":{"id":"msg_1","model":"claude-sonnet-5-5","role":"assistant","content":[{"type":"tool_use","id":"t2","name":"Read","input":{}}],"usage":{"input_tokens":10,"cache_creation_input_tokens":0,"cache_read_input_tokens":100,"output_tokens":40}}}
+{"type":"assistant","sessionId":"s1","requestId":"req_2","timestamp":"2026-05-25T21:01:00.000Z","cwd":"/proj","message":{"id":"msg_2","model":"claude-sonnet-5-5","role":"assistant","usage":{"input_tokens":1,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":7}}}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "a.jsonl"), []byte(streamed), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	duplicate := `{"type":"assistant","sessionId":"s1","requestId":"req_1","timestamp":"2026-05-25T21:00:02.000Z","cwd":"/proj","message":{"id":"msg_1","model":"claude-sonnet-5-5","role":"assistant","usage":{"input_tokens":10,"cache_creation_input_tokens":0,"cache_read_input_tokens":100,"output_tokens":40}}}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "b.jsonl"), []byte(duplicate), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, Catalog: testPricingCatalog()}
+	rows, err := ScanClaudeHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	var output, total, tools int64
+	for _, row := range rows {
+		output += row.OutputTokens
+		total += row.TotalTokens
+		tools += row.ToolCallCount
+	}
+	if output != 47 {
+		t.Fatalf("expected output 47 (40+7), got %d", output)
+	}
+	if total != 158 {
+		t.Fatalf("expected total 158 (150+8), got %d", total)
+	}
+	if tools != 2 {
+		t.Fatalf("expected 2 tool calls, got %d", tools)
 	}
 }
