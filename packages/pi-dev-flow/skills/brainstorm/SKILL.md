@@ -15,7 +15,7 @@ Use this skill when the user:
 - Wants help shaping a feature before coding
 - Needs options, tradeoffs, or a recommendation
 - Is unsure about scope, UX, architecture, or workflow
-- Wants a spec or plan before implementation
+- Wants to resolve design choices before implementation
 
 Do not use this skill when the request is already specific and the user clearly wants code changes now.
 
@@ -24,7 +24,7 @@ Do not use this skill when the request is already specific and the user clearly 
 - Do not start implementing while still in brainstorming mode
 - Ask one clarifying question at a time when requirements are fuzzy
 - Prefer concrete choices over vague discussion
-- Propose 2-3 approaches with tradeoffs and a recommendation
+- Offer alternatives only when a real choice exists; recommend the simplest suitable approach
 - Keep the design proportional to the task; simple ideas only need a short design
 - Follow the existing codebase and product patterns when brainstorming changes to an existing project
 
@@ -42,7 +42,8 @@ If the idea is too broad for one pass, say so and help the user split it into sm
 
 ### 2. Clarify the Goal
 
-Ask focused questions to understand:
+Use the request and available context first. Do not ask again about decisions the user already made. Ask only about missing information that changes the direction:
+
 
 1. What problem this solves
 2. Who it is for
@@ -53,7 +54,7 @@ Prefer multiple-choice questions when they make the decision easier.
 
 ### 3. Offer Approaches
 
-Once the goal is clear, present 2-3 viable approaches.
+Once the goal is clear, recommend a direction. Present alternatives only when they involve meaningful tradeoffs. Do not invent options to fill a template.
 
 For each approach, cover:
 
@@ -75,7 +76,7 @@ After discussing options, summarize the recommended design in a compact structur
 - Failure cases or edge cases
 - Testing or validation strategy
 
-Ask for confirmation before switching from brainstorming to implementation.
+If the user requested discussion only, present the direction and stop. If implementation is already authorized, proceed once material decisions are resolved. Do not add another approval round for an already approved direction.
 
 ## Output Style
 

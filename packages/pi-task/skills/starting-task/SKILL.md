@@ -84,9 +84,9 @@ Keep the existing-workspace flow: resolve the current workspace with `workspace_
 
 A tracked Local Task may contain multiple independently deliverable plan subtasks in its `plan.md`. A plan subtask is an execution unit within the tracked Local Task; its independent deliverability does not by itself require a new Local Task.
 
-Before execution, the controller must create and freeze a brief for each plan subtask. Each brief must define its scope, non-goals, acceptance criteria or check, and a finite execution budget. Do not begin a plan subtask without its brief. The controller is the sole authority to create or replace scope-changing plan content.
+Use a plan proportional to the uncertainty and risk. Ordinary changes need only a short checklist and verification method. A tracked task does not require separate frozen briefs or budgets for every step.
 
-Executors may record only within-brief execution detail in `plan.md`; they must not replace scope-changing plan content. When a newly discovered issue is related to the active plan subtask, a non-scope-changing clarification may stay in scope. If the discovery changes its frozen scope, requires a new decision or dependency, or changes assumptions for a later plan subtask, record it in `notes` and stop the current attempt. The controller decides whether to continue and, if so, must replace the affected scope-changing plan content with a newly frozen brief before resuming. Ask the user when the change affects unapproved behavior, commitments, or tradeoffs. For an unrelated issue, ask the user whether to create a separate Local Task.
+Adjust implementation and test details within the agreed scope. Record material discoveries in `notes` and keep the plan current at meaningful milestones. For delegated work, report material scope or architecture changes to the coordinating agent before proceeding. Ask the user when a change affects unapproved behavior, commitments, or tradeoffs. Keep unrelated work separate rather than expanding the active task.
 
 Use `task_read` for the synthetic, read-only brief. Use `task_update` to change metadata, new, progressing, or cancelled status, priority, or tags. It cannot set done. Use `task_list` or `task_search` to find tasks.
 

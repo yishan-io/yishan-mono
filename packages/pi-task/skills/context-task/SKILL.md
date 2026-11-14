@@ -19,7 +19,7 @@ Use `task_list` to filter by status, priority, workspace, or tags. Use `task_sea
 
 A tracked Local Task may contain multiple independently deliverable plan subtasks. A plan subtask is an execution unit within the tracked Local Task; its independent deliverability does not by itself require a new Local Task.
 
-When a newly discovered issue is related to the active plan subtask, a non-scope-changing clarification may stay in scope. If the discovery changes that plan subtask's frozen scope, requires a new decision or dependency, or changes assumptions for a later plan subtask, record it in `notes` and stop the current attempt. The controller decides whether to continue and, if so, must replace the affected scope-changing plan content with a newly frozen brief before resuming. Ask the user when the change affects unapproved behavior, commitments, or tradeoffs. For an unrelated issue, ask the user whether to create a separate Local Task.
+Adjust implementation details within the agreed scope without a new approval round. Record discoveries that materially affect the remaining work and update the plan. For delegated work, report material scope or architecture changes to the coordinating agent before proceeding. Ask the user when a change affects unapproved behavior, commitments, or tradeoffs. Keep unrelated issues out of the active work and offer follow-up tracking only when useful.
 
 ## Context Documents
 
@@ -29,9 +29,9 @@ The daemon provides the paths for three context documents:
 - `notes` contains task-specific research and decisions.
 - `outcome` contains a factual completion summary.
 
-Before execution, every plan subtask in a tracked Local Task requires a controller-created, frozen brief in `plan.md`. Each brief must state its scope, non-goals, acceptance criteria or check, and a finite execution budget. The controller is the sole authority to create or replace scope-changing plan content. Do not execute a plan subtask without its brief.
+Keep the plan proportional to the work. A short checklist with scope and verification is enough for ordinary changes. Add detailed handoff boundaries or investigation limits only when delegation or risk requires them. Tracking a task does not require a frozen brief or budget for every step.
 
-Use `task_write` to replace `notes` or `outcome`. Executors may use it in `plan` only to record execution details that remain within the applicable frozen brief; only the controller may replace scope-changing plan content. Use `task_append_note` to add research or progress to `notes`. Keep the plan coherent. Keep notes specific to this Local Task.
+Use `task_write` to replace `plan`, `notes`, or `outcome`. Keep the plan aligned with the agreed scope. Delegated executors must not change assigned scope without the coordinating agent's decision. Use `task_append_note` for material discoveries or milestones, not every tool call or test cycle. Keep notes specific to this Local Task.
 
 Start a new `notes` document with this compact, editable Markdown structure:
 
