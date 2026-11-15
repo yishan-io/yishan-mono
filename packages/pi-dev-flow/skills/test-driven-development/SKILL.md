@@ -10,7 +10,7 @@ For testable behavior, prefer a failing test before the production change. Use t
 ## Red, Green, Refactor
 
 1. Write a focused test for the next behavior or bug reproduction.
-2. Run it and confirm that it fails for the expected reason, not broken test setup.
+2. Run it and confirm that it fails for the expected reason, not broken test setup. Keep the command and the key line of the failure output as evidence.
 3. Make the smallest production change that passes the test.
 4. Run the focused test again.
 5. Refactor only where useful, keeping the test green.
@@ -21,9 +21,9 @@ If the test passes before the fix, examine whether it exercises the failure. Do 
 
 ## Local Autonomy
 
-The implementing agent owns test cases and local red/green iterations within the agreed scope. A frozen controller brief or separate retry budget is not required for each cycle.
+The implementing agent owns test cases and local red/green iterations inside the files in scope. A frozen controller brief is not required for each cycle.
 
-If repeated attempts make no progress, use `systematic-debugging`. Escalate material scope or architecture changes, not normal test adjustments.
+If the same test is still red after 3 fix attempts, stop guessing and switch to `systematic-debugging`. Do not edit the test to make it pass unless you can state why the test, not the code, was wrong. Editing a source file outside the agreed scope to get a test green is a scope change: ask first.
 
 ## When Test-First Is Not Useful
 
@@ -37,6 +37,6 @@ If implementation already exists, add or strengthen coverage where needed. State
 
 Test observable behavior. Use mocks only where isolation requires them. Read `testing-anti-patterns.md` before introducing complex doubles or test-only hooks.
 
-For a bug fix, prefer a regression test that fails on the old implementation and passes on the fix. Report what was tested, the observed results, and any gaps.
+For a bug fix, prefer a regression test that fails on the old implementation and passes on the fix. Report what was tested, the exact commands and results (the red result and the green result), and any gaps. For tracked work, put the red and green results in the task notes at the verification moment, not per cycle.
 
 Review correctness and regression coverage. Missing test-first evidence alone is not a blocking code defect.

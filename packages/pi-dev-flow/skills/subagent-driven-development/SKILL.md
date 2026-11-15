@@ -21,11 +21,20 @@ Use `explore` for read-only research, `builder` for implementation, and `code-re
 
 ## Handoff
 
-Provide the goal, scope, relevant files, constraints, expected result, and verification method. Include explicit non-goals or an investigation limit when the work risks expanding or repeating failed attempts. Do not paste the entire session history.
+Every handoff must contain all of these fields. Do not paste the entire session history.
 
-The executor can adjust implementation details and test cycles within the assigned scope. A new architectural decision, unapproved behavior change, or material scope expansion requires a report to the coordinating agent.
+- Goal: the outcome wanted, in one or two sentences.
+- Done when: checkable success criteria, including the exact verification command.
+- Out of scope: files, behavior, and refactors the agent must not touch.
+- Files: the files to read first and the files it may edit.
+- Stop rule: return `BLOCKED` if the same check fails 3 times, or after 20 tool calls on one sub-problem without a new finding. Do not keep trying.
+- Report format: Changed (files and behavior), Verified (exact commands and results), Not verified, Risks, and any file edited outside the "may edit" list.
 
-Treat `NEEDS_CONTEXT` and `BLOCKED` as decisions to resolve. Do not blindly redispatch. If attempts produce no new evidence, stop and reassess rather than increasing the retry count.
+The executor can adjust test cases and local implementation inside the "may edit" files. Editing any other file, adding a dependency, a new abstraction, or a behavior change not in Done when requires returning `NEEDS_CONTEXT` first.
+
+Treat `NEEDS_CONTEXT` and `BLOCKED` as decisions to resolve. Do not blindly redispatch. Redispatch only with new information in the handoff. Do not dispatch the same scope more than twice.
+
+After every delegation returns, the coordinating agent must run `git status` and `git diff --stat` itself. Compare the result with the "may edit" list. Do not rely on the subagent's report alone. Revert or ask about any unplanned file.
 
 ## Parallel Work
 
@@ -41,6 +50,8 @@ Verify the combined result before reporting completion. A previous scoped review
 
 ## Progress and Long-Running Work
 
-For an existing tracked Local Task, update its plan and notes after material discoveries or milestones. Do not write a document after every tool call or test cycle. Record the result and remaining issues in the outcome. Task closure remains user-controlled.
+For an existing tracked Local Task, write to it at the Task record moments in the system instructions: when delegating (the handoff and the reason), when a result changes the plan, and when verification results are known. Do not write after every tool call or test cycle. Task closure remains user-controlled.
+
+While a delegation runs, the coordinating agent posts a user-facing line when it starts (who, what scope) and when it returns (result in 1–2 lines). If a background run has produced no event for a long time, tell the user what it is doing and whether you are waiting or stopping it.
 
 For resident or long-running operations, define a progress signal, an observation trigger, and a condition for stopping or escalation. Do not leave an operation running without an observable state or a next decision point.

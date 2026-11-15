@@ -50,7 +50,7 @@ Use the request and available context first. Do not ask again about decisions th
 3. What constraints matter
 4. What success looks like
 
-Prefer multiple-choice questions when they make the decision easier.
+Prefer multiple-choice questions when they make the decision easier. Ask at most 3 questions in total, one at a time. If the direction is still unclear after that, write down your assumptions, recommend a direction, and let the user correct it.
 
 ### 3. Offer Approaches
 
@@ -75,8 +75,11 @@ After discussing options, summarize the recommended design in a compact structur
 - Data flow or state changes
 - Failure cases or edge cases
 - Testing or validation strategy
+- Done when: checkable success criteria
+- Out of scope: what this direction will not change
+- Assumptions: anything you decided without the user's confirmation
 
-If the user requested discussion only, present the direction and stop. If implementation is already authorized, proceed once material decisions are resolved. Do not add another approval round for an already approved direction.
+If the user requested discussion only, present the direction and stop. Brainstorming alone does not authorize edits. Proceed to implementation only when the user has said to implement, and only after every item under Assumptions is confirmed or marked as low risk. Do not add another approval round for an already approved direction.
 
 ## Output Style
 

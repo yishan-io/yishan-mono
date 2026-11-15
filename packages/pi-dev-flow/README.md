@@ -6,11 +6,14 @@ Pi skills for design discussion, planning, debugging, testing, code review, suba
 
 Inspect the relevant code, make the scoped change, and run focused verification. Skills are methods to use when needed, not stages to run in sequence. Multiple steps or files alone do not require a formal plan, tracked task, or subagents.
 
-- For clear local changes, implement directly and inspect the diff.
-- For ordinary multi-file work, use a short checklist and keep related implementation and tests together.
-- For uncertain or high-risk work, add written planning, specialist review, or isolated execution where it reduces risk.
+The hard rules (align before editing, heartbeat every 10 tool calls, scope gate, stop rule, closing diff check, closing report, and the Task record moments) live in one place: the "Working agreement" section of `apps/cli/internal/agent/setup/assets/pi-agent/APPEND_SYSTEM.md`. The skills below add method-specific limits and refer to those rules. Edit the rules there, not in each skill.
 
-Substantial or high-risk changes usually need one independent code review near completion. Do not require a new builder or review for every plan step.
+Concrete limits used by the skills:
+
+- Debugging: stop after 3 tested hypotheses, 20 tool calls, or 3 identical failures.
+- Delegation: every handoff has Goal, Done when, Out of scope, Files, Stop rule, and Report format. The coordinating agent checks `git diff --stat` after every return. Dispatch the same scope at most twice.
+- Review: at most 2 independent rounds per change. The reviewer lists UNPLANNED files.
+- Plans: a plan with a `NEEDS APPROVAL` decision, an architecture or data-format change, or a migration waits for the user.
 
 ## Skills
 
