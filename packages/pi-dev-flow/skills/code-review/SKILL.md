@@ -17,12 +17,15 @@ For substantial changes, risky fixes, migrations, or an explicit review request,
 
 Provide:
 
-- The intended behavior or requirements
-- The changed files or diff range
+- Goal and Done when: the intended behavior and success criteria
+- Out of scope: what the change was not supposed to touch
+- The output of `git diff --stat` and the diff range
 - The relevant constraints and known risks
-- The verification results and gaps
+- The verification results (exact commands) and gaps
 
-Ask for bugs, regressions, missing coverage, and unsafe assumptions. Do not ask for an unrestricted redesign or repeat completed reviews without a new risk.
+Ask for bugs, regressions, missing coverage, and unsafe assumptions. Also ask the reviewer to list every changed file that the Goal does not explain, marked UNPLANNED. Do not ask for an unrestricted redesign or repeat completed reviews without a new risk.
+
+Ask the reviewer to return each finding with a file and line, the failing scenario, and a severity of blocking or non-blocking. A finding without a concrete scenario is a question, not a defect.
 
 ## Evaluate Feedback
 
@@ -36,6 +39,8 @@ Keep style preferences, speculative improvements, and unrelated refactors outsid
 
 Run the checks affected by each fix. Request at most one follow-up review, focused on unresolved findings or risky fixes. A trivial, directly verifiable fix does not require another agent pass.
 
-If blocking findings remain, report the evidence and the remaining decision. Do not keep looping until a reviewer returns no comments. Further rounds need a concrete new scope or reason, not a desire for a clean verdict.
+Hard limit: 2 independent review rounds per change. After round 2, if blocking findings remain, stop. Report each remaining finding with its evidence and the decision the user must make. Do not start a third round unless the user asks.
 
-Summarize resolved issues, remaining risks, and actual verification. Review does not close a tracked Local Task. Task closure remains user-controlled.
+Handle each UNPLANNED file the reviewer lists: revert it, or explain it and ask the user.
+
+Summarize resolved issues, remaining risks, and actual verification (exact commands and results). For tracked work, write the findings, your decision on each (fixed, rejected with evidence, deferred), and the verification result to the task notes. Review does not close a tracked Local Task. Task closure remains user-controlled.

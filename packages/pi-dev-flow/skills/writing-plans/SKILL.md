@@ -15,21 +15,23 @@ Read the relevant code before planning. Check durable memory when prior decision
 
 ## Write the Plan
 
-Include:
+Every plan must include:
 
-- The goal and change boundary
-- The implementation steps and relevant files
-- The verification method
-- Risks or decisions that need attention
+- Goal: the outcome, in one or two sentences.
+- Done when: checkable success criteria.
+- Out of scope: what the plan will not change.
+- Steps: for each step, the files it touches and the exact command that verifies it.
+- Decisions: each choice between approaches, with the options, the pick, and the reason. Mark any decision the user has not approved as `NEEDS APPROVAL`.
+- Risks: what could go wrong and how you will notice.
 
 Group work by complete behavior. Keep implementation and its tests together. Do not create separate execution units just because code, tests, and documentation can be checked separately.
 
-Add explicit non-goals, handoff contracts, or investigation limits only where ambiguity or risk requires them. Do not require a frozen brief or budget for every step.
+Do not require a frozen brief or budget for every step. Add a handoff contract only when a step is delegated (see `subagent-driven-development`).
 
 ## Review and Proceed
 
 Check that the plan covers the request without unrelated work. Use `plan-reviewer` only for high-risk plans, unresolved design concerns, or a user-requested review.
 
-If implementation is already authorized and no material decision remains, proceed without another approval round. If the user requested only a plan, present it and stop. Ask for a decision when the plan changes requested behavior, commitments, or unapproved tradeoffs.
+Present the plan and stop for approval if any of these is true: the plan has a `NEEDS APPROVAL` decision, it changes an architecture or data format, it includes a migration, it touches files outside what the request implies, or the user asked only for a plan. A request such as "fix X" authorizes the result, not an architecture or migration you chose. Proceed without another approval round only when none of these applies, or when the user has said to go ahead with this plan.
 
-During execution, adjust local implementation details within the agreed scope. Update the plan when discoveries affect the remaining work. Escalate material scope or architecture changes, not routine coding adjustments.
+During execution, adjust test cases and local code inside the files listed in the plan. Touching a file not listed in the plan counts as a scope change: ask first. Update the plan when a discovery changes the remaining steps, and record that change in the task notes.

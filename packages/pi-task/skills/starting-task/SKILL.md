@@ -84,9 +84,9 @@ Keep the existing-workspace flow: resolve the current workspace with `workspace_
 
 A tracked Local Task may contain multiple independently deliverable plan subtasks in its `plan.md`. A plan subtask is an execution unit within the tracked Local Task; its independent deliverability does not by itself require a new Local Task.
 
-Use a plan proportional to the uncertainty and risk. Ordinary changes need only a short checklist and verification method. A tracked task does not require separate frozen briefs or budgets for every step.
+Use a plan proportional to the uncertainty and risk. Ordinary changes need only a short checklist with Done when, Out of scope, and a verification command per step.
 
-Adjust implementation and test details within the agreed scope. Record material discoveries in `notes` and keep the plan current at meaningful milestones. For delegated work, report material scope or architecture changes to the coordinating agent before proceeding. Ask the user when a change affects unapproved behavior, commitments, or tradeoffs. Keep unrelated work separate rather than expanding the active task.
+Right after the task is created, write the Goal, Done when, and Out of scope to `notes`, then follow the Task record moments in `context-task`. Adjust test cases and code inside the files the plan lists. Touching an unlisted file, adding a dependency or abstraction, or changing behavior outside the acceptance criteria is a scope change: ask first. For delegated work, report scope changes to the coordinating agent before proceeding. Keep unrelated work separate rather than expanding the active task.
 
 Use `task_read` for the synthetic, read-only brief. Use `task_update` to change metadata, new, progressing, or cancelled status, priority, or tags. It cannot set done. Use `task_list` or `task_search` to find tasks.
 

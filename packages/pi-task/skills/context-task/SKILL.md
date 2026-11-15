@@ -19,7 +19,7 @@ Use `task_list` to filter by status, priority, workspace, or tags. Use `task_sea
 
 A tracked Local Task may contain multiple independently deliverable plan subtasks. A plan subtask is an execution unit within the tracked Local Task; its independent deliverability does not by itself require a new Local Task.
 
-Adjust implementation details within the agreed scope without a new approval round. Record discoveries that materially affect the remaining work and update the plan. For delegated work, report material scope or architecture changes to the coordinating agent before proceeding. Ask the user when a change affects unapproved behavior, commitments, or tradeoffs. Keep unrelated issues out of the active work and offer follow-up tracking only when useful.
+Adjust test cases and code inside the files the plan lists without a new approval round. Touching an unlisted file, adding a dependency or abstraction, or changing behavior outside the task's acceptance criteria is a scope change: ask first. For delegated work, report scope changes to the coordinating agent before proceeding. Record discoveries that change the remaining work and update the plan. Keep unrelated issues out of the active work and offer follow-up tracking only when useful.
 
 ## Context Documents
 
@@ -29,9 +29,11 @@ The daemon provides the paths for three context documents:
 - `notes` contains task-specific research and decisions.
 - `outcome` contains a factual completion summary.
 
-Keep the plan proportional to the work. A short checklist with scope and verification is enough for ordinary changes. Add detailed handoff boundaries or investigation limits only when delegation or risk requires them. Tracking a task does not require a frozen brief or budget for every step.
+Keep the plan proportional to the work. A short checklist with Done when, Out of scope, and a verification command per step is enough for ordinary changes. Add detailed handoff boundaries only when delegation requires them.
 
-Use `task_write` to replace `plan`, `notes`, or `outcome`. Keep the plan aligned with the agreed scope. Delegated executors must not change assigned scope without the coordinating agent's decision. Use `task_append_note` for material discoveries or milestones, not every tool call or test cycle. Keep notes specific to this Local Task.
+Use `task_write` to replace `plan`, `notes`, or `outcome`. Keep the plan aligned with the agreed scope. Delegated executors must not change assigned scope without the coordinating agent's decision. Keep notes specific to this Local Task.
+
+Use `task_append_note` at exactly these moments: the start (Goal, Done when, Out of scope), a choice between approaches (options, choice, reason), a discovery that changes the plan or scope, a known verification result (exact command and result), and the end (Changed, Verified, Not verified, Risks). Each entry needs evidence a later reader can check: file paths, command names, error text. Do not write per tool call or per test cycle.
 
 Start a new `notes` document with this compact, editable Markdown structure:
 
@@ -40,16 +42,22 @@ Start a new `notes` document with this compact, editable Markdown structure:
 
 ## Summary
 
+- Goal:
+- Done when:
+- Out of scope:
+
 ## Decisions
+
+- YYYY-MM-DD — <decision>. Options: <a>, <b>. Reason: <why>.
 
 ## Evidence and Progress
 
-- YYYY-MM-DD — <fact, result, or change>
+- YYYY-MM-DD — <fact, result, or change>. Evidence: <command / file path / error text>
 
 ## Open Questions
 ```
 
-Append dated, factual entries under **Evidence and Progress**. Move resolved material into **Summary** or **Decisions** when it becomes important. Do not preserve an old format for its own sake: when the user asks to change the notes, replace or reorganize the Markdown with `task_write`. Users can also edit `notes.md` directly in the file editor.
+Append dated, factual entries under **Evidence and Progress**. Each entry states the evidence. Record every choice between approaches under **Decisions** with its options and reason. Move resolved material into **Summary** or **Decisions** when it becomes important. Do not preserve an old format for its own sake: when the user asks to change the notes, replace or reorganize the Markdown with `task_write`. Users can also edit `notes.md` directly in the file editor.
 
 ## Delegate to a New Workspace
 
