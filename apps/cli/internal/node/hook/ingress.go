@@ -8,6 +8,8 @@ package hook
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
+	"sync"
 
 	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/memory"
@@ -39,6 +41,12 @@ type Ingress struct {
 	memory     *memory.Service
 	registry   *instance.Registry
 	usage      *UsageTracker
+
+	// waiting records sessions last seen in wait_input. A per-tool event
+	// (PostToolUse*) arriving for such a session means the user answered the
+	// question/approval and the agent resumed, so it is promoted to "start".
+	waitingMu sync.Mutex
+	waiting   map[string]bool
 }
 
 // NewIngress builds the hook ingress.
@@ -49,6 +57,25 @@ func NewIngress(deps IngressDeps) *Ingress {
 		memory:     deps.Memory,
 		registry:   deps.Registry,
 		usage:      deps.Usage,
+		waiting:    map[string]bool{},
+	}
+}
+
+// trackWaitingState promotes a per-tool event to "start" when the session was
+// waiting for input, and keeps the waiting set in sync with lifecycle events.
+func (i *Ingress) trackWaitingState(event *normalizedHookEvent) {
+	i.waitingMu.Lock()
+	defer i.waitingMu.Unlock()
+	switch event.eventType {
+	case "wait_input":
+		i.waiting[event.sessionKey] = true
+	case "start", "stop":
+		delete(i.waiting, event.sessionKey)
+	case "unknown":
+		if isPerToolHookEvent(strings.ToLower(strings.TrimSpace(event.rawEventType))) && i.waiting[event.sessionKey] {
+			delete(i.waiting, event.sessionKey)
+			event.eventType = "start"
+		}
 	}
 }
 
@@ -106,6 +133,7 @@ func (i *Ingress) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	i.trackWaitingState(&event)
 	if i.tokenUsage != nil && event.eventType == "stop" {
 		i.tokenUsage.Trigger(event.agent, "hook-stop")
 	}
