@@ -430,3 +430,40 @@ func newIngressForTest(events *eventbus.Hub) *Ingress {
 		Usage:  NewUsageTracker(),
 	})
 }
+
+func TestServeAgentHookResumesRunningAfterPostToolUseWhileWaiting(t *testing.T) {
+	hub := eventbus.NewHub()
+	ingress := newIngressForTest(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
+
+	for _, name := range []string{"PermissionRequest", "PostToolUse", "PostToolUse"} {
+		postHookPayload(t, ingress, map[string]any{
+			"agent": "claude", "workspaceId": "ws-1", "tabId": "tab-1", "paneId": "pane-1", "rawEventType": name,
+		})
+	}
+
+	var types []string
+	for len(types) < 2 {
+		select {
+		case event := <-events:
+			if event.Topic != "notificationEvent" {
+				continue
+			}
+			payload := event.Payload.(map[string]any)
+			types = append(types, payload["observerStatus"].(map[string]string)["normalizedEventType"])
+		case <-time.After(100 * time.Millisecond):
+			t.Fatalf("timed out, got %v", types)
+		}
+	}
+	if types[0] != "wait_input" || types[1] != "start" {
+		t.Fatalf("expected wait_input then start, got %v", types)
+	}
+	select {
+	case event := <-events:
+		if event.Topic == "notificationEvent" {
+			t.Fatalf("second PostToolUse should be silent, got %#v", event)
+		}
+	case <-time.After(50 * time.Millisecond):
+	}
+}
