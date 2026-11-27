@@ -286,3 +286,61 @@ export function readDaemonLocalFolder(value: unknown): DaemonLocalFolder | undef
 }
 
 /** Workspace namespace methods for the daemon RPC client. */
+
+/** One pull request the daemon recorded for a workspace (PR history). */
+export type DaemonWorkspacePullRequestRecord = {
+  id: string;
+  workspaceId: string;
+  organizationId: string;
+  prId: string;
+  title: string | null;
+  url: string | null;
+  branch: string | null;
+  baseBranch: string | null;
+  state: "open" | "closed" | "merged";
+  metadata: Record<string, unknown> | null;
+  detectedAt: string;
+  resolvedAt: string | null;
+};
+
+const PULL_REQUEST_RECORD_STATES = new Set(["open", "closed", "merged"]);
+
+/** Parses the daemon's raw JSON metadata snapshot; malformed or non-object metadata becomes null. */
+function parsePullRequestMetadata(value: unknown): Record<string, unknown> | null {
+  const raw = readOptionalString(value);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return asRecord(JSON.parse(raw)) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Reads one recorded pull request; rows missing identity or carrying an unknown state are dropped. */
+export function readDaemonWorkspacePullRequestRecord(value: unknown): DaemonWorkspacePullRequestRecord | undefined {
+  const record = asRecord(value);
+  const id = readOptionalString(record?.id);
+  const prId = readOptionalString(record?.prId);
+  const state = readOptionalString(record?.state);
+  const detectedAt = readOptionalString(record?.detectedAt);
+  if (!record || !id || !prId || !state || !PULL_REQUEST_RECORD_STATES.has(state) || !detectedAt) {
+    return undefined;
+  }
+
+  return {
+    id,
+    workspaceId: readOptionalString(record.workspaceId) ?? "",
+    organizationId: readOptionalString(record.organizationId) ?? "",
+    prId,
+    title: readOptionalString(record.title) ?? null,
+    url: readOptionalString(record.url) ?? null,
+    branch: readOptionalString(record.branch) ?? null,
+    baseBranch: readOptionalString(record.baseBranch) ?? null,
+    state: state as DaemonWorkspacePullRequestRecord["state"],
+    metadata: parsePullRequestMetadata(record.metadata),
+    detectedAt,
+    resolvedAt: readOptionalString(record.resolvedAt) ?? null,
+  };
+}

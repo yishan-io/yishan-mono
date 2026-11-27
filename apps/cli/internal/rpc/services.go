@@ -22,6 +22,7 @@ type WorkspaceService interface {
 	Create(ctx context.Context, req WorkspaceCreateParams) (any, error)
 	Close(ctx context.Context, req WorkspaceCloseParams) (any, error)
 	RefreshPullRequest(ctx context.Context, req workspace.RefreshPullRequestRequest) (any, error)
+	ListPullRequests(ctx context.Context, req WorkspaceListPullRequestsParams) (any, error)
 	SetActive(ctx context.Context, req terminal.SetActiveWorkspaceRequest) (any, error)
 	SyncContextLink(ctx context.Context, req workspace.SyncContextLinkRequest) (any, error)
 	Health(ctx context.Context, req WorkspaceHealthParams) (any, error)

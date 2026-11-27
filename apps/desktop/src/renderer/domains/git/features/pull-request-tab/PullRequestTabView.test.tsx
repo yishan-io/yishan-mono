@@ -138,8 +138,6 @@ function buildHistoricalPullRequest(
     metadata: overrides.metadata ?? null,
     detectedAt: overrides.detectedAt ?? "2024-01-01T00:00:00.000Z",
     resolvedAt: overrides.resolvedAt ?? null,
-    createdAt: overrides.createdAt ?? "2024-01-01T00:00:00.000Z",
-    updatedAt: overrides.updatedAt ?? "2024-01-01T00:00:00.000Z",
   };
 }
 

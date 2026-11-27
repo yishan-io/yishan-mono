@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { WorkspacePullRequestRecord } from "../../api/workspacePullRequestApi";
+import type { WorkspacePullRequestRecord } from "../../api/types";
 import { listPullRequestHistory, refreshWorkspacePullRequest } from "../../commands/gitProjectionCommands";
 import type { GitPullRequest } from "../../pull-request/gitPullRequestTypes";
 import { gitProjectionStore } from "../../state/gitProjectionStore";
@@ -11,7 +11,7 @@ export type WorkspacePullRequestState = {
   selectedWorkspaceId: string;
   /** The live PR from the daemon (current branch, real-time). */
   pullRequest: GitPullRequest | undefined;
-  /** Historical PRs from the api-service, ordered by detected_at desc. */
+  /** Historical PRs recorded by the local daemon, ordered by detected_at desc. */
   historicalPullRequests: WorkspacePullRequestRecord[];
   isLoading: boolean;
 };
@@ -25,8 +25,6 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
   const [historicalPullRequests, setHistoricalPullRequests] = useState<WorkspacePullRequestRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const orgId = workspace?.organizationId;
-  const projectId = workspace?.projectId;
   const worktreePath = workspace?.worktreePath;
 
   // Track whether we've already attempted an on-demand daemon refresh for this workspace
@@ -34,7 +32,7 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
   const daemonRefreshAttemptedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!enabled || !selectedWorkspaceId || !orgId || !projectId) {
+    if (!enabled || !selectedWorkspaceId) {
       setHistoricalPullRequests([]);
       return;
     }
@@ -42,7 +40,7 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
     let cancelled = false;
     setIsLoading(true);
 
-    listPullRequestHistory(orgId, projectId, selectedWorkspaceId)
+    listPullRequestHistory(selectedWorkspaceId)
       .then((records) => {
         if (!cancelled) {
           setHistoricalPullRequests(records);
@@ -63,7 +61,7 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
     return () => {
       cancelled = true;
     };
-  }, [enabled, selectedWorkspaceId, orgId, projectId]);
+  }, [enabled, selectedWorkspaceId]);
 
   // When the tab is active and there is no live daemon PR yet, trigger an immediate
   // daemon PR refresh for this workspace so the current branch is re-checked without

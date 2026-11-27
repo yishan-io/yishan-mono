@@ -1,4 +1,4 @@
-import type { WorkspacePullRequestRecord } from "../../api/workspacePullRequestApi";
+import type { WorkspacePullRequestRecord } from "../../api/types";
 import { livePrStatus } from "../../pull-request/gitPullRequestStatus";
 import type { GitPullRequest, GitPullRequestCheck } from "../../pull-request/gitPullRequestTypes";
 

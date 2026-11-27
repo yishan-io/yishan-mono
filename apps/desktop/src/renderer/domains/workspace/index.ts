@@ -33,6 +33,7 @@ export {
   toggleLeftPaneVisibility,
   toggleRightPaneVisibility,
   undoFileTreeOperation,
+  listWorkspacePullRequestHistory,
   refreshWorkspacePullRequest,
   resolveWorkspaceId,
   syncWorkspaceContextLinks,
