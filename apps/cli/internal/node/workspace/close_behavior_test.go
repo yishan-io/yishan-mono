@@ -54,9 +54,9 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 		t.Fatalf("close result workspace entry = %#v, want status closed", closeResult["workspace"])
 	}
 
-	// Cloud record changes: "closing" before teardown, terminal "closed" after.
-	if want := []string{"closing", "closed"}; !reflect.DeepEqual(recorder.closeStatuses(), want) {
-		t.Fatalf("remote close statuses = %v, want %v", recorder.closeStatuses(), want)
+	// Workspace records are local only: api-service is never told.
+	if statuses := recorder.closeStatuses(); len(statuses) != 0 {
+		t.Fatalf("expected no api-service close, got %v", statuses)
 	}
 
 	// Local record: SQLite row flipped to closed; runtime record removed.

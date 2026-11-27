@@ -10,13 +10,13 @@ import (
 var projectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "Project operations",
-	Long:  `List projects for the current organization (remote-authoritative).`,
+	Long:  `List projects for the current organization on this machine.`,
 }
 
 var projectListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List projects",
-	Long:  `List all projects in the current organization (read from the remote API through the daemon).`,
+	Long:  `List all projects in the current organization (read from the local daemon).`,
 	Example: `  yishan project list
   yishan project list --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {

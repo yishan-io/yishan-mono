@@ -2,161 +2,38 @@ package app
 
 import (
 	"context"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"testing"
-	"time"
 
-	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/localtask"
 	nodelocaltask "yishan/apps/cli/internal/node/localtask"
-	"yishan/apps/cli/internal/platform/config"
+	nodeproject "yishan/apps/cli/internal/node/project"
 )
 
-func TestCloudKeyAllocator_UsesPersonalAndProjectRoutes(t *testing.T) {
-	paths := make([]string, 0, 2)
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		paths = append(paths, request.URL.Path)
-		_, _ = io.WriteString(writer, `{"key":"TASK-1"}`)
-	}))
-	defer server.Close()
-	allocator := newCloudKeyAllocator(session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "token"}}))
-	if _, err := allocator.AllocateTaskKey(context.Background(), nodelocaltask.KeyAllocationRequest{TaskID: "personal"}); err != nil {
-		t.Fatalf("allocate personal key: %v", err)
-	}
-	projectID, organizationID := "project-1", "org-1"
-	_, err := allocator.AllocateTaskKey(context.Background(), nodelocaltask.KeyAllocationRequest{TaskID: "project", ProjectID: &projectID, OrganizationID: &organizationID})
-	if err != nil {
-		t.Fatalf("allocate project key: %v", err)
-	}
-	if got, want := paths[0]+"|"+paths[1], "/me/local-tasks/key|/orgs/org-1/projects/project-1/local-tasks/key"; got != want {
-		t.Fatalf("allocation paths = %q, want %q", got, want)
-	}
-}
-
-func TestAppClose_CancelsBlockedLocalTaskKeyBackfillRequest(t *testing.T) {
-	requestStarted := make(chan struct{})
-	releaseRequest := make(chan struct{})
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		close(requestStarted)
-		<-releaseRequest
-	}))
-	defer server.Close()
-	defer close(releaseRequest)
-
+func TestLocalKeyAllocator_AllocatesProjectAndPersonalKeys(t *testing.T) {
+	ctx := context.Background()
 	database := openTestDB(t)
-	if _, err := sqlite.NewLocalTaskStore(database).Create(context.Background(), localtask.Task{
-		ID: "legacy-task", Title: "Legacy task", Status: localtask.StatusNew, Priority: localtask.PriorityMedium,
-	}); err != nil {
-		t.Fatalf("seed unkeyed Local Task: %v", err)
+	prefix := "PROJ"
+	if err := sqlite.NewProjectStore(database).Create(ctx, sqlite.Project{ID: "project-1", OrganizationID: "org-1", Name: "Project", SourceType: "unknown", TaskPrefix: &prefix}, nil); err != nil {
+		t.Fatalf("seed project: %v", err)
 	}
-	app, err := Bootstrap(Config{
-		NodeID: "node-1", Database: database, EnvDir: t.TempDir(), DataDir: t.TempDir(),
-		Session:    session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "token"}}),
-		TokenUsage: newRecordingTokenUsage(database),
-	})
-	if err != nil {
-		t.Fatalf("bootstrap app: %v", err)
+	allocator := newLocalKeyAllocator(nodeproject.NewService(nodeproject.Deps{Database: database}), sqlite.NewTaskKeyStore(database))
+	projectID, missingID, folderID := "project-1", "deleted-project", "folder-1"
+	folderKind := localtask.ProjectKindFolder
+	cases := []struct {
+		request nodelocaltask.KeyAllocationRequest
+		want    string
+	}{
+		{nodelocaltask.KeyAllocationRequest{TaskID: "a", ProjectID: &projectID}, "PROJ-1"},
+		{nodelocaltask.KeyAllocationRequest{TaskID: "b", ProjectID: &projectID}, "PROJ-2"},
+		{nodelocaltask.KeyAllocationRequest{TaskID: "c"}, "PERS-1"},
+		{nodelocaltask.KeyAllocationRequest{TaskID: "d", ProjectID: &missingID}, "PERS-2"},
+		{nodelocaltask.KeyAllocationRequest{TaskID: "e", ProjectID: &folderID, ProjectKind: &folderKind}, "PERS-3"},
 	}
-
-	select {
-	case <-requestStarted:
-	case <-time.After(time.Second):
-		t.Fatal("Local Task key backfill did not start its cloud request")
-	}
-	closeDone := make(chan error, 1)
-	go func() { closeDone <- app.Close() }()
-	select {
-	case err := <-closeDone:
-		if err != nil {
-			t.Fatalf("close app: %v", err)
+	for _, testCase := range cases {
+		key, err := allocator.AllocateTaskKey(ctx, testCase.request)
+		if err != nil || key != testCase.want {
+			t.Fatalf("allocate %s: got %q err=%v, want %q", testCase.request.TaskID, key, err, testCase.want)
 		}
-	case <-time.After(time.Second):
-		t.Fatal("app shutdown waited for the cloud request timeout")
-	}
-}
-
-func TestCloudKeyAllocator_ResolvesLegacyProjectOrganizationBeforeAllocation(t *testing.T) {
-	paths := make([]string, 0, 3)
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		paths = append(paths, request.URL.Path)
-		switch request.URL.Path {
-		case "/orgs":
-			_, _ = io.WriteString(writer, `{"organizations":[{"id":"org-1"}]}`)
-		case "/orgs/org-1/projects":
-			_, _ = io.WriteString(writer, `{"projects":[{"id":"project-1","organizationId":"org-1"}]}`)
-		case "/orgs/org-1/projects/project-1/local-tasks/key":
-			_, _ = io.WriteString(writer, `{"key":"PROJECT-1"}`)
-		default:
-			http.NotFound(writer, request)
-		}
-	}))
-	defer server.Close()
-	allocator := newCloudKeyAllocator(session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "token"}}))
-	projectID := "project-1"
-	key, err := allocator.AllocateTaskKey(context.Background(), nodelocaltask.KeyAllocationRequest{TaskID: "legacy", ProjectID: &projectID})
-	if err != nil {
-		t.Fatalf("allocate legacy project key: %v", err)
-	}
-	if key != "PROJECT-1" {
-		t.Fatalf("key = %q, want project key", key)
-	}
-	if got, want := paths[0]+"|"+paths[1]+"|"+paths[2], "/orgs|/orgs/org-1/projects|/orgs/org-1/projects/project-1/local-tasks/key"; got != want {
-		t.Fatalf("allocation paths = %q, want %q", got, want)
-	}
-}
-
-func TestCloudKeyAllocator_UsesPersonalFallbackWhenLegacyProjectNoLongerExists(t *testing.T) {
-	paths := make([]string, 0, 3)
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		paths = append(paths, request.URL.Path)
-		switch request.URL.Path {
-		case "/orgs":
-			_, _ = io.WriteString(writer, `{"organizations":[{"id":"org-1"}]}`)
-		case "/orgs/org-1/projects":
-			_, _ = io.WriteString(writer, `{"projects":[]}`)
-		case "/me/local-tasks/key":
-			_, _ = io.WriteString(writer, `{"key":"PERSONAL-1"}`)
-		default:
-			http.NotFound(writer, request)
-		}
-	}))
-	defer server.Close()
-	allocator := newCloudKeyAllocator(session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "token"}}))
-	projectID := "deleted-project"
-	key, err := allocator.AllocateTaskKey(context.Background(), nodelocaltask.KeyAllocationRequest{TaskID: "legacy", ProjectID: &projectID})
-	if err != nil {
-		t.Fatalf("allocate legacy fallback key: %v", err)
-	}
-	if key != "PERSONAL-1" {
-		t.Fatalf("key = %q, want personal fallback key", key)
-	}
-	if got, want := paths[0]+"|"+paths[1]+"|"+paths[2], "/orgs|/orgs/org-1/projects|/me/local-tasks/key"; got != want {
-		t.Fatalf("allocation paths = %q, want %q", got, want)
-	}
-}
-
-func TestCloudKeyAllocator_UsesPersonalRouteForFolderTask(t *testing.T) {
-	paths := make([]string, 0, 1)
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		paths = append(paths, request.URL.Path)
-		_, _ = io.WriteString(writer, `{"key":"PERSONAL-1"}`)
-	}))
-	defer server.Close()
-	allocator := newCloudKeyAllocator(session.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "token"}}))
-	folderID, folderKind := "folder-workspace-1", localtask.ProjectKindFolder
-	key, err := allocator.AllocateTaskKey(context.Background(), nodelocaltask.KeyAllocationRequest{
-		TaskID: "folder-task", ProjectID: &folderID, ProjectKind: &folderKind,
-	})
-	if err != nil {
-		t.Fatalf("allocate folder task key: %v", err)
-	}
-	if key != "PERSONAL-1" {
-		t.Fatalf("key = %q, want personal key", key)
-	}
-	if got, want := len(paths), 1; got != want || paths[0] != "/me/local-tasks/key" {
-		t.Fatalf("allocation paths = %#v, want only personal allocation", paths)
 	}
 }

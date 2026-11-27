@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/workspace"
@@ -119,38 +118,51 @@ func (d *appDeps) APIConfigured() bool {
 	return d.s.deps.Session != nil && d.s.deps.Session.APIConfigured()
 }
 
+// ListProjects reads the organization's projects from the local store, which
+// is the source of truth for project metadata.
 func (d *appDeps) ListProjects(ctx context.Context, organizationID string) ([]application.Project, error) {
-	runtime := d.s.deps.Session
-	if runtime == nil || !runtime.APIConfigured() {
-		return nil, fmt.Errorf("workspace creation requires an authenticated API session")
+	if d.s.deps.Database == nil {
+		return nil, fmt.Errorf("load project metadata: project storage is not available")
 	}
-	response, err := runtime.APIClient().ListProjects(organizationID)
+	stored, err := sqlite.NewProjectStore(d.s.deps.Database).ListByOrganization(ctx, organizationID)
 	if err != nil {
 		return nil, fmt.Errorf("load project metadata: %w", err)
 	}
-	projects := make([]application.Project, 0, len(response.Projects))
-	for _, project := range response.Projects {
+	projects := make([]application.Project, 0, len(stored))
+	for _, project := range stored {
 		projects = append(projects, application.Project{
-			ID: project.ID, RepoKey: project.RepoKey, RepoURL: project.RepoURL,
+			ID: project.ID, RepoKey: stringValue(project.RepoKey), RepoURL: stringValue(project.RepoURL),
 			SetupScript: project.SetupScript, ContextEnabled: project.ContextEnabled,
 		})
 	}
 	return projects, nil
 }
 
+// ListWorkspaces returns the project's live workspaces on this host.
 func (d *appDeps) ListWorkspaces(ctx context.Context, organizationID string, projectID string) ([]workspace.Record, error) {
-	if d.s.deps.Session == nil || !d.s.deps.Session.APIConfigured() {
-		return nil, fmt.Errorf("load project workspaces: no authenticated API session")
+	return d.localWorkspaceRecords(ctx, projectID)
+}
+
+func (d *appDeps) localWorkspaceRecords(ctx context.Context, projectID string) ([]workspace.Record, error) {
+	if d.s.deps.Database == nil {
+		return []workspace.Record{}, nil
 	}
-	response, err := d.s.deps.Session.APIClient().ListWorkspaces(organizationID, projectID)
+	rows, err := sqlite.NewWorkspaceStore(d.s.deps.Database).ListLiveByProject(ctx, projectID)
 	if err != nil {
-		return nil, fmt.Errorf("load project workspaces: %w", err)
+		return nil, fmt.Errorf("load local project workspaces: %w", err)
 	}
-	records := make([]workspace.Record, 0, len(response.Workspaces))
-	for _, item := range response.Workspaces {
-		records = append(records, cloud.WorkspaceToDomain(item))
+	records := make([]workspace.Record, 0, len(rows))
+	for _, row := range rows {
+		records = append(records, sqlite.WorkspaceToDomain(row))
 	}
 	return records, nil
+}
+
+func stringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func (d *appDeps) ListNodes(ctx context.Context, organizationID string) ([]application.Node, error) {
@@ -173,18 +185,6 @@ func (d *appDeps) EnsureSharedRepoClone(ctx context.Context, repoKey string, rep
 }
 
 // ---- WorkspaceRecords ----
-
-func (d *appDeps) CreateRemoteRecord(ctx context.Context, registration application.Registration) {
-	d.s.CreateRecord(ctx, registration)
-}
-
-func (d *appDeps) UpdateRemoteRecord(ctx context.Context, registration application.Registration, localPath string) {
-	d.s.UpdateRecord(ctx, registration, localPath)
-}
-
-func (d *appDeps) CloseRemoteRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status workspace.Status) {
-	d.s.CloseRecord(ctx, organizationID, projectID, workspaceID, string(status))
-}
 
 func (d *appDeps) PersistPrepared(ctx context.Context, plan application.CreatePlan) error {
 	return d.s.PersistPlan(ctx, plan)

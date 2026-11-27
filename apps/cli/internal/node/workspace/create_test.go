@@ -102,12 +102,12 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 		t.Fatalf("worktree missing after create: %v", statErr)
 	}
 
-	// Cloud record changes: create (provisioning) then update (active).
-	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
-		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
+	// api-service is never written: workspace records are local only.
+	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 0 {
+		t.Fatalf("workspace records are local; expected no api-service create, got %v", recorder.snapshot())
 	}
-	if recorder.count(http.MethodPatch, "/workspaces/ws-seq-1") != 1 {
-		t.Fatalf("expected one API update call, got %v", recorder.snapshot())
+	if recorder.count(http.MethodPatch, "/workspaces/ws-seq-1") != 0 {
+		t.Fatalf("workspace records are local; expected no api-service update, got %v", recorder.snapshot())
 	}
 
 	// Local record changes: SQLite row provisioning → active with localPath.
@@ -181,9 +181,9 @@ func TestCreateRemoteNode_EventSequence(t *testing.T) {
 		t.Fatalf("unexpected events after relay dispatch: %v", extra)
 	}
 
-	// Cloud record written; no local SQLite row (origin skips it for relays).
-	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
-		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
+	// No api-service record and no local SQLite row (origin skips it for relays).
+	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 0 {
+		t.Fatalf("workspace records are local; expected no api-service create, got %v", recorder.snapshot())
 	}
 	if _, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-remote-1"); err == nil {
 		t.Fatal("expected no local SQLite row for remote-target create")
@@ -232,13 +232,13 @@ func TestCreateLocalNode_WorktreeStepFailureRollsBack(t *testing.T) {
 		"workspaceCreateFailed",
 	})
 
-	// Cloud record closed (registration rollback).
+	// No api-service record to close (records are local only).
 	statuses := recorder.closeStatuses()
-	if len(statuses) == 0 || statuses[0] != "closed" {
-		t.Fatalf("expected close with status closed, got %v", statuses)
+	if len(statuses) != 0 {
+		t.Fatalf("workspace records are local; expected no api-service close, got %v", statuses)
 	}
-	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
-		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
+	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 0 {
+		t.Fatalf("workspace records are local; expected no api-service create, got %v", recorder.snapshot())
 	}
 
 	// Local row closed.
@@ -321,8 +321,8 @@ func TestCreateLocalNode_ContextStepFailureRollsBackWorktree(t *testing.T) {
 	}
 
 	statuses := recorder.closeStatuses()
-	if len(statuses) == 0 || statuses[0] != "closed" {
-		t.Fatalf("expected close with status closed, got %v", statuses)
+	if len(statuses) != 0 {
+		t.Fatalf("workspace records are local; expected no api-service close, got %v", statuses)
 	}
 	row, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-ctxfail")
 	if err != nil {
@@ -421,11 +421,11 @@ func TestCreateRemoteNode_DispatchRejectedRollsBackRegistration(t *testing.T) {
 
 	// Registration rollback: the cloud provisioning record is closed.
 	statuses := recorder.closeStatuses()
-	if len(statuses) == 0 || statuses[0] != "closed" {
-		t.Fatalf("expected close with status closed, got %v", statuses)
+	if len(statuses) != 0 {
+		t.Fatalf("workspace records are local; expected no api-service close, got %v", statuses)
 	}
-	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
-		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
+	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 0 {
+		t.Fatalf("workspace records are local; expected no api-service create, got %v", recorder.snapshot())
 	}
 }
 

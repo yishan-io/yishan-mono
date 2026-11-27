@@ -1,6 +1,8 @@
 package rpc
 
 import (
+	"encoding/json"
+
 	"yishan/apps/cli/internal/workspace/application"
 )
 
@@ -296,6 +298,126 @@ type ProjectListParams struct {
 
 type ProjectListWithWorkspacesParams struct {
 	OrganizationID string `json:"organizationId"`
+}
+
+// ProjectCreateParams creates a daemon-owned project. A non-empty LocalPath
+// also records this node's primary workspace at that checkout.
+type ProjectCreateParams struct {
+	OrganizationID string `json:"organizationId"`
+	Name           string `json:"name"`
+	TaskPrefix     string `json:"taskPrefix"`
+	SourceTypeHint string `json:"sourceTypeHint,omitempty"`
+	RepoURL        string `json:"repoUrl,omitempty"`
+	LocalPath      string `json:"localPath,omitempty"`
+	ContextEnabled *bool  `json:"contextEnabled,omitempty"`
+	Icon           string `json:"icon,omitempty"`
+	Color          string `json:"color,omitempty"`
+}
+
+// ProjectCommandParam is one named project command on the wire.
+type ProjectCommandParam struct {
+	Name    string `json:"name"`
+	Command string `json:"command"`
+}
+
+// ProjectUpdateParams changes project configuration; nil fields are kept.
+// LocalPath moves this node's primary workspace.
+type ProjectUpdateParams struct {
+	OrganizationID string                 `json:"organizationId"`
+	ProjectID      string                 `json:"projectId"`
+	LocalPath      *string                `json:"localPath,omitempty"`
+	Name           *string                `json:"name,omitempty"`
+	Icon           *string                `json:"icon,omitempty"`
+	Color          *string                `json:"color,omitempty"`
+	SetupScript    *string                `json:"setupScript,omitempty"`
+	PostScript     *string                `json:"postScript,omitempty"`
+	Commands       *[]ProjectCommandParam `json:"commands,omitempty"`
+	ContextEnabled *bool                  `json:"contextEnabled,omitempty"`
+}
+
+// ProjectRefParams identifies one project (delete, ensureTaskPrefix).
+type ProjectRefParams struct {
+	OrganizationID string `json:"organizationId"`
+	ProjectID      string `json:"projectId"`
+}
+
+// ProjectPromoteGitParams promotes a git-local project to a git project.
+type ProjectPromoteGitParams struct {
+	OrganizationID string `json:"organizationId"`
+	ProjectID      string `json:"projectId"`
+	RemoteURL      string `json:"remoteUrl"`
+}
+
+// ---- scheduledJob namespace ----
+
+// ScheduledJobListParams lists an organization's jobs, optionally for one project.
+type ScheduledJobListParams struct {
+	OrganizationID string `json:"organizationId"`
+	ProjectID      string `json:"projectId,omitempty"`
+}
+
+// ScheduledJobCreateParams creates a job that runs on this daemon's node.
+type ScheduledJobCreateParams struct {
+	OrganizationID string  `json:"organizationId"`
+	ProjectID      string  `json:"projectId"`
+	NodeID         string  `json:"nodeId,omitempty"`
+	Name           string  `json:"name"`
+	AgentKind      string  `json:"agentKind,omitempty"`
+	Prompt         string  `json:"prompt"`
+	Model          *string `json:"model,omitempty"`
+	Command        *string `json:"command,omitempty"`
+	CronExpression string  `json:"cronExpression"`
+	Timezone       string  `json:"timezone,omitempty"`
+}
+
+// ScheduledJobUpdateParams changes a job's definition; nil fields are kept.
+// Model and Command accept an explicit null (ClearModel/ClearCommand).
+type ScheduledJobUpdateParams struct {
+	OrganizationID string           `json:"organizationId"`
+	JobID          string           `json:"jobId"`
+	NodeID         *string          `json:"nodeId,omitempty"`
+	Name           *string          `json:"name,omitempty"`
+	AgentKind      *string          `json:"agentKind,omitempty"`
+	Prompt         *string          `json:"prompt,omitempty"`
+	Model          OptionalNullable `json:"model"`
+	Command        OptionalNullable `json:"command"`
+	CronExpression *string          `json:"cronExpression,omitempty"`
+	Timezone       *string          `json:"timezone,omitempty"`
+}
+
+// ScheduledJobRefParams identifies one job.
+type ScheduledJobRefParams struct {
+	OrganizationID string `json:"organizationId"`
+	JobID          string `json:"jobId"`
+}
+
+// ScheduledJobListRunsParams lists a job's recent runs.
+type ScheduledJobListRunsParams struct {
+	OrganizationID string `json:"organizationId"`
+	JobID          string `json:"jobId"`
+	Limit          int    `json:"limit,omitempty"`
+}
+
+// OptionalNullable distinguishes an absent field (Set false) from an explicit
+// null (Set true, Value nil) and a value.
+type OptionalNullable struct {
+	Set   bool
+	Value *string
+}
+
+// UnmarshalJSON records that the field was present.
+func (field *OptionalNullable) UnmarshalJSON(data []byte) error {
+	field.Set = true
+	if string(data) == "null" {
+		field.Value = nil
+		return nil
+	}
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	field.Value = &value
+	return nil
 }
 
 // ---- context namespace ----

@@ -1,33 +1,37 @@
 // Package project is the Node application service for the project.* RPC
-// namespace: remote project listing with the host-local workspace runtime
-// overlay. It receives a small
-// dependency set and never imports the composition root or the daemon.
+// namespace. Projects are daemon-owned and per node: the local SQLite row is
+// the only copy. api-service is read once per organization to import the
+// projects that existed there before. It receives a small dependency set and
+// never imports the composition root or the daemon.
 package project
 
 import (
 	"context"
 	"database/sql"
-	"strings"
+	"fmt"
+	"sync"
 
-	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/sqlite"
 	"yishan/apps/cli/internal/rpc"
-
-	"github.com/rs/zerolog/log"
 )
 
 // Deps are the explicit dependencies of the project application service.
 type Deps struct {
-	// Session provides the cloud API client and auth state.
+	// Session provides the cloud API client used by the one-time import.
 	Session *session.Session
-	// Database provides the local workspace store for the runtime overlay.
+	// Database holds the local projects and workspaces tables.
 	Database *sql.DB
+	// NodeID identifies this daemon; primary workspaces are recorded per node.
+	NodeID string
 }
 
 // Service implements the project.* RPC namespace.
 type Service struct {
 	deps Deps
+
+	// importMu serializes the one-time per-organization import.
+	importMu sync.Mutex
 
 	// router is the namespace routing table for tests (callRPCForTest routes
 	// through the same path rpc.Server uses for live connections). Production
@@ -41,150 +45,75 @@ func NewService(deps Deps) *Service {
 }
 
 // projectWithWorkspaces is the project + live workspaces shape returned by
-// project.listWithWorkspaces.
+// project.listWithWorkspaces and the project mutations.
 type projectWithWorkspaces struct {
 	sqlite.Project
 	Workspaces []sqlite.Workspace `json:"workspaces"`
 }
 
-func optionalString(value string) *string {
-	trimmedValue := strings.TrimSpace(value)
-	if trimmedValue == "" {
-		return nil
-	}
-	return &trimmedValue
+func (s *Service) store() *sqlite.ProjectStore {
+	return sqlite.NewProjectStore(s.deps.Database)
 }
 
-// apiProjectToLocalRecord maps a remote project list record to the
-// local-shaped record used by the RPC response.
-func apiProjectToLocalRecord(project cloud.Project) sqlite.Project {
-	commands := make([]sqlite.ProjectCommand, 0, len(project.Commands))
-	for _, command := range project.Commands {
-		commands = append(commands, sqlite.ProjectCommand{Name: command.Name, Command: command.Command})
-	}
-	return sqlite.Project{
-		ID:              project.ID,
-		Name:            project.Name,
-		TaskPrefix:      project.TaskPrefix,
-		SourceType:      project.SourceType,
-		RepoProvider:    optionalString(project.RepoProvider),
-		RepoURL:         optionalString(project.RepoURL),
-		RepoKey:         optionalString(project.RepoKey),
-		Icon:            project.Icon,
-		Color:           project.Color,
-		SetupScript:     project.SetupScript,
-		PostScript:      project.PostScript,
-		Commands:        commands,
-		ContextEnabled:  project.ContextEnabled,
-		OrganizationID:  project.OrganizationID,
-		CreatedByUserID: optionalString(project.CreatedByUserID),
-		CreatedAt:       project.CreatedAt,
-		UpdatedAt:       project.UpdatedAt,
-	}
+func (s *Service) apiConfigured() bool {
+	return s.deps.Session != nil && s.deps.Session.APIConfigured()
 }
 
-// apiWorkspaceToLocalRecord maps a remote workspace list record to the
-// local-shaped record used by the RPC response. Runtime fields (state/health/
-// localPath) are overlaid afterwards from the local store.
-func apiWorkspaceToLocalRecord(workspace cloud.Workspace) sqlite.Workspace {
-	return sqlite.Workspace{
-		ID:             workspace.ID,
-		OrganizationID: workspace.OrganizationID,
-		ProjectID:      workspace.ProjectID,
-		NodeID:         workspace.NodeID,
-		Kind:           workspace.Kind,
-		Status:         workspace.Status,
-		Branch:         optionalString(workspace.Branch),
-		SourceBranch:   optionalString(workspace.SourceBranch),
-		LocalPath:      workspace.LocalPath,
-		State:          "active",
-	}
-}
-
-// listRemoteProjects fetches the org's projects from the remote list endpoint
-// (org-scoped), mapped to the local-shaped records used by the RPC response.
-func (s *Service) listRemote(ctx context.Context, orgID string) ([]sqlite.Project, error) {
-	response, err := s.deps.Session.APIClient().ListProjects(orgID)
-	if err != nil {
-		return nil, err
-	}
-	projects := make([]sqlite.Project, 0, len(response.Projects))
-	for _, project := range response.Projects {
-		projects = append(projects, apiProjectToLocalRecord(project))
-	}
-	return projects, nil
-}
-
-// listRemoteWithWorkspaces fetches the org's projects together with the
-// actor's live (non-closed) workspaces from the remote `withWorkspaces` list
-// endpoint (one backend call), then overlays the host-local workspace runtime
-// (state/health/localPath) from the local workspace store.
-func (s *Service) listRemoteWithWorkspaces(ctx context.Context, orgID string) ([]projectWithWorkspaces, error) {
-	response, err := s.deps.Session.APIClient().ListProjectsWithWorkspaces(orgID)
-	if err != nil {
-		return nil, err
-	}
-
-	runtimeByID := map[string]sqlite.Workspace{}
-	if s.deps.Database != nil {
-		if local, err := sqlite.NewWorkspaceStore(s.deps.Database).List(ctx); err == nil {
-			for _, workspace := range local {
-				runtimeByID[workspace.ID] = workspace
-			}
-		}
-	}
-
-	results := make([]projectWithWorkspaces, 0, len(response.Projects))
-	for _, project := range response.Projects {
-		workspaces := make([]sqlite.Workspace, 0, len(project.Workspaces))
-		for _, workspace := range project.Workspaces {
-			record := apiWorkspaceToLocalRecord(workspace)
-			if runtime, ok := runtimeByID[record.ID]; ok {
-				// The local row is the authoritative lifecycle for the host: the
-				// create flow flips it to active in FinalizePersisted before the
-				// remote PATCH is attempted, so overlaying Status here keeps the
-				// desktop from rendering a locally-completed workspace as still
-				// provisioning when the remote record is stale (PATCH failed or
-				// never ran).
-				record.Status = runtime.Status
-				record.State = runtime.State
-				record.Health = runtime.Health
-				record.LocalPath = runtime.LocalPath
-			}
-			workspaces = append(workspaces, record)
-		}
-		results = append(results, projectWithWorkspaces{Project: apiProjectToLocalRecord(project.Project), Workspaces: workspaces})
-	}
-	return results, nil
-}
-
-// ProjectList returns the org's projects from the remote API. There is no
-// local project store anymore, so a failed/unconfigured remote read returns an
-// empty list.
+// List returns the organization's local projects.
 func (s *Service) List(ctx context.Context, req rpc.ProjectListParams) (any, error) {
-	if s.deps.Session == nil || !s.deps.Session.APIConfigured() {
+	if s.deps.Database == nil {
 		return []sqlite.Project{}, nil
 	}
-	projects, err := s.listRemote(ctx, req.OrganizationID)
+	s.EnsureImported(ctx, req.OrganizationID)
+	projects, err := s.store().ListByOrganization(ctx, req.OrganizationID)
 	if err != nil {
-		log.Warn().Err(err).Str("orgId", req.OrganizationID).Msg("remote project list failed")
-		return []sqlite.Project{}, nil
+		return nil, fmt.Errorf("list projects: %w", err)
 	}
 	return projects, nil
 }
 
-// ListWithWorkspaces returns the org's projects with the actor's
-// live workspaces from the remote API, overlaying host-local runtime. There is
-// no local project store anymore; a failed/unconfigured remote read returns an
-// empty list.
+// ListWithWorkspaces returns the organization's local projects with this
+// host's live workspaces.
 func (s *Service) ListWithWorkspaces(ctx context.Context, req rpc.ProjectListWithWorkspacesParams) (any, error) {
-	if s.deps.Session == nil || !s.deps.Session.APIConfigured() {
+	if s.deps.Database == nil {
 		return []projectWithWorkspaces{}, nil
 	}
-	results, err := s.listRemoteWithWorkspaces(ctx, req.OrganizationID)
+	s.EnsureImported(ctx, req.OrganizationID)
+	projects, err := s.store().ListByOrganization(ctx, req.OrganizationID)
 	if err != nil {
-		log.Warn().Err(err).Str("orgId", req.OrganizationID).Msg("remote project list failed")
-		return []projectWithWorkspaces{}, nil
+		return nil, fmt.Errorf("list projects: %w", err)
+	}
+	results := make([]projectWithWorkspaces, 0, len(projects))
+	for _, project := range projects {
+		withWorkspaces, err := s.withWorkspaces(ctx, project)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, withWorkspaces)
 	}
 	return results, nil
+}
+
+func (s *Service) withWorkspaces(ctx context.Context, project sqlite.Project) (projectWithWorkspaces, error) {
+	workspaces, err := sqlite.NewWorkspaceStore(s.deps.Database).ListLiveByProject(ctx, project.ID)
+	if err != nil {
+		return projectWithWorkspaces{}, fmt.Errorf("list workspaces for project %q: %w", project.ID, err)
+	}
+	return projectWithWorkspaces{Project: project, Workspaces: workspaces}, nil
+}
+
+// Project returns one local project (used by the workspace and Local
+// Task services).
+func (s *Service) Project(ctx context.Context, projectID string) (sqlite.Project, bool, error) {
+	if s.deps.Database == nil {
+		return sqlite.Project{}, false, nil
+	}
+	project, err := s.store().Get(ctx, projectID)
+	if err != nil {
+		if isNotFound(err) {
+			return sqlite.Project{}, false, nil
+		}
+		return sqlite.Project{}, false, err
+	}
+	return project, true, nil
 }

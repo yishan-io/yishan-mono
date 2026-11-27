@@ -61,9 +61,6 @@ type retryRecords struct {
 	finalizeErr error
 }
 
-func (*retryRecords) CreateRemoteRecord(context.Context, Registration)                            {}
-func (*retryRecords) UpdateRemoteRecord(context.Context, Registration, string)                    {}
-func (*retryRecords) CloseRemoteRecord(context.Context, string, string, string, workspace.Status) {}
 func (*retryRecords) PersistPrepared(context.Context, CreatePlan) error                           { return nil }
 func (f *retryRecords) FinalizePersisted(context.Context, CreatePlan, workspace.Workspace) error {
 	if f.finalizeErr != nil {

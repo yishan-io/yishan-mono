@@ -118,7 +118,6 @@ func closeRequest(command CloseCommand) workspace.CloseRequest {
 
 func (s *Service) prepareClose(ctx context.Context, command CloseCommand, closeReq workspace.CloseRequest) (workspace.Workspace, error, error) {
 	s.deps.Instances.SetState(command.WorkspaceID, instance.StateClosing, instance.HealthOK)
-	s.deps.Records.CloseRemoteRecord(ctx, command.OrganizationID, command.ProjectID, command.WorkspaceID, workspace.StatusClosing)
 	if s.deps.SyncUsage != nil {
 		s.deps.SyncUsage("close")
 	}
@@ -208,7 +207,6 @@ func (s *Service) commitAgentCleanup(handle any) {
 
 func (s *Service) restoreCloseFailure(ctx context.Context, command CloseCommand, ws workspace.Workspace, wsErr error) error {
 	if wsErr != nil {
-		s.revertRemoteClosing(ctx, command, ws, wsErr)
 		return nil
 	}
 	if err := s.deps.Instances.SetState(ws.ID, instance.StateActive, instance.HealthOK); err != nil {
@@ -222,7 +220,6 @@ func (s *Service) restoreCloseFailure(ctx context.Context, command CloseCommand,
 		}
 		return fmt.Errorf("restore workspace watchers: %w", err)
 	}
-	s.revertRemoteClosing(ctx, command, ws, wsErr)
 	return nil
 }
 
@@ -237,26 +234,3 @@ func (s *Service) registerCloseCleanup(closeReq workspace.CloseRequest, ws works
 	})
 }
 
-// revertRemoteClosing flips a remotely-closing record back to active after a
-// failed teardown so the workspace stays visible. The worktree path is taken
-// from the manager first, then the local DB row. Best-effort.
-func (s *Service) revertRemoteClosing(ctx context.Context, command CloseCommand, ws workspace.Workspace, wsErr error) {
-	if !s.deps.Environment.APIConfigured() {
-		return
-	}
-	if strings.TrimSpace(command.OrganizationID) == "" || strings.TrimSpace(command.ProjectID) == "" {
-		return
-	}
-	path := strings.TrimSpace(ws.Path)
-	if path == "" && wsErr != nil {
-		if row, ok := s.deps.Records.LocalRow(ctx, command.WorkspaceID); ok {
-			path = strings.TrimSpace(row.LocalPath)
-		}
-	}
-	if path == "" {
-		return
-	}
-	s.deps.Records.UpdateRemoteRecord(ctx, Registration{
-		ID: command.WorkspaceID, OrganizationID: command.OrganizationID, ProjectID: command.ProjectID,
-	}, path)
-}

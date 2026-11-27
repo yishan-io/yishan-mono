@@ -73,20 +73,14 @@ func (s *Service) UpdateState(ctx context.Context, workspaceID string, state str
 	return nil
 }
 
-// ClosePersisted marks the workspace record closed locally and mirrors the
-// closed status on the remote record (best-effort).
+// MarkClosed marks the workspace record closed.
 func (s *Service) MarkClosed(ctx context.Context, workspaceID string) error {
 	if s.deps.Database == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil
 	}
-	workspaceStore := sqlite.NewWorkspaceStore(s.deps.Database)
-	if err := workspaceStore.Update(ctx, workspaceID, sqlite.StatusUpdate(string(workspace.StatusClosed))); err != nil && !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
+	err := sqlite.NewWorkspaceStore(s.deps.Database).Update(ctx, workspaceID, sqlite.StatusUpdate(string(workspace.StatusClosed)))
+	if err != nil && !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
 		return err
-	}
-	// Mirror the closed status on the remote record (best-effort). The local row
-	// still carries the org/project ids after the status update.
-	if record, err := workspaceStore.Get(ctx, workspaceID); err == nil {
-		s.CloseRecord(ctx, record.OrganizationID, record.ProjectID, workspaceID, string(workspace.StatusClosed))
 	}
 	return nil
 }

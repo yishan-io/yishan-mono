@@ -1,3 +1,6 @@
+// Package cloud owns access to the Yishan cloud HTTP API: the Client handles
+// transport, token refresh, and response decoding, and resource files hold
+// the endpoint methods. Domain policy stays outside this package.
 package cloud
 
 import (

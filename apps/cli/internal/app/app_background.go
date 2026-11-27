@@ -1,8 +1,6 @@
 package app
 
 import (
-	"time"
-
 	modellist "yishan/apps/cli/internal/agent/catalog"
 
 	"github.com/rs/zerolog/log"
@@ -21,7 +19,8 @@ func (a *App) Start() {
 	a.StartLocalTaskKeyBackfill()
 }
 
-// StartLocalTaskKeyBackfill periodically retries legacy key reservations until the app closes.
+// StartLocalTaskKeyBackfill keys legacy Local Tasks once at startup. Keys
+// come from local counters, so one pass is enough.
 func (a *App) StartLocalTaskKeyBackfill() {
 	if a.localTaskSvc == nil {
 		return
@@ -34,22 +33,8 @@ func (a *App) StartLocalTaskKeyBackfill() {
 
 func (a *App) runLocalTaskKeyBackfill() {
 	defer a.localTaskBackfillWG.Done()
-	a.backfillLocalTaskKeys()
-	ticker := time.NewTicker(localTaskKeyBackfillInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-a.cleanupCtx.Done():
-			return
-		case <-ticker.C:
-			a.backfillLocalTaskKeys()
-		}
-	}
-}
-
-func (a *App) backfillLocalTaskKeys() {
 	if err := a.localTaskSvc.BackfillTaskKeys(a.cleanupCtx); err != nil && a.cleanupCtx.Err() == nil {
-		log.Debug().Err(err).Msg("Local Task key backfill deferred")
+		log.Warn().Err(err).Msg("Local Task key backfill failed")
 	}
 }
 

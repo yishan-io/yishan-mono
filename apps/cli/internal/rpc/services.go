@@ -149,6 +149,11 @@ type LocalTaskService interface {
 type projectService interface {
 	List(ctx context.Context, req ProjectListParams) (any, error)
 	ListWithWorkspaces(ctx context.Context, req ProjectListWithWorkspacesParams) (any, error)
+	Create(ctx context.Context, req ProjectCreateParams) (any, error)
+	Update(ctx context.Context, req ProjectUpdateParams) (any, error)
+	Delete(ctx context.Context, req ProjectRefParams) (any, error)
+	PromoteGit(ctx context.Context, req ProjectPromoteGitParams) (any, error)
+	EnsureTaskPrefix(ctx context.Context, req ProjectRefParams) (any, error)
 }
 
 // SystemService backs the daemon./app./agent./tokenUsage./node. RPC methods.

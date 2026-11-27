@@ -27,7 +27,21 @@ const (
 
 	MethodProjectList             = "project.list"
 	MethodProjectListWithWkspaces = "project.listWithWorkspaces"
+	MethodProjectCreate           = "project.create"
+	MethodProjectUpdate           = "project.update"
+	MethodProjectDelete           = "project.delete"
+	MethodProjectPromoteGit       = "project.promoteGit"
+	MethodProjectEnsureTaskPrefix = "project.ensureTaskPrefix"
 	MethodNodeList                = "node.list"
+
+	MethodScheduledJobList     = "scheduledJob.list"
+	MethodScheduledJobCreate   = "scheduledJob.create"
+	MethodScheduledJobUpdate   = "scheduledJob.update"
+	MethodScheduledJobPause    = "scheduledJob.pause"
+	MethodScheduledJobResume   = "scheduledJob.resume"
+	MethodScheduledJobDelete   = "scheduledJob.delete"
+	MethodScheduledJobListRuns = "scheduledJob.listRuns"
+	MethodScheduledJobRunNow   = "scheduledJob.runNow"
 
 	MethodLocalTaskCreate                    = "localTask.create"
 	MethodLocalTaskGet                       = "localTask.get"

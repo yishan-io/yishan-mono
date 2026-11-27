@@ -226,9 +226,6 @@ func ensureNodeUsableForWorkspace(env Environment, organizationID string, nodeID
 }
 
 func loadProjectForCreate(env Environment, organizationID string, projectID string) (Project, error) {
-	if !env.APIConfigured() {
-		return Project{}, fmt.Errorf("workspace creation requires an authenticated API session")
-	}
 	projects, err := env.ListProjects(context.Background(), organizationID)
 	if err != nil {
 		return Project{}, fmt.Errorf("load project metadata: %w", err)

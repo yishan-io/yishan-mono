@@ -39,17 +39,9 @@ type Environment interface {
 	EnsureSharedRepoClone(ctx context.Context, repoKey string, repoURL string) (string, error)
 }
 
-// WorkspaceRecords owns workspace record persistence: the cloud API record and
-// the local SQLite row. Cloud writes are best-effort (failures are logged by
-// the implementation and the local record stays authoritative).
+// WorkspaceRecords owns workspace record persistence in the local SQLite
+// database, the only copy of workspace records.
 type WorkspaceRecords interface {
-	// CreateRemoteRecord writes the cloud record (provisioning) before the
-	// worktree is provisioned.
-	CreateRemoteRecord(ctx context.Context, registration Registration)
-	// UpdateRemoteRecord records the final worktree path (provisioning → active).
-	UpdateRemoteRecord(ctx context.Context, registration Registration, localPath string)
-	// CloseRemoteRecord marks the cloud record closing/closed (best-effort).
-	CloseRemoteRecord(ctx context.Context, organizationID string, projectID string, workspaceID string, status workspace.Status)
 	// PersistPrepared writes the local SQLite row (provisioning) for a local
 	// create. Remote-target creates skip it (the executor writes its own row).
 	PersistPrepared(ctx context.Context, plan CreatePlan) error

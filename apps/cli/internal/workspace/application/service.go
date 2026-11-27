@@ -49,11 +49,6 @@ func (s *Service) Create(ctx context.Context, command CreateCommand) (CreateResu
 		s.rollbackRegistration(ctx, prepared)
 		return CreateResult{}, err
 	}
-	// Write the cloud record (provisioning) before provisioning or dispatching,
-	// so the same create→provision→activate→close lifecycle is node-agnostic.
-	if prepared.Registration != nil {
-		s.deps.Records.CreateRemoteRecord(ctx, *prepared.Registration)
-	}
 	s.deps.Events.SnapshotChanged(prepared.OrganizationID, prepared.ProjectID, prepared.WorkspaceID, "created")
 	s.deps.Events.CreateStarted(prepared.StartedEvent)
 
