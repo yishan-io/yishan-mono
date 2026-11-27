@@ -75,6 +75,7 @@ const rpcMocks = vi.hoisted(() => ({
   workspaceOpenProject: vi.fn(async () => ({ opened: [], skipped: [], errors: [] })),
   workspaceSyncContextLink: vi.fn(async () => ({ updated: [], skipped: [], errors: {} })),
   workspaceImportLocalPath: vi.fn(),
+  workspaceAdoptLocalFolders: vi.fn(async () => undefined),
   workspaceListLocalFolders: vi.fn(
     async () => [] as Array<{ id: string; path: string; name?: string; state?: string; health?: string }>,
   ),
@@ -89,6 +90,7 @@ vi.mock("../../../domains/workspace/daemon/daemonWorkspaceClient", () => ({
       syncContextLink: rpcMocks.workspaceSyncContextLink,
       importLocalPath: rpcMocks.workspaceImportLocalPath,
       listLocalFolders: rpcMocks.workspaceListLocalFolders,
+      adoptLocalFolders: rpcMocks.workspaceAdoptLocalFolders,
     }),
 }));
 
@@ -262,7 +264,9 @@ describe("projectCommands", () => {
 
     await loadWorkspaceSnapshot();
 
+    expect(rpcMocks.workspaceAdoptLocalFolders).toHaveBeenCalledWith("org-1");
     expect(rpcMocks.workspaceListLocalFolders).toHaveBeenCalledTimes(1);
+    expect(rpcMocks.workspaceListLocalFolders).toHaveBeenCalledWith("org-1");
     expect(workspaceStore.getState().workspaces).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -421,6 +425,7 @@ describe("projectCommands", () => {
     expect(rpcMocks.workspaceImportLocalPath).toHaveBeenCalledWith({
       path: "/tmp/plain-folder",
       name: "Plain Folder",
+      organizationId: "org-1",
     });
     expect(apiMocks.createProject).not.toHaveBeenCalled();
     expect(workspaceStore.getState().workspaces).toEqual(
@@ -851,6 +856,7 @@ describe("projectCommands", () => {
     expect(rpcMocks.workspaceImportLocalPath).toHaveBeenCalledWith({
       path: "/tmp/plain-folder",
       name: "Plain Git Repo",
+      organizationId: "org-1",
     });
     expect(appendRepo).toHaveBeenCalledTimes(1);
     expect(appendRepo.mock.calls[0]?.[0]).toEqual(
@@ -926,6 +932,7 @@ describe("projectCommands", () => {
     expect(rpcMocks.workspaceImportLocalPath).toHaveBeenCalledWith({
       path: "/tmp/plain-folder",
       name: "Plain Git Repo",
+      organizationId: "org-1",
     });
     // The project row + its primary workspace reach the store, and the
     // workspace is opened on the daemon immediately.

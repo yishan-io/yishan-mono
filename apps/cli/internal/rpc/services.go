@@ -28,7 +28,8 @@ type WorkspaceService interface {
 	OpenProject(ctx context.Context, req WorkspaceOpenProjectParams) (any, error)
 	CloseProject(ctx context.Context, req WorkspaceCloseProjectParams) (any, error)
 	ImportLocalPath(ctx context.Context, req WorkspaceImportLocalPathParams) (any, error)
-	ListLocalFolders(ctx context.Context) (any, error)
+	ListLocalFolders(ctx context.Context, req WorkspaceListLocalFoldersParams) (any, error)
+	AdoptLocalFolders(ctx context.Context, req WorkspaceAdoptLocalFoldersParams) (any, error)
 	DeleteLocalFolder(ctx context.Context, req WorkspaceDeleteLocalFolderParams) (any, error)
 }
 

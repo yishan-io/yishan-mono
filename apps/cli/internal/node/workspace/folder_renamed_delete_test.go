@@ -76,7 +76,7 @@ func assertRenamedFolderUnregistered(t *testing.T, s *Service, store *sqlite.Wor
 	if _, err := s.GetWorkspace(folderID); err == nil {
 		t.Fatal("expected folder to be removed from runtime")
 	}
-	listed, err := s.ListLocalFolders(ctx)
+	listed, err := s.ListLocalFolders(ctx, rpc.WorkspaceListLocalFoldersParams{})
 	if err != nil {
 		t.Fatalf("list local folders: %v", err)
 	}

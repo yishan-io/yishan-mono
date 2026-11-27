@@ -124,6 +124,20 @@ func (r *Registry) SetState(workspaceID string, state workspace.State, health wo
 	return nil
 }
 
+// SetOrgID updates the organization of an open instance. It reports false
+// when the instance is not open, which callers treat as nothing to update.
+func (r *Registry) SetOrgID(workspaceID string, orgID string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	ws, ok := r.instances[workspaceID]
+	if !ok {
+		return false
+	}
+	ws.OrgID = orgID
+	r.instances[workspaceID] = ws
+	return true
+}
+
 func (r *Registry) SetPullRequest(workspaceID string, pr *workspace.WorkspacePullRequest) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

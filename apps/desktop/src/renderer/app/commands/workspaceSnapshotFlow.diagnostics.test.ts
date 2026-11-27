@@ -16,6 +16,7 @@ const rpcMocks = vi.hoisted(() => ({
   filter: vi.fn(),
   listProjects: vi.fn(),
   workspaceImportLocalPath: vi.fn(),
+  workspaceAdoptLocalFolders: vi.fn(async () => undefined),
   workspaceListLocalFolders: vi.fn(async () => []),
   workspaceOpenProject: vi.fn(async () => ({ opened: [], skipped: [], errors: [] })),
   workspaceSyncContextLink: vi.fn(async () => ({ updated: [], skipped: [], errors: {} })),
@@ -49,6 +50,7 @@ vi.mock("@renderer/domains/workspace/daemon/daemonWorkspaceClient", () => ({
     Promise.resolve({
       importLocalPath: rpcMocks.workspaceImportLocalPath,
       listLocalFolders: rpcMocks.workspaceListLocalFolders,
+      adoptLocalFolders: rpcMocks.workspaceAdoptLocalFolders,
       openProject: rpcMocks.workspaceOpenProject,
       syncContextLink: rpcMocks.workspaceSyncContextLink,
     }),

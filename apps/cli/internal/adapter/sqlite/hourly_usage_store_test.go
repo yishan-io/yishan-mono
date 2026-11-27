@@ -135,6 +135,7 @@ func TestHourlyUsageStoreRetainsExpiredDirtyRows(t *testing.T) {
 	store := NewHourlyUsageStore(database)
 	oldBucket := time.Now().UTC().Add(-HourlyUsageRetentionWindow - time.Hour).UnixMilli()
 	dirtyRow := newTestHourlyUsageRow(oldBucket, 100)
+	dirtyRow.OrganizationID = "org-1"
 	if err := store.ReplaceAgentHourlyRows(context.Background(), "claude", []HourlyUsageRow{dirtyRow}); err != nil {
 		t.Fatalf("seed dirty row: %v", err)
 	}
@@ -148,6 +149,49 @@ func TestHourlyUsageStoreRetainsExpiredDirtyRows(t *testing.T) {
 	}
 	if len(dirtyRows) != 1 || dirtyRows[0].BucketStartHourUTC != oldBucket {
 		t.Fatalf("expected expired dirty row to remain, got %#v", dirtyRows)
+	}
+}
+
+func TestHourlyUsageStorePrunesExpiredUnattributableDirtyRows(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	store := NewHourlyUsageStore(database)
+	oldBucket := time.Now().UTC().Add(-HourlyUsageRetentionWindow - time.Hour).Truncate(time.Hour).UnixMilli()
+	recentBucket := time.Now().UTC().Add(-time.Hour).Truncate(time.Hour).UnixMilli()
+
+	expiredNoOrg := newTestHourlyUsageRow(oldBucket, 100)
+	expiredNoWorkspace := newTestHourlyUsageRow(oldBucket, 100)
+	expiredNoWorkspace.WorkspaceID = ""
+	expiredNoWorkspace.OrganizationID = "org-1"
+	recentNoOrg := newTestHourlyUsageRow(recentBucket, 100)
+	recentNoOrg.WorkspaceID = "workspace-2"
+	expiredAttributed := newTestHourlyUsageRow(oldBucket, 100)
+	expiredAttributed.WorkspaceID = "workspace-3"
+	expiredAttributed.OrganizationID = "org-1"
+	seed := []HourlyUsageRow{expiredNoOrg, expiredNoWorkspace, recentNoOrg, expiredAttributed}
+	if err := store.ReplaceAgentHourlyRows(context.Background(), "claude", seed); err != nil {
+		t.Fatalf("seed rows: %v", err)
+	}
+	if err := store.ReplaceAgentHourlyRows(context.Background(), "claude", nil); err != nil {
+		t.Fatalf("trigger prune: %v", err)
+	}
+
+	dirtyRows, err := store.ListDirtyHourlyRows(context.Background())
+	if err != nil {
+		t.Fatalf("list dirty rows: %v", err)
+	}
+	remaining := make(map[string]bool, len(dirtyRows))
+	for _, row := range dirtyRows {
+		remaining[row.WorkspaceID] = true
+	}
+	if len(dirtyRows) != 2 || !remaining["workspace-2"] || !remaining["workspace-3"] {
+		t.Fatalf("expected only the recent unattributed row and the expired attributed row to remain, got %#v", dirtyRows)
 	}
 }
 

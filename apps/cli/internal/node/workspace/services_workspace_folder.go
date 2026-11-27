@@ -38,7 +38,9 @@ func (s *Service) ImportLocalPath(ctx context.Context, req rpc.WorkspaceImportLo
 	} else if !errors.Is(err, sqlite.ErrWorkspaceNotFound) {
 		return nil, err
 	}
-	created, err := store.CreateFolder(ctx, sqlite.FolderWorkspaceInput{LocalPath: resolvedPath, NodeID: s.deps.NodeID, Name: req.Name})
+	created, err := store.CreateFolder(ctx, sqlite.FolderWorkspaceInput{
+		LocalPath: resolvedPath, NodeID: s.deps.NodeID, Name: req.Name, OrganizationID: req.OrganizationID,
+	})
 	if err != nil {
 		if isFolderPathUniqueViolation(err) {
 			return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "a workspace already exists for path: "+resolvedPath)
@@ -92,14 +94,43 @@ func isFolderPathUniqueViolation(err error) bool {
 	return strings.Contains(lower, "unique constraint") && strings.Contains(lower, "local_path")
 }
 
-// WorkspaceListLocalFolders returns all local-only folder workspaces that
-// the daemon has persisted. They are not required to be open in the runtime
-// manager; the desktop opens them on demand.
-func (s *Service) ListLocalFolders(ctx context.Context) (any, error) {
+// ListLocalFolders returns the local-only folder workspaces that the daemon
+// has persisted, scoped to req.OrganizationID when set (every folder
+// otherwise). They are not required to be open in the runtime manager; the
+// desktop opens them on demand.
+func (s *Service) ListLocalFolders(ctx context.Context, req rpc.WorkspaceListLocalFoldersParams) (any, error) {
 	if s.deps.Database == nil {
 		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
 	}
-	return sqlite.NewWorkspaceStore(s.deps.Database).ListFolders(ctx)
+	store := sqlite.NewWorkspaceStore(s.deps.Database)
+	if organizationID := strings.TrimSpace(req.OrganizationID); organizationID != "" {
+		return store.ListFoldersByOrganization(ctx, organizationID)
+	}
+	return store.ListFolders(ctx)
+}
+
+// AdoptLocalFolders assigns every unowned legacy folder (created before
+// folders were organization-scoped) to req.OrganizationID, persisting the
+// change and updating open instances so new usage is attributed to it.
+func (s *Service) AdoptLocalFolders(ctx context.Context, req rpc.WorkspaceAdoptLocalFoldersParams) (any, error) {
+	if s.deps.Database == nil {
+		return nil, rpc.NewRPCError(rpc.CodeServerError, "local database is not configured")
+	}
+	organizationID := strings.TrimSpace(req.OrganizationID)
+	if organizationID == "" {
+		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "organizationId is required")
+	}
+	adoptedIDs, err := sqlite.NewWorkspaceStore(s.deps.Database).AdoptUnownedFolders(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	for _, folderID := range adoptedIDs {
+		s.deps.Registry.SetOrgID(folderID, organizationID)
+	}
+	if adoptedIDs == nil {
+		adoptedIDs = []string{}
+	}
+	return rpc.WorkspaceAdoptLocalFoldersResult{AdoptedIDs: adoptedIDs}, nil
 }
 
 // WorkspaceDeleteLocalFolder removes a folder workspace row. If the folder

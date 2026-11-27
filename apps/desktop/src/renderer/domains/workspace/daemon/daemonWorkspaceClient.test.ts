@@ -194,6 +194,27 @@ describe("DaemonWorkspaceClient", () => {
     ]);
   });
 
+  it("scopes the local folder list to an organization when one is given", async () => {
+    const invoke = vi.fn(async () => [{ id: "folder-1", localPath: "/tmp/a" }]);
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await client.listLocalFolders(" org-1 ");
+    await client.listLocalFolders("  ");
+
+    expect(invoke).toHaveBeenNthCalledWith(1, "workspace.listLocalFolders", { organizationId: "org-1" });
+    expect(invoke).toHaveBeenNthCalledWith(2, "workspace.listLocalFolders");
+  });
+
+  it("adopts unowned local folders into an organization", async () => {
+    const invoke = vi.fn(async () => ({ adoptedIds: ["folder-1"] }));
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await client.adoptLocalFolders(" org-1 ");
+
+    expect(invoke).toHaveBeenCalledWith("workspace.adoptLocalFolders", { organizationId: "org-1" });
+    await expect(client.adoptLocalFolders("  ")).rejects.toThrow("organizationId is required");
+  });
+
   it("deletes a local folder by id", async () => {
     const invoke = vi.fn(async (method: string, params?: unknown) => {
       if (method === "workspace.deleteLocalFolder") {

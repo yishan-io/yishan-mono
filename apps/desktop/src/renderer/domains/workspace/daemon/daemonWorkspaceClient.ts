@@ -316,7 +316,7 @@ export class DaemonWorkspaceClient {
     return (await this.invoke("workspace.closeProject", input)) as WorkspaceCloseProjectOutput;
   }
 
-  async importLocalPath(input: { path: string; name?: string }): Promise<LocalPathImport> {
+  async importLocalPath(input: { path: string; name?: string; organizationId?: string }): Promise<LocalPathImport> {
     const record = asRecord(input);
     const path = readOptionalString(record?.path);
     if (!path) {
@@ -327,6 +327,7 @@ export class DaemonWorkspaceClient {
       await this.invoke("workspace.importLocalPath", {
         path,
         name: readOptionalString(record?.name),
+        organizationId: readOptionalString(record?.organizationId),
       }),
     );
     if (readOptionalString(result?.kind) === "git") {
@@ -343,8 +344,12 @@ export class DaemonWorkspaceClient {
     throw new Error("daemon workspace importLocalPath returned invalid response");
   }
 
-  async listLocalFolders(): Promise<DaemonLocalFolder[]> {
-    const result = await this.invoke("workspace.listLocalFolders");
+  /** Lists daemon folders, scoped to `organizationId` when given (all folders otherwise). */
+  async listLocalFolders(organizationId?: string): Promise<DaemonLocalFolder[]> {
+    const scopedOrganizationId = organizationId?.trim();
+    const result = scopedOrganizationId
+      ? await this.invoke("workspace.listLocalFolders", { organizationId: scopedOrganizationId })
+      : await this.invoke("workspace.listLocalFolders");
     if (!Array.isArray(result)) {
       return [];
     }
@@ -357,6 +362,16 @@ export class DaemonWorkspaceClient {
       }
     }
     return folders;
+  }
+
+  /** Assigns every legacy folder that has no organization to `organizationId`. */
+  async adoptLocalFolders(organizationId: string): Promise<void> {
+    const scopedOrganizationId = organizationId.trim();
+    if (!scopedOrganizationId) {
+      throw new Error("organizationId is required");
+    }
+
+    await this.invoke("workspace.adoptLocalFolders", { organizationId: scopedOrganizationId });
   }
 
   async deleteLocalFolder(input: { id: string }): Promise<void> {

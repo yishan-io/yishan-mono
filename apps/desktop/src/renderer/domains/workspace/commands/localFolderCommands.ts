@@ -78,10 +78,20 @@ export function restoreFolderSelectionIfNeeded(
   }
 }
 
-/** Lists all local folder workspaces registered on the daemon. */
-export async function listLocalFolders(): Promise<DaemonLocalFolder[]> {
+/** Lists the daemon's local folder workspaces, scoped to `organizationId` when given. */
+export async function listLocalFolders(organizationId?: string): Promise<DaemonLocalFolder[]> {
   const workspaceRpc = await getWorkspaceRpc();
-  return await workspaceRpc.listLocalFolders();
+  return await workspaceRpc.listLocalFolders(organizationId);
+}
+
+/**
+ * Lists the folders of `organizationId` after assigning it every legacy folder
+ * that has no organization yet (folders created before they were org-scoped).
+ */
+export async function adoptAndListLocalFolders(organizationId: string): Promise<DaemonLocalFolder[]> {
+  const workspaceRpc = await getWorkspaceRpc();
+  await workspaceRpc.adoptLocalFolders(organizationId);
+  return await workspaceRpc.listLocalFolders(organizationId);
 }
 
 /** Deletes one local folder workspace on the daemon, then removes it from store state. */

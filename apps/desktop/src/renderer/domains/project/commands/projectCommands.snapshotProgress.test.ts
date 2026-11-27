@@ -17,6 +17,7 @@ vi.mock("../../../domains/organization/api/orgApi", () => ({
 
 const rpcMocks = vi.hoisted(() => ({
   listProjects: vi.fn(),
+  workspaceAdoptLocalFolders: vi.fn(async () => undefined),
   listLocalFolders: vi.fn(async () => []),
 }));
 
@@ -44,6 +45,7 @@ vi.mock("../../../domains/workspace/daemon/daemonWorkspaceClient", () => ({
   getWorkspaceRpc: () =>
     Promise.resolve({
       listLocalFolders: rpcMocks.listLocalFolders,
+      adoptLocalFolders: rpcMocks.workspaceAdoptLocalFolders,
     }),
 }));
 

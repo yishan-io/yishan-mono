@@ -38,6 +38,7 @@ export {
   syncWorkspaceContextLinks,
 } from "./commands/workspaceCommands";
 export {
+  adoptAndListLocalFolders,
   applyLocalFolderImport,
   listLocalFolders,
   openFoldersForSnapshot,

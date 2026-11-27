@@ -61,7 +61,11 @@ export async function createProject(input: {
 
   if (isLocalSource) {
     const workspaceRpc = await getWorkspaceRpc();
-    const localPathImport = await workspaceRpc.importLocalPath({ path: normalizedPath, name: normalizedName });
+    const localPathImport = await workspaceRpc.importLocalPath({
+      path: normalizedPath,
+      name: normalizedName,
+      organizationId: sessionStore.getState().selectedOrganizationId?.trim() || undefined,
+    });
     if (localPathImport.kind === "folder") {
       await applyLocalFolderImport(localPathImport.folder);
       return;

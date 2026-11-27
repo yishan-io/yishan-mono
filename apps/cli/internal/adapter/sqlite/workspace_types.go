@@ -46,12 +46,15 @@ type WorkspacePullRequest struct {
 }
 
 // FolderWorkspaceInput defines a local-only folder workspace that exists solely
-// in the daemon DB (project_id NULL, organization_id NULL).
+// in the daemon DB (project_id NULL). OrganizationID scopes the folder to one
+// organization; empty stores NULL (legacy callers), which AdoptUnownedFolders
+// later assigns.
 type FolderWorkspaceInput struct {
-	ID        string
-	LocalPath string
-	NodeID    string
-	Name      string
+	ID             string
+	LocalPath      string
+	NodeID         string
+	Name           string
+	OrganizationID string
 }
 
 // stringPointer returns a pointer to value.

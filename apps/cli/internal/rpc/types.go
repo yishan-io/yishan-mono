@@ -179,6 +179,9 @@ type WorkspaceCloseProjectResult struct {
 type WorkspaceImportLocalPathParams struct {
 	Path string `json:"path"`
 	Name string `json:"name,omitempty"`
+	// OrganizationID scopes a newly created folder to the caller's selected
+	// organization. Empty keeps the legacy unowned folder (adopted later).
+	OrganizationID string `json:"organizationId,omitempty"`
 }
 
 // WorkspaceImportLocalPathResult classifies an existing local directory. Git
@@ -199,6 +202,23 @@ type WorkspaceImportLocalPathFolder struct {
 	Name      *string `json:"name,omitempty"`
 	State     string  `json:"state,omitempty"`
 	Health    *string `json:"health,omitempty"`
+}
+
+// WorkspaceListLocalFoldersParams filters folders by organization. Empty
+// OrganizationID (or absent params) lists every folder.
+type WorkspaceListLocalFoldersParams struct {
+	OrganizationID string `json:"organizationId,omitempty"`
+}
+
+// WorkspaceAdoptLocalFoldersParams assigns every unowned legacy folder to
+// OrganizationID.
+type WorkspaceAdoptLocalFoldersParams struct {
+	OrganizationID string `json:"organizationId"`
+}
+
+// WorkspaceAdoptLocalFoldersResult lists the folder IDs that were adopted.
+type WorkspaceAdoptLocalFoldersResult struct {
+	AdoptedIDs []string `json:"adoptedIds"`
 }
 
 type WorkspaceDeleteLocalFolderParams struct {

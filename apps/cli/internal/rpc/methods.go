@@ -16,6 +16,7 @@ const (
 	MethodWorkspaceCloseProject       = "workspace.closeProject"
 	MethodWorkspaceImportLocalPath    = "workspace.importLocalPath"
 	MethodWorkspaceListLocalFolders   = "workspace.listLocalFolders"
+	MethodWorkspaceAdoptLocalFolders  = "workspace.adoptLocalFolders"
 	MethodWorkspaceDeleteLocalFolder  = "workspace.deleteLocalFolder"
 
 	MethodContextGetState         = "context.getState"
@@ -48,10 +49,10 @@ const (
 	MethodLocalTaskUpdateWorkspaceLinkStatus = "localTask.updateWorkspaceLinkStatus"
 	MethodLocalTaskListWorkspaceLinks        = "localTask.listWorkspaceLinks"
 	MethodLocalTaskListTaskLinks             = "localTask.listTaskLinks"
-	MethodLocalTaskReadDocument             = "localTask.readDocument"
-	MethodLocalTaskWriteDocument            = "localTask.writeDocument"
-	MethodLocalTaskAppendNote               = "localTask.appendNote"
-	MethodLocalTaskFinish                   = "localTask.finish"
+	MethodLocalTaskReadDocument              = "localTask.readDocument"
+	MethodLocalTaskWriteDocument             = "localTask.writeDocument"
+	MethodLocalTaskAppendNote                = "localTask.appendNote"
+	MethodLocalTaskFinish                    = "localTask.finish"
 
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
 	MethodAgentListModels            = "agent.listModels"
