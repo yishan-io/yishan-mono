@@ -262,9 +262,14 @@ func upsertHourlyUsageRow(ctx context.Context, tx *sql.Tx, row HourlyUsageRow) e
 	return nil
 }
 
+// pruneCleanHourlyUsageRows deletes rows older than the retention window that
+// will never be uploaded again: clean rows, plus dirty rows that cannot be
+// attributed (no organization or workspace). Sync skips unattributable rows,
+// so without this they would stay dirty and be retained forever.
 func pruneCleanHourlyUsageRows(ctx context.Context, tx *sql.Tx, now time.Time) error {
 	retentionCutoff := now.Add(-HourlyUsageRetentionWindow).UnixMilli()
-	if _, err := tx.ExecContext(ctx, `DELETE FROM token_usage_hourly WHERE is_dirty = 0 AND bucket_start_hour_utc < ?`, retentionCutoff); err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM token_usage_hourly WHERE bucket_start_hour_utc < ?
+		AND (is_dirty = 0 OR organization_id = '' OR workspace_id = '')`, retentionCutoff); err != nil {
 		return fmt.Errorf("prune clean usage rows: %w", err)
 	}
 	return nil

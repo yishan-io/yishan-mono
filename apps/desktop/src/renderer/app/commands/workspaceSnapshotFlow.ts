@@ -17,7 +17,7 @@ import {
   workspaceCreateProgressStore,
   workspaceStore,
 } from "@renderer/domains/workspace";
-import { listLocalFolders } from "@renderer/domains/workspace";
+import { adoptAndListLocalFolders, listLocalFolders } from "@renderer/domains/workspace";
 import { reconcileWorkspaceSnapshot } from "./snapshotReconciler";
 /**
  * WorkspaceSnapshotFlow — the shared workspace-snapshot load.
@@ -195,8 +195,9 @@ export async function loadWorkspaceSnapshot(options?: {
     workbenchNavigationStore.getState().setActiveWorkspaceId(reconciled.selectedWorkspaceId);
 
     // load() retains prior folder items until the authoritative folder snapshot replaces them.
+    // Folders are organization-scoped; legacy unowned folders join the selected organization.
     stage = "local-folders";
-    const daemonFolders = await listLocalFolders();
+    const daemonFolders = await adoptAndListLocalFolders(selectedOrganization.id);
 
     if (!isCurrentRequest()) {
       return;

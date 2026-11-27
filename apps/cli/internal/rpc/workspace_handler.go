@@ -75,7 +75,20 @@ func (h *WorkspaceHandler) Call(ctx context.Context, connection *Connection, met
 		}
 		return h.Services.ImportLocalPath(ctx, req)
 	case MethodWorkspaceListLocalFolders:
-		return h.Services.ListLocalFolders(ctx)
+		var req WorkspaceListLocalFoldersParams
+		// Params are optional: legacy callers send none and list every folder.
+		if len(params) > 0 {
+			if err := DecodeParams(params, &req); err != nil {
+				return nil, err
+			}
+		}
+		return h.Services.ListLocalFolders(ctx, req)
+	case MethodWorkspaceAdoptLocalFolders:
+		var req WorkspaceAdoptLocalFoldersParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Services.AdoptLocalFolders(ctx, req)
 	case MethodWorkspaceDeleteLocalFolder:
 		var req WorkspaceDeleteLocalFolderParams
 		if err := DecodeParams(params, &req); err != nil {

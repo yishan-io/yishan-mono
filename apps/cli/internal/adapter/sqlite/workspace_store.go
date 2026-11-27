@@ -44,9 +44,9 @@ func (store *WorkspaceStore) Create(ctx context.Context, workspace *Workspace) e
 	return nil
 }
 
-// CreateFolder inserts a local-only folder workspace with NULL project_id and
-// organization_id. It never exists remotely and is keyed purely by its local
-// path and daemon node.
+// CreateFolder inserts a local-only folder workspace with NULL project_id. It
+// never exists remotely and is keyed purely by its local path and daemon node.
+// A non-empty OrganizationID scopes the folder to that organization.
 func (store *WorkspaceStore) CreateFolder(ctx context.Context, input FolderWorkspaceInput) (Workspace, error) {
 	id := input.ID
 	if id == "" {
@@ -56,10 +56,15 @@ func (store *WorkspaceStore) CreateFolder(ctx context.Context, input FolderWorks
 	if trimmedName := strings.TrimSpace(input.Name); trimmedName != "" {
 		name = trimmedName
 	}
+	organizationID := strings.TrimSpace(input.OrganizationID)
+	var organizationValue any
+	if organizationID != "" {
+		organizationValue = organizationID
+	}
 	_, err := store.database.ExecContext(ctx, `INSERT INTO workspaces
 		(id, organization_id, project_id, node_id, kind, status, branch, source_branch, local_path, state, health, name, created_at, updated_at)
-		VALUES (?, NULL, NULL, ?, 'folder', 'active', NULL, NULL, ?, 'active', NULL, ?, datetime('now'), datetime('now'))`,
-		id, input.NodeID, input.LocalPath, name)
+		VALUES (?, ?, NULL, ?, 'folder', 'active', NULL, NULL, ?, 'active', NULL, ?, datetime('now'), datetime('now'))`,
+		id, organizationValue, input.NodeID, input.LocalPath, name)
 	if err != nil {
 		return Workspace{}, fmt.Errorf("create folder workspace: %w", err)
 	}
@@ -68,7 +73,7 @@ func (store *WorkspaceStore) CreateFolder(ctx context.Context, input FolderWorks
 		createdName = stringPointer(trimmedName)
 	}
 	return Workspace{
-		ID: id, OrganizationID: "", ProjectID: "", NodeID: input.NodeID, Kind: "folder",
+		ID: id, OrganizationID: organizationID, ProjectID: "", NodeID: input.NodeID, Kind: "folder",
 		Status: "active", LocalPath: input.LocalPath, State: "active", Name: createdName,
 	}, nil
 }
@@ -77,6 +82,13 @@ func (store *WorkspaceStore) CreateFolder(ctx context.Context, input FolderWorks
 func (store *WorkspaceStore) ListFolders(ctx context.Context) ([]Workspace, error) {
 	return store.list(ctx, `SELECT `+workspaceColumns+` FROM workspaces
 		WHERE project_id IS NULL AND kind = 'folder' ORDER BY created_at, id`)
+}
+
+// ListFoldersByOrganization returns the folder workspaces scoped to
+// organizationID in creation order.
+func (store *WorkspaceStore) ListFoldersByOrganization(ctx context.Context, organizationID string) ([]Workspace, error) {
+	return store.list(ctx, `SELECT `+workspaceColumns+` FROM workspaces
+		WHERE project_id IS NULL AND kind = 'folder' AND organization_id = ? ORDER BY created_at, id`, organizationID)
 }
 
 // List returns all local workspaces in creation order.
