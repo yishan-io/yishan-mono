@@ -7,7 +7,6 @@ import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 
-import { sessionStore } from "@renderer/domains/session";
 import { useDialogRegistration } from "../../../../domains/workbench";
 import { updateScheduledJob } from "../../commands/scheduledJobCommands";
 import { useScheduledJobFormState } from "../../hooks/useScheduledJobFormState";
@@ -25,7 +24,6 @@ const editCustomCronDescriptionSx = { mt: -0.5 };
 /** Dialog for editing an existing scheduled job's mutable fields. */
 export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduledJobDialogViewProps) {
   const { t } = useTranslation();
-  const orgId = sessionStore((state) => state.selectedOrganizationId);
   const projects = projectStore((state) => state.projects);
   useDialogRegistration(open);
 
@@ -55,13 +53,10 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
     setScheduleTime,
     weeklyDay,
     setWeeklyDay,
-    nodes,
-    isNodesLoading,
-    nodesError,
     cronDescription,
     nextRunEstimate,
     resetForm,
-  } = useScheduledJobFormState({ initialState, orgId, projects });
+  } = useScheduledJobFormState({ initialState, projects });
 
   useEffect(() => {
     if (open) {
@@ -73,7 +68,6 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
     mutationFn: async () => {
       await updateScheduledJob(job.id, {
         name: draft.name.trim(),
-        nodeId: draft.nodeId,
         // Only Pi is supported — editing a legacy job rewrites its agent kind to pi deliberately.
         agentKind: SCHEDULED_JOB_AGENT_KIND,
         cronExpression: draft.cronExpression.trim(),
@@ -86,12 +80,7 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
 
   const isSaving = updateMutation.isPending;
   const isSubmitDisabled =
-    isSaving ||
-    !draft.name.trim() ||
-    !draft.projectId ||
-    !draft.nodeId ||
-    !draft.cronExpression.trim() ||
-    !draft.prompt.trim();
+    isSaving || !draft.name.trim() || !draft.projectId || !draft.cronExpression.trim() || !draft.prompt.trim();
   const handleClose = (_event: React.SyntheticEvent<unknown>, reason?: string) => {
     if (isSaving) {
       return;
@@ -127,14 +116,10 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
             scheduleTime={scheduleTime}
             setScheduleTime={setScheduleTime}
             projects={projects}
-            nodes={nodes}
             isBusy={isSaving}
-            isNodesLoading={isNodesLoading}
-            nodesError={nodesError}
             cronDescription={cronDescription}
             nextRunEstimate={nextRunEstimate}
             isProjectEditable={false}
-            showNodeLabelWhenError
             customCronDescriptionSx={editCustomCronDescriptionSx}
           />
 

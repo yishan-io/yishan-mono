@@ -10,7 +10,6 @@ import { workspaceStore } from "../../../../domains/workspace/state/workspaceSto
 import { EditScheduledJobDialogView } from "./EditScheduledJobDialogView";
 
 const mocked = vi.hoisted(() => ({
-  listNodesByOrg: vi.fn(),
   updateScheduledJob: vi.fn(),
 }));
 
@@ -30,10 +29,6 @@ vi.mock("../../commands/scheduledJobCommands", () => ({
 
 vi.mock("../../../domains/workbench", () => ({
   useDialogRegistration: () => {},
-}));
-
-vi.mock("../../../../domains/node/api/nodeApi", () => ({
-  listOrganizationNodes: mocked.listNodesByOrg,
 }));
 
 const initialSessionState = sessionStore.getState();
@@ -88,17 +83,13 @@ describe("EditScheduledJobDialogView", () => {
     workspaceStore.setState({ workspaces: [] });
 
     renderEditScheduledJobDialogView();
-
-    await waitFor(() => {
-      expect(mocked.listNodesByOrg).toHaveBeenCalledWith("org-1");
-    });
+    expect(screen.queryByText("scheduledJob.form.node")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "scheduledJob.edit.save" }));
 
     await waitFor(() => {
       expect(mocked.updateScheduledJob).toHaveBeenCalledWith("job-1", {
         name: "Tuesday digest",
-        nodeId: "node-2",
         agentKind: "pi",
         cronExpression: "30 14 * * 2",
         timezone: "UTC",

@@ -1,20 +1,10 @@
-import { getErrorMessage } from "@shared/errors/getErrorMessage";
-import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { listOrgNodes } from "../../../domains/node";
 import { computeNextRunEstimate, describeCronExpression } from "../schedule/scheduledJobScheduleDisplay";
 import { type ScheduleType, toCronExpression } from "../schedule/scheduledJobScheduleRules";
 
 type ScheduledJobFormProject = {
   id: string;
-};
-
-type ScheduledJobFormNode = {
-  id: string;
-  name: string;
-  scope: "private" | "shared";
-  canUse: boolean;
 };
 
 /** Composed scheduled-job input draft shared by create/edit wrappers. */
@@ -47,8 +37,8 @@ export type ScheduledJobFormStateSnapshot = {
 /** Input for the shared scheduled-job form-state hook. */
 export type UseScheduledJobFormStateInput = {
   initialState: ScheduledJobFormStateSnapshot;
-  orgId?: string | null;
   projects: ScheduledJobFormProject[];
+  /** This machine's node; scheduled jobs always run on it. */
   daemonId?: string;
 };
 
@@ -62,9 +52,6 @@ export type UseScheduledJobFormStateResult = {
   setScheduleTime: Dispatch<SetStateAction<string>>;
   weeklyDay: string;
   setWeeklyDay: Dispatch<SetStateAction<string>>;
-  nodes: ScheduledJobFormNode[];
-  isNodesLoading: boolean;
-  nodesError: string | null;
   cronDescription: string;
   nextRunEstimate: Date | null;
   resetForm: (nextState: ScheduledJobFormStateSnapshot) => void;
@@ -73,7 +60,6 @@ export type UseScheduledJobFormStateResult = {
 /** Reuses scheduled-job draft and schedule state across create/edit wrappers. */
 export function useScheduledJobFormState({
   initialState,
-  orgId,
   projects,
   daemonId,
 }: UseScheduledJobFormStateInput): UseScheduledJobFormStateResult {
@@ -81,14 +67,6 @@ export function useScheduledJobFormState({
   const [scheduleType, setScheduleType] = useState<ScheduleType>(initialState.scheduleType);
   const [weeklyDay, setWeeklyDay] = useState(initialState.weeklyDay);
   const [scheduleTime, setScheduleTime] = useState(initialState.scheduleTime);
-
-  const nodesQuery = useQuery({
-    queryKey: ["org-nodes", orgId],
-    queryFn: () => listOrgNodes(orgId as string),
-    enabled: Boolean(orgId),
-  });
-  const nodes = nodesQuery.data ?? [];
-  const nodesError = nodesQuery.isError ? getErrorMessage(nodesQuery.error) : null;
 
   const resetForm = useCallback((nextState: ScheduledJobFormStateSnapshot) => {
     setDraft(nextState.draft);
@@ -111,14 +89,10 @@ export function useScheduledJobFormState({
     if (!daemonId) {
       return;
     }
-    setDraft((previousDraft) => {
-      if (previousDraft.nodeId) {
-        return previousDraft;
-      }
-      const daemonNode = nodes.find((node) => node.id === daemonId && node.scope === "private" && node.canUse);
-      return daemonNode ? { ...previousDraft, nodeId: daemonNode.id } : previousDraft;
-    });
-  }, [daemonId, nodes]);
+    setDraft((previousDraft) =>
+      previousDraft.nodeId === daemonId ? previousDraft : { ...previousDraft, nodeId: daemonId },
+    );
+  }, [daemonId]);
 
   useEffect(() => {
     if (scheduleType === "custom") {
@@ -149,9 +123,6 @@ export function useScheduledJobFormState({
     setScheduleTime,
     weeklyDay,
     setWeeklyDay,
-    nodes,
-    isNodesLoading: nodesQuery.isLoading,
-    nodesError,
     cronDescription,
     nextRunEstimate,
     resetForm,

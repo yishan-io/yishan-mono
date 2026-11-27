@@ -11,7 +11,6 @@ import { CreateScheduledJobFormView } from "./CreateScheduledJobFormView";
 
 const mocked = vi.hoisted(() => ({
   createScheduledJob: vi.fn(),
-  listNodesByOrg: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -26,10 +25,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../commands/scheduledJobCommands", () => ({
   createScheduledJob: mocked.createScheduledJob,
-}));
-
-vi.mock("../../../../domains/node/api/nodeApi", () => ({
-  listOrganizationNodes: mocked.listNodesByOrg,
 }));
 
 const initialSessionState = sessionStore.getState();
@@ -53,36 +48,17 @@ describe("CreateScheduledJobFormView", () => {
     vi.clearAllMocks();
   });
 
-  it("submits with the selected project default and daemon node default", async () => {
+  it("submits with the selected project default on this daemon's node", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1", daemonId: "node-daemon" });
     workbenchNavigationStore.setState({
       activeProjectId: "project-2",
     });
     workspaceStore.setState({});
     projectStore.setState({});
-    mocked.listNodesByOrg.mockResolvedValueOnce([
-      {
-        id: "node-daemon",
-        name: "Local daemon",
-        kind: "managed",
-        scope: "private",
-        endpoint: null,
-        metadata: null,
-        ownerUserId: "user-1",
-        organizationId: "org-1",
-        canUse: true,
-        createdByUserId: "user-1",
-        createdAt: "2024-01-01T00:00:00.000Z",
-        updatedAt: "2024-01-01T00:00:00.000Z",
-        isOnline: true,
-      },
-    ]);
-
     renderCreateScheduledJobFormView();
 
-    await waitFor(() => {
-      expect(mocked.listNodesByOrg).toHaveBeenCalledWith("org-1");
-    });
+    // Jobs always run on this machine, so there is no node picker.
+    expect(screen.queryByText("scheduledJob.form.node")).toBeNull();
 
     fireEvent.change(screen.getByPlaceholderText("scheduledJob.form.namePlaceholder"), {
       target: { value: "Morning summary" },
