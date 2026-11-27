@@ -2,11 +2,12 @@ import { projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
 import {
   isFolderWorkspace,
+  listWorkspacePullRequestHistory,
   refreshWorkspacePullRequest as refreshWorkspacePullRequestRpc,
   workspaceStore,
 } from "@renderer/domains/workspace";
 import { isWorkspaceNotFoundError } from "@shared/errors/getErrorMessage";
-import { listWorkspacePullRequests } from "../api/workspacePullRequestApi";
+import type { WorkspacePullRequestRecord } from "../api/types";
 import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,
@@ -90,9 +91,7 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
     // Fetch uncommitted changes and (optionally) branch diff summary in parallel.
     const [sections, branchSummary] = await Promise.all([
       gitRpc.listChanges({ workspaceId }),
-      targetBranch
-        ? gitRpc.getBranchDiffSummary({ workspaceId, targetBranch })
-        : Promise.resolve(null),
+      targetBranch ? gitRpc.getBranchDiffSummary({ workspaceId, targetBranch }) : Promise.resolve(null),
     ]);
 
     const uncommittedCount = countWorkspaceGitChanges(sections);
@@ -149,9 +148,9 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
   }
 }
 
-/** Lists historical pull request records for one workspace from the API service. */
-export async function listPullRequestHistory(orgId: string, projectId: string, workspaceId: string) {
-  return listWorkspacePullRequests(orgId, projectId, workspaceId);
+/** Lists historical pull request records for one workspace from the local daemon. */
+export async function listPullRequestHistory(workspaceId: string): Promise<WorkspacePullRequestRecord[]> {
+  return listWorkspacePullRequestHistory(workspaceId);
 }
 
 /** Stores one workspace pull request in the git projection store. */

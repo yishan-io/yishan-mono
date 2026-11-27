@@ -9,6 +9,7 @@ import type { DaemonLocalFolder } from "../local-folder/snapshotTypes";
 import type {
   DaemonWorkspace,
   DaemonWorkspacePullRequest,
+  DaemonWorkspacePullRequestRecord,
   WorkspaceCloseExecutionInput,
   WorkspaceCloseExecutionResponse,
   WorkspaceCloseProjectInput,
@@ -25,7 +26,12 @@ import type {
   WorkspaceSyncContextLinkInput,
   WorkspaceSyncContextLinkResponse,
 } from "./daemonWorkspaceWire";
-import { normalizeWorktreePath, readDaemonLocalFolder, readDaemonWorkspacePullRequest } from "./daemonWorkspaceWire";
+import {
+  normalizeWorktreePath,
+  readDaemonLocalFolder,
+  readDaemonWorkspacePullRequest,
+  readDaemonWorkspacePullRequestRecord,
+} from "./daemonWorkspaceWire";
 
 type InvokeFn = (method: string, params?: unknown, timeoutMs?: number) => Promise<unknown>;
 
@@ -302,6 +308,23 @@ export class DaemonWorkspaceClient {
       forceBranch: true,
       postHook,
     })) as WorkspaceCloseExecutionResponse;
+  }
+
+  /** Lists the pull requests the daemon recorded for one workspace, newest detection first. */
+  async listPullRequests(workspaceId: string): Promise<DaemonWorkspacePullRequestRecord[]> {
+    const scopedWorkspaceId = workspaceId.trim();
+    if (!scopedWorkspaceId) {
+      throw new Error("workspaceId is required");
+    }
+
+    const result = asRecord(await this.invoke("workspace.listPullRequests", { workspaceId: scopedWorkspaceId }));
+    if (!Array.isArray(result?.pullRequests)) {
+      return [];
+    }
+    return result.pullRequests.flatMap((candidate) => {
+      const parsed = readDaemonWorkspacePullRequestRecord(candidate);
+      return parsed ? [parsed] : [];
+    });
   }
 
   async health(input: WorkspaceHealthInput): Promise<WorkspaceHealthOutput> {

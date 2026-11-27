@@ -176,6 +176,34 @@ type WorkspaceCloseProjectResult struct {
 	Stopped []string `json:"stopped"`
 }
 
+// WorkspaceListPullRequestsParams selects the workspace whose recorded pull
+// request history is returned.
+type WorkspaceListPullRequestsParams struct {
+	WorkspaceID string `json:"workspaceId"`
+}
+
+// WorkspacePullRequestRecord is one pull request the daemon has observed for a
+// workspace. Metadata is the raw JSON snapshot recorded by the PR tracker.
+type WorkspacePullRequestRecord struct {
+	ID             string  `json:"id"`
+	WorkspaceID    string  `json:"workspaceId"`
+	OrganizationID string  `json:"organizationId"`
+	PRID           string  `json:"prId"`
+	Title          *string `json:"title"`
+	URL            *string `json:"url"`
+	Branch         *string `json:"branch"`
+	BaseBranch     *string `json:"baseBranch"`
+	State          string  `json:"state"`
+	Metadata       *string `json:"metadata"`
+	DetectedAt     string  `json:"detectedAt"`
+	ResolvedAt     *string `json:"resolvedAt"`
+}
+
+// WorkspaceListPullRequestsResult lists recorded pull requests, newest detection first.
+type WorkspaceListPullRequestsResult struct {
+	PullRequests []WorkspacePullRequestRecord `json:"pullRequests"`
+}
+
 type WorkspaceImportLocalPathParams struct {
 	Path string `json:"path"`
 	Name string `json:"name,omitempty"`

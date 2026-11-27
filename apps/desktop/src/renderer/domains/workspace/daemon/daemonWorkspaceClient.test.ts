@@ -215,6 +215,73 @@ describe("DaemonWorkspaceClient", () => {
     await expect(client.adoptLocalFolders("  ")).rejects.toThrow("organizationId is required");
   });
 
+  it("lists recorded pull requests, parsing metadata and dropping malformed rows", async () => {
+    const invoke = vi.fn(async () => ({
+      pullRequests: [
+        {
+          id: "pr-row-1",
+          workspaceId: "workspace-1",
+          organizationId: "org-1",
+          prId: "42",
+          title: "Add feature",
+          url: "https://github.com/acme/repo/pull/42",
+          branch: "feature",
+          baseBranch: "main",
+          state: "merged",
+          metadata: '{"number":42,"isDraft":true}',
+          detectedAt: "2026-07-01T00:00:00Z",
+          resolvedAt: "2026-07-02T00:00:00Z",
+        },
+        { id: "pr-row-2", prId: "43", state: "open", metadata: "not json", detectedAt: "2026-07-03T00:00:00Z" },
+        { id: "pr-row-3", prId: "44", state: "review", detectedAt: "2026-07-03T00:00:00Z" },
+        { prId: "45", state: "open", detectedAt: "2026-07-03T00:00:00Z" },
+      ],
+    }));
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    const records = await client.listPullRequests(" workspace-1 ");
+
+    expect(invoke).toHaveBeenCalledWith("workspace.listPullRequests", { workspaceId: "workspace-1" });
+    expect(records).toEqual([
+      {
+        id: "pr-row-1",
+        workspaceId: "workspace-1",
+        organizationId: "org-1",
+        prId: "42",
+        title: "Add feature",
+        url: "https://github.com/acme/repo/pull/42",
+        branch: "feature",
+        baseBranch: "main",
+        state: "merged",
+        metadata: { number: 42, isDraft: true },
+        detectedAt: "2026-07-01T00:00:00Z",
+        resolvedAt: "2026-07-02T00:00:00Z",
+      },
+      {
+        id: "pr-row-2",
+        workspaceId: "",
+        organizationId: "",
+        prId: "43",
+        title: null,
+        url: null,
+        branch: null,
+        baseBranch: null,
+        state: "open",
+        metadata: null,
+        detectedAt: "2026-07-03T00:00:00Z",
+        resolvedAt: null,
+      },
+    ]);
+  });
+
+  it("returns no pull requests for a malformed response and rejects a blank workspace id", async () => {
+    const invoke = vi.fn(async () => ({ pullRequests: "nope" }));
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    await expect(client.listPullRequests("workspace-1")).resolves.toEqual([]);
+    await expect(client.listPullRequests("  ")).rejects.toThrow("workspaceId is required");
+  });
+
   it("deletes a local folder by id", async () => {
     const invoke = vi.fn(async (method: string, params?: unknown) => {
       if (method === "workspace.deleteLocalFolder") {

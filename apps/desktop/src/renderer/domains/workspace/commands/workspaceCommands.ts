@@ -311,6 +311,12 @@ export async function refreshWorkspacePullRequest(input: { workspaceId: string }
   return await workspaceRpc.refreshPullRequest(input);
 }
 
+/** Lists one workspace's recorded pull request history from the daemon (git domain consumes this). */
+export async function listWorkspacePullRequestHistory(workspaceId: string) {
+  const workspaceRpc = await getWorkspaceRpc();
+  return await workspaceRpc.listPullRequests(workspaceId);
+}
+
 /** Syncs project context links across the given worktree paths (project domain consumes this). */
 export async function syncWorkspaceContextLinks(input: {
   repoKey: string;

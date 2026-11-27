@@ -38,6 +38,12 @@ func (h *WorkspaceHandler) Call(ctx context.Context, connection *Connection, met
 			return nil, err
 		}
 		return h.Services.RefreshPullRequest(ctx, req)
+	case MethodWorkspaceListPullRequests:
+		var req WorkspaceListPullRequestsParams
+		if err := DecodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.Services.ListPullRequests(ctx, req)
 	case MethodWorkspaceSyncContextLink:
 		var req workspace.SyncContextLinkRequest
 		if err := DecodeParams(params, &req); err != nil {

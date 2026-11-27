@@ -9,6 +9,7 @@ const (
 	MethodWorkspaceCreate             = "workspace.create"
 	MethodWorkspaceClose              = "workspace.close"
 	MethodWorkspaceRefreshPullRequest = "workspace.refreshPullRequest"
+	MethodWorkspaceListPullRequests   = "workspace.listPullRequests"
 	MethodWorkspaceSetActive          = "workspace.setActive"
 	MethodWorkspaceSyncContextLink    = "workspace.syncContextLink"
 	MethodWorkspaceHealth             = "workspace.health"

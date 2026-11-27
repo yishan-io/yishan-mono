@@ -16,6 +16,4 @@ export type WorkspacePullRequestRecord = {
   metadata: Record<string, unknown> | null;
   detectedAt: string;
   resolvedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
 };
