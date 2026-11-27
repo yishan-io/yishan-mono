@@ -18,7 +18,6 @@ type CreateCommand struct {
 	TaskRun        *workspace.TaskRunConfig `json:"taskRun,omitempty"`
 	Kind           string                   `json:"kind,omitempty"`
 	Branch         string                   `json:"branch,omitempty"`
-	ReplyNodeID    string                   `json:"replyNodeId,omitempty"`
 }
 
 type StartedEvent struct {

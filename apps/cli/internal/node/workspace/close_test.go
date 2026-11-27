@@ -61,20 +61,6 @@ func TestCloseWorkspaceLocally_MakesNoRemoteCallsOnTeardownFailure(t *testing.T)
 	}
 }
 
-func TestWorkspaceClose_RemoteNode_RelaysInsteadOfLocalClose(t *testing.T) {
-	s := newCloseRoutingTestHandler(t, "node-remote")
-	params, err := json.Marshal(workspaceCloseParams{
-		WorkspaceID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1",
-	})
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	_, err = s.callRPCForTest(context.Background(), rpc.MethodWorkspaceClose, params)
-	if err == nil || !strings.Contains(err.Error(), "relay not connected") {
-		t.Fatalf("expected relay path (relay not connected), got err=%v", err)
-	}
-}
-
 func TestWorkspaceClose_LocalNode_TakesLocalClosePath(t *testing.T) {
 	s := newCloseRoutingTestHandler(t, "node-1")
 	params, err := json.Marshal(workspaceCloseParams{

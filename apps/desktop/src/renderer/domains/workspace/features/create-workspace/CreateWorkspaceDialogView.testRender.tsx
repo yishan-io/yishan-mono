@@ -133,10 +133,6 @@ export function setupCreateWorkspaceDialogViewTests() {
     getMockedCommands().renameWorkspace.mockResolvedValue(undefined);
     getMockedCommands().renameWorkspaceBranch.mockResolvedValue(undefined);
     getMockedCommands().listAgentModels.mockResolvedValue({ models: [] });
-    getMockedCommands().listNodesByOrg.mockResolvedValue([
-      { id: "daemon-1", name: "Local Node", scope: "private", canUse: true },
-      { id: "node-2", name: "Shared Node", scope: "shared", canUse: true },
-    ]);
     agentSettingsStore.setState(defaultAgentSettingsState);
     workspaceSettingsStore.setState(
       {

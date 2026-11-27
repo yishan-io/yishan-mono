@@ -280,9 +280,6 @@ func Bootstrap(cfg Config) (*App, error) {
 		AgentLifecycleCtx: agentLifecycleCtx,
 		DaemonWSEndpoint:  cfg.DaemonWSEndpoint,
 		ServerCtx:         context.Background(),
-		RelayCreateCompleted: func(prepared application.CreatePlan, completed map[string]any) {
-			workspaceSvc.RelayCreateCompleted(prepared, completed)
-		},
 	})
 	workspaceSvc.SetAgentCleanupLifecycle(
 		func(ctx context.Context, workspaceID string) (any, error) {
@@ -385,7 +382,6 @@ func Bootstrap(cfg Config) (*App, error) {
 		Events:  events,
 	})
 	terminalSvc.SetRelayClient(app.relay)
-	workspaceSvc.SetRelayClient(app.relay)
 
 	// Constructing LocalScheduler starts its internal workers. Defer that until
 	// the relay and every relay callback consumer are fully wired.

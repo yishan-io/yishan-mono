@@ -33,9 +33,6 @@ func (s *Service) PublishWorkspaceCreateCompleted(prepared application.CreatePla
 		completionPayload["taskRunTitle"] = taskRunSession.title
 	}
 	s.deps.Events.Publish(eventbus.Event{Topic: "workspaceCreateCompleted", Payload: completionPayload})
-	if s.deps.RelayCreateCompleted != nil {
-		s.deps.RelayCreateCompleted(prepared, completionPayload)
-	}
 }
 
 // maybeStartTaskRun starts the task run attached to a workspace create.

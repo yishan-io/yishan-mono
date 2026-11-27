@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
 
@@ -11,14 +10,10 @@ import (
 
 // fakeEnvironment implements Environment for prepare tests.
 type fakeEnvironment struct {
-	apiConfigured bool
-	projects      []Project
-	workspaces    []workspace.Record
-	nodes         []Node
-	clonePath     string
+	projects   []Project
+	workspaces []workspace.Record
+	clonePath  string
 }
-
-func (f *fakeEnvironment) APIConfigured() bool { return f.apiConfigured }
 
 func (f *fakeEnvironment) ListProjects(_ context.Context, _ string) ([]Project, error) {
 	return f.projects, nil
@@ -26,10 +21,6 @@ func (f *fakeEnvironment) ListProjects(_ context.Context, _ string) ([]Project, 
 
 func (f *fakeEnvironment) ListWorkspaces(_ context.Context, _ string, _ string) ([]workspace.Record, error) {
 	return f.workspaces, nil
-}
-
-func (f *fakeEnvironment) ListNodes(_ context.Context, _ string) ([]Node, error) {
-	return f.nodes, nil
 }
 
 func (f *fakeEnvironment) EnsureSharedRepoClone(_ context.Context, _ string, _ string) (string, error) {
@@ -102,7 +93,6 @@ func TestPrepare_RejectsPrimaryWorkspaceCreate(t *testing.T) {
 
 func TestPrepare_WorktreeCreateUsesPrimaryWorkspacePath(t *testing.T) {
 	env := &fakeEnvironment{
-		apiConfigured: true,
 		projects: []Project{{
 			ID: "proj-1", RepoKey: "acme/repo", RepoURL: "https://example.com/repo.git",
 			SetupScript: "npm install", ContextEnabled: true,
@@ -126,9 +116,6 @@ func TestPrepare_WorktreeCreateUsesPrimaryWorkspacePath(t *testing.T) {
 	if plan.LocalCreate == nil {
 		t.Fatal("localCreate = nil, want local worktree plan")
 	}
-	if plan.RemoteRequest != nil {
-		t.Fatalf("remoteRequest = %#v, want nil", plan.RemoteRequest)
-	}
 	if plan.LocalCreate.SourcePath != "/tmp/primary-repo" {
 		t.Fatalf("SourcePath = %q, want %q", plan.LocalCreate.SourcePath, "/tmp/primary-repo")
 	}
@@ -137,37 +124,6 @@ func TestPrepare_WorktreeCreateUsesPrimaryWorkspacePath(t *testing.T) {
 	}
 	if plan.LocalCreate.SetupHook != "npm install" {
 		t.Fatalf("SetupHook = %q, want %q", plan.LocalCreate.SetupHook, "npm install")
-	}
-}
-
-func TestPrepare_WorktreeCreateRemoteNodeReturnsRelayRequest(t *testing.T) {
-	env := &fakeEnvironment{
-		apiConfigured: true,
-		nodes:         []Node{{ID: "node-remote"}},
-	}
-	service := newPrepareTestService(env)
-	plan, err := service.prepare(context.Background(), CreateCommand{
-		OrganizationID: "org-1",
-		ProjectID:      "proj-1",
-		Kind:           string(workspace.KindWorktree),
-		Branch:         "feature/test",
-		SourceBranch:   "main",
-		NodeID:         "node-remote",
-	})
-	if err != nil {
-		t.Fatalf("prepare: %v", err)
-	}
-	if plan.RemoteRequest == nil {
-		t.Fatal("remoteRequest = nil, want remote relay plan")
-	}
-	if plan.LocalCreate != nil {
-		t.Fatalf("localCreate = %#v, want nil", plan.LocalCreate)
-	}
-	if plan.RemoteRequest.NodeID != "node-remote" {
-		t.Fatalf("NodeID = %q, want %q", plan.RemoteRequest.NodeID, "node-remote")
-	}
-	if plan.RemoteRequest.ReplyNodeID != "node-local" {
-		t.Fatalf("ReplyNodeID = %q, want %q", plan.RemoteRequest.ReplyNodeID, "node-local")
 	}
 }
 
@@ -182,44 +138,6 @@ func (r *remoteCreateRelay) DispatchCreate(_ context.Context, _ CreatePlan, _ Cr
 
 func (r *remoteCreateRelay) DispatchClose(_ context.Context, _ CloseCommand, _ string) error {
 	return nil
-}
-
-func TestCreate_RejectsLocalTaskCreateForRemoteNodeBeforeDispatch(t *testing.T) {
-	env := &fakeEnvironment{apiConfigured: true, nodes: []Node{{ID: "node-remote"}}}
-	relay := &remoteCreateRelay{}
-	service := New(Dependencies{NodeID: "node-local", Environment: env, Relay: relay})
-
-	_, err := service.Create(context.Background(), CreateCommand{
-		LocalTaskID: "task-1", OrganizationID: "org-1", ProjectID: "proj-1",
-		Branch: "feature/test", SourceBranch: "main", NodeID: "node-remote",
-	})
-
-	var validationError *workspace.Error
-	if !errors.As(err, &validationError) || validationError.Code != workspace.ErrCodeInvalidParams {
-		t.Fatalf("err = %v, want invalid workspace params error", err)
-	}
-	if err == nil || !strings.Contains(err.Error(), "localTaskId can only be used when creating a workspace on this daemon") {
-		t.Fatalf("err = %v, want clear local task remote target validation", err)
-	}
-	if relay.createCalls != 0 {
-		t.Fatalf("relay create calls = %d, want 0", relay.createCalls)
-	}
-}
-
-func TestPrepare_RejectsLocalTaskDirectCreateForRemoteNode(t *testing.T) {
-	service := newPrepareTestService(nil)
-	_, err := service.prepare(context.Background(), CreateCommand{
-		LocalTaskID: "task-1", OrganizationID: "org-1", ProjectID: "proj-1", NodeID: "node-remote",
-		SourcePath: "/tmp/primary-repo", RepoKey: "acme/repo", TargetBranch: "feature/test", SourceBranch: "main",
-	})
-
-	var validationError *workspace.Error
-	if !errors.As(err, &validationError) || validationError.Code != workspace.ErrCodeInvalidParams {
-		t.Fatalf("err = %v, want invalid workspace params error", err)
-	}
-	if !strings.Contains(err.Error(), "localTaskId can only be used when creating a workspace on this daemon") {
-		t.Fatalf("err = %v, want clear local task remote target validation", err)
-	}
 }
 
 func TestPrepare_DirectCreateSetsRegistrationWithFallbackNodeID(t *testing.T) {
@@ -271,5 +189,18 @@ func TestPrepare_DirectCreateSkipsRegistrationWhenOrgMissing(t *testing.T) {
 	}
 	if plan.Registration != nil {
 		t.Fatalf("registration = %#v, want nil when org is missing", plan.Registration)
+	}
+}
+
+func TestPrepare_RejectsCreateOnAnotherNode(t *testing.T) {
+	service := newPrepareTestService(nil)
+	for _, command := range []CreateCommand{
+		{OrganizationID: "org-1", ProjectID: "proj-1", NodeID: "node-remote", Branch: "feature/x", SourceBranch: "main"},
+		{OrganizationID: "org-1", ProjectID: "proj-1", NodeID: "node-remote", SourcePath: "/tmp/repo", TargetBranch: "feature/x"},
+	} {
+		_, err := service.prepare(context.Background(), command)
+		if err == nil || !strings.Contains(err.Error(), "workspaces are created on this machine") {
+			t.Fatalf("err = %v, want rejection of another node", err)
+		}
 	}
 }

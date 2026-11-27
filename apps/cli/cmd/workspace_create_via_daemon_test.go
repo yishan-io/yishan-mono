@@ -28,7 +28,6 @@ func TestBuildWorkspaceCreateRPCRequest(t *testing.T) {
 	cmd.Flags().Set("branch", "feature/test")
 	cmd.Flags().Set("source-branch", "main")
 	cmd.Flags().Set("name", "feature-test")
-	cmd.Flags().Set("target-node", "node-2")
 	cmd.Flags().Set("task-run-prompt", "fix bug")
 	cmd.Flags().Set("task-run-model", "sonnet")
 
@@ -42,9 +41,6 @@ func TestBuildWorkspaceCreateRPCRequest(t *testing.T) {
 	}
 	if request.ProjectID != "proj-1" {
 		t.Fatalf("ProjectID = %q, want %q", request.ProjectID, "proj-1")
-	}
-	if request.NodeID != "node-2" {
-		t.Fatalf("NodeID = %q, want %q", request.NodeID, "node-2")
 	}
 	if request.Kind != string(workspace.KindWorktree) {
 		t.Fatalf("Kind = %q, want %q", request.Kind, string(workspace.KindWorktree))
@@ -177,7 +173,6 @@ func newWorkspaceCreateTestCommand() *cobra.Command {
 	cmd.Flags().String("kind", string(workspace.KindWorktree), "")
 	cmd.Flags().String("branch", "", "")
 	cmd.Flags().String("source-branch", "", "")
-	cmd.Flags().String("target-node", "", "")
 	cmd.Flags().String("name", "", "")
 	cmd.Flags().String("task-run-prompt", "", "")
 	cmd.Flags().String("task-run-model", "", "")

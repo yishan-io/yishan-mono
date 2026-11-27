@@ -67,7 +67,3 @@ func assertTopicSequence(t *testing.T, events []eventbus.Event, want []string) {
 		t.Fatalf("lifecycle topic sequence = %v, want %v", got, want)
 	}
 }
-
-// wireRelayCapture runs a real relay client against a fake relay that echoes a
-// verdict and forwards every received JSON-RPC message (the relay envelope) to
-// the returned channel.

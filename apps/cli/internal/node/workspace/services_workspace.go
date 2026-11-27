@@ -34,9 +34,6 @@ func (s *Service) Close(ctx context.Context, req rpc.WorkspaceCloseParams) (any,
 	if err != nil {
 		return nil, err
 	}
-	if result.Relayed {
-		return map[string]any{"workspaceId": result.WorkspaceID, "status": result.Status}, nil
-	}
 	response := map[string]any{
 		"workspace":   map[string]string{"id": result.WorkspaceID, "status": result.Status},
 		"workspaceId": result.WorkspaceID,

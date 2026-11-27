@@ -46,7 +46,6 @@ type closeLifecycleCase struct {
 func closeLifecycleCases() []closeLifecycleCase {
 	return []closeLifecycleCase{
 		{name: "direct", close: closeDirectLifecycleWorkspace},
-		{name: "executor_relay", close: closeRelayedLifecycleWorkspace},
 		{name: "retry", close: closeRetryLifecycleWorkspace},
 	}
 }
@@ -54,17 +53,6 @@ func closeLifecycleCases() []closeLifecycleCase {
 func closeDirectLifecycleWorkspace(svc *Service, _ string) error {
 	_, err := svc.CloseLocal(context.Background(), workspaceDomain.CloseRequest{WorkspaceID: "matching"})
 	return err
-}
-
-func closeRelayedLifecycleWorkspace(svc *Service, _ string) error {
-	svc.handleRelayedClose(relayWorkspaceCloseEnvelope{
-		WorkspaceID: "matching", TargetNodeID: "node-1", Change: relayChangeWorkspaceCloseRequest,
-	})
-	_, err := svc.GetWorkspace("matching")
-	if err == nil {
-		return errors.New("executor relay close retained workspace")
-	}
-	return nil
 }
 
 func closeRetryLifecycleWorkspace(svc *Service, path string) error {

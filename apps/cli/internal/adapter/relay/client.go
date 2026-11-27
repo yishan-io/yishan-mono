@@ -71,8 +71,7 @@ type ClientConfig struct {
 }
 
 // Client is the relay WebSocket client: the reconnect loop, the per-session
-// read loop, the connection handle, pending dispatch verdicts, and the
-// connection status. It is the single owner of the relay connection state.
+// read loop, the connection handle, and the connection status. It is the single owner of the relay connection state.
 type Client struct {
 	runtime     *session.Session
 	nodeID      string
@@ -86,9 +85,6 @@ type Client struct {
 
 	connMu sync.RWMutex
 	conn   *rpc.Connection
-
-	pendingMu sync.Mutex
-	pending   map[string]chan dispatchVerdict
 }
 
 // NewClient creates a relay client. The reconnect loop starts via Run.
@@ -103,7 +99,6 @@ func NewClient(cfg ClientConfig) *Client {
 		events:      cfg.Events,
 		onConnected: cfg.OnConnected,
 		status:      NewStatus(cfg.URL != "", cfg.URL),
-		pending:     make(map[string]chan dispatchVerdict),
 	}
 }
 

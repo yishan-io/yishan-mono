@@ -41,7 +41,6 @@ func (s *Service) newAppService() *application.Service {
 		Environment:                  deps,
 		Records:                      deps,
 		Instances:                    deps,
-		Relay:                        deps,
 		Events:                       deps,
 		WorkspaceAvailabilityChanged: s.deps.WorkspaceAvailabilityChanged,
 		LinkLocalTaskWorkspace: func(ctx context.Context, taskID string, workspaceID string) error {
@@ -114,10 +113,6 @@ func (s *Service) newAppService() *application.Service {
 
 // ---- Environment ----
 
-func (d *appDeps) APIConfigured() bool {
-	return d.s.deps.Session != nil && d.s.deps.Session.APIConfigured()
-}
-
 // ListProjects reads the organization's projects from the local store, which
 // is the source of truth for project metadata.
 func (d *appDeps) ListProjects(ctx context.Context, organizationID string) ([]application.Project, error) {
@@ -163,21 +158,6 @@ func stringValue(value *string) string {
 		return ""
 	}
 	return *value
-}
-
-func (d *appDeps) ListNodes(ctx context.Context, organizationID string) ([]application.Node, error) {
-	if d.s.deps.Session == nil || !d.s.deps.Session.APIConfigured() {
-		return nil, fmt.Errorf("load organization nodes: no authenticated API session")
-	}
-	response, err := d.s.deps.Session.APIClient().ListNodes(organizationID)
-	if err != nil {
-		return nil, fmt.Errorf("load organization nodes: %w", err)
-	}
-	nodes := make([]application.Node, 0, len(response.Nodes))
-	for _, node := range response.Nodes {
-		nodes = append(nodes, application.Node{ID: node.ID})
-	}
-	return nodes, nil
 }
 
 func (d *appDeps) EnsureSharedRepoClone(ctx context.Context, repoKey string, repoURL string) (string, error) {
@@ -259,29 +239,6 @@ func (d *appDeps) StopTracking(workspaceID string) {
 	}
 }
 
-// ---- Relay ----
-
-func (d *appDeps) DispatchCreate(ctx context.Context, plan application.CreatePlan, command application.CreateCommand) error {
-	return d.s.dispatchCreate(workspaceCreateParams(command), workspaceCreateStartedEvent(plan.StartedEvent))
-}
-
-func (d *appDeps) DispatchClose(ctx context.Context, command application.CloseCommand, targetNodeID string) error {
-	payload := relayWorkspaceCloseEnvelope{
-		OrganizationID: command.OrganizationID,
-		ProjectID:      command.ProjectID,
-		WorkspaceID:    command.WorkspaceID,
-		SourceNodeID:   d.s.deps.NodeID,
-		TargetNodeID:   targetNodeID,
-		Change:         relayChangeWorkspaceCloseRequest,
-		Branch:         command.Branch,
-		RemoveBranch:   command.RemoveBranch,
-		ForceWorktree:  command.ForceWorktree,
-		ForceBranch:    command.ForceBranch,
-		PostHook:       command.PostHook,
-	}
-	return d.s.relayClient.SendDispatchRequest(payload, targetNodeID)
-}
-
 // ---- Events ----
 
 func (d *appDeps) Publish(topic string, payload any) {
@@ -298,12 +255,10 @@ func (d *appDeps) CreateStarted(event application.StartedEvent) {
 
 func (d *appDeps) CreateProgress(plan application.CreatePlan, event workspace.CreateProgressEvent) {
 	d.s.deps.Events.Publish(eventbus.Event{Topic: "workspaceCreateProgress", Payload: event})
-	d.s.relayCreateProgress(plan, event)
 }
 
 func (d *appDeps) CreateFailed(plan application.CreatePlan, failed application.FailedEvent) {
 	d.s.deps.Events.Publish(eventbus.Event{Topic: "workspaceCreateFailed", Payload: failed})
-	d.s.relayCreateFailed(plan, workspaceCreateFailedEvent(failed))
 }
 
 func (d *appDeps) CreateCompleted(plan application.CreatePlan, created workspace.Workspace, warnings []any) {

@@ -44,11 +44,9 @@ func (s *Service) PersistPlan(ctx context.Context, prepared application.CreatePl
 	return sqlite.NewWorkspaceStore(s.deps.Database).Create(ctx, &row)
 }
 
-// FinalizePersisted transitions the persisted row to active once the local
-// worktree has been provisioned. A relayed create runs on the executor node,
-// which may not have a local row for the workspace (the origin node wrote it);
-// a missing row is tolerated because the remote record is authoritative and
-// the cache is reconciled on the next sync.
+// Finalize transitions the persisted row to active once the local worktree
+// has been provisioned. A missing row (a direct create without project
+// registration) is tolerated.
 func (s *Service) Finalize(ctx context.Context, prepared application.CreatePlan, created workspace.Workspace) error {
 	if s.deps.Database == nil || prepared.Registration == nil {
 		return nil

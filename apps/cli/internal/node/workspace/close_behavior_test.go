@@ -77,73 +77,12 @@ func TestCloseLocalNode_RecordSequence(t *testing.T) {
 	}
 }
 
-func TestCloseRemoteNode_Relays(t *testing.T) {
-	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, nil, "node-1", database)
-	relayMessages := wireRelayCapture(t, s, map[string]any{"accepted": true})
-
-	store := sqlite.NewWorkspaceStore(database)
-	if err := store.Create(context.Background(), &sqlite.Workspace{
-		ID: "ws-remote-close", OrganizationID: "org-1", ProjectID: "project-1", NodeID: "node-2",
-		Kind: string(workspace.KindWorktree), Status: "active", LocalPath: t.TempDir(),
-		State: string(workspace.StateActive),
-	}); err != nil {
-		t.Fatalf("create persisted workspace: %v", err)
-	}
-
-	raw, err := json.Marshal(map[string]any{
-		"workspaceId": "ws-remote-close", "organizationId": "org-1", "projectId": "project-1", "removeBranch": true,
-	})
-	if err != nil {
-		t.Fatalf("marshal close params: %v", err)
-	}
-
-	result, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceClose, raw)
-	if err != nil {
-		t.Fatalf("handleWorkspaceClose: %v", err)
-	}
-	closeResult, ok := result.(map[string]any)
-	if !ok || closeResult["status"] != "closing" {
-		t.Fatalf("close result = %#v, want status closing (relayed)", result)
-	}
-
-	var relayMsg map[string]any
-	select {
-	case relayMsg = <-relayMessages:
-	case <-time.After(10 * time.Second):
-		t.Fatal("timed out waiting for close relay dispatch")
-	}
-	envelope := decodeRelayCloseEnvelope(t, relayMsg)
-	if envelope.Change != relayChangeWorkspaceCloseRequest {
-		t.Fatalf("relay change = %q, want %q", envelope.Change, relayChangeWorkspaceCloseRequest)
-	}
-	if envelope.WorkspaceID != "ws-remote-close" || envelope.TargetNodeID != "node-2" || envelope.SourceNodeID != "node-1" {
-		t.Fatalf("relay close envelope = %#v, want workspaceId ws-remote-close target node-2 source node-1", envelope)
-	}
-	if !envelope.RemoveBranch {
-		t.Fatal("relay close envelope must carry removeBranch")
-	}
-
-	// No local teardown: SQLite row untouched, no runtime record created.
-	row, err := store.Get(context.Background(), "ws-remote-close")
-	if err != nil {
-		t.Fatalf("get persisted workspace: %v", err)
-	}
-	if row.Status != "active" {
-		t.Fatalf("persisted status = %q, want active (origin does not close remote rows)", row.Status)
-	}
-	if len(s.deps.Registry.List()) != 0 {
-		t.Fatalf("expected no manager runtime records, got %v", s.deps.Registry.List())
-	}
-}
-
 func TestSuccessfulClose_UnlinksLocalTaskWorkspace(t *testing.T) {
 	testCases := []struct {
 		name  string
 		close func(*Service, string) error
 	}{
 		{name: "local", close: closeLocalTaskWorkspace},
-		{name: "relay executor", close: closeRelayedTaskWorkspace},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -155,11 +94,6 @@ func TestSuccessfulClose_UnlinksLocalTaskWorkspace(t *testing.T) {
 func closeLocalTaskWorkspace(s *Service, workspaceID string) error {
 	_, err := s.app.CloseLocal(context.Background(), workspaceCloseParams{WorkspaceID: workspaceID})
 	return err
-}
-
-func closeRelayedTaskWorkspace(s *Service, workspaceID string) error {
-	s.handleRelayedClose(relayWorkspaceCloseEnvelope{WorkspaceID: workspaceID, TargetNodeID: "node-1", Change: relayChangeWorkspaceCloseRequest})
-	return nil
 }
 
 func assertSuccessfulCloseUnlinksLocalTaskWorkspace(t *testing.T, closeWorkspace func(*Service, string) error) {
@@ -218,25 +152,5 @@ func TestCloseLocalNode_UsesAgentCleanupLifecycle(t *testing.T) {
 	}
 	if want := []string{"begin", "commit"}; !reflect.DeepEqual(calls, want) {
 		t.Fatalf("agent cleanup lifecycle = %v, want %v", calls, want)
-	}
-}
-
-func TestRelayedClose_ExecutorRunsAgentCleanupLifecycle(t *testing.T) {
-	s := newTestHandler(t)
-	workspacePath := t.TempDir()
-	openLocalWorkspace(t, s, "ws-relayed-close", workspacePath)
-	var calls []string
-	s.SetAgentCleanupLifecycle(
-		func(context.Context, string) (any, error) { calls = append(calls, "begin"); return "cleanup", nil },
-		func(any) { calls = append(calls, "abort") },
-		func(any) { calls = append(calls, "commit") },
-	)
-
-	s.handleRelayedClose(relayWorkspaceCloseEnvelope{
-		WorkspaceID: "ws-relayed-close", TargetNodeID: "node-1", Change: relayChangeWorkspaceCloseRequest,
-	})
-
-	if want := []string{"begin", "commit"}; !reflect.DeepEqual(calls, want) {
-		t.Fatalf("executor agent cleanup lifecycle = %v, want %v", calls, want)
 	}
 }

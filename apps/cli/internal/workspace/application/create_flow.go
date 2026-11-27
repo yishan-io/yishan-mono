@@ -6,18 +6,15 @@ import (
 )
 
 type PreparedPlan struct {
-	WorkspaceID   string
-	LocalCreate   *workspace.CreateRequest
-	RemoteRequest *CreateCommand
+	WorkspaceID string
+	LocalCreate *workspace.CreateRequest
 }
 
 type ExecutePreparedPlanDependencies struct {
-	Now                  func() string
-	DispatchRemote       func(req CreateCommand) error
-	RollbackRegistration func(context.Context)
-	ExecuteLocalCreate   func(context.Context, workspace.CreateProgressReporter) error
-	PublishProgress      func(workspace.CreateProgressEvent)
-	PublishFailed        func(FailedEvent)
+	Now                func() string
+	ExecuteLocalCreate func(context.Context, workspace.CreateProgressReporter) error
+	PublishProgress    func(workspace.CreateProgressEvent)
+	PublishFailed      func(FailedEvent)
 }
 
 type ExecuteLocalCreateDependencies struct {
@@ -43,17 +40,6 @@ func ExecutePreparedPlan(ctx context.Context, plan PreparedPlan, deps ExecutePre
 		}
 	}
 
-	if plan.RemoteRequest != nil {
-		if deps.DispatchRemote != nil {
-			if err := deps.DispatchRemote(*plan.RemoteRequest); err != nil {
-				if deps.RollbackRegistration != nil {
-					deps.RollbackRegistration(ctx)
-				}
-				reportFailed(err.Error())
-			}
-		}
-		return
-	}
 	if plan.LocalCreate != nil && deps.ExecuteLocalCreate != nil {
 		if err := deps.ExecuteLocalCreate(ctx, reportProgress); err != nil {
 			reportFailed(err.Error())

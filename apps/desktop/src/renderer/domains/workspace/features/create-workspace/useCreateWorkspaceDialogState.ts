@@ -1,8 +1,6 @@
 import { useGitAuthorName } from "@renderer/domains/git";
 import type { WorkspaceProjectRecord } from "@renderer/domains/project";
-import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { useEffect, useRef, useState } from "react";
-import { listOrgNodes } from "../../../../domains/node";
 import type { WorkspaceItem } from "../../../../domains/workspace/workspaceTypes";
 import { resolveGitBranchPrefix } from "../../naming/branchPrefix";
 import type { GitBranchPrefixMode } from "../../naming/branchPrefix";
@@ -14,13 +12,9 @@ import {
   suggestTargetBranchName,
 } from "./workspaceBranchNaming";
 
-type NodeOption = { id: string; name: string; scope: "private" | "shared"; canUse: boolean; isOnline?: boolean };
-
 type UseCreateWorkspaceDialogStateInput = {
   open: boolean;
   projectId: string;
-  organizationId: string | undefined;
-  daemonId: string | undefined;
   projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceItem[];
   prefixMode: GitBranchPrefixMode;
@@ -50,10 +44,6 @@ export type UseCreateWorkspaceDialogStateResult = {
   hasEditedTargetBranchRef: React.MutableRefObject<boolean>;
   isCreatingWorkspace: boolean;
   setIsCreatingWorkspace: React.Dispatch<React.SetStateAction<boolean>>;
-  selectedNodeId: string;
-  setSelectedNodeId: React.Dispatch<React.SetStateAction<string>>;
-  nodes: NodeOption[];
-  nodesError: string;
   resetDraftInputs: () => void;
   selectedProject: WorkspaceProjectRecord | undefined;
   selectedProjectBranchListPath: string;
@@ -64,12 +54,10 @@ export type UseCreateWorkspaceDialogStateResult = {
   setTaskModel: React.Dispatch<React.SetStateAction<string>>;
 };
 
-/** Manages draft state, branch loading, node loading, and prefix-derived defaults for the workspace dialog. */
+/** Manages draft state, branch loading, and prefix-derived defaults for the workspace dialog. */
 export function useCreateWorkspaceDialogState({
   open,
   projectId,
-  organizationId,
-  daemonId,
   projects,
   workspaces,
   prefixMode,
@@ -93,9 +81,6 @@ export function useCreateWorkspaceDialogState({
   const hasEditedTargetBranchRef = useRef(false);
   const hasSyncedRepoIdForOpenRef = useRef(false);
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
-  const [selectedNodeId, setSelectedNodeId] = useState("");
-  const [nodes, setNodes] = useState<NodeOption[]>([]);
-  const [nodesError, setNodesError] = useState("");
   const [taskPrompt, setTaskPrompt] = useState("");
   const [taskModel, setTaskModel] = useState("");
 
@@ -148,57 +133,6 @@ export function useCreateWorkspaceDialogState({
       return projects[0]?.id ?? "";
     });
   }, [open, projectId, projects]);
-
-  useEffect(() => {
-    if (!open || !organizationId) {
-      setNodes([]);
-      setNodesError("");
-      setSelectedNodeId("");
-      return;
-    }
-
-    let isCancelled = false;
-    const loadNodes = async () => {
-      try {
-        const listedNodes = await listOrgNodes(organizationId);
-        if (isCancelled) {
-          return;
-        }
-        setNodes(listedNodes);
-        setNodesError("");
-      } catch (error) {
-        if (isCancelled) {
-          return;
-        }
-        setNodes([]);
-        setNodesError(getErrorMessage(error));
-      }
-    };
-
-    void loadNodes();
-    return () => {
-      isCancelled = true;
-    };
-  }, [open, organizationId]);
-
-  useEffect(() => {
-    if (!open || !nodes || nodes.length === 0) {
-      return;
-    }
-    setSelectedNodeId((currentNodeId) => {
-      if (currentNodeId && nodes.some((node) => node.id === currentNodeId && node.canUse && node.isOnline)) {
-        return currentNodeId;
-      }
-      const daemonNode = daemonId
-        ? nodes.find((node) => node.id === daemonId && node.canUse && node.isOnline)
-        : undefined;
-      if (daemonNode) {
-        return daemonNode.id;
-      }
-      const fallbackNode = nodes.find((node) => node.canUse && node.isOnline);
-      return fallbackNode?.id ?? "";
-    });
-  }, [daemonId, nodes, open]);
 
   useEffect(() => {
     if (!open || hasEditedTargetBranchRef.current) {
@@ -297,10 +231,6 @@ export function useCreateWorkspaceDialogState({
     hasEditedTargetBranchRef,
     isCreatingWorkspace,
     setIsCreatingWorkspace,
-    selectedNodeId,
-    setSelectedNodeId,
-    nodes,
-    nodesError,
     resetDraftInputs,
     selectedProject,
     selectedProjectBranchListPath,

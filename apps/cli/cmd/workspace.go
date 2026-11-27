@@ -127,7 +127,6 @@ func init() {
 	workspaceCreateCmd.Flags().String("kind", "worktree", "deprecated: workspace create only supports worktree")
 	workspaceCreateCmd.Flags().String("branch", "", "branch name for worktree")
 	workspaceCreateCmd.Flags().String("source-branch", "", "source branch for worktree")
-	workspaceCreateCmd.Flags().String("target-node", "", "target node ID (defaults to local daemon node)")
 	workspaceCreateCmd.Flags().String("name", "", "workspace name for worktree path")
 	workspaceCreateCmd.Flags().String("task-run-prompt", "", "initial prompt for task run agent")
 	workspaceCreateCmd.Flags().String("task-run-model", "", "model override for task run agent")

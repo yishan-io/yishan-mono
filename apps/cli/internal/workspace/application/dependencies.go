@@ -23,19 +23,12 @@ type Project struct {
 	ContextEnabled bool
 }
 
-// Node is the domain-shaped node record used for create routing.
-type Node struct {
-	ID string
-}
-
-// Environment resolves projects, workspaces, and nodes from the cloud API.
+// Environment resolves projects and workspaces from the local store.
 type Environment interface {
-	APIConfigured() bool
 	ListProjects(ctx context.Context, organizationID string) ([]Project, error)
 	ListWorkspaces(ctx context.Context, organizationID string, projectID string) ([]workspace.Record, error)
-	ListNodes(ctx context.Context, organizationID string) ([]Node, error)
-	// EnsureSharedRepoClone returns a local clone path for a repo (cross-node
-	// creates need a shared clone when no primary workspace exists).
+	// EnsureSharedRepoClone returns a local clone path for a repo (a create
+	// needs a shared clone when the project has no primary checkout here).
 	EnsureSharedRepoClone(ctx context.Context, repoKey string, repoURL string) (string, error)
 }
 
@@ -47,8 +40,7 @@ type WorkspaceRecords interface {
 	PersistPrepared(ctx context.Context, plan CreatePlan) error
 	// FinalizePersisted flips the local row to active with the worktree path.
 	FinalizePersisted(ctx context.Context, plan CreatePlan, created workspace.Workspace) error
-	// ClosePersisted flips the local row to closed (tolerates a missing row:
-	// relayed creates leave no row on the origin).
+	// ClosePersisted flips the local row to closed (tolerates a missing row).
 	ClosePersisted(ctx context.Context, workspaceID string) error
 	// LocalRow returns the local SQLite row for a workspace as a domain record.
 	LocalRow(ctx context.Context, workspaceID string) (workspace.Record, bool)
@@ -72,17 +64,7 @@ type Instances interface {
 	StopTracking(workspaceID string)
 }
 
-// Relay delivers workspace create/close envelopes to the relay.
-type Relay interface {
-	// DispatchCreate sends a workspace.create.request envelope and waits for
-	// the routing verdict (rejected when the target node is offline).
-	DispatchCreate(ctx context.Context, plan CreatePlan, command CreateCommand) error
-	// DispatchClose sends a workspace.close.request envelope to the owner node.
-	DispatchClose(ctx context.Context, command CloseCommand, targetNodeID string) error
-}
-
-// Events publishes frontend events and relays create progress/completion back
-// to the origin node. The CreateCompleted implementation stays daemon-side
+// Events publishes frontend events. The CreateCompleted implementation stays daemon-side
 // because task-run start needs the agent manager and desktop connection state.
 type Events interface {
 	Publish(topic string, payload any)
@@ -103,7 +85,6 @@ type Dependencies struct {
 	Environment Environment
 	Records     WorkspaceRecords
 	Instances   Instances
-	Relay       Relay
 	Events      Events
 
 	// WorkspaceAvailabilityChanged notifies consumers after the authoritative

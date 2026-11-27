@@ -33,7 +33,6 @@ import (
 	"testing"
 	"time"
 	"yishan/apps/cli/internal/adapter/cloud/session"
-	"yishan/apps/cli/internal/adapter/relay"
 	modellist "yishan/apps/cli/internal/agent/catalog"
 	agentmanager "yishan/apps/cli/internal/agent/process"
 	"yishan/apps/cli/internal/events"
@@ -177,15 +176,6 @@ func newTestServiceWithAgentAndInspectResolver(
 		AgentLifecycleCtx: context.Background(),
 		ServerCtx:         context.Background(),
 	})
-	svc.SetRelayClient(relay.NewClient(relay.ClientConfig{
-		Session: runtime,
-		NodeID:  nodeID,
-		// No URL/static token: the client stays disconnected unless a test
-		// wires it to a fake relay (wireRelayReader/wireRelayCapture).
-		Server:  rpc.NewServer(noopRPCHandler{}),
-		Handler: svc,
-		Events:  events,
-	}))
 	router := rpc.NewRouter()
 	router.Register("list", &rpc.WorkspaceHandler{Services: svc})
 	router.Register("workspace", &rpc.WorkspaceHandler{Services: svc})
@@ -244,15 +234,6 @@ func expectNoEvent(t *testing.T, events <-chan eventbus.Event, wait time.Duratio
 		t.Fatalf("expected no event, got topic %q", event.Topic)
 	case <-time.After(wait):
 	}
-}
-
-// noopRPCHandler answers every method with method-not-found; relay dispatch
-// tests only need a live rpc server, not real namespace routing.
-type noopRPCHandler struct{}
-
-// Call implements rpc.Handler.
-func (noopRPCHandler) Call(ctx context.Context, connection *rpc.Connection, method string, params json.RawMessage) (any, error) {
-	return nil, rpc.NewRPCError(rpc.CodeMethodNotFound, "noop: "+method)
 }
 
 var lifecycleEventTopics = map[string]bool{

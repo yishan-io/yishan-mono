@@ -7,27 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/adapter/cloud/session"
 	gitexec "yishan/apps/cli/internal/git/exec"
 )
-
-func ensureNodeUsableForWorkspace(runtime *session.Session, organizationID string, nodeID string) error {
-	nodesResponse, err := runtime.APIClient().ListNodes(organizationID)
-	if err != nil {
-		return fmt.Errorf("load organization nodes: %w", err)
-	}
-	for _, node := range nodesResponse.Nodes {
-		if node.ID == nodeID {
-			return nil
-		}
-	}
-	return fmt.Errorf("node %s was not found in this organization", nodeID)
-}
 
 func ensureSharedRepoClone(ctx context.Context, repoKey string, repoURL string) (string, error) {
 	normalizedKey := strings.TrimSpace(repoKey)
 	if normalizedKey == "" {
-		return "", fmt.Errorf("repoKey is required for cross-node workspace creation")
+		return "", fmt.Errorf("repoKey is required to clone the project repository")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
