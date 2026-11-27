@@ -1,28 +1,50 @@
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
-import { overviewStore } from "../../../domains/overview/state/overviewStore";
+import { overviewStore } from "../state/overviewStore";
 
+import { projectStore } from "@renderer/domains/project";
 import { sessionStore } from "@renderer/domains/session";
-import { getOverviewModelBreakdown, getOverviewTokenUsage, getOverviewWorkspaceInsights } from "../api/overviewApi";
-import type { OverviewTimeRange } from "../overviewTypes";
+import {
+  type OverviewQuery,
+  getOverviewModelBreakdown,
+  getOverviewTokenUsage,
+  getOverviewWorkspaceInsights,
+} from "../daemon/overviewDaemonProcedures";
+import type { OverviewTimeRange, WorkspaceInsightsResult } from "../overviewTypes";
 
-function selectedOrganizationId(): string {
-  const organizationId = sessionStore.getState().selectedOrganizationId?.trim() || "";
-  if (!organizationId) {
-    throw new Error("No organization selected");
-  }
-  return organizationId;
+/**
+ * Builds the local Overview scope. Overview reads this device's daemon
+ * database, so no organization is required; when one is selected the
+ * aggregates are limited to it, matching the org-scoped project filter.
+ */
+function currentQuery(): OverviewQuery {
+  const { timeRange, selectedProjectId } = overviewStore.getState();
+  return {
+    range: timeRange,
+    projectId: selectedProjectId || undefined,
+    organizationId: sessionStore.getState().selectedOrganizationId?.trim() || undefined,
+  };
+}
+
+/** The daemon only knows project IDs; display names come from the loaded project list. */
+function withProjectNames(insights: WorkspaceInsightsResult): WorkspaceInsightsResult {
+  const namesById = new Map(projectStore.getState().projects.map((project) => [project.id, project.name]));
+  const resolve = <T extends { projectId: string; projectName: string }>(item: T): T => ({
+    ...item,
+    projectName: namesById.get(item.projectId) || item.projectName || item.projectId,
+  });
+  return {
+    ...insights,
+    lastClosedWorkspaces: insights.lastClosedWorkspaces.map(resolve),
+    topPrimaryWorkspaces: insights.topPrimaryWorkspaces.map(resolve),
+  };
 }
 
 export async function refreshOverviewTokenUsage(): Promise<void> {
-  const { timeRange, selectedProjectId, granularity } = overviewStore.getState();
+  const { granularity } = overviewStore.getState();
   overviewStore.getState().setTokenUsageLoadState("loading");
 
   try {
-    const result = await getOverviewTokenUsage(selectedOrganizationId(), {
-      range: timeRange,
-      projectId: selectedProjectId || undefined,
-      granularity,
-    });
+    const result = await getOverviewTokenUsage({ ...currentQuery(), granularity });
     overviewStore
       .getState()
       .setTokenUsageData(
@@ -42,14 +64,10 @@ export async function refreshOverviewTokenUsage(): Promise<void> {
 }
 
 export async function refreshOverviewModelBreakdown(): Promise<void> {
-  const { timeRange, selectedProjectId } = overviewStore.getState();
   overviewStore.getState().setModelBreakdownLoadState("loading");
 
   try {
-    const result = await getOverviewModelBreakdown(selectedOrganizationId(), {
-      range: timeRange,
-      projectId: selectedProjectId || undefined,
-    });
+    const result = await getOverviewModelBreakdown(currentQuery());
     overviewStore.getState().setModelBreakdown(result.models);
     overviewStore.getState().setModelBreakdownLoadState("loaded");
   } catch (error) {
@@ -58,15 +76,11 @@ export async function refreshOverviewModelBreakdown(): Promise<void> {
 }
 
 export async function refreshOverviewWorkspaceInsights(): Promise<void> {
-  const { timeRange, selectedProjectId } = overviewStore.getState();
   overviewStore.getState().setWorkspaceInsightsLoadState("loading");
 
   try {
-    const result = await getOverviewWorkspaceInsights(selectedOrganizationId(), {
-      range: timeRange,
-      projectId: selectedProjectId || undefined,
-    });
-    overviewStore.getState().setWorkspaceInsights(result);
+    const result = await getOverviewWorkspaceInsights(currentQuery());
+    overviewStore.getState().setWorkspaceInsights(withProjectNames(result));
     overviewStore.getState().setWorkspaceInsightsLoadState("loaded");
   } catch (error) {
     overviewStore.getState().setWorkspaceInsightsLoadState("error", getErrorMessage(error));
@@ -92,4 +106,4 @@ export function setOverviewGranularity(granularity: "hour" | "day"): void {
   void refreshOverviewTokenUsage();
 }
 
-export type { OverviewTimeRange } from "../api/overviewApi.types";
+export type { OverviewTimeRange } from "../overviewTypes";

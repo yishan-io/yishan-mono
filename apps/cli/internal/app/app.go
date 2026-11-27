@@ -30,6 +30,7 @@ import (
 	"yishan/apps/cli/internal/node/context"
 	"yishan/apps/cli/internal/node/hook"
 	nodelocaltask "yishan/apps/cli/internal/node/localtask"
+	nodeoverview "yishan/apps/cli/internal/node/overview"
 	nodeproject "yishan/apps/cli/internal/node/project"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
@@ -371,7 +372,8 @@ func Bootstrap(cfg Config) (*App, error) {
 		SettingsPath: cfg.SettingsPath,
 		ServerCtx:    context.Background(),
 	})
-	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
+	overviewSvc := nodeoverview.NewService(nodeoverview.Deps{Store: sqlite.NewOverviewStore(cfg.Database)})
+	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc, overviewSvc)
 	app.rpcServer = rpc.NewServer(appHandler{router: app.router, agent: agentSvc})
 	app.rpcServer.BinaryFrameHandler = terminalSvc
 	requestScheduledJobsRefresh := func(ctx context.Context) {
@@ -422,6 +424,6 @@ func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 
 // NewRouter builds the namespace routing table for the node services (test
 // and composition helper; Bootstrap wires it into the app).
-func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service) *rpc.Router {
-	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc)
+func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service, overviewSvc *nodeoverview.Service) *rpc.Router {
+	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc, overviewSvc)
 }
