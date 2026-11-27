@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"yishan/apps/cli/internal/adapter/cloud/session"
-	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/files"
 	"yishan/apps/cli/internal/git"
@@ -73,7 +72,7 @@ type Deps struct {
 	CommitAgentCleanup func(any)
 
 	// ServerCtx is the long-lived context RPC handlers use for server-side
-	// work (relayed creates).
+	// work.
 	ServerCtx context.Context
 }
 
@@ -91,10 +90,6 @@ type Service struct {
 	// app is the application service for workspace create/close orchestration.
 	app *application.Service
 
-	// relayClient owns the relay connection state (internal/relay); the
-	// composition root attaches it after the relay client is built.
-	relayClient *relay.Client
-
 	// router is the namespace routing table for tests (callRPCForTest routes
 	// through the same path rpc.Server uses for live connections). Production
 	// composes the router in internal/app and leaves this nil.
@@ -110,12 +105,6 @@ func NewService(deps Deps) *Service {
 	service := &Service{deps: deps}
 	service.app = service.newAppService()
 	return service
-}
-
-// SetRelayClient attaches the relay client after it is built (needs the rpc
-// server). The composition root owns relay enablement.
-func (s *Service) SetRelayClient(client *relay.Client) {
-	s.relayClient = client
 }
 
 // SetAgentCleanupLifecycle attaches the agent cleanup callbacks after both
@@ -137,4 +126,11 @@ func (s *Service) clearAgentUsage(workspaceID string) {
 // getAgentUsage returns the agents recorded for a workspace.
 func (s *Service) getAgentUsage(workspaceID string) []string {
 	return s.deps.Usage.List(workspaceID)
+}
+
+func (s *Service) serverContext() context.Context {
+	if s.deps.ServerCtx != nil {
+		return s.deps.ServerCtx
+	}
+	return context.Background()
 }

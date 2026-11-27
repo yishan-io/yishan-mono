@@ -9,8 +9,8 @@ import (
 )
 
 // BackfillTaskKeys reserves and persists keys for legacy Local Tasks.
-// It is safe to retry: the cloud reservation uses the stable local task ID,
-// and SQLite only writes a key while the row is still unkeyed.
+// It is safe to retry: SQLite only writes a key while the row is still
+// unkeyed.
 func (s *Service) BackfillTaskKeys(ctx context.Context) error {
 	tasks, err := s.deps.Repository.ListWithoutTaskKey(ctx)
 	if err != nil {

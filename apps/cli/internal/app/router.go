@@ -5,6 +5,7 @@ import (
 	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	nodeoverview "yishan/apps/cli/internal/node/overview"
 	nodeproject "yishan/apps/cli/internal/node/project"
+	nodescheduledjob "yishan/apps/cli/internal/node/scheduledjob"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
@@ -16,7 +17,7 @@ import (
 // and call exactly one typed service method; the daemon implements the
 // services. The agent namespaces (pi/skill/customize) route through the rpc
 // AgentHandler into the daemon's AgentService implementation.
-func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service, overviewSvc *nodeoverview.Service) *rpc.Router {
+func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service, overviewSvc *nodeoverview.Service, scheduledJobSvc *nodescheduledjob.Service) *rpc.Router {
 	router := rpc.NewRouter()
 	router.Register("list", &rpc.WorkspaceHandler{Services: workspaceSvc})
 	router.Register("workspace", &rpc.WorkspaceHandler{Services: workspaceSvc})
@@ -29,6 +30,7 @@ func buildNamespaceRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspa
 	router.Register("project", &rpc.ProjectHandler{Services: projectSvc})
 	router.Register("localTask", &rpc.LocalTaskHandler{Services: localTaskSvc})
 	router.Register("overview", &rpc.OverviewHandler{Services: overviewSvc})
+	router.Register("scheduledJob", &rpc.ScheduledJobHandler{Services: scheduledJobSvc})
 	router.Register("system", &rpc.SystemHandler{Services: systemSvc})
 	router.Register("pi", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})
 	router.Register("skill", &rpc.AgentHandler{Pi: agentSvc, Skill: agentSvc, Customize: agentSvc})

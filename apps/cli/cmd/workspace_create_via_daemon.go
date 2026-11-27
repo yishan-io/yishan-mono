@@ -29,7 +29,6 @@ type persistentDaemonRPCClient interface {
 type workspaceCreateRPCRequest struct {
 	OrganizationID string                   `json:"organizationId"`
 	ProjectID      string                   `json:"projectId"`
-	NodeID         string                   `json:"nodeId,omitempty"`
 	Kind           string                   `json:"kind,omitempty"`
 	Branch         string                   `json:"branch,omitempty"`
 	SourceBranch   string                   `json:"sourceBranch,omitempty"`
@@ -152,10 +151,6 @@ func buildWorkspaceCreateRPCRequest(cmd *cobra.Command) (workspaceCreateRPCReque
 	if err != nil {
 		return workspaceCreateRPCRequest{}, err
 	}
-	targetNode, err := cmd.Flags().GetString("target-node")
-	if err != nil {
-		return workspaceCreateRPCRequest{}, err
-	}
 	taskRunPrompt, err := cmd.Flags().GetString("task-run-prompt")
 	if err != nil {
 		return workspaceCreateRPCRequest{}, err
@@ -181,7 +176,6 @@ func buildWorkspaceCreateRPCRequest(cmd *cobra.Command) (workspaceCreateRPCReque
 	return workspaceCreateRPCRequest{
 		OrganizationID: orgID,
 		ProjectID:      projectID,
-		NodeID:         strings.TrimSpace(targetNode),
 		Kind:           strings.TrimSpace(kind),
 		Branch:         strings.TrimSpace(branch),
 		SourceBranch:   strings.TrimSpace(sourceBranch),

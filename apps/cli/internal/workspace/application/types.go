@@ -1,8 +1,8 @@
 // Package application owns the workspace create/close orchestration. The
 // JSON-RPC handler is a thin wrapper: it decodes input, calls one
-// Service method, and encodes output. Routing (local vs remote node) and
-// rollback policy live here; the daemon implements the ports with its existing
-// manager / API client / SQLite store / relay connection / event hub.
+// Service method, and encodes output. Rollback policy lives here; the daemon
+// implements the ports with its manager / SQLite store / event hub. Every
+// workspace is created and closed on the daemon's own node.
 package application
 
 import "yishan/apps/cli/internal/workspace"
@@ -16,24 +16,20 @@ type CreateResult struct {
 	Branch        string
 }
 
-// CreatePlan is a prepared create: all state needed to execute (locally or via
-// relay) a create request, produced by prepare and consumed by execute.
+// CreatePlan is a prepared create: all state needed to execute a create
+// request, produced by prepare and consumed by execute.
 type CreatePlan struct {
-	WorkspaceID      string
-	LocalTaskID      string
-	OrganizationID   string
-	ProjectID        string
-	StartedEvent     StartedEvent
-	RelayReplyNodeID string
-	IsRelayed        bool // true when dispatched from another node via relay
-	LocalCreate      *workspace.CreateRequest
-	Registration     *Registration
-	RemoteRequest    *CreateCommand
+	WorkspaceID    string
+	LocalTaskID    string
+	OrganizationID string
+	ProjectID      string
+	StartedEvent   StartedEvent
+	LocalCreate    *workspace.CreateRequest
+	Registration   *Registration
 }
 
-// Registration is the workspace record registration shared by the local row,
-// the cloud record, and the relayed request. Moved from the daemon
-// WorkspaceCreation; Kind is the typed domain value.
+// Registration is the workspace record registration persisted as the local
+// row. Kind is the typed domain value.
 type Registration struct {
 	ID             string
 	NodeID         string

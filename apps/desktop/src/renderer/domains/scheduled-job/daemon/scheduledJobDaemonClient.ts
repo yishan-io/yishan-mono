@@ -1,15 +1,14 @@
-import { requestJson } from "@renderer/api/restClient";
+import { request } from "@renderer/rpc";
 
-/** Matches ScheduledJobView.status from the api-service. */
+// Scheduled jobs are owned and run by the local daemon (scheduledJob.* RPC).
+
+/** A scheduled job's lifecycle status. */
 export type ScheduledJobStatus = "active" | "paused" | "disabled";
 
-/** Matches ScheduledJobView.lastRunStatus from the api-service. */
+/** The outcome of a job's most recent run. */
 export type ScheduledJobLastRunStatus = "succeeded" | "failed" | null;
 
-/**
- * Wire shape of one scheduled job as returned by the api-service.
- * Field names and nullability exactly match ScheduledJobView serialised to JSON.
- */
+/** Wire shape of one scheduled job as returned by the daemon. */
 export type ScheduledJobRecord = {
   id: string;
   organizationId: string;
@@ -35,13 +34,10 @@ export type ScheduledJobRecord = {
   updatedAt: string;
 };
 
-/** The status of one scheduled job run. Matches ScheduledJobRunView.status. */
+/** The status of one scheduled job run. */
 export type ScheduledJobRunStatus = "pending" | "running" | "succeeded" | "failed" | "skipped_offline";
 
-/**
- * Wire shape of one scheduled job run as returned by the api-service.
- * Field names and nullability exactly match ScheduledJobRunView serialised to JSON.
- */
+/** Wire shape of one scheduled job run as returned by the daemon. */
 export type ScheduledJobRunRecord = {
   id: string;
   jobId: string;
@@ -84,41 +80,27 @@ export type CreateScheduledJobInput = {
 
 /** Lists all scheduled jobs for one organization. */
 export async function listScheduledJobs(orgId: string): Promise<ScheduledJobRecord[]> {
-  const response = await requestJson<{ jobs: ScheduledJobRecord[] }>(`/orgs/${orgId}/scheduled-jobs`);
-  return response.jobs;
+  return (await request("scheduledJob.list", { organizationId: orgId })) as ScheduledJobRecord[];
 }
 
-/** Creates a new scheduled job. */
+/** Creates a new scheduled job on this daemon's node. */
 export async function createScheduledJob(orgId: string, input: CreateScheduledJobInput): Promise<ScheduledJobRecord> {
-  const response = await requestJson<{ job: ScheduledJobRecord }>(`/orgs/${orgId}/scheduled-jobs`, {
-    method: "POST",
-    body: input,
-  });
-  return response.job;
+  return (await request("scheduledJob.create", { organizationId: orgId, ...input })) as ScheduledJobRecord;
 }
 
 /** Pauses one scheduled job. */
 export async function pauseScheduledJob(orgId: string, jobId: string): Promise<ScheduledJobRecord> {
-  const response = await requestJson<{ job: ScheduledJobRecord }>(`/orgs/${orgId}/scheduled-jobs/${jobId}/pause`, {
-    method: "PUT",
-  });
-  return response.job;
+  return (await request("scheduledJob.pause", { organizationId: orgId, jobId })) as ScheduledJobRecord;
 }
 
 /** Resumes one paused scheduled job. */
 export async function resumeScheduledJob(orgId: string, jobId: string): Promise<ScheduledJobRecord> {
-  const response = await requestJson<{ job: ScheduledJobRecord }>(`/orgs/${orgId}/scheduled-jobs/${jobId}/resume`, {
-    method: "PUT",
-  });
-  return response.job;
+  return (await request("scheduledJob.resume", { organizationId: orgId, jobId })) as ScheduledJobRecord;
 }
 
 /** Lists the most recent runs for one scheduled job (default limit: 20). */
 export async function listScheduledJobRuns(orgId: string, jobId: string, limit = 20): Promise<ScheduledJobRunRecord[]> {
-  const response = await requestJson<{ runs: ScheduledJobRunRecord[] }>(
-    `/orgs/${orgId}/scheduled-jobs/${jobId}/runs?limit=${limit}`,
-  );
-  return response.runs;
+  return (await request("scheduledJob.listRuns", { organizationId: orgId, jobId, limit })) as ScheduledJobRunRecord[];
 }
 
 /** Updates one scheduled job's editable fields. */
@@ -127,27 +109,18 @@ export async function updateScheduledJob(
   jobId: string,
   input: UpdateScheduledJobInput,
 ): Promise<ScheduledJobRecord> {
-  const response = await requestJson<{ job: ScheduledJobRecord }>(`/orgs/${orgId}/scheduled-jobs/${jobId}`, {
-    method: "PUT",
-    body: input,
-  });
-  return response.job;
+  return (await request("scheduledJob.update", { organizationId: orgId, jobId, ...input })) as ScheduledJobRecord;
 }
 
-/** Soft-deletes one scheduled job so it no longer appears in job lists. */
+/** Deletes one scheduled job and its run history. */
 export async function deleteScheduledJob(orgId: string, jobId: string): Promise<void> {
-  await requestJson<{ ok: boolean }>(`/orgs/${orgId}/scheduled-jobs/${jobId}`, {
-    method: "DELETE",
-  });
+  await request("scheduledJob.delete", { organizationId: orgId, jobId });
 }
 
 /** Triggers one scheduled job immediately. */
 export async function runScheduledJobNow(orgId: string, jobId: string): Promise<ScheduledJobRunRecord> {
-  const response = await requestJson<{ ok: boolean; run: ScheduledJobRunRecord }>(
-    `/orgs/${orgId}/scheduled-jobs/${jobId}/run-now`,
-    {
-      method: "POST",
-    },
-  );
+  const response = (await request("scheduledJob.runNow", { organizationId: orgId, jobId })) as {
+    run: ScheduledJobRunRecord;
+  };
   return response.run;
 }

@@ -8,14 +8,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadWorkspaceSnapshot } from "./workspaceSnapshotFlow";
 
 const mocks = vi.hoisted(() => ({
-  requestJson: vi.fn(),
+  projectRpc: vi.fn(),
   request: vi.fn(),
   listProjects: vi.fn(),
   listFolders: vi.fn(),
 }));
-vi.mock("@renderer/api/restClient", () => ({ requestJson: mocks.requestJson }));
 vi.mock("@renderer/rpc/client", () => ({
-  request: mocks.request,
+  // Project mutations go to the daemon; route them to their own mock so the
+  // other daemon calls keep their exact call lists.
+  request: (method: string, ...args: unknown[]) =>
+    method.startsWith("project.") && method !== "project.listWithWorkspaces"
+      ? mocks.projectRpc(method, ...args)
+      : mocks.request(method, ...args),
   subscribeConnectionStatus: vi.fn(() => vi.fn()),
 }));
 vi.mock("@renderer/events/desktopRpcEventBus", () => ({
@@ -111,7 +115,7 @@ beforeEach(() => {
       },
     ],
   });
-  mocks.requestJson.mockResolvedValue({ project: { name: "Saved", contextEnabled: false } });
+  mocks.projectRpc.mockResolvedValue({ name: "Saved", contextEnabled: false });
   mocks.request.mockImplementation(async (method: string) => {
     if (method === "git.inspectPath") return { isGitRepository: true, repositoryRoot: "/new" };
     if (method === "workspace.openProject") return { opened: ["primary"], skipped: [], errors: [] };
@@ -167,14 +171,14 @@ describe("project mutation snapshot fence", () => {
   });
 
   it("skips snapshots started during an in-flight mutation", async () => {
-    const pendingSave = defer<{ project: { name: string; contextEnabled: boolean } }>();
-    mocks.requestJson.mockReturnValueOnce(pendingSave.promise);
+    const pendingSave = defer<{ name: string; contextEnabled: boolean }>();
+    mocks.projectRpc.mockReturnValueOnce(pendingSave.promise);
     const saving = savePath();
-    await vi.waitFor(() => expect(mocks.requestJson).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(mocks.projectRpc).toHaveBeenCalledTimes(1));
     mocks.listProjects.mockResolvedValueOnce(snapshot());
     await loadWorkspaceSnapshot();
     expect(mocks.listProjects).not.toHaveBeenCalled();
-    pendingSave.resolve({ project: { name: "Saved", contextEnabled: false } });
+    pendingSave.resolve({ name: "Saved", contextEnabled: false });
     await saving;
     expectSavedPath();
     expectNoOldWarmup();
@@ -197,7 +201,7 @@ describe("project mutation snapshot fence", () => {
   });
 
   it.each(["save", "delete"])("releases the guard after %s failure", async (operation) => {
-    mocks.requestJson.mockRejectedValueOnce(new Error("offline"));
+    mocks.projectRpc.mockRejectedValueOnce(new Error("offline"));
     await expect(operation === "save" ? savePath() : deleteProject("project")).rejects.toThrow("offline");
     mocks.listProjects.mockResolvedValueOnce(snapshot("/recovered", "Recovered"));
     await loadWorkspaceSnapshot();

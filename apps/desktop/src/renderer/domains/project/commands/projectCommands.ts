@@ -25,7 +25,7 @@ import {
   ensureProjectTaskPrefix as ensureProjectTaskPrefixFromApi,
   promoteGitLocalProject as promoteGitLocalProjectFromApi,
   updateProject as updateProjectFromApi,
-} from "../api/projectApi";
+} from "../daemon/projectDaemonClient";
 import { beginProjectMutation } from "../state/projectMutationStore";
 import { pickRandomProjectColor, pickRandomProjectIcon, projectStore } from "../state/projectStore";
 import { createProjectConfigScope, prepareProjectPathChange, syncProjectPathChange } from "./projectConfigPath";
@@ -36,7 +36,7 @@ export function recordLastUsedExternalApp(organizationId: string, appId: Externa
   projectStore.getState().setLastUsedExternalAppId(organizationId, appId);
 }
 
-/** Creates one project in backend, then applies it into the local legacy store shape. */
+/** Creates one project in the local daemon, then applies it into the local legacy store shape. */
 export async function createProject(input: {
   name: string;
   taskPrefix: string;
@@ -57,7 +57,6 @@ export async function createProject(input: {
   let inferredSourceTypeHint: "unknown" | "git-local" | "git" = input.sourceTypeHint ?? "git";
   let inferredRemoteUrl = normalizedGitUrl || undefined;
   let inferredDefaultBranch: string | undefined;
-  let inferredNodeId: string | undefined;
 
   if (isLocalSource) {
     const workspaceRpc = await getWorkspaceRpc();
@@ -70,7 +69,6 @@ export async function createProject(input: {
       await applyLocalFolderImport(localPathImport.folder);
       return;
     }
-    inferredNodeId = sessionStore.getState().daemonId?.trim();
     inferredRemoteUrl = localPathImport.remoteUrl;
     inferredSourceTypeHint = inferredRemoteUrl ? "git" : "git-local";
     inferredDefaultBranch = localPathImport.currentBranch;
@@ -101,7 +99,6 @@ export async function createProject(input: {
       taskPrefix,
       sourceTypeHint: inferredSourceTypeHint,
       repoUrl: inferredRemoteUrl,
-      nodeId: inferredNodeId,
       localPath: isLocalSource ? normalizedPath : undefined,
       contextEnabled: workspaceSettingsStore.getState().isDefaultContextEnabled,
       icon: randomIcon,
@@ -281,7 +278,7 @@ export async function copyProjectTaskPrefix(projectId: string): Promise<void> {
   }
 }
 
-/** Deletes one project in backend and then removes it from local store state. */
+/** Deletes one project in the local daemon and then removes it from local store state. */
 export async function deleteProject(projectId: string): Promise<void> {
   if (!projectId.trim()) throw new Error("A project ID is required to delete a project");
   const scope = createProjectConfigScope();
@@ -318,7 +315,7 @@ export async function deleteProject(projectId: string): Promise<void> {
   }
 }
 
-/** Persists project config to backend and updates local config state when successful. */
+/** Persists project config to the local daemon and updates local config state when successful. */
 export async function updateProjectConfig(
   projectId: string,
   input: {
@@ -350,7 +347,7 @@ export async function updateProjectConfig(
     if (selectedOrganizationId) {
       try {
         const updatedProject = await updateProjectFromApi(selectedOrganizationId, projectId, {
-          ...pathChange,
+          localPath: pathChange?.localPath,
           name: config.name,
           icon: config.icon,
           color: config.color,

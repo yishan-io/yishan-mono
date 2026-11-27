@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 	"yishan/apps/cli/internal/adapter/cloud/session"
-	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/adapter/sqlite"
 	domainlocaltask "yishan/apps/cli/internal/localtask"
 	nodelocaltask "yishan/apps/cli/internal/node/localtask"
@@ -102,12 +101,12 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 		t.Fatalf("worktree missing after create: %v", statErr)
 	}
 
-	// Cloud record changes: create (provisioning) then update (active).
-	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
-		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
+	// api-service is never written: workspace records are local only.
+	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 0 {
+		t.Fatalf("workspace records are local; expected no api-service create, got %v", recorder.snapshot())
 	}
-	if recorder.count(http.MethodPatch, "/workspaces/ws-seq-1") != 1 {
-		t.Fatalf("expected one API update call, got %v", recorder.snapshot())
+	if recorder.count(http.MethodPatch, "/workspaces/ws-seq-1") != 0 {
+		t.Fatalf("workspace records are local; expected no api-service update, got %v", recorder.snapshot())
 	}
 
 	// Local record changes: SQLite row provisioning → active with localPath.
@@ -128,70 +127,6 @@ func TestCreateLocalNode_EventSequence(t *testing.T) {
 }
 
 // ============================= create, remote node =============================
-
-func TestCreateRemoteNode_EventSequence(t *testing.T) {
-	var recorder apiCallRecorder
-	apiServer := newWorkspaceAPIStub(t, &recorder)
-	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, apiConfiguredRuntime(apiServer), "node-1", database)
-	subscriptionID, eventCh := s.deps.Events.Subscribe()
-	defer s.deps.Events.Unsubscribe(subscriptionID)
-	relayMessages := wireRelayCapture(t, s, map[string]any{"accepted": true})
-
-	raw, err := json.Marshal(map[string]any{
-		"id": "ws-remote-1", "organizationId": "org-1", "projectId": "project-1", "nodeId": "node-2",
-		"branch": "feature-remote", "sourceBranch": "main",
-	})
-	if err != nil {
-		t.Fatalf("marshal create params: %v", err)
-	}
-	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreate, raw); err != nil {
-		t.Fatalf("handleWorkspaceCreate: %v", err)
-	}
-
-	var relayMsg map[string]any
-	select {
-	case relayMsg = <-relayMessages:
-	case <-time.After(10 * time.Second):
-		t.Fatal("timed out waiting for relay dispatch")
-	}
-	events := collectUntil(t, eventCh, "workspaceCreateStarted", 5*time.Second)
-
-	envelope := decodeRelayCreateEnvelope(t, relayMsg)
-	if envelope.Change != relay.ChangeCreateRequest {
-		t.Fatalf("relay change = %q, want %q", envelope.Change, relay.ChangeCreateRequest)
-	}
-	if envelope.TargetNodeID != "node-2" || envelope.SourceNodeID != "node-1" {
-		t.Fatalf("relay envelope = %#v, want target node-2 source node-1", envelope)
-	}
-	if envelope.Request == nil || envelope.Request.ID != "ws-remote-1" || envelope.Request.NodeID != "node-2" || envelope.Request.ReplyNodeID != "node-1" {
-		t.Fatalf("relay request = %#v, want id ws-remote-1 node node-2 reply node-1", envelope.Request)
-	}
-
-	// Event sequence on the origin: created + started, nothing else.
-	assertTopicSequence(t, events, []string{
-		"workspaceSnapshotChanged", // change:"created"
-		"workspaceCreateStarted",
-	})
-	started := decodeCreateStartedEvent(t, findTopic(events, "workspaceCreateStarted"))
-	if started.NodeID != "node-2" {
-		t.Fatalf("createStarted nodeId = %q, want node-2 (executor)", started.NodeID)
-	}
-	if extra := lifecycleTopicNames(collectFor(t, eventCh, 300*time.Millisecond)); len(extra) != 0 {
-		t.Fatalf("unexpected events after relay dispatch: %v", extra)
-	}
-
-	// Cloud record written; no local SQLite row (origin skips it for relays).
-	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
-		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
-	}
-	if _, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-remote-1"); err == nil {
-		t.Fatal("expected no local SQLite row for remote-target create")
-	}
-	if len(s.deps.Registry.List()) != 0 {
-		t.Fatalf("expected no manager runtime records, got %v", s.deps.Registry.List())
-	}
-}
 
 // ============================= create rollback =============================
 
@@ -232,13 +167,13 @@ func TestCreateLocalNode_WorktreeStepFailureRollsBack(t *testing.T) {
 		"workspaceCreateFailed",
 	})
 
-	// Cloud record closed (registration rollback).
+	// No api-service record to close (records are local only).
 	statuses := recorder.closeStatuses()
-	if len(statuses) == 0 || statuses[0] != "closed" {
-		t.Fatalf("expected close with status closed, got %v", statuses)
+	if len(statuses) != 0 {
+		t.Fatalf("workspace records are local; expected no api-service close, got %v", statuses)
 	}
-	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
-		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
+	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 0 {
+		t.Fatalf("workspace records are local; expected no api-service create, got %v", recorder.snapshot())
 	}
 
 	// Local row closed.
@@ -321,8 +256,8 @@ func TestCreateLocalNode_ContextStepFailureRollsBackWorktree(t *testing.T) {
 	}
 
 	statuses := recorder.closeStatuses()
-	if len(statuses) == 0 || statuses[0] != "closed" {
-		t.Fatalf("expected close with status closed, got %v", statuses)
+	if len(statuses) != 0 {
+		t.Fatalf("workspace records are local; expected no api-service close, got %v", statuses)
 	}
 	row, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-ctxfail")
 	if err != nil {
@@ -384,48 +319,6 @@ func TestCreateLocalNode_SetupHookWarningCompletes(t *testing.T) {
 	row, err := sqlite.NewWorkspaceStore(database).Get(context.Background(), "ws-warn")
 	if err != nil || row.Status != "active" {
 		t.Fatalf("persisted workspace = %#v, err %v; want status active", row, err)
-	}
-}
-
-// TestCreateRemoteNode_DispatchRejectedRollsBackRegistration covers the remote
-// dispatch failure: the relay rejects the target (offline), the origin must
-// close the cloud provisioning record and publish the failed events.
-func TestCreateRemoteNode_DispatchRejectedRollsBackRegistration(t *testing.T) {
-	var recorder apiCallRecorder
-	apiServer := newWorkspaceAPIStub(t, &recorder)
-	database := openMigratedTestDB(t)
-	s := newBehaviorHandler(t, apiConfiguredRuntime(apiServer), "node-1", database)
-	subscriptionID, eventCh := s.deps.Events.Subscribe()
-	defer s.deps.Events.Unsubscribe(subscriptionID)
-	wireRelayCapture(t, s, map[string]any{"accepted": false, "reason": "target node offline"})
-
-	raw, err := json.Marshal(map[string]any{
-		"id": "ws-rejected", "organizationId": "org-1", "projectId": "project-1", "nodeId": "node-2",
-		"branch": "feature-rejected", "sourceBranch": "main",
-	})
-	if err != nil {
-		t.Fatalf("marshal create params: %v", err)
-	}
-	if _, err := s.callRPCForTest(context.Background(), rpc.MethodWorkspaceCreate, raw); err != nil {
-		t.Fatalf("handleWorkspaceCreate: %v", err)
-	}
-
-	events := collectUntil(t, eventCh, "workspaceCreateFailed", 10*time.Second)
-
-	assertTopicSequence(t, events, []string{
-		"workspaceSnapshotChanged", // change:"created"
-		"workspaceCreateStarted",
-		"workspaceCreateProgress", // complete failed
-		"workspaceCreateFailed",
-	})
-
-	// Registration rollback: the cloud provisioning record is closed.
-	statuses := recorder.closeStatuses()
-	if len(statuses) == 0 || statuses[0] != "closed" {
-		t.Fatalf("expected close with status closed, got %v", statuses)
-	}
-	if recorder.count(http.MethodPost, "/projects/project-1/workspaces") != 1 {
-		t.Fatalf("expected one API create call, got %v", recorder.snapshot())
 	}
 }
 

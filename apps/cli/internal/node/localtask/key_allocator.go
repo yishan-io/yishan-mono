@@ -8,7 +8,7 @@ import (
 	domain "yishan/apps/cli/internal/localtask"
 )
 
-// KeyAllocationRequest identifies the local task whose cloud display key is reserved.
+// KeyAllocationRequest identifies the local task whose display key is reserved.
 type KeyAllocationRequest struct {
 	TaskID         string
 	ProjectID      *string
@@ -16,17 +16,17 @@ type KeyAllocationRequest struct {
 	ProjectKind    *domain.ProjectKind
 }
 
-// KeyAllocator reserves cloud-backed display keys for Local Tasks.
+// KeyAllocator reserves display keys for Local Tasks.
 type KeyAllocator interface {
 	AllocateTaskKey(context.Context, KeyAllocationRequest) (string, error)
 }
 
-// KeyAllocationError reports why a required cloud task-key reservation failed.
+// KeyAllocationError reports why a required task-key reservation failed.
 type KeyAllocationError struct{ Cause error }
 
 // Error describes the action needed to create a Local Task.
 func (err *KeyAllocationError) Error() string {
-	return "reserve Local Task key (check your connection and sign-in): " + err.Cause.Error()
+	return "reserve Local Task key: " + err.Cause.Error()
 }
 
 // Unwrap exposes the allocation failure for errors.Is and errors.As.

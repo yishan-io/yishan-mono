@@ -71,3 +71,8 @@ func setMetadataKey(ctx context.Context, database *sql.DB, key, value string) er
 	_, err := database.ExecContext(ctx, `INSERT INTO _metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value)
 	return err
 }
+
+// SetMetadataKey stores a metadata value, replacing any existing one.
+func SetMetadataKey(ctx context.Context, database *sql.DB, key, value string) error {
+	return setMetadataKey(ctx, database, key, value)
+}

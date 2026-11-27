@@ -1,13 +1,9 @@
 package cmd
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
-	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/cmd/output"
 	"yishan/apps/cli/internal/workspace"
 
@@ -17,7 +13,7 @@ import (
 var workspaceListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List project workspaces",
-	Long:  `List all workspaces belonging to a project.`,
+	Long:  `List this machine's live workspaces, for one project or across all projects.`,
 	Example: `  yishan workspace list --project-id <id>
   yishan workspace list --project-id <id> --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -25,7 +21,6 @@ var workspaceListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
 		orgID, err := resolveOrgID(cmd)
 		if err != nil {
 			return err
@@ -34,32 +29,12 @@ var workspaceListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		response := cloud.ListWorkspacesResponse{Workspaces: []cloud.Workspace{}}
-		projectNames := map[string]string{}
-		if strings.TrimSpace(projectID) != "" {
-			response, err = apiClient.ListWorkspaces(orgID, projectID)
-			if err != nil {
-				return err
-			}
-			return output.PrintRenderData(renderWorkspacesList(response, verbose, false, projectNames))
-		}
-
-		projectsResponse, err := apiClient.ListProjects(orgID)
+		projects, err := loadLocalProjectWorkspaces(cmd.Context(), orgID)
 		if err != nil {
 			return err
 		}
-
-		for _, project := range projectsResponse.Projects {
-			projectNames[project.ID] = project.Name
-			projectWorkspaces, projectErr := apiClient.ListWorkspaces(orgID, project.ID)
-			if projectErr != nil {
-				return projectErr
-			}
-			response.Workspaces = append(response.Workspaces, projectWorkspaces.Workspaces...)
-		}
-
-		return output.PrintRenderData(renderWorkspacesList(response, verbose, true, projectNames))
+		response, projectNames := flattenLocalWorkspaces(projects, strings.TrimSpace(projectID))
+		return output.PrintRenderData(renderWorkspacesList(response, verbose, strings.TrimSpace(projectID) == "", projectNames))
 	},
 }
 
@@ -70,36 +45,15 @@ var workspaceFindCmd = &cobra.Command{
 	Example: `  yishan workspace find --project-id <id> --workspace-id <id>
   yishan workspace find --project-id <id> --workspace-id <id> --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		orgID, err := resolveOrgID(cmd)
+		orgID, projectID, workspaceID, err := workspaceRefFlags(cmd)
 		if err != nil {
 			return err
 		}
-		projectID, err := cmd.Flags().GetString("project-id")
+		selected, err := findLocalWorkspace(cmd.Context(), orgID, projectID, workspaceID)
 		if err != nil {
 			return err
 		}
-		workspaceID, err := cmd.Flags().GetString("workspace-id")
-		if err != nil {
-			return err
-		}
-
-		response, err := apiClient.ListWorkspaces(orgID, projectID)
-		if err != nil {
-			return formatWorkspaceLifecycleError("get", err)
-		}
-
-		for i := range response.Workspaces {
-			item := response.Workspaces[i]
-			if item.ID == workspaceID {
-				return output.PrintAny(map[string]any{
-					"workspace":      item,
-					"organizationId": orgID,
-					"projectId":      projectID,
-				})
-			}
-		}
-
-		return fmt.Errorf("workspace %s was not found in project %s; run `yishan workspace list --project-id %s` to find a valid id", workspaceID, projectID, projectID)
+		return output.PrintAny(map[string]any{"workspace": selected, "organizationId": orgID, "projectId": projectID})
 	},
 }
 
@@ -121,46 +75,25 @@ Examples:
 var workspaceCloseCmd = &cobra.Command{
 	Use:     "close",
 	Short:   "Close project workspace",
-	Long:    `Close a workspace, stopping any associated processes and releasing compute resources.`,
+	Long:    `Close a workspace, stopping any associated processes and removing its worktree.`,
 	Example: `  yishan workspace close --project-id <id> --workspace-id <id>`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		orgID, err := resolveOrgID(cmd)
+		orgID, projectID, workspaceID, err := workspaceRefFlags(cmd)
 		if err != nil {
 			return err
 		}
-		projectID, err := cmd.Flags().GetString("project-id")
+		if _, err := findLocalWorkspace(cmd.Context(), orgID, projectID, workspaceID); err != nil {
+			return err
+		}
+		client, err := resolveDaemonClient()
 		if err != nil {
 			return err
 		}
-		workspaceID, err := cmd.Flags().GetString("workspace-id")
-		if err != nil {
-			return err
+		var response any
+		params := map[string]any{"workspaceId": workspaceID, "organizationId": orgID, "projectId": projectID}
+		if err := client.Call(cmd.Context(), "workspace.close", params, &response); err != nil {
+			return fmt.Errorf("failed to close workspace: %w", err)
 		}
-
-		workspaces, err := apiClient.ListWorkspaces(orgID, projectID)
-		if err != nil {
-			return formatWorkspaceLifecycleError("close", err)
-		}
-
-		var selected *cloud.Workspace
-		for i := range workspaces.Workspaces {
-			item := &workspaces.Workspaces[i]
-			if item.ID == workspaceID {
-				selected = item
-				break
-			}
-		}
-		if selected == nil {
-			return fmt.Errorf("workspace %s was not found in project %s; run `yishan workspace list --project-id %s` to find a valid id", workspaceID, projectID, projectID)
-		}
-
-		response, err := apiClient.CloseWorkspace(orgID, projectID, cloud.CloseWorkspaceInput{
-			WorkspaceID: selected.ID,
-		})
-		if err != nil {
-			return formatWorkspaceLifecycleError("close", err)
-		}
-
 		return output.PrintAny(response)
 	},
 }
@@ -194,7 +127,6 @@ func init() {
 	workspaceCreateCmd.Flags().String("kind", "worktree", "deprecated: workspace create only supports worktree")
 	workspaceCreateCmd.Flags().String("branch", "", "branch name for worktree")
 	workspaceCreateCmd.Flags().String("source-branch", "", "source branch for worktree")
-	workspaceCreateCmd.Flags().String("target-node", "", "target node ID (defaults to local daemon node)")
 	workspaceCreateCmd.Flags().String("name", "", "workspace name for worktree path")
 	workspaceCreateCmd.Flags().String("task-run-prompt", "", "initial prompt for task run agent")
 	workspaceCreateCmd.Flags().String("task-run-model", "", "model override for task run agent")
@@ -218,53 +150,6 @@ func validateWorkspaceKind(kind string) error {
 	default:
 		return fmt.Errorf("invalid kind %q: expected worktree", kind)
 	}
-}
-
-func formatWorkspaceLifecycleError(action string, err error) error {
-	var apiErr *cloud.APIError
-	if !errors.As(err, &apiErr) {
-		return err
-	}
-
-	message := strings.TrimSpace(extractAPIErrorMessage(apiErr.Body))
-	if message == "" {
-		message = strings.TrimSpace(apiErr.Status)
-	}
-
-	switch apiErr.StatusCode {
-	case http.StatusBadRequest:
-		return fmt.Errorf("failed to %s workspace: invalid input. %s", action, message)
-	case http.StatusForbidden:
-		return fmt.Errorf("failed to %s workspace: permission denied. Verify your organization role and project access", action)
-	case http.StatusNotFound:
-		return fmt.Errorf("failed to %s workspace: resource not found. %s", action, message)
-	default:
-		if message != "" {
-			return fmt.Errorf("failed to %s workspace: %s", action, message)
-		}
-		return err
-	}
-}
-
-func extractAPIErrorMessage(body []byte) string {
-	if len(body) == 0 {
-		return ""
-	}
-
-	payload := map[string]any{}
-	if err := json.Unmarshal(body, &payload); err != nil {
-		return ""
-	}
-
-	for _, key := range []string{"message", "error", "details"} {
-		if value, ok := payload[key]; ok {
-			if text := strings.TrimSpace(fmt.Sprint(value)); text != "" {
-				return text
-			}
-		}
-	}
-
-	return ""
 }
 
 func buildTaskRunConfig(prompt, model string) *workspace.TaskRunConfig {

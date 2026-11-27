@@ -80,7 +80,7 @@ func (s *Service) SetTaskTemplates(ctx context.Context, req rpc.LocalTaskSetTemp
 	return s.GetTaskTemplates(ctx, struct{}{})
 }
 
-// Create validates, reserves a cloud key, and persists a new Local Task.
+// Create validates, reserves a key, and persists a new Local Task.
 func (s *Service) Create(ctx context.Context, req rpc.LocalTaskCreateParams) (any, error) {
 	task, err := buildNewTask(req)
 	if err != nil {

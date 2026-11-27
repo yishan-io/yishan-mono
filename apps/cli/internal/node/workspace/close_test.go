@@ -15,12 +15,10 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-// TestCloseWorkspaceLocally_MarksRemoteClosingThenRevertsOnTeardownFailure
-// verifies the close ordering contract: the remote record is marked "closing"
-// BEFORE the local teardown starts (so live lists stop showing the workspace
-// during cleanup), and when the teardown fails the remote record is reverted
-// to active so the workspace is not left hidden behind the closing tombstone.
-func TestCloseWorkspaceLocally_MarksRemoteClosingThenRevertsOnTeardownFailure(t *testing.T) {
+// TestCloseWorkspaceLocally_MakesNoRemoteCallsOnTeardownFailure verifies that
+// a close, even a failing one, never writes a workspace record to api-service:
+// workspace records are local only.
+func TestCloseWorkspaceLocally_MakesNoRemoteCallsOnTeardownFailure(t *testing.T) {
 	var calls []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -58,32 +56,8 @@ func TestCloseWorkspaceLocally_MarksRemoteClosingThenRevertsOnTeardownFailure(t 
 		t.Fatalf("expected teardown failure (workspace not registered in manager)")
 	}
 
-	if len(calls) < 2 {
-		t.Fatalf("expected a closing mark and a failure revert, got %d calls: %v", len(calls), calls)
-	}
-	closingCall := calls[0]
-	if !strings.Contains(closingCall, "PATCH /orgs/org-1/projects/project-1/workspaces/close") ||
-		!strings.Contains(closingCall, `"status":"closing"`) {
-		t.Errorf("expected the remote to be marked closing BEFORE teardown, got call[0] = %q", closingCall)
-	}
-	revertCall := calls[1]
-	if !strings.Contains(revertCall, "PATCH /orgs/org-1/projects/project-1/workspaces/ws-1") ||
-		!strings.Contains(revertCall, `"localPath":"/tmp/ws"`) {
-		t.Errorf("expected the remote to be reverted to active after teardown failure, got call[1] = %q", revertCall)
-	}
-}
-
-func TestWorkspaceClose_RemoteNode_RelaysInsteadOfLocalClose(t *testing.T) {
-	s := newCloseRoutingTestHandler(t, "node-remote")
-	params, err := json.Marshal(workspaceCloseParams{
-		WorkspaceID: "ws-1", OrganizationID: "org-1", ProjectID: "project-1",
-	})
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	_, err = s.callRPCForTest(context.Background(), rpc.MethodWorkspaceClose, params)
-	if err == nil || !strings.Contains(err.Error(), "relay not connected") {
-		t.Fatalf("expected relay path (relay not connected), got err=%v", err)
+	if len(calls) != 0 {
+		t.Fatalf("workspace records are local; expected no api-service calls, got %v", calls)
 	}
 }
 

@@ -30,7 +30,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("../../../../domains/scheduled-job/api/scheduledJobApi", () => ({
+vi.mock("../../../../domains/scheduled-job/daemon/scheduledJobDaemonClient", () => ({
   listScheduledJobRuns: mocked.listRuns,
 }));
 

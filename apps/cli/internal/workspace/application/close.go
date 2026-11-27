@@ -15,63 +15,19 @@ import (
 // CloseResult is the outcome of a workspace close, encoded by the JSON-RPC handler
 // into the workspace.close result payload.
 type CloseResult struct {
-	WorkspaceID string
-	Status      string
-	// Relayed reports that the close was forwarded to the owning node; the
-	// Relayed marks that the handler must emit the relay result shape.
-	Relayed               bool
+	WorkspaceID           string
+	Status                string
 	PostHookResult        *workspace.HookResult
 	TerminalCleanupErrors []string
 }
 
-// Close handles a workspace.close request: validates the input, resolves the
-// node that owns the workspace's worktree, and either relays the close to that
-// node or closes locally. Routing and revert-on-failure policy live here.
+// Close handles a workspace.close request: validates the input and closes
+// the workspace on this machine, which owns every workspace it lists.
 func (s *Service) Close(ctx context.Context, command CloseCommand) (CloseResult, error) {
 	if strings.TrimSpace(command.ProjectID) == "" {
 		return CloseResult{}, workspace.NewError(workspace.ErrCodeInvalidParams, "projectId is required")
 	}
-	nodeID := s.ownerNodeForClose(ctx, command)
-	if strings.TrimSpace(nodeID) != "" && strings.TrimSpace(nodeID) != strings.TrimSpace(s.deps.NodeID) {
-		if err := s.relayClose(ctx, command, nodeID); err != nil {
-			return CloseResult{}, err
-		}
-		return CloseResult{WorkspaceID: command.WorkspaceID, Status: "closing", Relayed: true}, nil
-	}
 	return s.CloseLocal(ctx, command)
-}
-
-// ownerNodeForClose resolves the node that owns the workspace's worktree: the
-// local SQLite row first, then the cloud record (a relayed create leaves no
-// local row on the origin). Empty when unresolvable.
-func (s *Service) ownerNodeForClose(ctx context.Context, command CloseCommand) string {
-	if row, ok := s.deps.Records.LocalRow(ctx, command.WorkspaceID); ok {
-		if nodeID := strings.TrimSpace(row.NodeID); nodeID != "" {
-			return nodeID
-		}
-	}
-	if !s.deps.Environment.APIConfigured() {
-		return ""
-	}
-	records, err := s.deps.Environment.ListWorkspaces(ctx, command.OrganizationID, command.ProjectID)
-	if err != nil {
-		log.Warn().Err(err).Str("workspaceId", command.WorkspaceID).Str("orgId", command.OrganizationID).Str("projectId", command.ProjectID).Msg("resolve workspace owner node: list workspaces failed")
-		return ""
-	}
-	for _, record := range records {
-		if string(record.ID) == command.WorkspaceID {
-			return record.NodeID
-		}
-	}
-	return ""
-}
-
-// relayClose forwards a close request to the node that owns the workspace's
-// worktree. The executor runs the same local-first close path and marks the
-// remote record closed. When the target node is offline the relay rejects the
-// dispatch and the close is NOT allowed (no fake "closing").
-func (s *Service) relayClose(ctx context.Context, command CloseCommand, targetNodeID string) error {
-	return s.deps.Relay.DispatchClose(ctx, command, targetNodeID)
 }
 
 // CloseLocal runs the local close pipeline. Until CloseWorkspace reports a
@@ -118,7 +74,6 @@ func closeRequest(command CloseCommand) workspace.CloseRequest {
 
 func (s *Service) prepareClose(ctx context.Context, command CloseCommand, closeReq workspace.CloseRequest) (workspace.Workspace, error, error) {
 	s.deps.Instances.SetState(command.WorkspaceID, instance.StateClosing, instance.HealthOK)
-	s.deps.Records.CloseRemoteRecord(ctx, command.OrganizationID, command.ProjectID, command.WorkspaceID, workspace.StatusClosing)
 	if s.deps.SyncUsage != nil {
 		s.deps.SyncUsage("close")
 	}
@@ -208,7 +163,6 @@ func (s *Service) commitAgentCleanup(handle any) {
 
 func (s *Service) restoreCloseFailure(ctx context.Context, command CloseCommand, ws workspace.Workspace, wsErr error) error {
 	if wsErr != nil {
-		s.revertRemoteClosing(ctx, command, ws, wsErr)
 		return nil
 	}
 	if err := s.deps.Instances.SetState(ws.ID, instance.StateActive, instance.HealthOK); err != nil {
@@ -222,7 +176,6 @@ func (s *Service) restoreCloseFailure(ctx context.Context, command CloseCommand,
 		}
 		return fmt.Errorf("restore workspace watchers: %w", err)
 	}
-	s.revertRemoteClosing(ctx, command, ws, wsErr)
 	return nil
 }
 
@@ -235,28 +188,4 @@ func (s *Service) registerCloseCleanup(closeReq workspace.CloseRequest, ws works
 		RemoveBranch: closeReq.RemoveBranch, ForceWorktree: closeReq.ForceWorktree,
 		ForceBranch: closeReq.ForceBranch, PostHook: closeReq.PostHook,
 	})
-}
-
-// revertRemoteClosing flips a remotely-closing record back to active after a
-// failed teardown so the workspace stays visible. The worktree path is taken
-// from the manager first, then the local DB row. Best-effort.
-func (s *Service) revertRemoteClosing(ctx context.Context, command CloseCommand, ws workspace.Workspace, wsErr error) {
-	if !s.deps.Environment.APIConfigured() {
-		return
-	}
-	if strings.TrimSpace(command.OrganizationID) == "" || strings.TrimSpace(command.ProjectID) == "" {
-		return
-	}
-	path := strings.TrimSpace(ws.Path)
-	if path == "" && wsErr != nil {
-		if row, ok := s.deps.Records.LocalRow(ctx, command.WorkspaceID); ok {
-			path = strings.TrimSpace(row.LocalPath)
-		}
-	}
-	if path == "" {
-		return
-	}
-	s.deps.Records.UpdateRemoteRecord(ctx, Registration{
-		ID: command.WorkspaceID, OrganizationID: command.OrganizationID, ProjectID: command.ProjectID,
-	}, path)
 }

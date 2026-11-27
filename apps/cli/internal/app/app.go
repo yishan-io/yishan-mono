@@ -32,6 +32,7 @@ import (
 	nodelocaltask "yishan/apps/cli/internal/node/localtask"
 	nodeoverview "yishan/apps/cli/internal/node/overview"
 	nodeproject "yishan/apps/cli/internal/node/project"
+	nodescheduledjob "yishan/apps/cli/internal/node/scheduledjob"
 	nodesystem "yishan/apps/cli/internal/node/system"
 	nodeterminal "yishan/apps/cli/internal/node/terminal"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
@@ -128,7 +129,7 @@ type App struct {
 	rpcServer *rpc.Server
 	// relay is the relay client (connection state owned by internal/relay).
 	relay *relay.Client
-	// scheduledJobs owns recovery-gated scheduled runtime composition.
+	// scheduledJobs owns the local scheduler and background runs.
 	scheduledJobs *scheduledJobsRuntime
 
 	cleanupCtx            context.Context
@@ -139,11 +140,11 @@ type App struct {
 	localTaskBackfillWG   sync.WaitGroup
 }
 
-func resolveLocalTaskKeyAllocator(cfg Config) nodelocaltask.KeyAllocator {
+func resolveLocalTaskKeyAllocator(cfg Config, projects taskPrefixes) nodelocaltask.KeyAllocator {
 	if cfg.LocalTaskKeyAllocator != nil {
 		return cfg.LocalTaskKeyAllocator
 	}
-	return newCloudKeyAllocator(cfg.Session)
+	return newLocalKeyAllocator(projects, sqlite.NewTaskKeyStore(cfg.Database))
 }
 
 // Bootstrap composes the daemon's service graph for one account. It mirrors
@@ -219,6 +220,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	projectSvc := nodeproject.NewService(nodeproject.Deps{
 		Session:  cfg.Session,
 		Database: cfg.Database,
+		NodeID:   cfg.NodeID,
 	})
 	var localTaskSvc *nodelocaltask.Service
 	localTaskSvc = nodelocaltask.NewService(nodelocaltask.Deps{
@@ -226,7 +228,7 @@ func Bootstrap(cfg Config) (*App, error) {
 		Registry:        registry,
 		WorkspaceStore:  store,
 		ProjectResolver: projectSvc,
-		KeyAllocator:    resolveLocalTaskKeyAllocator(cfg),
+		KeyAllocator:    resolveLocalTaskKeyAllocator(cfg, projectSvc),
 		Events:          events,
 		TemplateStore:   templateStore,
 		TaskContextsChanged: func() {
@@ -278,9 +280,6 @@ func Bootstrap(cfg Config) (*App, error) {
 		AgentLifecycleCtx: agentLifecycleCtx,
 		DaemonWSEndpoint:  cfg.DaemonWSEndpoint,
 		ServerCtx:         context.Background(),
-		RelayCreateCompleted: func(prepared application.CreatePlan, completed map[string]any) {
-			workspaceSvc.RelayCreateCompleted(prepared, completed)
-		},
 	})
 	workspaceSvc.SetAgentCleanupLifecycle(
 		func(ctx context.Context, workspaceID string) (any, error) {
@@ -373,28 +372,21 @@ func Bootstrap(cfg Config) (*App, error) {
 		ServerCtx:    context.Background(),
 	})
 	overviewSvc := nodeoverview.NewService(nodeoverview.Deps{Store: sqlite.NewOverviewStore(cfg.Database)})
-	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc, overviewSvc)
+	scheduledJobSvc := newScheduledJobService(cfg, projectSvc)
+	app.router = buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc, overviewSvc, scheduledJobSvc)
 	app.rpcServer = rpc.NewServer(appHandler{router: app.router, agent: agentSvc})
 	app.rpcServer.BinaryFrameHandler = terminalSvc
-	requestScheduledJobsRefresh := func(ctx context.Context) {
-		if app.scheduledJobs != nil {
-			app.scheduledJobs.RequestRefresh(ctx)
-		}
-	}
 	app.relay = relay.NewClient(relay.ClientConfig{
 		Session: cfg.Session, NodeID: cfg.NodeID, URL: cfg.RelayURL, StaticToken: cfg.RelayToken, Server: app.rpcServer,
-		Handler: relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc, runtime: cfg.Session,
-			daemonWSEndpoint: cfg.DaemonWSEndpoint, refreshScheduledJobs: requestScheduledJobsRefresh,
-			scheduleRefreshState: &scheduleRefreshState{}},
-		Events: events, OnConnected: requestScheduledJobsRefresh,
+		Handler: relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc},
+		Events:  events,
 	})
 	terminalSvc.SetRelayClient(app.relay)
-	workspaceSvc.SetRelayClient(app.relay)
 
 	// Constructing LocalScheduler starts its internal workers. Defer that until
 	// the relay and every relay callback consumer are fully wired.
 	var scheduledJobsErr error
-	app.scheduledJobs, scheduledJobsErr = newScheduledJobs(cfg.Database, cfg.Session, cfg.NodeID, cfg.DaemonWSEndpoint)
+	app.scheduledJobs, scheduledJobsErr = newScheduledJobs(scheduledJobSvc)
 	if scheduledJobsErr != nil {
 		return nil, fmt.Errorf("compose scheduled jobs: %w", scheduledJobsErr)
 	}
@@ -424,6 +416,18 @@ func (a *App) ServeAgentHook(w http.ResponseWriter, r *http.Request) {
 
 // NewRouter builds the namespace routing table for the node services (test
 // and composition helper; Bootstrap wires it into the app).
-func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service, overviewSvc *nodeoverview.Service) *rpc.Router {
-	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc, overviewSvc)
+func NewRouter(agentSvc *nodeagent.Service, workspaceSvc *nodeworkspace.Service, terminalSvc *nodeterminal.Service, projectSvc *nodeproject.Service, systemSvc *nodesystem.Service, localTaskSvc *nodelocaltask.Service, overviewSvc *nodeoverview.Service, scheduledJobSvc *nodescheduledjob.Service) *rpc.Router {
+	return buildNamespaceRouter(agentSvc, workspaceSvc, terminalSvc, projectSvc, systemSvc, localTaskSvc, overviewSvc, scheduledJobSvc)
+}
+
+// newScheduledJobService composes the scheduled job service; its scheduler
+// hooks are attached by newScheduledJobs.
+func newScheduledJobService(cfg Config, projectSvc *nodeproject.Service) *nodescheduledjob.Service {
+	return nodescheduledjob.NewService(nodescheduledjob.Deps{
+		Database: cfg.Database, NodeID: cfg.NodeID, Session: cfg.Session,
+		EnsureProjectsImported: projectSvc.EnsureImported,
+		RunAgent: func(ctx context.Context, agentKind, prompt, model, projectPath string) (string, error) {
+			return nodesystem.RunAgent(ctx, agentKind, prompt, model, projectPath, cfg.DaemonWSEndpoint)
+		},
+	})
 }

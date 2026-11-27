@@ -41,7 +41,8 @@ vi.mock("@renderer/events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("@renderer/domains/project/api/projectApi", () => ({
+vi.mock("@renderer/domains/project/daemon/projectDaemonClient", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@renderer/domains/project/daemon/projectDaemonClient")>()),
   createProject: apiMocks.createProject,
 }));
 

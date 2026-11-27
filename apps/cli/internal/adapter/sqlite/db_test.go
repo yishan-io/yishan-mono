@@ -29,7 +29,10 @@ func TestOpenAndMigrate_CreatesSchemaAndConfiguresDatabase(t *testing.T) {
 	assertTableExists(t, database, "local_task_tags")
 	assertTableExists(t, database, "local_task_workspace_links")
 	assertTableExists(t, database, "local_tasks_fts")
-	assertTableExists(t, database, "scheduled_job_run_outbox")
+	assertTableExists(t, database, "projects")
+	assertTableExists(t, database, "task_key_counters")
+	assertTableExists(t, database, "scheduled_jobs")
+	assertTableExists(t, database, "scheduled_job_runs")
 	assertTableExists(t, database, "_migrations")
 }
 

@@ -24,31 +24,10 @@ func (s *Service) HandleRelayMessage(ctx context.Context, connState *rpc.Connect
 	}
 }
 
-// publishWorkspaceSnapshotChanged republishes relay workspace snapshot changes
-// as frontend events and runs the relayed create/close workflows on this node
-// when this node is the target.
+// publishWorkspaceSnapshotChanged republishes relay workspace snapshot
+// changes as frontend events. Cross-node workspace create/close envelopes are
+// no longer acted on; they only trigger a frontend snapshot refresh.
 func publishWorkspaceSnapshotChanged(handler *Service, params json.RawMessage) {
-	if payload, ok := decodeRelayWorkspaceCreateEnvelope(params); ok {
-		switch payload.Change {
-		case workspaceRelayChangeCreateRequest:
-			handler.handleRelayedCreate(payload)
-			handler.republishCreate(payload)
-		case workspaceRelayChangeCreateFailed:
-			handler.unlinkFailedLocalTaskWorkspace(payload.WorkspaceID)
-			handler.republishCreate(payload)
-		default:
-			handler.republishCreate(payload)
-		}
-		return
-	}
-
-	if payload, ok := decodeRelayWorkspaceCloseEnvelope(params); ok {
-		if payload.Change == relayChangeWorkspaceCloseRequest && strings.TrimSpace(payload.TargetNodeID) == strings.TrimSpace(handler.deps.NodeID) {
-			handler.handleRelayedClose(payload)
-		}
-		return
-	}
-
 	var payload map[string]any
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &payload); err != nil {
@@ -80,13 +59,4 @@ func publishWorkspaceSnapshotChanged(handler *Service, params json.RawMessage) {
 	}
 
 	handler.deps.Events.Publish(eventbus.Event{Topic: "workspaceSnapshotChanged", Payload: payload})
-}
-
-func (s *Service) unlinkFailedLocalTaskWorkspace(workspaceID string) {
-	if s.deps.UnlinkLocalTaskWorkspace == nil {
-		return
-	}
-	if err := s.deps.UnlinkLocalTaskWorkspace(s.serverContext(), workspaceID); err != nil {
-		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("unlink Local Task after relayed workspace create failure")
-	}
 }

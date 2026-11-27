@@ -16,7 +16,6 @@ import { createWorkspace } from "../../commands/workspaceCommands";
 import { useWorkspaceBranchPrefixSettings } from "../../hooks/useWorkspaceBranchPrefixSettings";
 import { WorkspaceDetailsSection } from "../../ui/WorkspaceDetailsSection";
 import { WorkspaceDialogSubmitButton } from "../../ui/WorkspaceDialogSubmitButton";
-import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";
 import { ProjectAndSourceBranchSection } from "./createWorkspaceDialog/ProjectAndSourceBranchSection";
 import { TaskRunSection } from "./createWorkspaceDialog/TaskRunSection";
 import { useCreateWorkspaceDialogState } from "./useCreateWorkspaceDialogState";
@@ -32,7 +31,6 @@ type CreateWorkspaceDialogViewProps = {
 export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWorkspaceDialogViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const organizationId = sessionStore((state) => state.selectedOrganizationId);
   const daemonId = sessionStore((state) => state.daemonId);
   const projects = projectStore((state) => state.projects);
   const displayProjectIds = projectStore((state) => state.displayProjectIds) ?? [];
@@ -68,10 +66,6 @@ export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWo
     hasEditedTargetBranchRef,
     isCreatingWorkspace,
     setIsCreatingWorkspace,
-    selectedNodeId,
-    setSelectedNodeId,
-    nodes,
-    nodesError,
     resetDraftInputs,
     defaultBranchPrefix,
     taskPrompt,
@@ -81,8 +75,6 @@ export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWo
   } = useCreateWorkspaceDialogState({
     open,
     projectId,
-    organizationId,
-    daemonId,
     projects: selectableProjects,
     workspaces,
     prefixMode,
@@ -95,7 +87,6 @@ export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWo
     !isLoadingSourceBranches &&
     !isCreatingWorkspace &&
     Boolean(name.trim()) &&
-    (!organizationId || Boolean(selectedNodeId)) &&
     Boolean(sourceBranch.trim()) &&
     Boolean(targetBranch.trim());
   const submitShortcutLabel = getRendererPlatform() === "darwin" ? "⌘↵" : "Ctrl+↵";
@@ -125,7 +116,8 @@ export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWo
         name: normalizedName,
         sourceBranch: sourceBranch.trim() || undefined,
         targetBranch: normalizedTargetBranch,
-        nodeId: selectedNodeId || undefined,
+        // Workspaces are always created on this machine's daemon.
+        nodeId: daemonId || undefined,
         taskRun: taskPrompt.trim()
           ? {
               agentKind: "pi",
@@ -191,13 +183,6 @@ export function CreateWorkspaceDialogView({ open, projectId, onClose }: CreateWo
               setTargetBranch(branch);
               hasEditedTargetBranchRef.current = true;
             }}
-          />
-          <NodeSelectorSection
-            selectedNodeId={selectedNodeId}
-            onNodeChange={setSelectedNodeId}
-            nodes={nodes}
-            nodesError={nodesError}
-            isCreatingWorkspace={isCreatingWorkspace}
           />
           <TaskRunSection
             taskPrompt={taskPrompt}

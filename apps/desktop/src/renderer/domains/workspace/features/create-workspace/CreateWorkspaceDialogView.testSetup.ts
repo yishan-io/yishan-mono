@@ -10,7 +10,6 @@ type MockedCommands = {
   getGitAuthorName: ReturnType<typeof vi.fn>;
   listGitBranches: ReturnType<typeof vi.fn>;
   listAgentModels: ReturnType<typeof vi.fn>;
-  listNodesByOrg: ReturnType<typeof vi.fn>;
 };
 
 // biome-ignore lint/style/noVar: var hoisting is required for vi.mock factory
@@ -28,7 +27,6 @@ export function getMockedCommands(): MockedCommands {
     getGitAuthorName: vi.fn(),
     listGitBranches: vi.fn(),
     listAgentModels: vi.fn(),
-    listNodesByOrg: vi.fn(),
   };
 
   return mocked;
@@ -132,11 +130,3 @@ vi.mock("@renderer/domains/agent", async (importOriginal) => {
     },
   };
 });
-
-vi.mock("../../../../api", () => ({
-  api: {
-    node: {
-      listByOrg: getMockedCommands().listNodesByOrg,
-    },
-  },
-}));

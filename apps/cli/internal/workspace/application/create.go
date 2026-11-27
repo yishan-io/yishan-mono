@@ -6,23 +6,14 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-// executePlan runs the create engine for a prepared plan. This is the
-// single place that decides the execution path (relay dispatch vs local
-// provision) and the rollback policy on failure.
+// executePlan runs the create engine for a prepared plan and applies the
+// rollback policy on failure.
 func (s *Service) executePlan(ctx context.Context, prepared CreatePlan) {
 	ExecutePreparedPlan(ctx, PreparedPlan{
-		WorkspaceID:   prepared.WorkspaceID,
-		LocalCreate:   prepared.LocalCreate,
-		RemoteRequest: (*CreateCommand)(prepared.RemoteRequest),
+		WorkspaceID: prepared.WorkspaceID,
+		LocalCreate: prepared.LocalCreate,
 	}, ExecutePreparedPlanDependencies{
 		Now: s.deps.Now,
-		DispatchRemote: func(req CreateCommand) error {
-			command := CreateCommand(req)
-			return s.deps.Relay.DispatchCreate(ctx, prepared, command)
-		},
-		RollbackRegistration: func(ctx context.Context) {
-			s.rollbackRegistration(ctx, prepared)
-		},
 		ExecuteLocalCreate: func(ctx context.Context, report workspace.CreateProgressReporter) error {
 			return s.executeLocalCreate(ctx, prepared, report)
 		},
@@ -55,9 +46,6 @@ func (s *Service) executeLocalCreate(ctx context.Context, prepared CreatePlan, r
 			if s.deps.WorkspaceAvailabilityChanged != nil {
 				s.deps.WorkspaceAvailabilityChanged()
 			}
-			if prepared.Registration != nil {
-				s.deps.Records.UpdateRemoteRecord(ctx, *prepared.Registration, created.Path)
-			}
 			s.deps.Events.SnapshotChanged(prepared.OrganizationID, prepared.ProjectID, created.ID, "updated")
 			return nil
 		},
@@ -72,14 +60,11 @@ func (s *Service) executeLocalCreate(ctx context.Context, prepared CreatePlan, r
 	}, reportProgress)
 }
 
-// rollbackRegistration closes the local row and the cloud record when a create
-// fails before a worktree exists (dispatch rejection, provision step failure).
+// rollbackRegistration closes the local row when a create fails before a
+// worktree exists (provision step failure).
 func (s *Service) rollbackRegistration(ctx context.Context, prepared CreatePlan) {
 	s.unlinkLocalTaskWorkspace(ctx, prepared)
-	if err := s.deps.Records.ClosePersisted(ctx, prepared.WorkspaceID); err != nil {
-		return
-	}
-	s.closeRemoteRecordForRegistration(ctx, prepared)
+	_ = s.deps.Records.ClosePersisted(ctx, prepared.WorkspaceID) // Best-effort: rollback continues regardless.
 }
 
 // rollbackCreateFailure rolls back a create that reached finalize: closes the
@@ -89,22 +74,9 @@ func (s *Service) rollbackCreateFailure(ctx context.Context, prepared CreatePlan
 	if err := s.deps.Records.ClosePersisted(ctx, prepared.WorkspaceID); err != nil {
 		return
 	}
-	s.closeRemoteRecordForRegistration(ctx, prepared)
 
 	closeReq := BuildCreateFailureClosePathRequest(created, prepared.LocalCreate.TargetBranch)
 	s.cleanupCreateFailure(ctx, closeReq)
-}
-
-// closeRemoteRecordForRegistration marks the cloud record closed from the
-// prepared registration rather than a local row lookup: the origin of a
-// remote-target create has no local row, so without this the remote
-// provisioning record would leak on dispatch failure.
-func (s *Service) closeRemoteRecordForRegistration(ctx context.Context, prepared CreatePlan) {
-	if prepared.Registration == nil {
-		return
-	}
-	registration := prepared.Registration
-	s.deps.Records.CloseRemoteRecord(ctx, registration.OrganizationID, registration.ProjectID, registration.ID, workspace.StatusClosed)
 }
 
 // cleanupCreateFailure tears down a partially created worktree and clears the

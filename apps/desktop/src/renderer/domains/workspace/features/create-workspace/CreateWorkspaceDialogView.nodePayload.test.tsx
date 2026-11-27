@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { agentSettingsStore } from "@renderer/domains/agent/state/agentSettingsStore";
+import { sessionStore } from "@renderer/domains/session";
 import { workspaceSettingsStore } from "@renderer/domains/workspace";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -95,13 +96,6 @@ vi.mock("./useCreateWorkspaceDialogState", () => ({
     hasEditedTargetBranchRef: { current: false },
     isCreatingWorkspace: false,
     setIsCreatingWorkspace,
-    selectedNodeId: "node-2",
-    setSelectedNodeId: vi.fn(),
-    nodes: [
-      { id: "daemon-1", name: "Local Node", scope: "private", canUse: true, isOnline: true },
-      { id: "node-2", name: "Shared Node", scope: "shared", canUse: true, isOnline: true },
-    ],
-    nodesError: "",
     resetDraftInputs,
     selectedWorkspace: undefined,
     defaultBranchPrefix: "",
@@ -117,6 +111,7 @@ vi.mock("./useCreateWorkspaceDialogState", () => ({
 const initialWorkspaceStoreState = workspaceStore.getState();
 const initialAgentSettingsStoreState = agentSettingsStore.getState();
 const initialWorkspaceSettingsStoreState = workspaceSettingsStore.getState();
+const initialSessionStoreState = sessionStore.getState();
 
 describe("CreateWorkspaceDialogView node payload", () => {
   beforeEach(() => {
@@ -152,6 +147,7 @@ describe("CreateWorkspaceDialogView node payload", () => {
       },
       true,
     );
+    sessionStore.setState({ daemonId: "daemon-1" });
     createWorkspace.mockResolvedValue(undefined);
     listAgentModels.mockResolvedValue({ models: [] });
   });
@@ -160,11 +156,12 @@ describe("CreateWorkspaceDialogView node payload", () => {
     workspaceStore.setState(initialWorkspaceStoreState, true);
     agentSettingsStore.setState(initialAgentSettingsStoreState, true);
     workspaceSettingsStore.setState(initialWorkspaceSettingsStoreState, true);
+    sessionStore.setState(initialSessionStoreState, true);
     cleanup();
     vi.clearAllMocks();
   });
 
-  it("passes the selected node id to createWorkspace", async () => {
+  it("creates the workspace on the current daemon node", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />
@@ -179,7 +176,7 @@ describe("CreateWorkspaceDialogView node payload", () => {
         name: "Node Workspace",
         sourceBranch: "main",
         targetBranch: "node-workspace",
-        nodeId: "node-2",
+        nodeId: "daemon-1",
         taskRun: undefined,
       });
     });

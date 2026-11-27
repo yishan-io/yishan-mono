@@ -27,7 +27,6 @@ const createCustomCronDescriptionSx = { display: "block", mt: 0.75 };
 /** Form for creating a new scheduled job. */
 export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }: CreateScheduledJobFormViewProps) {
   const { t } = useTranslation();
-  const orgId = sessionStore((state) => state.selectedOrganizationId);
   const daemonId = sessionStore((state) => state.daemonId);
   const selectedProjectId = workbenchNavigationStore((state) => state.activeProjectId);
   const projects = projectStore((state) => state.projects);
@@ -45,13 +44,10 @@ export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }
     setScheduleTime,
     weeklyDay,
     setWeeklyDay,
-    nodes,
-    isNodesLoading,
-    nodesError,
     cronDescription,
     nextRunEstimate,
     resetForm,
-  } = useScheduledJobFormState({ initialState, orgId, projects, daemonId });
+  } = useScheduledJobFormState({ initialState, projects, daemonId });
 
   const createMutation = useMutation({
     mutationFn: async (input: CreateScheduledJobInput) => {
@@ -112,14 +108,10 @@ export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }
         scheduleTime={scheduleTime}
         setScheduleTime={setScheduleTime}
         projects={projects}
-        nodes={nodes}
         isBusy={isCreating}
-        isNodesLoading={isNodesLoading}
-        nodesError={nodesError}
         cronDescription={cronDescription}
         nextRunEstimate={nextRunEstimate}
         isProjectEditable
-        showNodeLabelWhenError={false}
         customCronDescriptionSx={createCustomCronDescriptionSx}
       />
       {createMutation.isError ? (

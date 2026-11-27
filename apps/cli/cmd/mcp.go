@@ -144,7 +144,7 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 			}
 
 			var projects []map[string]any
-			if err := daemonClient.Call("project.list", map[string]any{"orgId": orgID}, &projects); err != nil {
+			if err := daemonClient.Call("project.list", map[string]any{"organizationId": orgID}, &projects); err != nil {
 				return textErrorResult(fmt.Sprintf("failed to list projects: %v", err)), nil, nil
 			}
 

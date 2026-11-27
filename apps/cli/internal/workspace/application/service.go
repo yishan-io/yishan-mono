@@ -10,7 +10,7 @@ import (
 
 // Service is the single owner of workspace create/close orchestration. The
 // JSON-RPC handler decodes input, calls one Service method, and encodes the
-// output; routing (local vs remote node) and rollback policy live here.
+// output; rollback policy lives here.
 type Service struct {
 	deps Dependencies
 
@@ -27,8 +27,8 @@ func New(deps Dependencies) *Service {
 	}
 }
 
-// Create handles a workspace.create request on the origin node: prepare →
-// register (local row) → cloud record → created events → async execution.
+// Create handles a workspace.create request: prepare → register (local row)
+// → created events → async execution.
 // The synchronous part mirrors today's handleWorkspaceCreate; the goroutine
 // mirrors executeWorkspaceCreate.
 func (s *Service) Create(ctx context.Context, command CreateCommand) (CreateResult, error) {
@@ -48,11 +48,6 @@ func (s *Service) Create(ctx context.Context, command CreateCommand) (CreateResu
 	if err := s.linkLocalTaskWorkspace(ctx, prepared); err != nil {
 		s.rollbackRegistration(ctx, prepared)
 		return CreateResult{}, err
-	}
-	// Write the cloud record (provisioning) before provisioning or dispatching,
-	// so the same create→provision→activate→close lifecycle is node-agnostic.
-	if prepared.Registration != nil {
-		s.deps.Records.CreateRemoteRecord(ctx, *prepared.Registration)
 	}
 	s.deps.Events.SnapshotChanged(prepared.OrganizationID, prepared.ProjectID, prepared.WorkspaceID, "created")
 	s.deps.Events.CreateStarted(prepared.StartedEvent)
@@ -83,38 +78,12 @@ func (s *Service) unlinkLocalTaskWorkspace(ctx context.Context, prepared CreateP
 	_ = s.deps.UnlinkLocalTaskWorkspace(ctx, prepared.WorkspaceID) // best-effort rollback; the create failure is authoritative
 }
 
-// register persists the local SQLite row for local creates. A remote-target
-// create is forwarded to the executor node, which owns the worktree and its
-// local runtime record: the origin only relays and must not write a local row.
+// register persists the local SQLite row for the create.
 func (s *Service) register(ctx context.Context, prepared CreatePlan) error {
-	if prepared.Registration == nil || prepared.RemoteRequest != nil {
+	if prepared.Registration == nil {
 		return nil
 	}
 	return s.deps.Records.PersistPrepared(ctx, prepared)
-}
-
-// ExecuteRelayed handles a create relayed from another node (executor side):
-// prepare → register → async execution, without the origin-side created events.
-func (s *Service) ExecuteRelayed(ctx context.Context, command CreateCommand) error {
-	// The origin owns the Local Task association. The executor must not alter
-	// a task database that may be unrelated to the originating task.
-	command.LocalTaskID = ""
-	prepared, err := s.prepare(ctx, command)
-	if err != nil {
-		return err
-	}
-	shouldReleaseReservation := true
-	defer func() {
-		if shouldReleaseReservation {
-			s.releaseCreateReservation(prepared)
-		}
-	}()
-	if err := s.register(ctx, prepared); err != nil {
-		return err
-	}
-	go s.execute(context.Background(), prepared)
-	shouldReleaseReservation = false
-	return nil
 }
 
 func (s *Service) execute(ctx context.Context, prepared CreatePlan) {

@@ -1,29 +1,31 @@
 package project
 
 import (
+	"context"
 	"testing"
 
-	"yishan/apps/cli/internal/adapter/cloud"
+	"yishan/apps/cli/internal/adapter/sqlite"
 	domain "yishan/apps/cli/internal/localtask"
 )
 
-func TestFindTaskProject_ReturnsMatchingDisplayOrNoResult(t *testing.T) {
-	projects := []cloud.Project{{ID: "project-1", Name: "Example", Icon: "code", Color: "#123456"}}
-	tests := []struct {
-		name      string
-		projectID string
-		want      domain.ProjectDisplay
-		isFound   bool
-	}{
-		{name: "matching project", projectID: "project-1", want: domain.ProjectDisplay{ID: "project-1", Name: "Example", Icon: "code", Color: "#123456"}, isFound: true},
-		{name: "deleted project", projectID: "deleted-project"},
+func TestResolveTaskProjects_ReadsLocalProjectsWithinTheirOrganization(t *testing.T) {
+	svc, database := newLocalTestService(t, nil)
+	project := sqlite.Project{ID: "project-1", OrganizationID: "org-1", Name: "Example", Icon: "code", Color: "#123456", SourceType: "unknown"}
+	if err := sqlite.NewProjectStore(database).Create(context.Background(), project, nil); err != nil {
+		t.Fatalf("create project: %v", err)
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, isFound := findTaskProject(projects, test.projectID)
-			if got != test.want || isFound != test.isFound {
-				t.Fatalf("findTaskProject() = %#v, %t; want %#v, %t", got, isFound, test.want, test.isFound)
-			}
-		})
+	resolved, err := svc.ResolveTaskProjects(context.Background(), map[string][]string{
+		"org-1": {"project-1", "deleted-project"},
+		"org-2": {"project-1"},
+	})
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	want := domain.ProjectDisplay{ID: "project-1", Name: "Example", Icon: "code", Color: "#123456"}
+	if len(resolved) != 1 || resolved["project-1"] != want {
+		t.Fatalf("unexpected resolution: %#v", resolved)
+	}
+	if _, found, _ := svc.ResolveTaskProject(context.Background(), "org-2", "project-1"); found {
+		t.Fatal("a project from another organization must not resolve")
 	}
 }

@@ -61,7 +61,8 @@ vi.mock("../../../events/desktopRpcEventBus", () => ({
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("../../../domains/project/api/projectApi", () => ({
+vi.mock("../../../domains/project/daemon/projectDaemonClient", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../domains/project/daemon/projectDaemonClient")>()),
   createProject: apiMocks.createProject,
   deleteProject: apiMocks.deleteProject,
   ensureProjectTaskPrefix: apiMocks.ensureProjectTaskPrefix,

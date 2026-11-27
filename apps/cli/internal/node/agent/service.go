@@ -18,7 +18,6 @@ import (
 	"yishan/apps/cli/internal/rpc"
 	term "yishan/apps/cli/internal/terminal"
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/workspace/application"
 )
 
 // WorkspaceResolver resolves an open workspace instance by id (skill active
@@ -47,10 +46,6 @@ type Deps struct {
 	ServerCtx context.Context
 	// DaemonWSEndpoint is injected into every Pi child process.
 	DaemonWSEndpoint string
-
-	// RelayCreateCompleted forwards a workspace-create completion to the
-	// origin node via the relay; wired by the composition root.
-	RelayCreateCompleted func(prepared application.CreatePlan, completed map[string]any)
 }
 
 // Service implements the pi.*, skill.*, and customize.* RPC namespaces and
