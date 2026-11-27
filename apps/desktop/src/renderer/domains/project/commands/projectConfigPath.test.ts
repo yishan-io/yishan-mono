@@ -5,10 +5,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { projectStore } from "../state/projectStore";
 import { updateProjectConfig } from "./projectCommands";
 
-const mocks = vi.hoisted(() => ({ requestJson: vi.fn(), request: vi.fn() }));
-vi.mock("@renderer/api/restClient", () => ({ requestJson: mocks.requestJson }));
+const mocks = vi.hoisted(() => ({ projectRpc: vi.fn(), request: vi.fn() }));
 vi.mock("@renderer/rpc/client", () => ({
-  request: mocks.request,
+  // Project mutations go to the daemon; route them to their own mock so the
+  // other daemon calls keep their exact call lists.
+  request: (method: string, ...args: unknown[]) =>
+    method.startsWith("project.") && method !== "project.listWithWorkspaces"
+      ? mocks.projectRpc(method, ...args)
+      : mocks.request(method, ...args),
   subscribeConnectionStatus: vi.fn(() => vi.fn()),
 }));
 
@@ -49,7 +53,7 @@ beforeEach(() => {
       },
     ],
   });
-  mocks.requestJson.mockResolvedValue({ project: { name: "Saved", contextEnabled: false } });
+  mocks.projectRpc.mockResolvedValue({ name: "Saved", contextEnabled: false });
   mocks.request.mockImplementation(async (method: string) => {
     if (method === "git.inspectPath") return { isGitRepository: true, repositoryRoot: "/new" };
     if (method === "workspace.openProject") return { opened: ["primary"], skipped: [], errors: [] };
@@ -61,7 +65,7 @@ beforeEach(() => {
 const savePath = (localPath = "/new") => updateProjectConfig("project", { name: "Saved", localPath });
 
 describe("project config primary path", () => {
-  it("validates then PUTs the path and stable IDs before awaiting daemon reconciliation", async () => {
+  it("validates then saves the path before awaiting daemon reconciliation", async () => {
     let finishOpen!: (value: unknown) => void;
     mocks.request.mockImplementation(async (method: string) => {
       if (method === "git.inspectPath") return { isGitRepository: true, repositoryRoot: "/new" };
@@ -71,10 +75,10 @@ describe("project config primary path", () => {
     });
     const saving = savePath(" /alias/subdir/ ");
     await vi.waitFor(() => expect(finishOpen).toBeTypeOf("function"));
-    expect(mocks.requestJson).toHaveBeenCalledWith("/orgs/org/projects/project", {
-      method: "PUT",
-      body: expect.objectContaining({ name: "Saved", localPath: "/new", workspaceId: "primary", nodeId: "node" }),
-    });
+    expect(mocks.projectRpc).toHaveBeenCalledWith(
+      "project.update",
+      expect.objectContaining({ organizationId: "org", projectId: "project", name: "Saved", localPath: "/new" }),
+    );
     expect(mocks.request).toHaveBeenCalledWith("git.inspectPath", { path: "/alias/subdir/" });
     expect(mocks.request).toHaveBeenCalledWith("workspace.openProject", {
       workspaces: [
@@ -87,8 +91,8 @@ describe("project config primary path", () => {
         },
       ],
     });
-    expect(mocks.request.mock.invocationCallOrder[0]).toBeLessThan(mocks.requestJson.mock.invocationCallOrder[0] ?? 0);
-    expect(mocks.requestJson.mock.invocationCallOrder[0]).toBeLessThan(mocks.request.mock.invocationCallOrder[1] ?? 0);
+    expect(mocks.request.mock.invocationCallOrder[0]).toBeLessThan(mocks.projectRpc.mock.invocationCallOrder[0] ?? 0);
+    expect(mocks.projectRpc.mock.invocationCallOrder[0]).toBeLessThan(mocks.request.mock.invocationCallOrder[1] ?? 0);
     expect(projectStore.getState().projects[0]?.localPath).toBe("/old");
     finishOpen({ opened: ["primary"], skipped: [], errors: [] });
     await saving;
@@ -116,9 +120,9 @@ describe("project config primary path", () => {
 
   it.each([undefined, " /old "])("preserves config-only behavior for unchanged/absent path %s", async (localPath) => {
     await updateProjectConfig("project", { name: "Saved", worktreePath: "/preference", localPath });
-    const body = mocks.requestJson.mock.calls[0]?.[1]?.body;
-    expect(body).not.toHaveProperty("localPath");
-    expect(body).not.toHaveProperty("workspaceId");
+    const body = mocks.projectRpc.mock.calls[0]?.[1];
+    expect(body).toMatchObject({ name: "Saved" });
+    expect(body?.localPath).toBeUndefined();
     expect(mocks.request).not.toHaveBeenCalled();
     expect(projectStore.getState().projects[0]).toMatchObject({
       name: "Saved",
@@ -140,7 +144,7 @@ describe("project config primary path", () => {
     });
     workspaceStore.setState({ workspaces: [] });
     await savePath("  ");
-    expect(mocks.requestJson.mock.calls[0]?.[1]?.body).not.toHaveProperty("localPath");
+    expect(mocks.projectRpc.mock.calls[0]?.[1]?.localPath).toBeUndefined();
     expect(mocks.request).not.toHaveBeenCalled();
     expect(projectStore.getState().projects[0]?.name).toBe("Saved");
   });
@@ -150,7 +154,7 @@ describe("project config primary path", () => {
     if (!primary) throw new Error("Expected a primary workspace fixture");
     workspaceStore.setState({ workspaces: [{ ...primary, id: "foreign", nodeId: "foreign-node" }, primary] });
     await savePath();
-    expect(mocks.requestJson.mock.calls[0]?.[1]?.body).toMatchObject({ workspaceId: "primary", nodeId: "node" });
+    expect(mocks.projectRpc.mock.calls[0]?.[1]).toMatchObject({ localPath: "/new" });
     expect(workspaceStore.getState().workspaces[0]?.worktreePath).toBe("/old");
     expect(workspaceStore.getState().workspaces[1]?.worktreePath).toBe("/new");
   });
@@ -175,12 +179,12 @@ describe("project config primary path", () => {
               ? { isGitRepository: true, repositoryRoot: "/new" }
               : { opened: ["primary"], errors: [] };
           });
-          mocks.requestJson.mockImplementation(async () => {
+          mocks.projectRpc.mockImplementation(async () => {
             if (stage === "PUT" || stage === "config PUT") await pending;
-            return { project: { name: "Saved", contextEnabled: true, repoKey: "stable" } };
+            return { name: "Saved", contextEnabled: true, repoKey: "stable" };
           });
           mocks.request.mockClear();
-          mocks.requestJson.mockClear();
+          mocks.projectRpc.mockClear();
           const saving = updateProjectConfig("project", {
             name: "Saved",
             localPath: stage === "config PUT" ? undefined : "/new",
@@ -189,7 +193,7 @@ describe("project config primary path", () => {
           await vi.waitFor(() => {
             if (stage === "inspection")
               expect(mocks.request).toHaveBeenCalledWith("git.inspectPath", expect.anything());
-            if (stage === "PUT" || stage === "config PUT") expect(mocks.requestJson).toHaveBeenCalledTimes(1);
+            if (stage === "PUT" || stage === "config PUT") expect(mocks.projectRpc).toHaveBeenCalledTimes(1);
             if (stage === "reconcile")
               expect(mocks.request).toHaveBeenCalledWith("workspace.openProject", expect.anything());
           });
@@ -197,7 +201,7 @@ describe("project config primary path", () => {
           if (shouldReturn) sessionStore.setState({ [field]: original });
           finish();
           await saving;
-          if (stage === "inspection") expect(mocks.requestJson).not.toHaveBeenCalled();
+          if (stage === "inspection") expect(mocks.projectRpc).not.toHaveBeenCalled();
           if (stage !== "reconcile")
             expect(mocks.request.mock.calls.map(([method]) => method)).toEqual(
               stage === "config PUT" ? [] : ["git.inspectPath"],
@@ -218,14 +222,14 @@ describe("project config primary path", () => {
   it("rejects invalid git target before any API save", async () => {
     mocks.request.mockResolvedValue({ isGitRepository: false });
     await expect(savePath()).rejects.toThrow(/git/i);
-    expect(mocks.requestJson).not.toHaveBeenCalled();
+    expect(mocks.projectRpc).not.toHaveBeenCalled();
     expect(projectStore.getState().projects[0]?.localPath).toBe("/old");
   });
 
   it.each([undefined, "", "   "])("rejects missing canonical root %s from older daemons", async (repositoryRoot) => {
     mocks.request.mockResolvedValue({ isGitRepository: true, repositoryRoot });
     await expect(savePath()).rejects.toThrow(/canonical.*root.*daemon/i);
-    expect(mocks.requestJson).not.toHaveBeenCalled();
+    expect(mocks.projectRpc).not.toHaveBeenCalled();
     expect(mocks.request.mock.calls.map(([method]) => method)).toEqual(["git.inspectPath"]);
     expect(projectStore.getState().projects[0]?.localPath).toBe("/old");
     expect(workspaceStore.getState().workspaces[0]?.worktreePath).toBe("/old");
@@ -234,7 +238,7 @@ describe("project config primary path", () => {
   it("rejects inspection failures before API save", async () => {
     mocks.request.mockRejectedValue(new Error("missing directory"));
     await expect(savePath()).rejects.toThrow("missing directory");
-    expect(mocks.requestJson).not.toHaveBeenCalled();
+    expect(mocks.projectRpc).not.toHaveBeenCalled();
   });
 
   it.each(["errors", "transport"])("rejects daemon %s after backend save and allows retry", async (failure) => {
@@ -244,7 +248,7 @@ describe("project config primary path", () => {
       return { opened: [], skipped: [], errors: ["path sync failed"] };
     });
     await expect(savePath()).rejects.toThrow(/sync failed|unavailable/);
-    expect(mocks.requestJson).toHaveBeenCalledTimes(1);
+    expect(mocks.projectRpc).toHaveBeenCalledTimes(1);
     expect(projectStore.getState().projects[0]?.localPath).toBe("/old");
     expect(workspaceStore.getState().workspaces[0]).toMatchObject({ worktreePath: "/old", state: "error" });
     mocks.request.mockImplementation(async (method: string) =>
@@ -253,7 +257,7 @@ describe("project config primary path", () => {
         : { opened: [], skipped: ["primary"], errors: [] },
     );
     await savePath();
-    expect(mocks.requestJson).toHaveBeenCalledTimes(2);
+    expect(mocks.projectRpc).toHaveBeenCalledTimes(2);
     expect(projectStore.getState().projects[0]?.localPath).toBe("/new");
   });
 
@@ -262,7 +266,7 @@ describe("project config primary path", () => {
       projects: projectStore.getState().projects.map((project) => ({ ...project, localPath: "/new", path: "/new" })),
     });
     await savePath();
-    expect(mocks.requestJson.mock.calls[0]?.[1]?.body).toMatchObject({ localPath: "/new", workspaceId: "primary" });
+    expect(mocks.projectRpc.mock.calls[0]?.[1]).toMatchObject({ localPath: "/new" });
     expect(workspaceStore.getState().workspaces[0]?.worktreePath).toBe("/new");
   });
 
@@ -277,7 +281,7 @@ describe("project config primary path", () => {
   });
 
   it("does not reconcile when the backend rejects", async () => {
-    mocks.requestJson.mockRejectedValue(new Error("API denied"));
+    mocks.projectRpc.mockRejectedValue(new Error("API denied"));
     await expect(savePath()).rejects.toThrow("API denied");
     expect(mocks.request.mock.calls.map(([method]) => method)).toEqual(["git.inspectPath"]);
   });
@@ -294,7 +298,7 @@ describe("project config primary path", () => {
       if (scenario === "no-node") sessionStore.setState({ daemonId: undefined });
       if (scenario === "foreign-node") sessionStore.setState({ daemonId: "another-host" });
       await expect(savePath(scenario === "blank" ? "  " : "/new")).rejects.toThrow();
-      expect(mocks.requestJson).not.toHaveBeenCalled();
+      expect(mocks.projectRpc).not.toHaveBeenCalled();
       expect(projectStore.getState().projects[0]?.localPath).toBe("/old");
     },
   );

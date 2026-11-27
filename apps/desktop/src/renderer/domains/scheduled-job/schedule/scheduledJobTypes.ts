@@ -1,7 +1,7 @@
 /**
  * Scheduled-job feature view-model types (D15).
  *
- * Structural mirrors of the transport DTOs in `api/scheduledJobApi`. The
+ * Structural mirrors of the transport DTOs in `daemon/scheduledJobDaemonClient`. The
  * Scheduled-job Store owns these types so the State layer does not import
  * transport implementations (R6). Shapes are identical to the DTOs, so no
  * runtime conversion is required.

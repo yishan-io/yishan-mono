@@ -6,9 +6,16 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { projectStore } from "../state/projectStore";
 import { deleteProject } from "./projectCommands";
 
-const mocks = vi.hoisted(() => ({ requestJson: vi.fn(), request: vi.fn() }));
-vi.mock("@renderer/api/restClient", () => ({ requestJson: mocks.requestJson }));
-vi.mock("@renderer/rpc/client", () => ({ request: mocks.request, subscribeConnectionStatus: vi.fn(() => vi.fn()) }));
+const mocks = vi.hoisted(() => ({ projectRpc: vi.fn(), request: vi.fn() }));
+vi.mock("@renderer/rpc/client", () => ({
+  // Project mutations go to the daemon; route them to their own mock so the
+  // other daemon calls keep their exact call lists.
+  request: (method: string, ...args: unknown[]) =>
+    method.startsWith("project.") && method !== "project.listWithWorkspaces"
+      ? mocks.projectRpc(method, ...args)
+      : mocks.request(method, ...args),
+  subscribeConnectionStatus: vi.fn(() => vi.fn()),
+}));
 vi.mock("@renderer/events/desktopRpcEventBus", () => ({ subscribeDesktopRpcEvent: vi.fn(() => vi.fn()) }));
 const initial = {
   project: projectStore.getState(),
@@ -64,15 +71,17 @@ afterEach(() => {
   workbenchNavigationStore.setState(initial.navigation, true);
   localStorage.clear();
 });
-it("DELETEs stable IDs without a directory/RPC prerequisite, then removes only owned records and tabs", async () => {
+it("deletes stable IDs without a directory/RPC prerequisite, then removes only owned records and tabs", async () => {
   let finish!: () => void;
-  mocks.requestJson.mockReturnValueOnce(
+  mocks.projectRpc.mockReturnValueOnce(
     new Promise<void>((resolve) => {
       finish = resolve;
     }),
   );
   const deleting = deleteProject("project");
-  expect(mocks.requestJson).toHaveBeenCalledWith("/orgs/org/projects/project", { method: "DELETE" });
+  await vi.waitFor(() =>
+    expect(mocks.projectRpc).toHaveBeenCalledWith("project.delete", { organizationId: "org", projectId: "project" }),
+  );
   expect(workspaceStore.getState().workspaces).toHaveLength(3);
   expect(projectStore.getState().projects).toHaveLength(2);
   finish();
@@ -91,7 +100,7 @@ it.each([
   "deletion reconciles active selection %s / %s without creating orphan tabs",
   async (activeProjectId, activeWorkspaceId, expectedProjectId, expectedWorkspaceId) => {
     let finish!: () => void;
-    mocks.requestJson.mockReturnValueOnce(
+    mocks.projectRpc.mockReturnValueOnce(
       new Promise<void>((resolve) => {
         finish = resolve;
       }),
@@ -108,7 +117,7 @@ it.each([
   },
 );
 it("retains all records on API rejection", async () => {
-  mocks.requestJson.mockRejectedValueOnce(new Error("offline"));
+  mocks.projectRpc.mockRejectedValueOnce(new Error("offline"));
   await expect(deleteProject("project")).rejects.toThrow("offline");
   expect(projectStore.getState().projects).toHaveLength(2);
   expect(workspaceStore.getState().workspaces).toHaveLength(3);
@@ -118,20 +127,20 @@ it("retains all records on API rejection", async () => {
 });
 it.each(["", "   "])("rejects blank ID %j without local success", async (id) => {
   await expect(deleteProject(id)).rejects.toThrow();
-  expect(mocks.requestJson).not.toHaveBeenCalled();
+  expect(mocks.projectRpc).not.toHaveBeenCalled();
   expect(projectStore.getState().projects).toHaveLength(2);
 });
 it("rejects a missing organization", async () => {
   sessionStore.setState({ selectedOrganizationId: "" });
   await expect(deleteProject("project")).rejects.toThrow();
-  expect(mocks.requestJson).not.toHaveBeenCalled();
+  expect(mocks.projectRpc).not.toHaveBeenCalled();
   expect(projectStore.getState().projects).toHaveLength(2);
 });
 it.each(["currentUserId", "selectedOrganizationId", "daemonId"] as const)(
   "protects new scope after %s changes away and back",
   async (key) => {
     let finish!: () => void;
-    mocks.requestJson.mockReturnValueOnce(
+    mocks.projectRpc.mockReturnValueOnce(
       new Promise<void>((resolve) => {
         finish = resolve;
       }),

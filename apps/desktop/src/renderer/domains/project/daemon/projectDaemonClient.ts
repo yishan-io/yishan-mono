@@ -20,6 +20,33 @@ export type ProjectListPreference = {
   workspaceOrderByParentId: Record<string, string[]>;
 };
 
+/** `project.create` parameters. */
+export type ProjectCreateInput = {
+  organizationId: string;
+  name: string;
+  taskPrefix: string;
+  sourceTypeHint?: "unknown" | "git-local" | "git";
+  repoUrl?: string;
+  localPath?: string;
+  contextEnabled?: boolean;
+  icon?: string;
+  color?: string;
+};
+
+/** `project.update` parameters; omitted fields are kept. */
+export type ProjectUpdateInput = {
+  organizationId: string;
+  projectId: string;
+  localPath?: string;
+  name?: string;
+  icon?: string;
+  color?: string;
+  setupScript?: string;
+  postScript?: string;
+  commands?: ProjectCommandRecord[];
+  contextEnabled?: boolean;
+};
+
 type InvokeFn = (method: string, params?: unknown, timeoutMs?: number) => Promise<unknown>;
 
 type DaemonWorkspacePayload = Record<string, unknown>;
@@ -136,6 +163,28 @@ export class DaemonProjectClient {
     return parseProjectListPreference(response.value);
   }
 
+  /** Creates one daemon-owned project; a local path also records this host's primary workspace. */
+  async create(input: ProjectCreateInput): Promise<ProjectWithWorkspacesRecord> {
+    return this.parseProjectWithWorkspaces(await this.invoke("project.create", input));
+  }
+
+  /** Updates project configuration; `localPath` moves this host's primary workspace. */
+  async update(input: ProjectUpdateInput): Promise<ProjectRecord> {
+    return this.parseProject(await this.invoke("project.update", input));
+  }
+
+  async delete(organizationId: string, projectId: string): Promise<void> {
+    await this.invoke("project.delete", { organizationId, projectId });
+  }
+
+  async promoteGit(organizationId: string, projectId: string, remoteUrl: string): Promise<ProjectRecord> {
+    return this.parseProject(await this.invoke("project.promoteGit", { organizationId, projectId, remoteUrl }));
+  }
+
+  async ensureTaskPrefix(organizationId: string, projectId: string): Promise<ProjectRecord> {
+    return this.parseProject(await this.invoke("project.ensureTaskPrefix", { organizationId, projectId }));
+  }
+
   private parseProjectWithWorkspaces(item: unknown): ProjectWithWorkspacesRecord {
     const record = asRecord(item);
     const workspaces = Array.isArray(record?.workspaces)
@@ -212,6 +261,65 @@ export async function listProjectsByOrg(
 ): Promise<ProjectWithWorkspacesRecord[]> {
   const projectRpc = await getProjectRpc();
   return await projectRpc.listByOrg(organizationId, opts);
+}
+
+/** Creates one daemon-owned project (the daemon mirrors it to api-service). */
+export async function createProject(
+  organizationId: string,
+  input: {
+    name: string;
+    taskPrefix: string;
+    sourceTypeHint?: "unknown" | "git-local" | "git";
+    repoUrl?: string;
+    localPath?: string;
+    contextEnabled?: boolean;
+    icon?: string;
+    color?: string;
+  },
+): Promise<ProjectWithWorkspacesRecord> {
+  const projectRpc = await getProjectRpc();
+  return await projectRpc.create({ organizationId, ...input });
+}
+
+/** Ensures one legacy project's immutable task prefix. */
+export async function ensureProjectTaskPrefix(organizationId: string, projectId: string): Promise<ProjectRecord> {
+  const projectRpc = await getProjectRpc();
+  return await projectRpc.ensureTaskPrefix(organizationId, projectId);
+}
+
+/** Promotes one git-local project with its origin remote. */
+export async function promoteGitLocalProject(
+  organizationId: string,
+  projectId: string,
+  remoteUrl: string,
+): Promise<ProjectRecord> {
+  const projectRpc = await getProjectRpc();
+  return await projectRpc.promoteGit(organizationId, projectId, remoteUrl);
+}
+
+/** Deletes one project. */
+export async function deleteProject(organizationId: string, projectId: string): Promise<void> {
+  const projectRpc = await getProjectRpc();
+  await projectRpc.delete(organizationId, projectId);
+}
+
+/** Updates one project's configuration; `localPath` moves this host's primary workspace. */
+export async function updateProject(
+  organizationId: string,
+  projectId: string,
+  input: {
+    localPath?: string;
+    name?: string;
+    icon?: string;
+    color?: string;
+    setupScript?: string;
+    postScript?: string;
+    commands?: ProjectCommandRecord[];
+    contextEnabled?: boolean;
+  },
+): Promise<ProjectRecord> {
+  const projectRpc = await getProjectRpc();
+  return await projectRpc.update({ organizationId, projectId, ...input });
 }
 
 /** Loads one organization's project-list order/fold preferences from the daemon. */

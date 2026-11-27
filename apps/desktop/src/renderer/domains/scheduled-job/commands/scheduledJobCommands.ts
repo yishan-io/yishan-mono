@@ -2,7 +2,7 @@ import { getErrorMessage } from "@shared/errors/getErrorMessage";
 import { scheduledJobStore } from "../../../domains/scheduled-job/state/scheduledJobStore";
 
 import { sessionStore } from "@renderer/domains/session";
-import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../api/scheduledJobApi";
+import type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../daemon/scheduledJobDaemonClient";
 import {
   createScheduledJob as createScheduledJobFromApi,
   deleteScheduledJob as deleteScheduledJobFromApi,
@@ -12,7 +12,7 @@ import {
   resumeScheduledJob as resumeScheduledJobFromApi,
   runScheduledJobNow as runScheduledJobNowFromApi,
   updateScheduledJob as updateScheduledJobFromApi,
-} from "../api/scheduledJobApi";
+} from "../daemon/scheduledJobDaemonClient";
 
 /**
  * Updates an existing scheduled job and refreshes the store entry on success.
@@ -154,4 +154,4 @@ export type {
   ScheduledJobLastRunStatus,
   ScheduledJobRunStatus,
 } from "../schedule/scheduledJobTypes";
-export type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../api/scheduledJobApi";
+export type { CreateScheduledJobInput, UpdateScheduledJobInput } from "../daemon/scheduledJobDaemonClient";
