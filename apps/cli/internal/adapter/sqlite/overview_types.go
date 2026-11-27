@@ -1,5 +1,7 @@
 package sqlite
 
+import "time"
+
 // ─── Token Usage ────────────────────────────────────────────────────────────────
 
 // OverviewTokenUsageSeriesItem is one bucket in a token usage time series.
@@ -45,20 +47,24 @@ type OverviewModelBreakdownResult struct {
 	Models []OverviewModelBreakdownItem `json:"models"`
 }
 
-// ─── Agent Kind Breakdown ───────────────────────────────────────────────────────
+// ─── Query Filter ───────────────────────────────────────────────────────────────
 
-// OverviewAgentKindBreakdownItem is one agent kind in the breakdown.
-type OverviewAgentKindBreakdownItem struct {
-	AgentKind    string  `json:"agentKind"`
-	TotalTokens  int64   `json:"totalTokens"`
-	InputTokens  int64   `json:"inputTokens"`
-	OutputTokens int64   `json:"outputTokens"`
-	Percentage   float64 `json:"percentage"`
-}
+// OverviewGranularity is the token-usage series bucket size.
+type OverviewGranularity string
 
-// OverviewAgentKindBreakdownResult is the agent kind breakdown response.
-type OverviewAgentKindBreakdownResult struct {
-	AgentKinds []OverviewAgentKindBreakdownItem `json:"agentKinds"`
+const (
+	OverviewGranularityHour OverviewGranularity = "hour"
+	OverviewGranularityDay  OverviewGranularity = "day"
+)
+
+// OverviewFilter scopes every Overview aggregate. Since/Until bound usage
+// buckets and closed-workspace close times (inclusive). Empty ProjectID or
+// OrganizationID means no restriction on that dimension.
+type OverviewFilter struct {
+	Since          time.Time
+	Until          time.Time
+	ProjectID      string
+	OrganizationID string
 }
 
 // ─── Workspace Insights ─────────────────────────────────────────────────────────

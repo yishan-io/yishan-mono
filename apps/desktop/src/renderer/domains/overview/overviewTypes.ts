@@ -1,7 +1,7 @@
 /**
  * Overview feature view-model types (D14).
  *
- * Structural mirrors of the transport DTOs in `api/overviewApi.types`.
+ * Structural mirrors of the transport DTOs in `daemon/overviewDaemonTypes`.
  * The Overview Store and Commands own these types so the State layer does not
  * import transport implementations (R6). Shapes are identical to the DTOs, so
  * no runtime conversion is required.

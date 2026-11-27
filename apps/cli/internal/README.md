@@ -29,6 +29,7 @@ Enforced by `internal/archtest` (`TestForbiddenImports`).
 | `node/agent` | Application boundary | `pi.*`, `skill.*`, `customize.*` + task runs, pi session registry, desktop-connection tracking |
 | `node/terminal` | Application boundary | `terminal.*` + remote stream state, binary terminal frames |
 | `node/project` | Application boundary | `project.*` (list, preferences) |
+| `node/overview` | Application boundary | `overview.*` — per-device usage analytics (token series, model breakdown, workspace insights) from local SQLite |
 | `node/system` | Application boundary | `system.*`, `memory.*`, `context.*` + CLI tool detection, scheduled jobs, memory-summarizer runner |
 | `node/hook` | Application boundary | Agent hook HTTP ingress (pi notify bridge), usage tracker |
 | `node/context` | Application boundary | Renderer-pushed desktop context store |

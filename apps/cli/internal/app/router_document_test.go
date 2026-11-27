@@ -56,7 +56,7 @@ func TestBuildNamespaceRouter_WritesTaskContextDocuments(t *testing.T) {
 		WorkspaceStore: sqlite.NewStore(workspaceStore),
 		KeyAllocator:   routerTestKeyAllocator{},
 	})
-	router := buildNamespaceRouter(nil, nil, nil, nil, nil, localTaskService)
+	router := buildNamespaceRouter(nil, nil, nil, nil, nil, localTaskService, nil)
 	created := createRoutedProjectTask(t, router)
 	contextDirectory := resolvedContextDirectory(t, contextRoot, created.ID)
 
