@@ -1,5 +1,4 @@
 import { openExternalUrl } from "@renderer/domains/browser";
-import { switchOrganization } from "@renderer/domains/organization";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { logout } from "../../../app/commands/appCommands";
@@ -9,14 +8,10 @@ export function useAppMenuViewState() {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const [organizationMenuAnchor, setOrganizationMenuAnchor] = useState<HTMLElement | null>(null);
-  const [isCreateOrganizationDialogOpen, setIsCreateOrganizationDialogOpen] = useState(false);
   const isMenuOpen = Boolean(menuAnchor);
-  const isOrganizationMenuOpen = Boolean(organizationMenuAnchor);
 
   const closeMenus = useCallback(() => {
     setMenuAnchor(null);
-    setOrganizationMenuAnchor(null);
   }, []);
 
   useEffect(() => {
@@ -29,18 +24,6 @@ export function useAppMenuViewState() {
 
   const handleToggleMenu = useCallback((anchorElement: HTMLElement) => {
     setMenuAnchor((currentAnchor) => (currentAnchor === anchorElement ? null : anchorElement));
-  }, []);
-
-  const handleOpenOrganizations = useCallback((anchorElement: HTMLElement) => {
-    setOrganizationMenuAnchor(anchorElement);
-  }, []);
-
-  const handleToggleOrganizations = useCallback((anchorElement: HTMLElement) => {
-    setOrganizationMenuAnchor((currentAnchor) => (currentAnchor === anchorElement ? null : anchorElement));
-  }, []);
-
-  const handleCloseOrganizationMenu = useCallback(() => {
-    setOrganizationMenuAnchor(null);
   }, []);
 
   const handleNavigateToSettings = useCallback(() => {
@@ -67,46 +50,14 @@ export function useAppMenuViewState() {
     setMenuAnchor(null);
   }, []);
 
-  const handleSelectOrganization = useCallback(
-    (organizationId: string, isSelected: boolean) => {
-      if (isSelected) {
-        closeMenus();
-        return;
-      }
-
-      // fire-and-forget: org switch updates shared state outside this view.
-      void switchOrganization(organizationId);
-      closeMenus();
-    },
-    [closeMenus],
-  );
-
-  const handleOpenCreateOrganizationDialog = useCallback(() => {
-    setOrganizationMenuAnchor(null);
-    setIsCreateOrganizationDialogOpen(true);
-  }, []);
-
-  const handleCloseCreateOrganizationDialog = useCallback(() => {
-    setIsCreateOrganizationDialogOpen(false);
-  }, []);
-
   return {
     menuAnchor,
-    organizationMenuAnchor,
     isMenuOpen,
-    isOrganizationMenuOpen,
-    isCreateOrganizationDialogOpen,
     closeMenus,
     handleToggleMenu,
-    handleOpenOrganizations,
-    handleToggleOrganizations,
-    handleCloseOrganizationMenu,
     handleNavigateToSettings,
     handleNavigateToKeybindings,
     handleLogout,
     handleOpenExternalUrl,
-    handleSelectOrganization,
-    handleOpenCreateOrganizationDialog,
-    handleCloseCreateOrganizationDialog,
   };
 }

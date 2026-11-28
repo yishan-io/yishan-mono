@@ -5,7 +5,6 @@ import {
   type BiCog,
   BiDownload,
   BiGitBranch,
-  BiGroup,
   BiLinkExternal,
   BiPalette,
   BiSolidKeyboard,
@@ -25,7 +24,6 @@ import {
   LANGUAGE_SEARCH_ITEMS,
   LINKS_SEARCH_ITEMS,
   LOCAL_TAGS_SEARCH_ITEMS,
-  MEMBERS_SEARCH_ITEMS,
   MEMORY_SEARCH_ITEMS,
   NOTIFICATION_SEARCH_ITEMS,
   PROVIDERS_SEARCH_ITEMS,
@@ -42,7 +40,6 @@ export type SettingsTab =
   | "keybindings"
   | "links"
   | "localTags"
-  | "members"
   | "memory"
   | "notifications"
   | "providers"
@@ -86,10 +83,6 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
     ],
   },
   {
-    titleKey: "settings.sections.organization",
-    items: [{ tab: "members", labelKey: "settings.items.members", icon: BiGroup }],
-  },
-  {
     titleKey: "settings.sections.localTasks",
     items: [{ tab: "localTags", labelKey: "settings.items.tagManagement", icon: LuTags }],
   },
@@ -127,7 +120,6 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...LINKS_SEARCH_ITEMS,
   ...SKILLS_SEARCH_ITEMS,
   ...CUSTOMIZE_SEARCH_ITEMS,
-  ...MEMBERS_SEARCH_ITEMS,
   ...KEYBINDINGS_SEARCH_ITEMS,
   ...DAEMON_SEARCH_ITEMS,
   ...MEMORY_SEARCH_ITEMS,

@@ -25,9 +25,6 @@ import { lazy } from "react";
 
 export { AccountSettingsView } from "../account/AccountSettingsView";
 export { AgentChatWidthSettingsView } from "../agent-chat-width/AgentChatWidthSettingsView";
-export const MemberSettingsView = lazy(() =>
-  import("@renderer/domains/organization").then((m) => ({ default: m.MemberSettingsView })),
-);
 export const DaemonSettingsView = lazy(() =>
   import("../daemon/DaemonSettingsView").then((m) => ({ default: m.DaemonSettingsView })),
 );

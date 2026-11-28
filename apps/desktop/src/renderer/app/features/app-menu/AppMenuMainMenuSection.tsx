@@ -1,5 +1,5 @@
 import { Box, Button, Divider, Typography } from "@mui/material";
-import { LuBookOpen, LuBuilding2, LuChevronRight, LuKeyboard, LuLogOut, LuMail, LuSettings } from "react-icons/lu";
+import { LuBookOpen, LuKeyboard, LuLogOut, LuMail, LuSettings } from "react-icons/lu";
 import { menuItemButtonSx } from "./appMenuStyles";
 
 const menuItemLabelRowSx = {
@@ -14,8 +14,6 @@ export interface AppMenuMainMenuSectionProps {
   settingsShortcutLabel: string;
   keybindingsShortcutLabel: string | null;
   translate: (key: string) => string;
-  onOpenOrganizations: (anchorElement: HTMLElement) => void;
-  onToggleOrganizations: (anchorElement: HTMLElement) => void;
   onNavigateToSettings: () => void;
   onOpenDocumentation: () => void;
   onNavigateToKeybindings: () => void;
@@ -28,8 +26,6 @@ export function AppMenuMainMenuSection({
   settingsShortcutLabel,
   keybindingsShortcutLabel,
   translate,
-  onOpenOrganizations,
-  onToggleOrganizations,
   onNavigateToSettings,
   onOpenDocumentation,
   onNavigateToKeybindings,
@@ -38,25 +34,6 @@ export function AppMenuMainMenuSection({
 }: AppMenuMainMenuSectionProps) {
   return (
     <Box>
-      <Button
-        size="small"
-        fullWidth
-        startIcon={<LuBuilding2 size={14} />}
-        sx={menuItemButtonSx}
-        onMouseEnter={(event) => {
-          onOpenOrganizations(event.currentTarget);
-        }}
-        onClick={(event) => {
-          onToggleOrganizations(event.currentTarget);
-        }}
-      >
-        <Box component="span" sx={menuItemLabelRowSx}>
-          <Typography component="span" variant="body2">
-            {translate("org.menu.organizations")}
-          </Typography>
-          <LuChevronRight size={14} aria-hidden="true" />
-        </Box>
-      </Button>
       <Button
         size="small"
         fullWidth

@@ -2,9 +2,6 @@
   "org": {
     "menu": {
       "trigger": "Org",
-      "organizations": "Organizations",
-      "noOrganizations": "No organizations",
-      "newOrganization": "New organization",
       "newOrganizationPrompt": "Organization name",
       "newOrganizationFailed": "Failed to create organization.",
       "settings": "Settings",
