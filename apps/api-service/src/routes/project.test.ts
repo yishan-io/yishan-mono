@@ -7,9 +7,7 @@ import type { AppEnv } from "@/hono";
 import { handleAppError } from "@/middlewares/error";
 import { projectRouter } from "@/routes/project";
 
-const neverSettlingRelayPublish = new Promise<void>(() => undefined);
-
-describe("projectRouter relay invalidation", () => {
+describe("projectRouter", () => {
   let app: Hono<AppEnv>;
   let executionContext: ExecutionContext;
   const allocateLocalTaskKey = vi.fn();
@@ -17,7 +15,6 @@ describe("projectRouter relay invalidation", () => {
   const deleteProject = vi.fn();
   const ensureProjectTaskPrefix = vi.fn();
   const getMembershipRole = vi.fn();
-  const publishWorkspaceSnapshotChanged = vi.fn();
 
   beforeEach(() => {
     allocateLocalTaskKey.mockReset();
@@ -25,9 +22,7 @@ describe("projectRouter relay invalidation", () => {
     deleteProject.mockReset();
     ensureProjectTaskPrefix.mockReset();
     getMembershipRole.mockReset();
-    publishWorkspaceSnapshotChanged.mockReset();
     getMembershipRole.mockResolvedValue("member");
-    publishWorkspaceSnapshotChanged.mockReturnValue(neverSettlingRelayPublish);
     executionContext = {
       waitUntil: vi.fn(),
       passThroughOnException: vi.fn(),
@@ -40,7 +35,6 @@ describe("projectRouter relay invalidation", () => {
       c.set("services", {
         organization: { getMembershipRole },
         project: { allocateLocalTaskKey, createProject, deleteProject, ensureProjectTaskPrefix },
-        relayEvent: { publishWorkspaceSnapshotChanged },
       } as never);
       await next();
     });
@@ -97,7 +91,6 @@ describe("projectRouter relay invalidation", () => {
   });
 
   it("ensures a task prefix using the authenticated organization and project route scope", async () => {
-    publishWorkspaceSnapshotChanged.mockResolvedValueOnce(undefined);
     ensureProjectTaskPrefix.mockResolvedValue({ id: "project-1", taskPrefix: "PROJ" });
 
     const response = await app.fetch(
@@ -162,7 +155,7 @@ describe("projectRouter relay invalidation", () => {
     expect(createProject).toHaveBeenCalledWith(expect.objectContaining({ icon: "atom", color: "#123456" }));
   });
 
-  it("returns a created project without awaiting relay invalidation", async () => {
+  it("returns a created project", async () => {
     createProject.mockResolvedValue({ id: "project-1", name: "Project 1" });
 
     const response = await app.fetch(
@@ -177,10 +170,9 @@ describe("projectRouter relay invalidation", () => {
 
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toEqual({ project: { id: "project-1", name: "Project 1" } });
-    expect(executionContext.waitUntil).toHaveBeenCalledWith(neverSettlingRelayPublish);
   });
 
-  it("returns project deletion without awaiting relay invalidation", async () => {
+  it("returns project deletion", async () => {
     deleteProject.mockResolvedValue(undefined);
 
     const response = await app.fetch(
@@ -191,7 +183,6 @@ describe("projectRouter relay invalidation", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
-    expect(executionContext.waitUntil).toHaveBeenCalledWith(neverSettlingRelayPublish);
   });
   it("does not expose a project insert failure cause", async () => {
     createProject.mockRejectedValue(new ProjectCreateFailedError(new Error("database connection refused")));
@@ -248,9 +239,8 @@ describe("projectRouter relay invalidation", () => {
 });
 
 describe("projectRouter git-local promotion", () => {
-  it("promotes with the authenticated organization and publishes an updated snapshot", async () => {
+  it("promotes with the authenticated organization", async () => {
     const promoteGitLocalProject = vi.fn().mockResolvedValue({ id: "project-1", sourceType: "git" });
-    const publishWorkspaceSnapshotChanged = vi.fn().mockResolvedValue(undefined);
     const app = new Hono<AppEnv>();
     app.onError(handleAppError);
     app.use("*", async (c, next) => {
@@ -258,7 +248,6 @@ describe("projectRouter git-local promotion", () => {
       c.set("services", {
         organization: { getMembershipRole: vi.fn().mockResolvedValue("member") },
         project: { promoteGitLocalProject },
-        relayEvent: { publishWorkspaceSnapshotChanged },
       } as never);
       await next();
     });
@@ -278,12 +267,6 @@ describe("projectRouter git-local promotion", () => {
       organizationId: "org-1",
       projectId: "project-1",
       remoteUrl: "https://github.com/acme/project.git",
-    });
-    expect(publishWorkspaceSnapshotChanged).toHaveBeenCalledWith({
-      organizationId: "org-1",
-      resource: "project",
-      change: "updated",
-      projectId: "project-1",
     });
   });
 });

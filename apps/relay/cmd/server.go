@@ -13,7 +13,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"yishan/apps/relay/internal/auth"
-	"yishan/apps/relay/internal/jobqueue"
 	"yishan/apps/relay/internal/relay"
 )
 
@@ -49,22 +48,12 @@ func startServer() error {
 
 	sessions := relay.NewSessionManager()
 
-	queue := jobqueue.NewManager(sessions, jobqueue.Config{
-		AckTimeout:    cfg.JobAckTimeout,
-		ResultTimeout: cfg.JobResultTimeout,
-		MaxRetries:    cfg.JobMaxRetries,
-	})
-
-	srv := relay.NewServer(sessions, authenticator, queue, cfg.APIToken)
+	srv := relay.NewServer(sessions, authenticator, cfg.APIToken)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", srv.HandleWebSocket)
 	mux.HandleFunc("/client/ws", srv.HandleClientWebSocket)
 	mux.HandleFunc("/healthz", handleHealthz)
-	mux.HandleFunc("/api/v1/dispatch", srv.HandleDispatch)
-	mux.HandleFunc("/api/v1/org-events", srv.HandlePublishOrgEvent)
-	mux.HandleFunc("/api/v1/node-events", srv.HandlePublishNodeEvent)
-	mux.HandleFunc("/api/v1/runs/", srv.HandleRunStatus)
 	mux.HandleFunc("/api/v1/metrics", srv.HandleMetrics)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)

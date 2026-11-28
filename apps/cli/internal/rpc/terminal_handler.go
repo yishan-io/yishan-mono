@@ -73,18 +73,6 @@ func (h *TerminalHandler) Call(ctx context.Context, connection *Connection, meth
 			return nil, err
 		}
 		return h.Services.Unsubscribe(ctx, connection, req)
-	case MethodTerminalRemoteSubscribe:
-		var req TerminalRemoteSubscribeParams
-		if err := DecodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		return h.Services.RemoteSubscribe(ctx, connection, req)
-	case MethodTerminalRemoteUnsubscribe:
-		var req TerminalRemoteUnsubscribeParams
-		if err := DecodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		return h.Services.RemoteUnsubscribe(ctx, connection, req)
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "unknown terminal method: "+method)
 	}

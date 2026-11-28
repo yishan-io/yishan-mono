@@ -2,7 +2,6 @@ import { closeOverlayPanel } from "@renderer/domains/workbench";
 import { getErrorMessage } from "@shared/errors/getErrorMessage";
 
 import { sessionStore } from "@renderer/domains/session";
-import { rendererQueryClient } from "../../../queryClient";
 import {
   addOrganizationMember,
   cancelOrganizationInvite,
@@ -44,8 +43,6 @@ export async function switchOrganization(orgId: string): Promise<void> {
   } catch {
     // Best-effort: daemon may not be available.
   }
-
-  await rendererQueryClient.invalidateQueries({ queryKey: ["org-nodes", orgId] });
 }
 
 /**

@@ -12,7 +12,6 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"yishan/apps/cli/internal/events"
 	"yishan/apps/cli/internal/rpc"
 )
 
@@ -33,7 +32,6 @@ func TestClient_Run_NotifiesOnEachSuccessfulConnection(t *testing.T) {
 		URL:         "ws" + strings.TrimPrefix(server.URL, "http"),
 		StaticToken: "test-token",
 		Server:      rpc.NewServer(rpc.HandlerFunc(func(context.Context, *rpc.Connection, string, json.RawMessage) (any, error) { return nil, nil })),
-		Events:      eventbus.NewHub(),
 		OnConnected: func(ctx context.Context) { connected <- ctx },
 	})
 	ctx, cancel := context.WithCancel(context.Background())
@@ -59,26 +57,7 @@ func TestClient_Run_NotifiesOnEachSuccessfulConnection(t *testing.T) {
 	run.Wait()
 }
 
-type blockingScheduleHandler struct {
-	started chan context.Context
-	release <-chan struct{}
-}
-
-func (h blockingScheduleHandler) HandleRelayMessage(ctx context.Context, _ *rpc.Connection, _ string, method string, _ json.RawMessage) bool {
-	if method != MethodJobScheduleChanged {
-		return false
-	}
-	go func() {
-		h.started <- ctx
-		select {
-		case <-h.release:
-		case <-ctx.Done():
-		}
-	}()
-	return true
-}
-
-func TestClient_Run_ScheduleRefreshDoesNotStallPingAndStopsOnCancellation(t *testing.T) {
+func TestClient_Run_AnswersPingWithPong(t *testing.T) {
 	upgrader := websocket.Upgrader{CheckOrigin: func(_ *http.Request) bool { return true }}
 	pong := make(chan struct{}, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -88,10 +67,6 @@ func TestClient_Run_ScheduleRefreshDoesNotStallPingAndStopsOnCancellation(t *tes
 			return
 		}
 		defer conn.Close()
-		if err := conn.WriteJSON(rpc.Notification{JSONRPC: "2.0", Method: MethodJobScheduleChanged}); err != nil {
-			t.Errorf("write schedule notification: %v", err)
-			return
-		}
 		if err := conn.WriteJSON(rpc.Notification{JSONRPC: "2.0", Method: MethodPing}); err != nil {
 			t.Errorf("write ping: %v", err)
 			return
@@ -110,33 +85,20 @@ func TestClient_Run_ScheduleRefreshDoesNotStallPingAndStopsOnCancellation(t *tes
 	}))
 	defer server.Close()
 
-	releaseRefresh := make(chan struct{})
-	handler := blockingScheduleHandler{started: make(chan context.Context, 1), release: releaseRefresh}
 	client := NewClient(ClientConfig{
 		URL:         "ws" + strings.TrimPrefix(server.URL, "http"),
 		StaticToken: "test-token",
 		Server:      rpc.NewServer(rpc.HandlerFunc(func(context.Context, *rpc.Connection, string, json.RawMessage) (any, error) { return nil, nil })),
-		Handler:     handler,
-		Events:      eventbus.NewHub(),
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go client.Run(ctx)
 
 	select {
-	case callbackCtx := <-handler.started:
-		if callbackCtx != ctx {
-			t.Fatal("schedule refresh received a context other than Run context")
-		}
-	case <-time.After(time.Second):
-		t.Fatal("schedule refresh did not start")
-	}
-	select {
 	case <-pong:
 	case <-time.After(time.Second):
-		t.Fatal("blocking schedule refresh stalled relay ping")
+		t.Fatal("relay ping was not answered")
 	}
-	close(releaseRefresh)
 	cancel()
 }
 
@@ -161,7 +123,6 @@ func TestClient_Run_CancellationClosesIdlePeer(t *testing.T) {
 		URL:         "ws" + strings.TrimPrefix(server.URL, "http"),
 		StaticToken: "test-token",
 		Server:      rpc.NewServer(rpc.HandlerFunc(func(context.Context, *rpc.Connection, string, json.RawMessage) (any, error) { return nil, nil })),
-		Events:      eventbus.NewHub(),
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	runDone := make(chan struct{})

@@ -173,11 +173,9 @@ moves only with its behavior owner; helpers stay with their single consumer.
 | node/workspace_close_behavior_test.go | 135 | use case | Close local/remote record sequence | node/workspace | yes | overlaps dispatch_workspace_close_test.go | move with workspace service (step 6); reconcile overlap |
 | node/workspace_create_behavior_test.go | 476 | use case | Create event sequence, rollback on step failure, cloud-unavailable completion | node/workspace | yes | overlaps dispatch_workspace_test.go | move with workspace service (step 6); reconcile overlap |
 | node/workspace_create_flow_test.go | 48 | use case | Create rejects invalid task-run before publishing start | node/workspace | yes | — | move with workspace service (step 6) |
-| node/workspace_create_relay_test.go | 109 | use case | Create snapshot republish for source node / loopback suppression | node/workspace | yes | — | move with workspace service (step 6) |
 | node/workspace_create_taskrun_test.go | 265 | use case | Task-run terminal metadata, desktop-UI detection, PiStart task-run fail-closed | node/agent (taskrun) | yes | PiStart overlap with pi_sessions_test.go | move with agent service (step 5) |
 | node/workspace_hydration_health_behavior_test.go | 195 | use case | Hydrate-from-DB transitions, health recovery re-registers watcher | node/workspace | yes | overlaps store_contract_test.go | move with workspace service (step 6); reconcile overlap |
 | node/workspace_lifecycle_helpers_test.go | 380 | support | Workspace lifecycle test helpers (no test functions) | node/workspace test support | yes | — | rename → test_support_test.go; move with workspace service (step 6) |
-| node/workspace_relay_dispatch_test.go | 89 | use case | Relay dispatch request send accepted/rejected by target state | node/workspace (relay) | yes | — | move with workspace service (step 6) |
 
 ## output — CLI output (→ cmd/output in Phase 19; exit-code policy owner from Phase 17B)
 

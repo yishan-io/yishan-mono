@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/spf13/viper"
 )
@@ -19,9 +18,6 @@ type Config struct {
 	JWTIssuer   string
 	JWTAudience string
 
-	JobAckTimeout    time.Duration
-	JobResultTimeout time.Duration
-	JobMaxRetries    int
 
 	LogLevel string
 }
@@ -32,9 +28,6 @@ func defaultConfig() Config {
 		Port:             8788,
 		JWTIssuer:        "https://yishan.io",
 		JWTAudience:      "api-service",
-		JobAckTimeout:    30 * time.Second,
-		JobResultTimeout: 5 * time.Minute,
-		JobMaxRetries:    3,
 		LogLevel:         "info",
 	}
 }
@@ -50,9 +43,6 @@ func configFromEnv() (Config, error) {
 	v.SetDefault("PORT", cfg.Port)
 	v.SetDefault("JWT_ISSUER", cfg.JWTIssuer)
 	v.SetDefault("JWT_AUDIENCE", cfg.JWTAudience)
-	v.SetDefault("JOB_ACK_TIMEOUT", cfg.JobAckTimeout.String())
-	v.SetDefault("JOB_RESULT_TIMEOUT", cfg.JobResultTimeout.String())
-	v.SetDefault("JOB_MAX_RETRIES", cfg.JobMaxRetries)
 	v.SetDefault("LOG_LEVEL", cfg.LogLevel)
 
 	if err := v.ReadInConfig(); err != nil {
@@ -67,9 +57,6 @@ func configFromEnv() (Config, error) {
 	cfg.APIToken = v.GetString("RELAY_API_TOKEN")
 	cfg.JWTIssuer = v.GetString("JWT_ISSUER")
 	cfg.JWTAudience = v.GetString("JWT_AUDIENCE")
-	cfg.JobAckTimeout = v.GetDuration("JOB_ACK_TIMEOUT")
-	cfg.JobResultTimeout = v.GetDuration("JOB_RESULT_TIMEOUT")
-	cfg.JobMaxRetries = v.GetInt("JOB_MAX_RETRIES")
 	cfg.LogLevel = v.GetString("LOG_LEVEL")
 
 	return cfg, nil

@@ -122,15 +122,7 @@ describe("DaemonProjectClient", () => {
         version: 1,
         by_project: {
           projectOrderIds: ["project-2", "project-1"],
-          nodeOrderByParentId: { "project:project-1": ["node-a"] },
           foldedProjectIds: ["project-2"],
-          foldedNodeKeys: [],
-        },
-        by_node: {
-          projectOrderIds: [],
-          nodeOrderByParentId: { "root:node": ["node-b"] },
-          foldedProjectIds: [],
-          foldedNodeKeys: ["node-a:project-1"],
         },
         workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
       },
@@ -141,8 +133,7 @@ describe("DaemonProjectClient", () => {
 
     expect(invoke).toHaveBeenCalledWith("preferences.get", { scope: "org-1", key: "project.navigator" });
     expect(preferences.by_project.projectOrderIds).toEqual(["project-2", "project-1"]);
-    expect(preferences.by_project.nodeOrderByParentId["project:project-1"]).toEqual(["node-a"]);
-    expect(preferences.by_node.foldedNodeKeys).toEqual(["node-a:project-1"]);
+    expect(preferences.by_project.foldedProjectIds).toEqual(["project-2"]);
     expect(preferences.workspaceOrderByParentId["project-1:node-a"]).toEqual(["workspace-1"]);
   });
 
@@ -151,7 +142,7 @@ describe("DaemonProjectClient", () => {
       found: true,
       value: {
         version: "latest",
-        by_project: { projectOrderIds: "not-an-array", nodeOrderByParentId: [1, 2] },
+        by_project: { projectOrderIds: "not-an-array", foldedProjectIds: [1, 2] },
       },
     }));
 
@@ -160,9 +151,8 @@ describe("DaemonProjectClient", () => {
 
     expect(preferences.version).toBe(1);
     expect(preferences.by_project.projectOrderIds).toEqual([]);
-    expect(preferences.by_project.nodeOrderByParentId).toEqual({});
+    expect(preferences.by_project.foldedProjectIds).toEqual([]);
     expect(preferences.workspaceOrderByParentId).toEqual({});
-    expect(preferences.by_node.foldedProjectIds).toEqual([]);
   });
 
   it("persists list preferences with the org id", async () => {
@@ -176,15 +166,7 @@ describe("DaemonProjectClient", () => {
       version: 1,
       by_project: {
         projectOrderIds: ["project-1"],
-        nodeOrderByParentId: {},
         foldedProjectIds: [],
-        foldedNodeKeys: [],
-      },
-      by_node: {
-        projectOrderIds: [],
-        nodeOrderByParentId: {},
-        foldedProjectIds: [],
-        foldedNodeKeys: [],
       },
       workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
     });
@@ -196,31 +178,21 @@ describe("DaemonProjectClient", () => {
         version: 1,
         by_project: {
           projectOrderIds: ["project-1"],
-          nodeOrderByParentId: {},
           foldedProjectIds: [],
-          foldedNodeKeys: [],
-        },
-        by_node: {
-          projectOrderIds: [],
-          nodeOrderByParentId: {},
-          foldedProjectIds: [],
-          foldedNodeKeys: [],
         },
         workspaceOrderByParentId: { "project-1:node-a": ["workspace-1"] },
       },
     });
     expect(result.by_project.projectOrderIds).toEqual(["project-1"]);
   });
-  it("merges legacy workspace buckets with by_node winning conflicts, unless a shared bucket exists", () => {
+  it("reads legacy workspace buckets from by_project, unless a shared bucket exists", () => {
     const legacy = {
       version: 0,
       by_project: { workspaceOrderByParentId: { shared: ["project"], project: ["p"] } },
-      by_node: { workspaceOrderByParentId: { shared: ["node"], node: ["n"] } },
     };
     expect(parseProjectListPreference(legacy).workspaceOrderByParentId).toEqual({
-      shared: ["node"],
+      shared: ["project"],
       project: ["p"],
-      node: ["n"],
     });
     expect(parseProjectListPreference({ ...legacy, workspaceOrderByParentId: {} }).workspaceOrderByParentId).toEqual(
       {},

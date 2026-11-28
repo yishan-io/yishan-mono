@@ -364,36 +364,6 @@ func TestSessionManager_EvictStale_ConnectedSessions_NotEvicted(t *testing.T) {
 	}
 }
 
-func TestSessionManager_SendNotification_OfflineNode(t *testing.T) {
-	mgr := NewSessionManager()
-	ok := mgr.SendNotification("unknown", "test.method", nil)
-	if ok {
-		t.Error("SendNotification to unknown node should return false")
-	}
-}
-
-func TestSessionManager_SendNotification_OnlineNode(t *testing.T) {
-	srvConn, cliConn, cleanup := pipeWebSocket(t)
-	defer cleanup()
-
-	mgr := NewSessionManager()
-	mgr.Register(srvConn, newTestIdentity("n", "u"))
-
-	ok := mgr.SendNotification("n", "relay.ping", nil)
-	if !ok {
-		t.Error("SendNotification to online node should return true")
-	}
-	// Read from client side to confirm delivery.
-	_ = cliConn.SetReadDeadline(time.Now().Add(time.Second))
-	var msg map[string]any
-	if err := cliConn.ReadJSON(&msg); err != nil {
-		t.Fatalf("ReadJSON: %v", err)
-	}
-	if msg["method"] != "relay.ping" {
-		t.Errorf("expected method 'relay.ping', got %v", msg["method"])
-	}
-}
-
 func TestSessionManager_EmitHandler_PanicRecovery(t *testing.T) {
 	mgr := NewSessionManager()
 	mgr.OnEvent(func(SessionEvent) { panic("handler panic") })

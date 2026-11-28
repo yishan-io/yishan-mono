@@ -1,16 +1,13 @@
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { projectStore, renderProjectIcon } from "@renderer/domains/project";
 
-import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { listOrgNodes } from "../../../../domains/node";
 import type { ScheduledJobRecord } from "../../../../domains/scheduled-job/commands/scheduledJobCommands";
 import { describeCronExpression } from "../../schedule/scheduledJobScheduleDisplay";
 import { ScheduledJobStatusIndicator } from "../../ui/ScheduledJobStatusIndicator";
 
 type ScheduledJobDetailFieldsProps = {
   job: ScheduledJobRecord;
-  orgId: string;
 };
 
 type FieldRowProps = { label: string; children: React.ReactNode };
@@ -50,19 +47,11 @@ function FieldRow({ label, children }: FieldRowProps) {
 }
 
 /** Renders the read-only detail fields for one scheduled job. */
-export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailFieldsProps) {
+export function ScheduledJobDetailFields({ job }: ScheduledJobDetailFieldsProps) {
   const { t } = useTranslation();
   const project = projectStore((state) => state.projects).find(
     (workspaceProject) => workspaceProject.id === job.projectId,
   );
-  const nodeQuery = useQuery({
-    queryKey: ["org-nodes", orgId],
-    queryFn: () => listOrgNodes(orgId),
-    enabled: Boolean(orgId),
-  });
-
-  const nodeName = nodeQuery.data?.find((node) => node.id === job.nodeId)?.name ?? job.nodeId;
-
   return (
     <Box sx={{ height: "100%", overflow: "auto", px: 2.5, py: 1.5 }}>
       <Stack divider={<Divider sx={{ borderStyle: "dashed" }} />}>
@@ -106,10 +95,6 @@ export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailField
               —
             </Typography>
           )}
-        </FieldRow>
-
-        <FieldRow label={t("scheduledJob.detail.fields.node")}>
-          <Typography variant="body2">{nodeName}</Typography>
         </FieldRow>
 
         <FieldRow label={t("scheduledJob.detail.fields.cronExpression")}>

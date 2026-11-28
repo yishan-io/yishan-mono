@@ -265,16 +265,6 @@ type WorkspaceCloseParams = application.CloseCommand
 
 // ---- terminal namespace ----
 
-type TerminalRemoteSubscribeParams struct {
-	SessionID string `json:"sessionId"`
-	OwnerNode string `json:"ownerNode"`
-}
-
-type TerminalRemoteUnsubscribeParams struct {
-	SessionID string `json:"sessionId"`
-	OwnerNode string `json:"ownerNode"`
-}
-
 // ---- memory namespace ----
 
 type MemorySearchParams struct {

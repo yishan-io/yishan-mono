@@ -3,7 +3,6 @@ import {
   BiBell,
   BiBot,
   BiChip,
-  BiDesktop,
   BiDownload,
   BiGitBranch,
   BiGroup,
@@ -216,27 +215,6 @@ export const SKILLS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.skills.official",
     ],
     focusItemId: "skills",
-  },
-];
-export const NODES_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
-  {
-    id: "nodes-list",
-    tab: "nodes",
-    icon: BiDesktop,
-    labelKey: "settings.nodes.title",
-    sectionLabelKey: "settings.items.nodes",
-    keywordKeys: [
-      "settings.nodes.description",
-      "settings.nodes.columns.name",
-      "settings.nodes.columns.type",
-      "settings.nodes.columns.version",
-      "settings.nodes.columns.owner",
-      "settings.nodes.columns.status",
-      "settings.nodes.types.private",
-      "settings.nodes.types.shared",
-      "settings.nodes.status.online",
-      "settings.nodes.status.offline",
-    ],
   },
 ];
 export const MEMBERS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [

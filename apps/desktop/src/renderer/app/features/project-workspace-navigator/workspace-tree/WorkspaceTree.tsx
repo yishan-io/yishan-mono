@@ -11,17 +11,13 @@ import { parseWorkspaceRowId } from "./workspaceTreeRowId";
 /** Render the workspace tree. */
 export function WorkspaceTree({
   projects,
-  nodes,
   workspaces,
   selectedProjectId,
-  selectedNodeId,
   selectedWorkspaceId,
-  hierarchyMode = "by_project",
   expandedItems,
   onExpandedItemsChange,
   localFolderGroupLabel,
   onSelectProject,
-  onSelectNode,
   onSelectWorkspace,
   deleteWorkspaceLabel,
   onProjectContextMenu,
@@ -39,9 +35,7 @@ export function WorkspaceTree({
 
   const { visibleRows, isExpanded, toggleExpanded } = useVisibleWorkspaceTree({
     projects,
-    nodes,
     workspaces,
-    hierarchyMode,
     expandedItemsOverride: expandedItems,
     onExpandedItemsChange,
     localFolderGroupLabel,
@@ -114,7 +108,7 @@ export function WorkspaceTree({
           virtualizer.scrollToIndex(nextVisibleRowIndex, { align: "auto" });
         }
 
-        onSelectWorkspace?.(nextWorkspaceId, nextWorkspace.projectId, nextWorkspace.nodeId);
+        onSelectWorkspace?.(nextWorkspaceId, nextWorkspace.projectId);
       }}
       sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 1 }}
     >
@@ -122,7 +116,6 @@ export function WorkspaceTree({
         <WorkspaceTreeRows
           createWorkspaceTooltipLabel={createWorkspaceTooltipLabel}
           deleteWorkspaceLabel={deleteWorkspaceLabel}
-          hierarchyMode={hierarchyMode}
           isExpanded={isExpanded}
           onDragEndRow={handleDragEnd}
           onDragOverRow={handleDragOver}
@@ -131,7 +124,6 @@ export function WorkspaceTree({
           onProjectActionsClick={onProjectActionsClick}
           onProjectContextMenu={onProjectContextMenu}
           onProjectCreateWorkspaceClick={onProjectCreateWorkspaceClick}
-          onSelectNode={onSelectNode}
           onSelectProject={onSelectProject}
           onSelectWorkspace={onSelectWorkspace}
           onWorkspaceContextMenu={onWorkspaceContextMenu}
@@ -139,7 +131,6 @@ export function WorkspaceTree({
           onWorkspaceMouseLeave={onWorkspaceMouseLeave}
           onWorkspaceRequestDelete={onWorkspaceRequestDelete}
           scrollRef={scrollRef}
-          selectedNodeId={selectedNodeId}
           selectedProjectId={selectedProjectId}
           selectedWorkspaceId={selectedWorkspaceId}
           toggleExpanded={toggleExpanded}

@@ -25,7 +25,6 @@ import {
   MarkdownSettingsView,
   MemberSettingsView,
   MemorySettingsView,
-  NodesSettingsView,
   NotificationSettingsView,
   ServiceTokenSettingsView,
   TerminalSettingsView,
@@ -64,7 +63,6 @@ export function SettingsView() {
       selectedTabParam === "localTags" ||
       selectedTabParam === "members" ||
       selectedTabParam === "memory" ||
-      selectedTabParam === "nodes" ||
       selectedTabParam === "notifications" ||
       selectedTabParam === "providers" ||
       selectedTabParam === "serviceTokens" ||
@@ -191,11 +189,6 @@ export function SettingsView() {
       members: (
         <Suspense fallback={null}>
           <MemberSettingsView />
-        </Suspense>
-      ),
-      nodes: (
-        <Suspense fallback={null}>
-          <NodesSettingsView />
         </Suspense>
       ),
       providers: (

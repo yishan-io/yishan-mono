@@ -52,12 +52,7 @@
       "searchPlaceholder": "\u5feb\u901f\u641c\u7d22\u9879\u76ee",
       "searchAriaLabel": "\u5feb\u901f\u641c\u7d22\u9879\u76ee",
       "sections": {
-        "hirarchy": "\u5c42\u7ea7",
         "projects": "\u9879\u76ee"
-      },
-      "hierarchy": {
-        "byProject": "\u6309\u9879\u76ee",
-        "byNode": "\u6309\u8282\u70b9"
       },
       "actions": {
         "all": "\u5168\u9009"
@@ -67,12 +62,7 @@
       "searchPlaceholder": "\u641c\u7d22\u9879\u76ee",
       "searchAriaLabel": "\u641c\u7d22\u9879\u76ee",
       "sections": {
-        "hirarchy": "\u5c42\u7ea7",
         "projects": "\u9879\u76ee"
-      },
-      "hierarchy": {
-        "byProject": "\u6309\u9879\u76ee",
-        "byNode": "\u6309\u8282\u70b9"
       },
       "actions": {
         "all": "\u5168\u90e8"

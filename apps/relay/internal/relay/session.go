@@ -1,7 +1,6 @@
 package relay
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -376,90 +375,4 @@ func (m *SessionManager) EvictStale(maxAge time.Duration) int {
 		}
 	}
 	return evicted
-}
-
-// SendNotification sends a JSON-RPC notification to a specific node.
-// Returns false if the node is not online.
-func (m *SessionManager) SendNotification(nodeID, method string, params any) bool {
-	return m.SendNotificationWithError(nodeID, method, params) == nil
-}
-
-// SendNotificationWithError sends a JSON-RPC notification to a specific node.
-// Returns an error when the node is offline or the write fails.
-func (m *SessionManager) SendNotificationWithError(nodeID, method string, params any) error {
-	m.mu.RLock()
-	session := m.sessions[nodeID]
-	m.mu.RUnlock()
-
-	if session == nil || !session.isConnected() {
-		log.Debug().Str("nodeId", nodeID).Str("method", method).Msg("send notification skipped: session offline")
-		return ErrNodeOffline
-	}
-
-	if err := session.SendNotification(method, params); err != nil {
-		log.Error().Err(err).
-			Str("nodeId", nodeID).
-			Str("method", method).
-			Str("remoteAddr", session.remoteAddr()).
-			Str("localAddr", session.localAddr()).
-			Msg("send notification failed")
-		return fmt.Errorf("send notification failed: %w", err)
-	}
-	return nil
-}
-
-// SendResponse sends a JSON-RPC response to a specific node. Returns an error
-// when the node is offline or the write fails.
-func (m *SessionManager) SendResponse(nodeID string, resp relayprotocol.Response) error {
-	m.mu.RLock()
-	session := m.sessions[nodeID]
-	m.mu.RUnlock()
-
-	if session == nil || !session.isConnected() {
-		log.Debug().Str("nodeId", nodeID).Msg("send response skipped: session offline")
-		return ErrNodeOffline
-	}
-
-	if err := session.SendJSON(resp); err != nil {
-		log.Error().Err(err).Str("nodeId", nodeID).Msg("send response failed")
-		return fmt.Errorf("send response failed: %w", err)
-	}
-	return nil
-}
-
-// SendOrgNotification sends a JSON-RPC notification to every connected node in one organization.
-// excludeNodeID, when non-empty, skips the sending node so it does not receive
-// its own broadcast back (prevents duplicate event processing on the origin).
-func (m *SessionManager) SendOrgNotification(organizationID string, method string, params any, excludeNodeID string) int {
-	m.mu.RLock()
-	sessions := make([]*NodeSession, 0, len(m.sessions))
-	for _, session := range m.sessions {
-		if !session.isConnected() {
-			continue
-		}
-		if excludeNodeID != "" && session.Identity.NodeID == excludeNodeID {
-			continue
-		}
-		for _, sessionOrganizationID := range session.Identity.OrganizationIDs {
-			if sessionOrganizationID == organizationID {
-				sessions = append(sessions, session)
-				break
-			}
-		}
-	}
-	m.mu.RUnlock()
-
-	notified := 0
-	for _, session := range sessions {
-		if err := session.SendNotification(method, params); err == nil {
-			notified++
-		} else {
-			log.Error().Err(err).
-				Str("nodeId", session.Identity.NodeID).
-				Str("organizationId", organizationID).
-				Str("method", method).
-				Msg("send org notification failed")
-		}
-	}
-	return notified
 }

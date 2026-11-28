@@ -40,7 +40,6 @@ export type ProjectStoreState = {
   displayProjectIds: string[];
   lastUsedExternalAppId?: ExternalAppId;
   organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
-  workspaceListHierarchyMode: "by_project" | "by_node";
   loadProjects: (
     organizationId: string,
     projects: WorkspaceProjectRecord[],
@@ -64,7 +63,6 @@ export type ProjectStoreState = {
   setDisplayProjectIds: (projectIds: string[]) => void;
   setOrganizationDisplayProjectIds: (organizationId: string, projectIds: string[]) => void;
   setLastUsedExternalAppId: (organizationId: string, appId: ExternalAppId) => void;
-  setWorkspaceListHierarchyMode: (mode: "by_project" | "by_node") => void;
 };
 
 /**
@@ -84,7 +82,6 @@ export function readLegacyWorkspacePrefs(): Partial<ProjectStoreState> | undefin
         displayProjectIds?: string[];
         lastUsedExternalAppId?: ExternalAppId;
         organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
-        workspaceListHierarchyMode?: "by_project" | "by_node";
       };
     };
     const legacyState = parsed.state;
@@ -95,7 +92,6 @@ export function readLegacyWorkspacePrefs(): Partial<ProjectStoreState> | undefin
       displayProjectIds: legacyState.displayProjectIds,
       lastUsedExternalAppId: legacyState.lastUsedExternalAppId,
       organizationPreferencesById: legacyState.organizationPreferencesById,
-      workspaceListHierarchyMode: legacyState.workspaceListHierarchyMode,
     };
   } catch {
     return undefined;
@@ -104,22 +100,28 @@ export function readLegacyWorkspacePrefs(): Partial<ProjectStoreState> | undefin
 
 /** Writes the migrated project preferences before removing their legacy source. */
 export function finalizeLegacyWorkspaceMigration(
-  state: Pick<ProjectStoreState, "workspaceListHierarchyMode" | "setWorkspaceListHierarchyMode">,
+  state: Pick<ProjectStoreState, "displayProjectIds" | "setDisplayProjectIds">,
 ): void {
   if (!localStorage.getItem(LEGACY_WORKSPACE_STORE_KEY)) {
     return;
   }
-  state.setWorkspaceListHierarchyMode(state.workspaceListHierarchyMode);
+  state.setDisplayProjectIds(state.displayProjectIds);
   localStorage.removeItem(LEGACY_WORKSPACE_STORE_KEY);
 }
 
 /** Merges legacy workspace preferences as a fallback without overriding project-store state. */
 export function mergeProjectStorePersistence(persisted: unknown, current: ProjectStoreState): ProjectStoreState {
   const legacy = readLegacyWorkspacePrefs();
+  // Drop the removed `workspaceListHierarchyMode` key (e.g. a stored "by_node")
+  // so stale persisted values never leak into the store state.
+  const { workspaceListHierarchyMode: _legacyMode, ...persistedState } = (persisted ??
+    {}) as Partial<ProjectStoreState> & {
+    workspaceListHierarchyMode?: unknown;
+  };
   return {
     ...current,
     ...legacy,
-    ...(persisted as Partial<ProjectStoreState>),
+    ...persistedState,
   };
 }
 
@@ -129,7 +131,6 @@ const initialProjectState = {
   displayProjectIds: [],
   lastUsedExternalAppId: undefined,
   organizationPreferencesById: undefined,
-  workspaceListHierarchyMode: "by_project" as const,
 };
 
 type CreatedProjectInput = {
@@ -391,9 +392,6 @@ export const projectStore = create<ProjectStoreState>()(
           state.organizationPreferencesById[normalizedOrganizationId].lastUsedExternalAppId = lastUsedExternalAppId;
         });
       },
-      setWorkspaceListHierarchyMode: (workspaceListHierarchyMode) => {
-        set({ workspaceListHierarchyMode });
-      },
     })),
     {
       name: "yishan-project-store",
@@ -402,7 +400,6 @@ export const projectStore = create<ProjectStoreState>()(
         displayProjectIds: state.displayProjectIds,
         lastUsedExternalAppId: state.lastUsedExternalAppId,
         organizationPreferencesById: state.organizationPreferencesById,
-        workspaceListHierarchyMode: state.workspaceListHierarchyMode,
       }),
       merge: mergeProjectStorePersistence,
       onRehydrateStorage: () => (state, error) => {

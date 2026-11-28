@@ -13,14 +13,6 @@ export type WorkspaceTreeProject = {
   isLocalFolderGroup?: boolean;
 };
 
-export type WorkspaceTreeNode = {
-  id: string;
-  name: string;
-  kind?: "managed" | "external";
-  scope?: "private" | "shared";
-  isOnline?: boolean;
-};
-
 export type WorkspaceTreeWorkspace = {
   id: string;
   name: string;
@@ -42,7 +34,7 @@ export type WorkspaceTreeRow = {
   id: string;
   label: string;
   depth: number;
-  kind: "project" | "node" | "workspace";
+  kind: "project" | "workspace";
   parentId: string | null;
   hasChildren: boolean;
   /** False for non-git projects; hides workspace-creation affordances. */
@@ -51,9 +43,6 @@ export type WorkspaceTreeRow = {
   isLocalFolderGroup?: boolean;
   icon?: string | null;
   color?: string | null;
-  nodeKind?: "managed" | "external";
-  nodeScope?: "private" | "shared";
-  nodeIsOnline?: boolean;
   workspaceKind?: "managed" | "local";
   /** Non-git local folder workspace rendered under the synthetic group. */
   isLocalFolder?: boolean;
@@ -68,19 +57,15 @@ export type WorkspaceTreeRow = {
 
 export type WorkspaceTreeProps = {
   projects: WorkspaceTreeProject[];
-  nodes: WorkspaceTreeNode[];
   workspaces: WorkspaceTreeWorkspace[];
   selectedProjectId?: string;
-  selectedNodeId?: string;
   selectedWorkspaceId?: string;
-  hierarchyMode?: "by_project" | "by_node";
   expandedItems?: string[];
   /** Translated label for the synthetic "Local Folders" group row. */
   localFolderGroupLabel?: string;
   onExpandedItemsChange?: (items: string[]) => void;
   onSelectProject?: (projectId: string) => void;
-  onSelectNode?: (nodeId: string, projectId: string) => void;
-  onSelectWorkspace?: (workspaceId: string, projectId: string, nodeId: string) => void;
+  onSelectWorkspace?: (workspaceId: string, projectId: string) => void;
   deleteWorkspaceLabel?: string;
   onProjectContextMenu?: (event: React.MouseEvent<HTMLElement>, projectId: string) => void;
   onWorkspaceContextMenu?: (event: React.MouseEvent<HTMLElement>, workspaceId: string, projectId: string) => void;

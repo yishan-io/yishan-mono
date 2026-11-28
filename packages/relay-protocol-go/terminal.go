@@ -2,32 +2,13 @@ package relayprotocol
 
 import "bytes"
 
-// TerminalStreamRequestParams is sent by a subscribing node to request PTY
-// streaming for a session owned by another node.
-type TerminalStreamRequestParams struct {
-	SessionID string `json:"sessionId"`
-	OwnerNode string `json:"ownerNode"`
-	FromNode  string `json:"fromNode"`
-}
-
-// TerminalStreamAcceptParams is sent by the owning node to confirm the stream.
-type TerminalStreamAcceptParams struct {
-	SessionID string `json:"sessionId"`
-}
-
-// TerminalStreamCancelParams is sent by either side to tear down a stream.
-type TerminalStreamCancelParams struct {
-	SessionID string `json:"sessionId"`
-	FromNode  string `json:"fromNode"`
-}
-
 // Binary PTY frame opcodes for the terminal I/O fast-path.
 const (
 	// BinaryFrameOpcodeInput marks a frame carrying terminal input from a
-	// subscriber to the owning node (routed to the session owner).
+	// subscriber to the daemon.
 	BinaryFrameOpcodeInput byte = 0x01
 	// BinaryFrameOpcodeOutput marks a frame carrying terminal output from the
-	// owning node to every subscribed node.
+	// daemon to the client.
 	BinaryFrameOpcodeOutput byte = 0x02
 )
 

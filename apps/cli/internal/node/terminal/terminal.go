@@ -62,11 +62,3 @@ func (s *Service) Unsubscribe(ctx context.Context, connection *rpc.Connection, r
 	connection.DetachSubscription(req.SessionID)
 	return term.UnsubscribeResponse{Unsubscribed: true}, nil
 }
-
-func (s *Service) RemoteSubscribe(ctx context.Context, connection *rpc.Connection, req rpc.TerminalRemoteSubscribeParams) (any, error) {
-	return s.remoteSubscribe(connection, req)
-}
-
-func (s *Service) RemoteUnsubscribe(ctx context.Context, connection *rpc.Connection, req rpc.TerminalRemoteUnsubscribeParams) (any, error) {
-	return s.remoteUnsubscribe(connection, req)
-}

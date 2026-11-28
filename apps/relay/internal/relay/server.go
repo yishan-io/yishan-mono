@@ -13,14 +13,12 @@ import (
 	relayprotocol "yishan/packages/relay-protocol-go"
 
 	"yishan/apps/relay/internal/auth"
-	"yishan/apps/relay/internal/jobqueue"
 )
 
 // Server is the relay WebSocket server.
 type Server struct {
 	sessions      *SessionManager
 	authenticator *auth.Authenticator
-	queue         *jobqueue.Manager
 	apiToken      string
 	upgrader      websocket.Upgrader
 	startedAt     time.Time
@@ -28,9 +26,6 @@ type Server struct {
 	metricsCache  *metricsSnapshot
 	clientMu      sync.RWMutex
 	clientsByNode map[string]map[*clientConn]struct{}
-	streamMu      sync.RWMutex
-	streamSubs    map[string]map[string]struct{} // sessionId → set of subscribing nodeIDs
-	streamOwners  map[string]string              // sessionId → owner nodeID
 }
 
 type metricsSnapshot struct {
@@ -45,11 +40,10 @@ type clientConn struct {
 }
 
 // NewServer creates a new relay server and wires background housekeeping.
-func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, queue *jobqueue.Manager, apiToken string) *Server {
+func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, apiToken string) *Server {
 	s := &Server{
 		sessions:      sessions,
 		authenticator: authenticator,
-		queue:         queue,
 		apiToken:      apiToken,
 		upgrader: websocket.Upgrader{
 			CheckOrigin:     func(_ *http.Request) bool { return true },
@@ -58,127 +52,16 @@ func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, queu
 		},
 		startedAt:     time.Now(),
 		clientsByNode: make(map[string]map[*clientConn]struct{}),
-		streamSubs:    make(map[string]map[string]struct{}),
-		streamOwners:  make(map[string]string),
 	}
 
-	// Wire session events to the job queue for reconnect/disconnect handling.
-	// HandleNodeReconnect is dispatched asynchronously so it never blocks the
-	// session event handler (which may be called from inside a lock).
-	sessions.OnEvent(func(event SessionEvent) {
+	sessions.OnEvent(func(_ SessionEvent) {
 		s.invalidateMetricsCache()
-		switch event.Type {
-		case "disconnected", "replaced":
-			queue.HandleNodeDisconnect(event.NodeID)
-			s.cancelStreamSubsForNode(event.NodeID)
-		case "connected":
-			go queue.HandleNodeReconnect(event.NodeID)
-		}
 	})
 
 	// Background housekeeping: evict stale disconnected sessions.
 	go s.evictionLoop()
 
-	// Background housekeeping: prune completed/failed job runs.
-	go queue.PruneLoop(staleSessionMaxAge)
-
 	return s
-}
-
-// HandlePublishOrgEvent handles POST /api/v1/org-events — broadcasts one org-scoped invalidation to subscribed nodes.
-func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
-	if !s.authorizeAPIRequest(w, r) {
-		return
-	}
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var body struct {
-		OrganizationID string         `json:"organizationId"`
-		Resource       string         `json:"resource"`
-		Change         string         `json:"change"`
-		ProjectID      string         `json:"projectId,omitempty"`
-		WorkspaceID    string         `json:"workspaceId,omitempty"`
-		SourceNodeID   string         `json:"sourceNodeId,omitempty"`
-		Metadata       map[string]any `json:"metadata,omitempty"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
-		return
-	}
-
-	organizationID := strings.TrimSpace(body.OrganizationID)
-	resource := strings.TrimSpace(body.Resource)
-	change := strings.TrimSpace(body.Change)
-	if organizationID == "" || resource == "" || change == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organizationId, resource, and change are required"})
-		return
-	}
-
-	params := map[string]any{
-		"organizationId": organizationID,
-		"resource":       resource,
-		"change":         change,
-	}
-	if projectID := strings.TrimSpace(body.ProjectID); projectID != "" {
-		params["projectId"] = projectID
-	}
-	if workspaceID := strings.TrimSpace(body.WorkspaceID); workspaceID != "" {
-		params["workspaceId"] = workspaceID
-	}
-	sourceNodeID := strings.TrimSpace(body.SourceNodeID)
-	if sourceNodeID != "" {
-		params["sourceNodeId"] = sourceNodeID
-	}
-	if len(body.Metadata) > 0 {
-		params["metadata"] = body.Metadata
-	}
-
-	// Exclude the originating node from the broadcast: it already applied the
-	// change locally, so echoing it back would cause duplicate processing.
-	notified := s.sessions.SendOrgNotification(organizationID, relayprotocol.MethodWorkspaceSnapshotChanged, params, sourceNodeID)
-	log.Info().
-		Str("organizationId", organizationID).
-		Str("resource", resource).
-		Str("change", change).
-		Str("projectId", strings.TrimSpace(body.ProjectID)).
-		Str("workspaceId", strings.TrimSpace(body.WorkspaceID)).
-		Str("sourceNodeId", sourceNodeID).
-		Int("notified", notified).
-		Msg("org event broadcast")
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "notified": notified})
-}
-
-// HandlePublishNodeEvent handles POST /api/v1/node-events — sends one supported notification to a named node.
-func (s *Server) HandlePublishNodeEvent(w http.ResponseWriter, r *http.Request) {
-	if !s.authorizeNodeEventsRequest(w, r) {
-		return
-	}
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var body struct {
-		NodeID string `json:"nodeId"`
-		Method string `json:"method"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
-		return
-	}
-	nodeID := strings.TrimSpace(body.NodeID)
-	if nodeID == "" || body.Method != relayprotocol.MethodJobScheduleChanged {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "nodeId and supported method are required"})
-		return
-	}
-
-	notified := s.sessions.SendNotification(nodeID, relayprotocol.MethodJobScheduleChanged, nil)
-	log.Info().Str("nodeId", nodeID).Bool("notified", notified).Msg("node event published")
-	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "notified": notified})
 }
 
 // evictionLoop periodically removes sessions that have been disconnected for
@@ -295,7 +178,6 @@ func (s *Server) readLoop(session *NodeSession) {
 
 		if msgType != websocket.TextMessage {
 			s.broadcastToNodeClients(nodeID, msgType, payload)
-			s.routeBinaryToStreamSubs(nodeID, msgType, payload)
 			continue
 		}
 
@@ -314,140 +196,12 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 		return false
 	}
 
-	switch req.Method {
-	case relayprotocol.MethodPong:
+	if req.Method == relayprotocol.MethodPong {
 		// Heartbeat pong — no action needed, the read itself proves liveness.
 		log.Debug().Str("nodeId", nodeID).Msg("pong received")
 		return true
-
-	case relayprotocol.MethodJobAck:
-		var params relayprotocol.JobAckParams
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid job.ack params")
-			return true
-		}
-		s.queue.HandleAck(nodeID, jobqueue.AckParams{
-			RunID:  params.RunID,
-			Status: params.Status,
-			Reason: params.Reason,
-		})
-		return true
-
-	case relayprotocol.MethodJobResult:
-		var params relayprotocol.JobResultParams
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid job.result params")
-			return true
-		}
-		result := jobqueue.ResultParams{
-			RunID:      params.RunID,
-			Status:     params.Status,
-			DurationMs: params.DurationMs,
-		}
-		if params.Output != nil {
-			result.Output = params.Output
-		}
-		if params.Error != nil {
-			result.Error = &jobqueue.ResultError{
-				Code:    params.Error.Code,
-				Message: params.Error.Message,
-				Details: params.Error.Details,
-			}
-		}
-		s.queue.HandleResult(nodeID, result)
-		return true
-
-	case relayprotocol.MethodTerminalSessionChanged:
-		session := s.sessions.Get(nodeID)
-		if session == nil {
-			log.Warn().Str("nodeId", nodeID).Msg("terminal.session.changed from unknown node")
-			return true
-		}
-		for _, orgID := range session.Identity.OrganizationIDs {
-			go s.sessions.SendOrgNotification(orgID, relayprotocol.MethodTerminalSessionChanged, req.Params, nodeID)
-		}
-		return true
-
-	case relayprotocol.MethodTerminalStreamRequest:
-		var params relayprotocol.TerminalStreamRequestParams
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.stream.request params")
-			return true
-		}
-		s.setStreamOwner(params.SessionID, params.OwnerNode)
-		s.addStreamSub(params.SessionID, params.FromNode)
-		go s.sessions.SendNotification(params.OwnerNode, relayprotocol.MethodTerminalStreamRequest, req.Params)
-		return true
-
-	case relayprotocol.MethodTerminalStreamAccept:
-		var params relayprotocol.TerminalStreamAcceptParams
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.stream.accept params")
-			return true
-		}
-		for _, sub := range s.streamSubsForSession(params.SessionID) {
-			go s.sessions.SendNotification(sub, relayprotocol.MethodTerminalStreamAccept, req.Params)
-		}
-		return true
-
-	case relayprotocol.MethodTerminalStreamCancel:
-		var params relayprotocol.TerminalStreamCancelParams
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.stream.cancel params")
-			return true
-		}
-		s.removeStreamSub(params.SessionID, params.FromNode)
-		return true
-
-	case relayprotocol.MethodWorkspaceSnapshotChanged:
-		// Node-originated snapshot change (workspace create/close relay).
-		// Broadcast to every other node in the org; the source node is excluded
-		// so it never receives its own message back. Each node self-selects on
-		// the envelope's targetNodeId.
-		var params relayprotocol.WorkspaceSnapshotChangedParams
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid workspace.snapshot.changed params")
-			return true
-		}
-		organizationID := strings.TrimSpace(params.OrganizationID)
-		targetNodeID := strings.TrimSpace(params.TargetNodeID)
-		if organizationID == "" {
-			return true
-		}
-
-		// When the origin expects a dispatch answer (request with an id) and the
-		// envelope names a target node, the relay answers whether it could route:
-		// online → broadcast + accepted; offline → skip broadcast + rejected. The
-		// relay stays stateless — this is a routing verdict, not retry/persistence.
-		if len(req.ID) > 0 && targetNodeID != "" {
-			// "accepted" means the target was online at verdict time, not that it
-			// received the broadcast: the broadcast runs in a goroutine and the
-			// session manager re-checks connectivity under lock when collecting
-			// sessions, so a target dropping between check and delivery is skipped
-			// (a safe false-positive; the reverse is a safe false-negative).
-			if s.sessions.IsOnline(targetNodeID) {
-				go s.sessions.SendOrgNotification(organizationID, relayprotocol.MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
-				_ = s.sessions.SendResponse(nodeID, relayprotocol.Response{
-					JSONRPC: "2.0",
-					ID:      req.ID,
-					Result:  relayprotocol.DispatchVerdict{Accepted: true, TargetOnline: true},
-				})
-			} else {
-				_ = s.sessions.SendResponse(nodeID, relayprotocol.Response{
-					JSONRPC: "2.0",
-					ID:      req.ID,
-					Result:  relayprotocol.DispatchVerdict{Accepted: false, Reason: "target node offline"},
-				})
-			}
-			return true
-		}
-
-		go s.sessions.SendOrgNotification(organizationID, relayprotocol.MethodWorkspaceSnapshotChanged, req.Params, strings.TrimSpace(params.SourceNodeID))
-		return true
-
-	default:
-		return false
 	}
+	return false
 }
 
 // heartbeatLoop sends periodic relay.ping to the node.
@@ -473,105 +227,7 @@ func (s *Server) heartbeatLoop(session *NodeSession, done <-chan struct{}) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// HTTP handlers for server-side dispatch and observability
-// ---------------------------------------------------------------------------
-
-// HandleDispatch handles POST /api/v1/dispatch — dispatches a job run to a node.
-func (s *Server) HandleDispatch(w http.ResponseWriter, r *http.Request) {
-	if !s.authorizeAPIRequest(w, r) {
-		return
-	}
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var body struct {
-		RunID        string         `json:"runId"`
-		JobID        string         `json:"jobId"`
-		NodeID       string         `json:"nodeId"`
-		ScheduledFor string         `json:"scheduledFor"`
-		Payload      map[string]any `json:"payload"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
-		return
-	}
-
-	if body.RunID == "" || body.JobID == "" || body.NodeID == "" || body.ScheduledFor == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "runId, jobId, nodeId, and scheduledFor are required"})
-		return
-	}
-
-	result := s.queue.Dispatch(jobqueue.DispatchParams{
-		RunID:        body.RunID,
-		JobID:        body.JobID,
-		NodeID:       body.NodeID,
-		ScheduledFor: body.ScheduledFor,
-		Payload:      body.Payload,
-	})
-
-	switch {
-	case result.OK:
-		writeJSON(w, http.StatusOK, map[string]any{
-			"ok":     true,
-			"runId":  result.RunID,
-			"status": "dispatched",
-		})
-	case result.Reason == "duplicate":
-		writeJSON(w, http.StatusOK, map[string]any{
-			"ok":            false,
-			"reason":        "duplicate",
-			"detail":        "duplicate dispatch",
-			"existingRunId": result.ExistingRunID,
-		})
-	case result.Reason == "node_offline":
-		writeJSON(w, http.StatusOK, map[string]any{
-			"ok":     false,
-			"reason": "node_offline",
-			"runId":  result.RunID,
-			"status": "skipped_offline",
-			"detail": "node is offline",
-		})
-	default:
-		writeJSON(w, http.StatusOK, map[string]any{
-			"ok":     false,
-			"reason": result.Reason,
-			"detail": result.ErrorDetail,
-		})
-	}
-}
-
-// HandleRunStatus handles GET /api/v1/runs/{runId} — returns the status of a run.
-func (s *Server) HandleRunStatus(w http.ResponseWriter, r *http.Request) {
-	if !s.authorizeAPIRequest(w, r) {
-		return
-	}
-
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Extract runId from path: /api/v1/runs/{runId}
-	runID := strings.TrimPrefix(r.URL.Path, "/api/v1/runs/")
-	if runID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "runId is required"})
-		return
-	}
-
-	run := s.queue.GetRun(runID)
-	if run == nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "run not found"})
-		return
-	}
-
-	writeJSON(w, http.StatusOK, run)
-}
-
-// HandleMetrics handles GET /api/v1/metrics — returns relay and queue metrics.
+// HandleMetrics handles GET /api/v1/metrics — returns relay metrics.
 func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	if !s.authorizeAPIRequest(w, r) {
 		return
@@ -600,14 +256,12 @@ func (s *Server) getMetricsSnapshot() map[string]any {
 
 	// Collect all session stats in one locked pass instead of four.
 	stats := s.sessions.GetStats()
-	queueMetrics := s.queue.GetMetrics()
 	payload := map[string]any{
 		"uptime":            time.Since(s.startedAt).String(),
 		"connectedNodes":    stats.ConnectedIDs,
 		"connectedSessions": stats.ConnectedSessions,
 		"connectedCount":    stats.ConnectedCount,
 		"totalSessions":     stats.TotalCount,
-		"queue":             queueMetrics,
 	}
 
 	s.metricsMu.Lock()
@@ -624,18 +278,6 @@ func (s *Server) invalidateMetricsCache() {
 	s.metricsMu.Lock()
 	s.metricsCache = nil
 	s.metricsMu.Unlock()
-}
-
-// authorizeNodeEventsRequest validates the Authorization bearer token for node events.
-// Node-event requests must not accept query-string tokens.
-func (s *Server) authorizeNodeEventsRequest(w http.ResponseWriter, r *http.Request) bool {
-	authorization := r.Header.Get("Authorization")
-	token, hasBearerPrefix := strings.CutPrefix(authorization, "Bearer ")
-	if !hasBearerPrefix || strings.TrimSpace(token) == "" || strings.TrimSpace(token) != s.apiToken {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return false
-	}
-	return true
 }
 
 // authorizeAPIRequest extracts and validates the bearer token from the request.

@@ -92,8 +92,6 @@ type TerminalService interface {
 	Resize(ctx context.Context, req terminal.ResizeRequest) (any, error)
 	Subscribe(ctx context.Context, connection *Connection, req terminal.SubscribeRequest) (any, error)
 	Unsubscribe(ctx context.Context, connection *Connection, req terminal.UnsubscribeRequest) (any, error)
-	RemoteSubscribe(ctx context.Context, connection *Connection, req TerminalRemoteSubscribeParams) (any, error)
-	RemoteUnsubscribe(ctx context.Context, connection *Connection, req TerminalRemoteUnsubscribeParams) (any, error)
 }
 
 // MemoryService backs the memory.* RPC methods. Each method is named after

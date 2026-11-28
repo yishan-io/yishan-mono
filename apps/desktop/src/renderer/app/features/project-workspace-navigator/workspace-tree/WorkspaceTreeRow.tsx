@@ -129,15 +129,7 @@ export function WorkspaceTreeRowView({
     >
       {row.hasChildren ? (
         <IconButton
-          aria-label={
-            row.kind === "project"
-              ? isExpanded
-                ? "repo.actions.collapse"
-                : "repo.actions.expand"
-              : isExpanded
-                ? "node.actions.collapse"
-                : "node.actions.expand"
-          }
+          aria-label={isExpanded ? "repo.actions.collapse" : "repo.actions.expand"}
           onClick={(event) => {
             event.stopPropagation();
             onToggle?.();

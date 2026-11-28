@@ -30,7 +30,6 @@ describe("projectStore storage migration", () => {
           organizationPreferencesById: {
             "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
           },
-          workspaceListHierarchyMode: "by_node",
         },
       }),
     );
@@ -48,7 +47,6 @@ describe("projectStore storage migration", () => {
       organizationPreferencesById: {
         "org-1": { displayProjectIds: ["repo-1"], knownProjectIds: ["repo-1"] },
       },
-      workspaceListHierarchyMode: "by_node",
     });
 
     // The persist merge is `...current, ...legacy, ...persisted` so legacy
@@ -67,18 +65,15 @@ describe("projectStore storage migration", () => {
   });
 
   it("writes migrated preferences before clearing the legacy workspace store", () => {
-    localStorage.setItem(
-      "yishan-workspace-store",
-      JSON.stringify({ state: { workspaceListHierarchyMode: "by_node" } }),
-    );
-    const setWorkspaceListHierarchyMode = vi.fn();
+    localStorage.setItem("yishan-workspace-store", JSON.stringify({ state: { displayProjectIds: ["repo-1"] } }));
+    const setDisplayProjectIds = vi.fn();
 
     finalizeLegacyWorkspaceMigration({
-      workspaceListHierarchyMode: "by_node",
-      setWorkspaceListHierarchyMode,
+      displayProjectIds: ["repo-1"],
+      setDisplayProjectIds,
     });
 
-    expect(setWorkspaceListHierarchyMode).toHaveBeenCalledWith("by_node");
+    expect(setDisplayProjectIds).toHaveBeenCalledWith(["repo-1"]);
     expect(localStorage.getItem("yishan-workspace-store")).toBeNull();
   });
 
@@ -91,7 +86,7 @@ describe("projectStore storage migration", () => {
           organizationPreferencesById: {
             "org-1": { displayProjectIds: ["project-hidden"], knownProjectIds: ["project-hidden"] },
           },
-          workspaceListHierarchyMode: "by_project",
+          workspaceListHierarchyMode: "by_node",
         },
       }),
     );
@@ -109,7 +104,7 @@ describe("projectStore storage migration", () => {
 
     expect(merged.displayProjectIds).toEqual(["project-visible"]);
     expect(merged.organizationPreferencesById?.["org-1"]?.displayProjectIds).toEqual(["project-visible"]);
-    expect(merged.workspaceListHierarchyMode).toBe("by_node");
+    expect("workspaceListHierarchyMode" in merged).toBe(false);
   });
 
   it("persists project prefs under the yishan-project-store key", () => {

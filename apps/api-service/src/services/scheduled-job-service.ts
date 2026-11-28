@@ -66,14 +66,6 @@ export type ScheduledJobRunView = {
   createdAt: Date;
 };
 
-export type PendingRun = {
-  runId: string;
-  scheduledFor: Date;
-  job: ScheduledJobView;
-};
-
-export type TriggerNowRun = PendingRun;
-
 type UpdateScheduledJobResult = {
   job: ScheduledJobView;
   previousNodeId: string;
@@ -428,68 +420,5 @@ export class ScheduledJobService {
       .orderBy(desc(scheduledJobRuns.scheduledFor))
       .limit(limit);
     return rows.map(toRunView);
-  }
-  async markRunNowDispatchFailed(input: JobIdentityInput & { runId: string }): Promise<{
-    didMarkDispatchFailed: boolean;
-    run: ScheduledJobRunView;
-  }> {
-    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
-    const failedRuns = await this.db
-      .update(scheduledJobRuns)
-      .set({
-        status: "failed",
-        finishedAt: new Date(),
-        errorCode: "QUEUE_DISPATCH_FAILED",
-        errorMessage: "Scheduled job run could not be dispatched to the queue",
-      })
-      .where(
-        and(
-          eq(scheduledJobRuns.id, input.runId),
-          eq(scheduledJobRuns.jobId, input.jobId),
-          eq(scheduledJobRuns.organizationId, input.organizationId),
-          eq(scheduledJobRuns.status, "pending"),
-          eq(scheduledJobRuns.trigger, "manual"),
-        ),
-      )
-      .returning();
-    if (failedRuns[0]) return { didMarkDispatchFailed: true, run: toRunView(failedRuns[0]) };
-    const currentRun = (
-      await this.db
-        .select()
-        .from(scheduledJobRuns)
-        .where(
-          and(
-            eq(scheduledJobRuns.id, input.runId),
-            eq(scheduledJobRuns.jobId, input.jobId),
-            eq(scheduledJobRuns.organizationId, input.organizationId),
-          ),
-        )
-        .limit(1)
-    )[0];
-    if (currentRun?.status !== "pending" && currentRun) {
-      return { didMarkDispatchFailed: false, run: toRunView(currentRun) };
-    }
-    throw new ScheduledJobRunTransitionUnavailableError();
-  }
-  async triggerRunNow(input: JobIdentityInput): Promise<TriggerNowRun> {
-    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
-    const job = await this.getJobOrThrow(input.jobId, input.organizationId);
-    const scheduledFor = new Date();
-    const runId = newId();
-    await this.db.insert(scheduledJobRuns).values({
-      id: runId,
-      jobId: job.id,
-      organizationId: job.organizationId,
-      projectId: job.projectId,
-      nodeId: job.nodeId,
-      scheduledFor,
-      trigger: "manual",
-      status: "pending",
-    });
-    return {
-      runId,
-      scheduledFor,
-      job: toScheduledJobView(job),
-    };
   }
 }

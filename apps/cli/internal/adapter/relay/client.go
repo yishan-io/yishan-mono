@@ -2,14 +2,12 @@ package relay
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -18,7 +16,6 @@ import (
 	relayprotocol "yishan/packages/relay-protocol-go"
 
 	"yishan/apps/cli/internal/adapter/cloud/session"
-	"yishan/apps/cli/internal/events"
 	release "yishan/apps/cli/internal/platform/release"
 	"yishan/apps/cli/internal/rpc"
 )
@@ -26,15 +23,8 @@ import (
 // Relay protocol method names are defined by the shared relay protocol module
 // and re-exported here so CLI consumers keep the relay.Method* names.
 const (
-	MethodPing                     = relayprotocol.MethodPing
-	MethodPong                     = relayprotocol.MethodPong
-	MethodJobRun                   = relayprotocol.MethodJobRun
-	MethodJobScheduleChanged       = relayprotocol.MethodJobScheduleChanged
-	MethodWorkspaceSnapshotChanged = relayprotocol.MethodWorkspaceSnapshotChanged
-	MethodTerminalSessionChanged   = relayprotocol.MethodTerminalSessionChanged
-	MethodTerminalStreamRequest    = relayprotocol.MethodTerminalStreamRequest
-	MethodTerminalStreamAccept     = relayprotocol.MethodTerminalStreamAccept
-	MethodTerminalStreamCancel     = relayprotocol.MethodTerminalStreamCancel
+	MethodPing = relayprotocol.MethodPing
+	MethodPong = relayprotocol.MethodPong
 )
 
 const (
@@ -45,26 +35,14 @@ const (
 	tokenEarlyRefreshWindow = 60 * time.Second
 )
 
-// MessageHandler is the app-side sink for relay-level messages the client does
-// not own (job dispatch, workspace snapshot changes, terminal session and
-// stream notifications). The implementation returns handled=true when the
-// message was consumed and must not be dispatched to the rpc server.
-type MessageHandler interface {
-	HandleRelayMessage(ctx context.Context, conn *rpc.Connection, nodeID string, method string, params json.RawMessage) bool
-}
-
 // ClientConfig wires the relay client. Server handles incoming JSON-RPC and
-// binary terminal frames on the relay connection; Handler owns the
-// relay-protocol messages; Events is the frontend hub the client forwards
-// terminal session changes from.
+// binary terminal frames on the relay connection (remote control).
 type ClientConfig struct {
 	Session     *session.Session
 	NodeID      string
 	URL         string
 	StaticToken string
 	Server      *rpc.Server
-	Handler     MessageHandler
-	Events      *eventbus.Hub
 	// OnConnected receives a coalesced notification for each successful relay connection.
 	// It must return when ctx is canceled.
 	OnConnected func(ctx context.Context)
@@ -78,13 +56,8 @@ type Client struct {
 	url         string
 	staticToken string
 	server      *rpc.Server
-	handler     MessageHandler
-	events      *eventbus.Hub
 	onConnected func(context.Context)
 	status      *Status
-
-	connMu sync.RWMutex
-	conn   *rpc.Connection
 }
 
 // NewClient creates a relay client. The reconnect loop starts via Run.
@@ -95,8 +68,6 @@ func NewClient(cfg ClientConfig) *Client {
 		url:         cfg.URL,
 		staticToken: cfg.StaticToken,
 		server:      cfg.Server,
-		handler:     cfg.Handler,
-		events:      cfg.Events,
 		onConnected: cfg.OnConnected,
 		status:      NewStatus(cfg.URL != "", cfg.URL),
 	}
@@ -218,31 +189,6 @@ func (c *Client) Run(ctx context.Context) {
 		c.runSession(ctx, conn)
 		c.status.setDisconnected("session ended")
 	}
-}
-
-// SendNotification writes a JSON-RPC notification to the relay connection.
-func (c *Client) SendNotification(method string, params any) error {
-	conn := c.conn
-	if conn == nil {
-		return fmt.Errorf("relay not connected")
-	}
-	msg := rpc.Notification{JSONRPC: "2.0", Method: method, Params: params}
-	if err := conn.WriteJSON(msg); err != nil {
-		return fmt.Errorf("relay write failed: %w", err)
-	}
-	return nil
-}
-
-// SendBinary writes a binary frame to the relay connection.
-func (c *Client) SendBinary(payload []byte) error {
-	conn := c.conn
-	if conn == nil {
-		return fmt.Errorf("relay not connected")
-	}
-	if err := conn.WriteBinary(payload); err != nil {
-		return fmt.Errorf("relay write failed: %w", err)
-	}
-	return nil
 }
 
 func (c *Client) mintToken() (string, time.Time, error) {

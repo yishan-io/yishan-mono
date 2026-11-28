@@ -378,10 +378,7 @@ func Bootstrap(cfg Config) (*App, error) {
 	app.rpcServer.BinaryFrameHandler = terminalSvc
 	app.relay = relay.NewClient(relay.ClientConfig{
 		Session: cfg.Session, NodeID: cfg.NodeID, URL: cfg.RelayURL, StaticToken: cfg.RelayToken, Server: app.rpcServer,
-		Handler: relayHandler{system: systemSvc, workspace: workspaceSvc, terminal: terminalSvc},
-		Events:  events,
 	})
-	terminalSvc.SetRelayClient(app.relay)
 
 	// Constructing LocalScheduler starts its internal workers. Defer that until
 	// the relay and every relay callback consumer are fully wired.

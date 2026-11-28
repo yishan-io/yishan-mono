@@ -37,14 +37,6 @@ export async function createWorkspaceHandler(
     sourceBranch: body.sourceBranch,
     localPath: body.localPath,
   });
-  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-    organizationId: params.orgId,
-    resource: "workspace",
-    change: "created",
-    projectId: params.projectId,
-    workspaceId: workspace.id,
-    sourceNodeId: body.sourceNodeId,
-  });
 
   return c.json({ workspace }, StatusCodes.CREATED);
 }
@@ -62,19 +54,6 @@ export async function closeWorkspaceHandler(
     projectId: params.projectId,
     status: body.status,
   });
-  // Only the terminal "closed" transition invalidates the workspace snapshot;
-  // the intermediate "closing" mark is a teardown signal, not a state change
-  // the desktop should reload for (the workspace was already removed locally).
-  if (closeResult.changed && (body.status ?? "closed") === "closed") {
-    await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-      organizationId: params.orgId,
-      resource: "workspace",
-      change: "closed",
-      projectId: params.projectId,
-      workspaceId: closeResult.workspace.id,
-      sourceNodeId: body.sourceNodeId,
-    });
-  }
 
   return c.json({ workspace: closeResult.workspace });
 }
@@ -91,14 +70,6 @@ export async function updateWorkspaceHandler(
     organizationId: params.orgId,
     projectId: params.projectId,
     localPath: body.localPath,
-  });
-  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-    organizationId: params.orgId,
-    resource: "workspace",
-    change: "updated",
-    projectId: params.projectId,
-    workspaceId: workspace.id,
-    sourceNodeId: body.sourceNodeId,
   });
 
   return c.json({ workspace });

@@ -40,9 +40,6 @@ export const LocalTaskTagsSettingsView = lazy(() =>
   import("@renderer/domains/local-task").then((m) => ({ default: m.LocalTaskTagsSettingsView })),
 );
 export { MarkdownSettingsView } from "../markdown/MarkdownSettingsView";
-export const NodesSettingsView = lazy(() =>
-  import("@renderer/domains/node").then((m) => ({ default: m.NodesSettingsView })),
-);
 export const NotificationSettingsView = lazy(() =>
   import("@renderer/domains/notification").then((m) => ({ default: m.NotificationSettingsView })),
 );

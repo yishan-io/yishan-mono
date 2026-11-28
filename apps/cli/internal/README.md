@@ -22,7 +22,7 @@ Enforced by `internal/archtest` (`TestForbiddenImports`).
 
 | Package | Role | Owns |
 |---|---|---|
-| `app` | Composition | Service graph construction, startup/shutdown; `appHandler` (router + desktop-connection tracking), `relayHandler` (job.run / workspace snapshot / terminal relay dispatch) |
+| `app` | Composition | Service graph construction, startup/shutdown; `appHandler` (router + desktop-connection tracking), relay client hook removed (remote control reuses the rpc server) |
 | `daemon` | Host | Process lifecycle, lock, state file, HTTP serving, daemon client |
 | `rpc` | Transport | JSON-RPC/WebSocket server, router, namespace handlers, wire error codes + `MapRPCError` |
 | `node/workspace` | Application boundary | `workspace.*`, `file.*`, `git.*` namespaces + workspace lifecycle application ops (create/close/folder/health/hydrate/persist/relay/watch) |

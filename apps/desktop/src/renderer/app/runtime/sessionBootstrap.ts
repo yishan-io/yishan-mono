@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
-import { listOrgNodes } from "../../domains/node";
 import { getSessionBootstrapData, isAuthExpiredError } from "../../domains/session";
 import { sessionStore } from "../../domains/session";
 import { setAppLanguage } from "../../i18n";
@@ -160,16 +159,6 @@ export function useSessionBootstrap() {
             await setAppLanguage(sessionData.currentUser.languagePreference);
           }
           bootstrappedSessionData = true;
-        }
-
-        const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
-        if (selectedOrganizationId) {
-          const nodes = await listOrgNodes(selectedOrganizationId);
-          if (disposed) {
-            return;
-          }
-
-          rendererQueryClient.setQueryData(["org-nodes", selectedOrganizationId], nodes);
         }
 
         if (!disposed) {

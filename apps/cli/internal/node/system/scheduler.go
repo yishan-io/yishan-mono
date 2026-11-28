@@ -3,45 +3,15 @@ package system
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
-	relayprotocol "yishan/packages/relay-protocol-go"
-
 	agentcmd "yishan/apps/cli/internal/agent/command"
 	"yishan/apps/cli/internal/platform/config"
-	"yishan/apps/cli/internal/rpc"
 )
 
 const agentExecTimeout = 5 * time.Minute
-
-// RejectRelayJobRun answers a job.run dispatched by api-service. Scheduled
-// jobs run from the daemon's local scheduler now, so remote dispatches are
-// rejected and api-service records the run as not executed.
-func RejectRelayJobRun(connState *rpc.Connection, raw json.RawMessage) {
-	var params relayprotocol.JobRunParams
-	_ = json.Unmarshal(raw, &params) // An unreadable payload is rejected the same way.
-	sendJobAck(connState, params.RunID, "rejected", "scheduled jobs now run from the local daemon")
-}
-
-func sendJobAck(connState *rpc.Connection, runID, status, reason string) {
-	msg := relayprotocol.Notification{
-		JSONRPC: "2.0",
-		Method:  relayprotocol.MethodJobAck,
-		Params: relayprotocol.JobAckParams{
-			RunID:  runID,
-			Status: status,
-			Reason: reason,
-		},
-	}
-	if err := connState.WriteJSON(msg); err != nil {
-		log.Error().Err(err).Str("runId", runID).Msg("scheduler: failed to send job.ack")
-	}
-}
 
 // ---------------------------------------------------------------------------
 // Agent execution

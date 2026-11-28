@@ -11,7 +11,6 @@ const (
 
 // Relay-specific JSON-RPC error codes.
 const (
-	CodeAuthFailed       = -32001
-	CodeNodeOffline      = -32002
-	CodeDispatchRejected = -32003
+	CodeAuthFailed  = -32001
+	CodeNodeOffline = -32002
 )

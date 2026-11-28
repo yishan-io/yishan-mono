@@ -2,12 +2,7 @@ import { Box } from "@mui/material";
 import type { DragEvent, RefObject } from "react";
 import { WorkspaceTreeRowView } from "./WorkspaceTreeRow";
 import type { WorkspaceTreeProps, WorkspaceTreeRow, WorkspaceTreeWorkspace } from "./types";
-import {
-  isWorkspaceTreeRowSelected,
-  parseCompositeNodeRowId,
-  parseProjectRowId,
-  parseWorkspaceRowId,
-} from "./workspaceTreeRowId";
+import { isWorkspaceTreeRowSelected, parseProjectRowId, parseWorkspaceRowId } from "./workspaceTreeRowId";
 
 type VirtualRowItem = {
   index: number;
@@ -20,18 +15,15 @@ interface WorkspaceTreeRowsProps
     WorkspaceTreeProps,
     | "createWorkspaceTooltipLabel"
     | "deleteWorkspaceLabel"
-    | "hierarchyMode"
     | "onProjectActionsClick"
     | "onProjectContextMenu"
     | "onProjectCreateWorkspaceClick"
-    | "onSelectNode"
     | "onSelectProject"
     | "onSelectWorkspace"
     | "onWorkspaceContextMenu"
     | "onWorkspaceMouseEnter"
     | "onWorkspaceMouseLeave"
     | "onWorkspaceRequestDelete"
-    | "selectedNodeId"
     | "selectedProjectId"
     | "selectedWorkspaceId"
   > {
@@ -51,7 +43,6 @@ interface WorkspaceTreeRowsProps
 export function WorkspaceTreeRows({
   createWorkspaceTooltipLabel,
   deleteWorkspaceLabel,
-  hierarchyMode = "by_project",
   isExpanded,
   onDragEndRow,
   onDragOverRow,
@@ -60,7 +51,6 @@ export function WorkspaceTreeRows({
   onProjectActionsClick,
   onProjectContextMenu,
   onProjectCreateWorkspaceClick,
-  onSelectNode,
   onSelectProject,
   onSelectWorkspace,
   onWorkspaceContextMenu,
@@ -68,7 +58,6 @@ export function WorkspaceTreeRows({
   onWorkspaceMouseLeave,
   onWorkspaceRequestDelete,
   scrollRef,
-  selectedNodeId,
   selectedProjectId,
   selectedWorkspaceId,
   toggleExpanded,
@@ -84,9 +73,7 @@ export function WorkspaceTreeRows({
 
     const isSelected = isWorkspaceTreeRowSelected({
       row,
-      hierarchyMode,
       selectedProjectId,
-      selectedNodeId,
       selectedWorkspaceId,
     });
 
@@ -190,27 +177,10 @@ export function WorkspaceTreeRows({
               return;
             }
 
-            if (row.kind === "node") {
-              if (hierarchyMode === "by_project") {
-                const parsedRowId = parseCompositeNodeRowId(row.id);
-                if (!parsedRowId) {
-                  return;
-                }
-                onSelectNode?.(parsedRowId.nodeId, parsedRowId.projectId);
-              } else {
-                onSelectNode?.(row.id.replace(/^node:/, ""), selectedProjectId ?? "");
-              }
-
-              if (row.hasChildren) {
-                toggleExpanded(row.id);
-              }
-              return;
-            }
-
             const workspaceId = parseWorkspaceRowId(row.id);
             const workspace = workspaceById.get(workspaceId);
             if (workspace) {
-              onSelectWorkspace?.(workspaceId, workspace.projectId, workspace.nodeId);
+              onSelectWorkspace?.(workspaceId, workspace.projectId);
             }
           }}
         />
