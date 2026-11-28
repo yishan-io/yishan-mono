@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 // fillMissingHourlyUsageOrganizations attributes usage rows that have no
@@ -19,6 +20,18 @@ func fillMissingHourlyUsageOrganizations(ctx context.Context, tx *sql.Tx) error 
 			'')
 		WHERE organization_id = ''`); err != nil {
 		return fmt.Errorf("fill missing usage organizations: %w", err)
+	}
+	return nil
+}
+
+// PruneExpiredUnsyncedHourlyRows deletes rows older than the retention window
+// even when they were never uploaded. The collector calls it only while the
+// daemon is not logged in: those rows cannot be uploaded, and normal pruning
+// keeps attributed dirty rows forever.
+func (s *HourlyUsageStore) PruneExpiredUnsyncedHourlyRows(ctx context.Context) error {
+	retentionCutoff := time.Now().UTC().Add(-HourlyUsageRetentionWindow).UnixMilli()
+	if _, err := s.database.ExecContext(ctx, `DELETE FROM token_usage_hourly WHERE bucket_start_hour_utc < ?`, retentionCutoff); err != nil {
+		return fmt.Errorf("prune expired unsynced usage rows: %w", err)
 	}
 	return nil
 }

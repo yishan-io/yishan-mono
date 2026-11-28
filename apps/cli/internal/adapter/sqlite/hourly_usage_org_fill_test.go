@@ -98,3 +98,32 @@ func TestReplaceAgentHourlyRowsKeepsOrganizationWhenRescanHasNone(t *testing.T) 
 		t.Fatalf("organization = %q, want org-1", orgs["workspace-1"])
 	}
 }
+
+func TestPruneExpiredUnsyncedHourlyRowsDropsOnlyExpiredRows(t *testing.T) {
+	database := openHourlyUsageOrgFillDB(t)
+	store := NewHourlyUsageStore(database)
+	expired := newTestHourlyUsageRow(time.Now().UTC().Add(-HourlyUsageRetentionWindow-time.Hour).UnixMilli(), 10)
+	expired.WorkspaceID = "ws-expired"
+	expired.OrganizationID = "org-1"
+	recent := newTestHourlyUsageRow(time.Now().UTC().Add(-time.Hour).UnixMilli(), 10)
+	recent.WorkspaceID = "ws-recent"
+	recent.OrganizationID = "org-1"
+	if err := store.ReplaceAgentHourlyRows(context.Background(), "claude", []HourlyUsageRow{expired, recent}); err != nil {
+		t.Fatalf("seed rows: %v", err)
+	}
+	if orgs := listUsageOrgsByWorkspace(t, store); len(orgs) != 2 {
+		t.Fatalf("expected both attributed dirty rows retained by normal pruning, got %#v", orgs)
+	}
+
+	if err := store.PruneExpiredUnsyncedHourlyRows(context.Background()); err != nil {
+		t.Fatalf("prune: %v", err)
+	}
+
+	orgs := listUsageOrgsByWorkspace(t, store)
+	if _, ok := orgs["ws-expired"]; ok {
+		t.Fatalf("expected expired dirty row to be pruned, got %#v", orgs)
+	}
+	if _, ok := orgs["ws-recent"]; !ok {
+		t.Fatalf("expected recent dirty row to stay for upload after login, got %#v", orgs)
+	}
+}

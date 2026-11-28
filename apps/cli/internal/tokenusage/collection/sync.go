@@ -20,6 +20,7 @@ const tokenUsageSyncChunk = 100
 // sync.
 func (c *Collector) syncPending(source string) {
 	if c.runtime == nil || !c.runtime.APIConfigured() {
+		c.pruneUnsyncableRows(source)
 		return
 	}
 	syncState, err := c.repo.GetHourlyUsageSyncState(context.Background())
@@ -77,6 +78,14 @@ func (c *Collector) syncPending(source string) {
 			Str("newestBucket", formatTokenUsageSyncTime(rows[len(rows)-1].BucketStartHourUTC)).
 			Str("syncedAt", formatTokenUsageSyncTime(syncedAt)).
 			Msg("token usage sync completed")
+	}
+}
+
+// pruneUnsyncableRows drops expired rows while the daemon is not logged in.
+// Rows inside the retention window stay dirty so they upload after a login.
+func (c *Collector) pruneUnsyncableRows(source string) {
+	if err := c.repo.PruneExpiredUnsyncedHourlyRows(context.Background()); err != nil {
+		log.Warn().Err(err).Str("source", source).Msg("token usage prune without login failed")
 	}
 }
 

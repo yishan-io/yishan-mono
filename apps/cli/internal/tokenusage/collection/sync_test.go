@@ -119,3 +119,24 @@ func TestSyncPendingNoOpWithoutRuntime(t *testing.T) {
 		t.Fatalf("expected no sync without runtime, got %v", repo.syncedOrgs)
 	}
 }
+
+// TestSyncPendingWithoutLoginPrunesInsteadOfUploading covers the no-login
+// mode: rows cannot be uploaded, so expired ones are pruned instead.
+func TestSyncPendingWithoutLoginPrunesInsteadOfUploading(t *testing.T) {
+	repo := &dirtyRowRepository{
+		dirtyRows: []sqlite.HourlyUsageRow{
+			dirtyRow("org-ok", time.Date(2026, 8, 16, 10, 0, 0, 0, time.UTC)),
+		},
+	}
+	collector := newTestCollector(repo)
+	collector.runtime = session.New(&config.Config{API: config.APIConfig{BaseURL: "http://127.0.0.1:1"}})
+
+	collector.syncPending("test")
+
+	if len(repo.syncedOrgs) != 0 {
+		t.Fatalf("expected no upload without login, got %v", repo.syncedOrgs)
+	}
+	if repo.pruneCalls != 1 {
+		t.Fatalf("expected one prune without login, got %d", repo.pruneCalls)
+	}
+}

@@ -120,12 +120,28 @@ const accessTokenEarlyRefreshWindow = 30 * time.Second
 const refreshTokenExpiryGuardWindow = 30 * time.Second
 const invalidRefreshTokenMessage = "invalid refresh token"
 
+// ErrNotLoggedIn is returned without sending a request when the client has no
+// credentials and the endpoint requires them. Running without login is a
+// normal state (for example a remote daemon), so callers doing background work
+// should skip quietly when they see it.
+var ErrNotLoggedIn = errors.New("not logged in: run `yishan login`")
+
+// publicPaths are the endpoints that work without credentials.
+var publicPaths = map[string]bool{"/health": true, "/auth/refresh": true, "/auth/revoke": true}
+
+func (c *Client) requiresLogin(path string) bool {
+	return c.accessToken == "" && c.refreshToken == "" && !publicPaths[strings.TrimSpace(path)]
+}
+
 func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
 	return c.DoRawContext(context.Background(), method, path, body)
 }
 
 // DoRawContext sends a request bound to ctx while preserving DoRaw's authentication behavior.
 func (c *Client) DoRawContext(ctx context.Context, method string, path string, body any) ([]byte, error) {
+	if c.requiresLogin(path) {
+		return nil, ErrNotLoggedIn
+	}
 	if c.shouldProactivelyRefresh(path) {
 		log.Debug().Str("path", path).Dur("window", accessTokenEarlyRefreshWindow).Msg("proactively refreshing API access token")
 		if err := c.refreshAccessTokenContext(ctx); err != nil {
