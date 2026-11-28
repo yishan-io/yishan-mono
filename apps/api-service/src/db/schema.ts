@@ -540,6 +540,7 @@ export const organizationInvitations = pgTable(
 export type OrganizationInvitation = InferSelectModel<typeof organizationInvitations>;
 export type NewOrganizationInvitation = InferInsertModel<typeof organizationInvitations>;
 
+// Unused since service tokens were removed; the table is dropped with Postgres.
 export const serviceTokens = pgTable(
   "service_tokens",
   {
