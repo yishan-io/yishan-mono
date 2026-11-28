@@ -8,7 +8,6 @@ import (
 
 	setup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/cmd/output"
-	"yishan/apps/cli/internal/adapter/cloud/session"
 )
 
 var setupCmd = &cobra.Command{
@@ -46,7 +45,7 @@ Codex, and Cursor agents. These hooks send lifecycle events
 				"message": "agent hooks removed from all supported agents",
 			})
 		}
-		setup.EnsureManagedAgentRuntime(session.UsesServiceTokenAuth())
+		setup.EnsureManagedAgentRuntime()
 		return output.PrintAny(map[string]any{
 			"action":  "installed",
 			"message": "agent hooks installed for all supported agents",
@@ -101,8 +100,7 @@ var setupStateCmd = &cobra.Command{
 func runSetupAll(_ *cobra.Command, _ []string) error {
 	var allErrors []string
 
-	disablePersona := session.UsesServiceTokenAuth()
-	setup.EnsureManagedAgentRuntime(disablePersona)
+	setup.EnsureManagedAgentRuntime()
 
 	if err := setup.EnsureDefaultPiExtensionSetup(); err != nil {
 		log.Warn().Err(err).Msg("setup: default pi extension setup failed")
@@ -114,7 +112,7 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 		allErrors = append(allErrors, "claude skills: "+err.Error())
 	}
 
-	if err := setup.EnsurePersonaSetup(disablePersona); err != nil {
+	if err := setup.EnsurePersonaSetup(); err != nil {
 		log.Warn().Err(err).Msg("setup: persona template install failed")
 		allErrors = append(allErrors, "persona: "+err.Error())
 	}

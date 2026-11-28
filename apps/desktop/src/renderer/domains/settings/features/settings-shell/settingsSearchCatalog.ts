@@ -6,7 +6,6 @@ import {
   BiDownload,
   BiGitBranch,
   BiGroup,
-  BiKey,
   BiLinkExternal,
   BiPalette,
   BiSolidKeyboard,
@@ -30,7 +29,6 @@ import {
   MEMORY_SEARCH_ITEMS,
   NOTIFICATION_SEARCH_ITEMS,
   PROVIDERS_SEARCH_ITEMS,
-  SERVICE_TOKEN_SEARCH_ITEMS,
   SKILLS_SEARCH_ITEMS,
   TERMINAL_SEARCH_ITEMS,
 } from "./settingsSearchCatalogSections";
@@ -48,7 +46,6 @@ export type SettingsTab =
   | "memory"
   | "notifications"
   | "providers"
-  | "serviceTokens"
   | "terminal"
   | "workspace";
 
@@ -90,10 +87,7 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
   },
   {
     titleKey: "settings.sections.organization",
-    items: [
-      { tab: "members", labelKey: "settings.items.members", icon: BiGroup },
-      { tab: "serviceTokens", labelKey: "settings.items.serviceTokens", icon: BiKey },
-    ],
+    items: [{ tab: "members", labelKey: "settings.items.members", icon: BiGroup }],
   },
   {
     titleKey: "settings.sections.localTasks",
@@ -140,6 +134,5 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...LOCAL_TAGS_SEARCH_ITEMS,
   ...GIT_WORKSPACE_SEARCH_ITEMS,
   ...TERMINAL_SEARCH_ITEMS,
-  ...SERVICE_TOKEN_SEARCH_ITEMS,
   ...NOTIFICATION_SEARCH_ITEMS,
 ];

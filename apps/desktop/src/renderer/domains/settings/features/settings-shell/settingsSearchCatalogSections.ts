@@ -6,7 +6,6 @@ import {
   BiDownload,
   BiGitBranch,
   BiGroup,
-  BiKey,
   BiLinkExternal,
   BiPalette,
   BiSolidKeyboard,
@@ -340,21 +339,6 @@ export const NOTIFICATION_SEARCH_ITEMS: SettingsSearchCatalogItem[] = NOTIFICATI
   }),
 );
 
-export const SERVICE_TOKEN_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
-  {
-    id: "service-tokens-list",
-    tab: "serviceTokens",
-    icon: BiKey,
-    labelKey: "settings.serviceTokens.title",
-    sectionLabelKey: "settings.items.serviceTokens",
-    keywordKeys: [
-      "settings.serviceTokens.description",
-      "settings.serviceTokens.columns.name",
-      "settings.serviceTokens.columns.token",
-      "settings.serviceTokens.columns.status",
-    ],
-  },
-];
 export const LOCAL_TAGS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "local-tags-colors",

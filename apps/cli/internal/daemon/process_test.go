@@ -4,9 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"yishan/apps/cli/internal/adapter/cloud/session"
-	"yishan/apps/cli/internal/platform/config"
 )
 
 func TestInitLocalDatabase_CreatesMigratedProfileDatabase(t *testing.T) {
@@ -34,68 +31,8 @@ func TestInitLocalDatabase_CreatesMigratedProfileDatabase(t *testing.T) {
 	}
 }
 
-func TestUsesRemoteHostPolicyReturnsTrueForServiceTokenRuntime(t *testing.T) {
-	runtime := session.New(&config.Config{
-		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
-		API: config.APIConfig{
-			Token: "yst_service_token_value",
-		},
-	})
-
-	if !usesRemoteHostPolicy(runtime) {
-		t.Fatal("expected remote host policy for service token runtime")
-	}
-}
-
-func TestUsesRemoteHostPolicyReturnsFalseForNilRuntime(t *testing.T) {
-	if usesRemoteHostPolicy(nil) {
-		t.Fatal("expected nil runtime not to use remote host policy")
-	}
-}
-
-func TestUsesRemoteHostPolicyReturnsFalseForJWTAuthRuntime(t *testing.T) {
-	runtime := session.New(&config.Config{
-		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
-		API: config.APIConfig{
-			Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
-		},
-	})
-
-	if usesRemoteHostPolicy(runtime) {
-		t.Fatal("expected jwt auth runtime not to use remote host policy")
-	}
-}
-
-func TestBuildMemorySummarizerConfigDisablesMemoryForRemoteHostPolicy(t *testing.T) {
-	runtime := session.New(&config.Config{
-		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
-		API:        config.APIConfig{Token: "yst_service_token_value"},
-	})
-
-	cfg := buildMemorySummarizerConfig(RunConfig{
-		MemorySummarizer:      true,
-		MemorySummarizerAgent: "opencode",
-		MemorySummarizerModel: "gpt-5",
-	}, runtime)
-
-	if !cfg.Enabled {
-		t.Fatal("expected base memory config to stay enabled")
-	}
-	if !cfg.DisableProjectMemory {
-		t.Fatal("expected project memory to be disabled for remote host policy")
-	}
-	if !cfg.DisablePersona {
-		t.Fatal("expected persona to be disabled for remote host policy")
-	}
-}
-
 func TestBuildMemorySummarizerConfigPreservesLocalDefaults(t *testing.T) {
-	runtime := session.New(&config.Config{
-		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
-		API:        config.APIConfig{Token: "jwt-token"},
-	})
-
-	cfg := buildMemorySummarizerConfig(RunConfig{MemorySummarizer: true}, runtime)
+	cfg := buildMemorySummarizerConfig(RunConfig{MemorySummarizer: true})
 
 	if cfg.DisableProjectMemory {
 		t.Fatal("expected local project memory to remain enabled")

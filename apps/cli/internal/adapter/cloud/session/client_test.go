@@ -460,35 +460,3 @@ func TestCheckAuthStatus_ClearsPersistedCredentialsWhenRefreshTokenInvalid(t *te
 		t.Fatal("expected invalid credentials to be cleared from the credential file")
 	}
 }
-
-func TestUsesServiceTokenAuthReturnsTrueForServiceToken(t *testing.T) {
-	cfg := &config.Config{
-		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
-		API: config.APIConfig{
-			BaseURL: "https://api.yishan.io",
-			Token:   "yst_service_token_value",
-		},
-	}
-	Configure(cfg)
-	t.Cleanup(func() { Configure(nil) })
-
-	if !UsesServiceTokenAuth() {
-		t.Fatal("expected service token auth to be detected")
-	}
-}
-
-func TestUsesServiceTokenAuthReturnsFalseForJWTToken(t *testing.T) {
-	cfg := &config.Config{
-		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
-		API: config.APIConfig{
-			BaseURL: "https://api.yishan.io",
-			Token:   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
-		},
-	}
-	Configure(cfg)
-	t.Cleanup(func() { Configure(nil) })
-
-	if UsesServiceTokenAuth() {
-		t.Fatal("expected jwt token not to be detected as service token auth")
-	}
-}

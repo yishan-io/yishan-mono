@@ -26,7 +26,6 @@ import {
   MemberSettingsView,
   MemorySettingsView,
   NotificationSettingsView,
-  ServiceTokenSettingsView,
   TerminalSettingsView,
   WorkspaceSettingsView,
 } from "./settingsLazyPages";
@@ -65,7 +64,6 @@ export function SettingsView() {
       selectedTabParam === "memory" ||
       selectedTabParam === "notifications" ||
       selectedTabParam === "providers" ||
-      selectedTabParam === "serviceTokens" ||
       selectedTabParam === "terminal" ||
       selectedTabParam === "workspace"
     ) {
@@ -197,11 +195,6 @@ export function SettingsView() {
             <AgentProviderSettingsView />
           </Suspense>
         </SettingsErrorBoundary>
-      ),
-      serviceTokens: (
-        <Suspense fallback={null}>
-          <ServiceTokenSettingsView />
-        </Suspense>
       ),
       customize: (
         <Suspense fallback={null}>

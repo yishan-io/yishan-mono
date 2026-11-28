@@ -527,10 +527,3 @@ export class VoiceTranscriptionQuotaExceededError extends AppError {
     this.name = "VoiceTranscriptionQuotaExceededError";
   }
 }
-
-export class ServiceTokenNotFoundError extends AppError {
-  constructor(tokenId: string) {
-    super("Service token not found or already revoked", StatusCodes.NOT_FOUND, "SERVICE_TOKEN_NOT_FOUND", { tokenId });
-    this.name = "ServiceTokenNotFoundError";
-  }
-}

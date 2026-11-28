@@ -10,7 +10,6 @@ import { OverviewService } from "@/services/overview-service";
 import { ProjectService } from "@/services/project-service";
 import { ResendEmailService } from "@/services/resend-email-service";
 import { ScheduledJobService } from "@/services/scheduled-job-service";
-import { ServiceTokenService } from "@/services/service-token-service";
 import { TokenUsageService } from "@/services/token-usage-service";
 import { UserService } from "@/services/user-service";
 import { VoiceTranscriptionService } from "@/services/voice-transcription-service";
@@ -33,7 +32,6 @@ export type AppServices = {
   workspace: WorkspaceService;
   workspacePullRequest: WorkspacePullRequestService;
   voiceTranscription: VoiceTranscriptionService;
-  serviceToken: ServiceTokenService;
   tokenUsage: TokenUsageService;
   overview: OverviewService;
 };
@@ -63,7 +61,6 @@ export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppS
     workspace: new WorkspaceService(deps.db, organization, workspaceProvisioner),
     workspacePullRequest: new WorkspacePullRequestService(deps.db, organization),
     voiceTranscription: new VoiceTranscriptionService(deps.db, deps.config, organization),
-    serviceToken: new ServiceTokenService(deps.db),
     tokenUsage: new TokenUsageService(deps.db, organization),
     overview: new OverviewService(deps.db, organization),
   };

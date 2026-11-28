@@ -177,7 +177,7 @@ profile root; account-scoped data lives under `accounts/<userId>/`:
 ```
 
 `user_id` comes from the JWT `sub` claim on browser login, from `WhoAmI` for
-service-token/env-credential logins, and is backfilled on the first daemon
+env-credential logins, and is backfilled on the first daemon
 boot when tokens exist. When no account is known yet, data resolves to the
 profile root (legacy layout) and is migrated into `accounts/<userId>/` on the
 first boot that knows the account. The persona file stays global at

@@ -123,11 +123,11 @@ remote), node/project/service, node/system (system, scheduler), plus
 Symbols with no direct production importer (used only inside the package or by
 tests — response payload types and input builders): `AddOrganizationMemberResponse`,
 `CreateNodeResponse`, `CreateOrganizationResponse`, `CreateProjectResponse`,
-`CreateServiceTokenResponse`, `CreateWorkspaceResponse`, `CreateWorkspaceInput`,
-`HealthResponse`, `ListProjectsWithWorkspacesResponse`, `ListServiceTokensResponse`,
+`CreateWorkspaceResponse`, `CreateWorkspaceInput`,
+`HealthResponse`, `ListProjectsWithWorkspacesResponse`, 
 `ListTokenUsageHourlyInput`, `MeResponse`, `OKResponse`, `OrganizationMember`,
 `ProjectWithWorkspaces`, `RefreshTokenResponse`, `RegisterNodeResponse`,
-`RelayTokenResponse`, `ScheduledJob`, `ServiceToken`, `TokenUsageHourlyRowOutput`,
+`RelayTokenResponse`, `ScheduledJob`, `TokenUsageHourlyRowOutput`,
 `UpdateNodeScopeResponse`, `UpdateWorkspaceInput`, `UpsertWorkspacePullRequestInput`,
 `CreateProjectInput`. These are wire contract types; Phase 27 keeps them next to
 their resource files. Candidate for Phase 30 review.
@@ -145,7 +145,6 @@ node/agent/customize.go.
 | `GetInstalledState` | cmd/setup |
 | `InstalledState`, `ExtensionState`, `HookState`, `MCPState` | cmd/setup |
 | `EnsureManagedAgentRuntime` | cmd/setup, daemon/process_server |
-| `RemoteHostPolicyEnvKey` | daemon/process_server |
 | `ListPiExtensions` | node/agent/customize |
 | `InstallPiExtension` / `RemovePiExtension` / `UpdatePiExtension` / `CheckPiExtensionUpdates` | node/agent/customize |
 | `ListPiAgents` / `GetPiAgentDetail` / `CreatePiAgent` / `UpdatePiAgent` / `RemovePiAgent` / `RestorePiAgent` | node/agent/customize |
@@ -290,7 +289,6 @@ workspaces.go         # workspace methods + workspace DTOs + input builders (was
 pull_requests.go      # UpsertWorkspacePullRequest + input
 usage.go              # List/UpsertTokenUsageHourly + row types
 jobs.go               # scheduled job run methods + inputs + job DTO
-service_tokens.go     # service token methods + inputs
 workspace_mapper.go / workspace_inputs.go→workspaces.go / token.go / expiry.go / runtime_client.go  # keep
 methods.go            # deleted (phase done)
 types.go              # deleted; resource DTOs moved to their resource files
