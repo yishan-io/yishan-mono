@@ -527,3 +527,10 @@ export class VoiceTranscriptionQuotaExceededError extends AppError {
     this.name = "VoiceTranscriptionQuotaExceededError";
   }
 }
+
+export class StoreConflictError extends AppError {
+  constructor(key: string) {
+    super("Concurrent update conflict, please retry", StatusCodes.CONFLICT, "STORE_CONFLICT", { key });
+    this.name = "StoreConflictError";
+  }
+}

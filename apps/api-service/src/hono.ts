@@ -12,6 +12,8 @@ type HyperdriveBinding = {
 export type AppEnv = {
   Bindings: {
     HYPERDRIVE?: HyperdriveBinding;
+    /** R2 bucket for the object store (src/store); bound in wrangler.toml at the cutover. */
+    DATA?: R2Bucket;
   };
   Variables: {
     config: ServiceConfig;
