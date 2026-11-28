@@ -102,6 +102,7 @@ func (c *Client) Run(ctx context.Context) {
 	defer notifier.wait()
 
 	delay := reconnectInitialDelay
+	loggedWaitingForLogin := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -111,7 +112,12 @@ func (c *Client) Run(ctx context.Context) {
 		}
 
 		if c.staticToken == "" && (c.runtime == nil || !c.runtime.APIConfigured()) {
-			log.Warn().Msg("relay client waiting for API credentials")
+			// Running without login is a normal state (e.g. a remote daemon):
+			// say so once instead of warning on every retry.
+			if !loggedWaitingForLogin {
+				log.Info().Msg("relay client idle until login")
+				loggedWaitingForLogin = true
+			}
 			c.status.setDisconnected("waiting for API credentials")
 			select {
 			case <-ctx.Done():
@@ -121,6 +127,8 @@ func (c *Client) Run(ctx context.Context) {
 			delay = nextDelay(delay)
 			continue
 		}
+
+		loggedWaitingForLogin = false
 
 		// Reuse the cached token if it is still valid; only mint a new one
 		// when the token is missing or about to expire.

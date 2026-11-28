@@ -12,12 +12,14 @@ import (
 
 // HourlyUsageRepository is the durable storage the collector needs: replace an
 // agent's hourly rows, list dirty rows for sync, mark rows synced, and read
-// the sync state. The SQLite implementation lives in internal/db.
+// the sync state, and drop expired rows that can never be uploaded. The SQLite
+// implementation lives in internal/adapter/sqlite.
 type HourlyUsageRepository interface {
 	ReplaceAgentHourlyRows(ctx context.Context, agentKind string, rows []sqlite.HourlyUsageRow) error
 	ListDirtyHourlyRows(ctx context.Context) ([]sqlite.HourlyUsageRow, error)
 	MarkHourlyRowsSynced(ctx context.Context, rows []sqlite.HourlyUsageRow, syncedAt int64) error
 	GetHourlyUsageSyncState(ctx context.Context) (sqlite.HourlyUsageSyncState, error)
+	PruneExpiredUnsyncedHourlyRows(ctx context.Context) error
 }
 
 // ToHourlyRows converts normalized scanner records into SQLite row shape for

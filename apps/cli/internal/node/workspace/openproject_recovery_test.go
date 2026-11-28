@@ -34,6 +34,10 @@ func (recoveryScanRepository) GetHourlyUsageSyncState(context.Context) (sqlite.H
 	return sqlite.HourlyUsageSyncState{}, nil
 }
 
+func (recoveryScanRepository) PruneExpiredUnsyncedHourlyRows(context.Context) error {
+	return nil
+}
+
 func TestWorkspaceOpenProject_ReturnsBeforeScheduledRecoveryScanCompletes(t *testing.T) {
 	s := newTestHandler(t)
 	collector, scanStarted, releaseScan, scanFinished := newBlockingRecoveryCollector()

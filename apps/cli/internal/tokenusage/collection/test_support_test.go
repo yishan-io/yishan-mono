@@ -33,6 +33,10 @@ func (s *stubHourlyUsageRepository) GetHourlyUsageSyncState(_ context.Context) (
 	return s.state, nil
 }
 
+func (s *stubHourlyUsageRepository) PruneExpiredUnsyncedHourlyRows(context.Context) error {
+	return nil
+}
+
 // countingHourlyUsageRepository records replace calls so tests can assert
 // replacement (not append) semantics.
 type countingHourlyUsageRepository struct {
@@ -71,6 +75,7 @@ type dirtyRowRepository struct {
 	dirtyRows   []sqlite.HourlyUsageRow
 	syncedOrgs  []string
 	syncedCount int
+	pruneCalls  int
 }
 
 func (s *dirtyRowRepository) ListDirtyHourlyRows(_ context.Context) ([]sqlite.HourlyUsageRow, error) {
@@ -79,6 +84,11 @@ func (s *dirtyRowRepository) ListDirtyHourlyRows(_ context.Context) ([]sqlite.Ho
 
 func (s *dirtyRowRepository) GetHourlyUsageSyncState(_ context.Context) (sqlite.HourlyUsageSyncState, error) {
 	return sqlite.HourlyUsageSyncState{DirtyRows: len(s.dirtyRows), TotalRows: len(s.dirtyRows)}, nil
+}
+
+func (s *dirtyRowRepository) PruneExpiredUnsyncedHourlyRows(context.Context) error {
+	s.pruneCalls++
+	return nil
 }
 
 func (s *dirtyRowRepository) MarkHourlyRowsSynced(_ context.Context, rows []sqlite.HourlyUsageRow, _ int64) error {
