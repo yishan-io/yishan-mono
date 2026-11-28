@@ -17,10 +17,9 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-const { setThemePreference, openExternalUrl, switchOrganization, logout } = vi.hoisted(() => ({
+const { setThemePreference, openExternalUrl, logout } = vi.hoisted(() => ({
   setThemePreference: vi.fn(),
   openExternalUrl: vi.fn(async () => undefined),
-  switchOrganization: vi.fn(async () => undefined),
   logout: vi.fn(async () => undefined),
 }));
 
@@ -37,11 +36,6 @@ vi.mock("@renderer/platform/platform", () => ({
 
 vi.mock("../../../shortcuts/shortcutDisplay", () => ({
   getShortcutDisplayLabelById: () => "⌘+K",
-}));
-
-vi.mock("../../../domains/organization/features/create-organization/CreateOrganizationDialogView", () => ({
-  CreateOrganizationDialogView: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="create-organization-dialog">create-organization-dialog</div> : null,
 }));
 
 /** Exposes route changes to exercise AppMenuView location-driven close behavior. */
@@ -110,28 +104,5 @@ describe("AppMenuView", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "org.menu.settings" })).toBeNull();
     });
-  });
-
-  it("opens the create organization dialog from the organization submenu", async () => {
-    renderAppMenuView();
-
-    fireEvent.click(screen.getByRole("button", { name: "org.menu.trigger" }));
-    fireEvent.click(screen.getByRole("button", { name: "org.menu.organizations" }));
-    fireEvent.click(screen.getByRole("button", { name: "org.menu.newOrganization" }));
-
-    expect(await screen.findByTestId("create-organization-dialog")).toBeTruthy();
-  });
-
-  it("closes both menus without switching when the selected organization is clicked", async () => {
-    renderAppMenuView();
-
-    fireEvent.click(screen.getByRole("button", { name: "org.menu.trigger" }));
-    fireEvent.click(screen.getByRole("button", { name: "org.menu.organizations" }));
-    fireEvent.click(screen.getByRole("button", { name: "Organization One" }));
-
-    await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "org.menu.settings" })).toBeNull();
-    });
-    expect(switchOrganization).not.toHaveBeenCalled();
   });
 });

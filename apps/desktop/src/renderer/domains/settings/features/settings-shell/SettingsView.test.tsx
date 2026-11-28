@@ -55,10 +55,6 @@ vi.mock("../keybindings/KeybindingsSettingsView", () => ({
   KeybindingsSettingsView: () => <div data-testid="keybindings-settings-panel" />,
 }));
 
-vi.mock("@renderer/domains/organization/features/manage-members/MemberSettingsView", () => ({
-  MemberSettingsView: () => <div data-testid="member-settings-panel" />,
-}));
-
 vi.mock("@renderer/domains/agent/features/manage-skills/SkillsSettingsView", () => ({
   SkillsSettingsView: () => <div data-testid="skills-settings-panel" />,
 }));
@@ -304,40 +300,6 @@ describe("SettingsView", () => {
     );
 
     expect(await screen.findByTestId("daemon-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
-  });
-
-  it("renders members panel when members tab is selected", async () => {
-    render(
-      <AppThemePreferenceProvider>
-        <MemoryRouter initialEntries={["/settings?tab=members"]}>
-          <Routes>
-            <Route path="/settings" element={<SettingsView />} />
-          </Routes>
-        </MemoryRouter>
-      </AppThemePreferenceProvider>,
-    );
-
-    expect(await screen.findByTestId("member-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
-  });
-
-  it("matches member settings in search and opens members tab", async () => {
-    render(
-      <AppThemePreferenceProvider>
-        <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
-          <Routes>
-            <Route path="/settings" element={<SettingsView />} />
-          </Routes>
-        </MemoryRouter>
-      </AppThemePreferenceProvider>,
-    );
-
-    fireEvent.change(screen.getByPlaceholderText("settings.searchPlaceholder"), {
-      target: { value: "role" },
-    });
-
-    fireEvent.click(await screen.findByRole("button", { name: /settings\.members\.title/ }));
-
-    expect(await screen.findByTestId("member-settings-panel", {}, { timeout: 30000 })).toBeTruthy();
   });
 
   it("matches daemon settings in search and opens daemon tab", async () => {

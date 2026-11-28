@@ -20,17 +20,3 @@ export type OrganizationMemberRecord = {
   name: string | null;
   avatarUrl: string | null;
 };
-
-export type OrganizationInviteRecord = {
-  id: string;
-  organizationId: string;
-  email: string;
-  role: string;
-  invitedByUserId: string;
-  expiresAt: string;
-  createdAt: string;
-};
-
-export type AddOrganizationMemberResponse =
-  | { invited: false; member: OrganizationMemberRecord }
-  | { invited: true; invite: OrganizationInviteRecord };

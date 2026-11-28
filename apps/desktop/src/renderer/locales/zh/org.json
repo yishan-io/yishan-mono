@@ -2,9 +2,6 @@
   "org": {
     "menu": {
       "trigger": "\u7ec4\u7ec7",
-      "organizations": "\u7ec4\u7ec7\u5217\u8868",
-      "noOrganizations": "\u6682\u65e0\u7ec4\u7ec7",
-      "newOrganization": "\u65b0\u5efa\u7ec4\u7ec7",
       "newOrganizationPrompt": "\u7ec4\u7ec7\u540d\u79f0",
       "newOrganizationFailed": "\u521b\u5efa\u7ec4\u7ec7\u5931\u8d25\u3002",
       "settings": "\u8bbe\u7f6e",

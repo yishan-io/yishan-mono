@@ -23,7 +23,6 @@ import {
   LinkSettingsView,
   LocalTaskTagsSettingsView,
   MarkdownSettingsView,
-  MemberSettingsView,
   MemorySettingsView,
   NotificationSettingsView,
   TerminalSettingsView,
@@ -60,7 +59,6 @@ export function SettingsView() {
       selectedTabParam === "language" ||
       selectedTabParam === "links" ||
       selectedTabParam === "localTags" ||
-      selectedTabParam === "members" ||
       selectedTabParam === "memory" ||
       selectedTabParam === "notifications" ||
       selectedTabParam === "providers" ||
@@ -182,11 +180,6 @@ export function SettingsView() {
       localTags: (
         <Suspense fallback={null}>
           <LocalTaskTagsSettingsView />
-        </Suspense>
-      ),
-      members: (
-        <Suspense fallback={null}>
-          <MemberSettingsView />
         </Suspense>
       ),
       providers: (

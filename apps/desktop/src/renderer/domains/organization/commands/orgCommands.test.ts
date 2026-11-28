@@ -9,17 +9,6 @@ const rpcMocks = vi.hoisted(() => ({
   setCurrentOrganization: vi.fn(async () => undefined),
 }));
 
-vi.mock("../../../api", () => ({
-  api: {
-    org: {
-      addMember: vi.fn(),
-      cancelInvite: vi.fn(),
-      leave: vi.fn(),
-      removeMember: vi.fn(),
-    },
-  },
-}));
-
 vi.mock("../../../domains/organization/daemon/daemonOrganizationProcedures", () => ({
   setCurrentOrganization: rpcMocks.setCurrentOrganization,
 }));

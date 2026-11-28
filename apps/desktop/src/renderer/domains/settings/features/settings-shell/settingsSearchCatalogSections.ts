@@ -5,7 +5,6 @@ import {
   BiChip,
   BiDownload,
   BiGitBranch,
-  BiGroup,
   BiLinkExternal,
   BiPalette,
   BiSolidKeyboard,
@@ -214,24 +213,6 @@ export const SKILLS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.skills.official",
     ],
     focusItemId: "skills",
-  },
-];
-export const MEMBERS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
-  {
-    id: "members-list",
-    tab: "members",
-    icon: BiGroup,
-    labelKey: "settings.members.title",
-    sectionLabelKey: "settings.items.members",
-    keywordKeys: [
-      "settings.members.description",
-      "settings.members.columns.member",
-      "settings.members.columns.email",
-      "settings.members.columns.role",
-      "settings.members.columns.userId",
-      "settings.members.empty",
-      "settings.members.loadError",
-    ],
   },
 ];
 export const KEYBINDINGS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [

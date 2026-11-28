@@ -6,7 +6,6 @@
     "searchNoResults": "No matching settings.",
     "sections": {
       "profile": "Profile",
-      "organization": "Organization",
       "system": "System",
       "localTasks": "Local Tasks"
     },
@@ -17,7 +16,6 @@
       "daemon": "Daemon",
       "keybindings": "Keyboard Shortcuts",
       "links": "Links",
-      "members": "Members",
       "memory": "Memory",
       "notifications": "Notifications",
       "terminal": "Terminal",
@@ -26,68 +24,6 @@
       "customize": "Customize",
       "localTags": "Local Task Tags",
       "tagManagement": "Tag Management"
-    },
-    "members": {
-      "title": "Organization members",
-      "description": "Review who belongs to the cur organization and what access role each person has.",
-      "loadError": "Failed to load organization members.",
-      "empty": "No members are available for this organization.",
-      "addMember": "Add member",
-      "memberAdded": "Member added successfully.",
-      "memberRemoved": "Member removed successfully.",
-      "inviteSent": "Invitation sent. They will be added when they register.",
-      "leaveOrganization": "Leave organization",
-      "removeAriaLabel": "Remove member",
-      "dangerZone": {
-        "title": "Danger zone",
-        "leaveTitle": "Leave this organization",
-        "leaveDescription": "You will lose access to all projects, workspaces, and resources in this organization."
-      },
-      "removeDialog": {
-        "title": "Remove member?",
-        "description": "{{email}} will be removed from the organization and will lose access immediately.",
-        "confirm": "Remove member"
-      },
-      "leaveDialog": {
-        "title": "Leave organization?",
-        "description": "You will lose access to this organization and all its resources. This cannot be undone.",
-        "confirm": "Leave organization"
-      },
-      "addDialog": {
-        "title": "Add organization member",
-        "emailLabel": "Email address",
-        "emailPlaceholder": "colleague@example.com",
-        "roleLabel": "Role",
-        "roles": {
-          "member": "Member",
-          "admin": "Admin"
-        },
-        "submit": "Add member",
-        "adding": "Adding...",
-        "errorEmailEmpty": "Email address cannot be empty."
-      },
-      "pendingInvites": {
-        "title": "Pending invitations",
-        "description": "These email addresses have been invited but have not yet registered.",
-        "loadError": "Failed to load pending invitations.",
-        "cancelAriaLabel": "Cancel invitation",
-        "cancelDialog": {
-          "title": "Cancel invitation?",
-          "description": "The invitation to {{email}} will be revoked. They will no longer be able to join this organization using it.",
-          "confirm": "Cancel invitation"
-        },
-        "columns": {
-          "email": "Email",
-          "role": "Role",
-          "expires": "Expires"
-        }
-      },
-      "columns": {
-        "member": "Member",
-        "email": "Email",
-        "role": "Role",
-        "userId": "User ID"
-      }
     },
     "account": {
       "title": "Account profile",

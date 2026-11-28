@@ -1,5 +1,4 @@
 import { ClickAwayListener, Divider, Popper, Stack } from "@mui/material";
-import { CreateOrganizationDialogView } from "@renderer/domains/organization";
 import { sessionStore } from "@renderer/domains/session";
 import { getRendererPlatform } from "@renderer/platform/platform";
 import { useTranslation } from "react-i18next";
@@ -7,7 +6,6 @@ import { useThemePreference } from "../../../domains/settings";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { FloatingSurface } from "../../../ui/components/FloatingSurface";
 import { AppMenuMainMenuSection } from "./AppMenuMainMenuSection";
-import { AppMenuOrganizationSubmenu } from "./AppMenuOrganizationSubmenu";
 import { AppMenuThemeControls } from "./AppMenuThemeControls";
 import { AppMenuTriggerButton } from "./AppMenuTriggerButton";
 import { useAppMenuViewState } from "./useAppMenuViewState";
@@ -22,26 +20,15 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: AppMenuView
   const { themePreference, setThemePreference } = useThemePreference();
   const { t } = useTranslation();
   const currentUser = sessionStore((state) => state.currentUser);
-  const organizations = sessionStore((state) => state.organizations);
-  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   const {
     menuAnchor,
-    organizationMenuAnchor,
     isMenuOpen,
-    isOrganizationMenuOpen,
-    isCreateOrganizationDialogOpen,
     closeMenus,
     handleToggleMenu,
-    handleOpenOrganizations,
-    handleToggleOrganizations,
-    handleCloseOrganizationMenu,
     handleNavigateToSettings,
     handleNavigateToKeybindings,
     handleLogout,
     handleOpenExternalUrl,
-    handleSelectOrganization,
-    handleOpenCreateOrganizationDialog,
-    handleCloseCreateOrganizationDialog,
   } = useAppMenuViewState();
   const platform = getRendererPlatform();
   const settingsShortcutLabel = platform === "darwin" ? "⌘+," : "CTRL+,";
@@ -78,8 +65,6 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: AppMenuView
                 settingsShortcutLabel={settingsShortcutLabel}
                 keybindingsShortcutLabel={keybindingsShortcutLabel}
                 translate={t}
-                onOpenOrganizations={handleOpenOrganizations}
-                onToggleOrganizations={handleToggleOrganizations}
                 onNavigateToSettings={handleNavigateToSettings}
                 onOpenDocumentation={() => {
                   handleOpenExternalUrl("https://www.electronjs.org/docs/latest/");
@@ -96,20 +81,6 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: AppMenuView
           </FloatingSurface>
         </ClickAwayListener>
       </Popper>
-      <AppMenuOrganizationSubmenu
-        anchorElement={organizationMenuAnchor}
-        organizations={organizations}
-        selectedOrganizationId={selectedOrganizationId}
-        isOpen={isOrganizationMenuOpen}
-        translate={t}
-        onSelectOrganization={handleSelectOrganization}
-        onOpenCreateOrganizationDialog={handleOpenCreateOrganizationDialog}
-        onClose={handleCloseOrganizationMenu}
-      />
-      <CreateOrganizationDialogView
-        open={isCreateOrganizationDialogOpen}
-        onClose={handleCloseCreateOrganizationDialog}
-      />
     </>
   );
 }
