@@ -43,7 +43,6 @@ const mocked = vi.hoisted(() => {
       selectedProjectId: string;
       selectedWorkspaceId: string;
       displayProjectIds: string[];
-      workspaceListHierarchyMode: "by_project" | "by_node";
     };
   } = {
     current: {
@@ -76,7 +75,6 @@ const mocked = vi.hoisted(() => {
       selectedProjectId: "local-folder",
       selectedWorkspaceId: "folder-1",
       displayProjectIds: ["repo-1"],
-      workspaceListHierarchyMode: "by_project",
     },
   };
   return { stateRef };
@@ -187,7 +185,6 @@ beforeEach(() => {
     selectedProjectId: LOCAL_FOLDER_PROJECT_ID,
     selectedWorkspaceId: "folder-1",
     displayProjectIds: ["repo-1"],
-    workspaceListHierarchyMode: "by_project",
   };
 });
 

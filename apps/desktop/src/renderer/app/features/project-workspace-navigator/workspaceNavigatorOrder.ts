@@ -44,24 +44,9 @@ export function reconcileOrder(storedOrder: string[], liveIds: string[]): string
   return [...retained, ...appended];
 }
 
-/** Parses the project ID from a tree row ID like "project:nodeId:projectId". */
+/** Parses the project ID from a tree row ID like "project:projectId". */
 export function parseProjectRowProjectId(rowId: string): string {
-  const value = rowId.replace(/^project:/, "");
-  const splitIndex = value.indexOf(":");
-  if (splitIndex < 0) {
-    return value;
-  }
-  return value.slice(splitIndex + 1);
-}
-
-/** Parses the node ID from a tree row ID like "node:parentId:nodeId". */
-export function parseNodeRowNodeId(rowId: string): string {
-  const value = rowId.replace(/^node:/, "");
-  const splitIndex = value.indexOf(":");
-  if (splitIndex < 0) {
-    return value;
-  }
-  return value.slice(splitIndex + 1);
+  return rowId.replace(/^project:/, "");
 }
 
 /** Builds a total sibling order: saved ranks, then creation time (unknown last), then immutable ID. */

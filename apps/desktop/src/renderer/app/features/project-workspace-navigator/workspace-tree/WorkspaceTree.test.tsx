@@ -22,29 +22,10 @@ describe("WorkspaceTree", () => {
     cleanup();
   });
 
-  it("hides node rows that have no workspaces", () => {
-    render(
-      <WorkspaceTree
-        projects={[{ id: "project-1", name: "Project 1" }]}
-        nodes={[
-          { id: "node-1", name: "Node 1" },
-          { id: "node-2", name: "Node 2" },
-        ]}
-        workspaces={[{ id: "workspace-1", name: "Workspace 1", projectId: "project-1", nodeId: "node-1" }]}
-        expandedItems={["project:project-1"]}
-      />,
-    );
-
-    expect(screen.getByText("Project 1")).toBeTruthy();
-    expect(screen.getByText("Node 1")).toBeTruthy();
-    expect(screen.queryByText("Node 2")).toBeNull();
-  });
-
   it("hides the add-workspace action for a non-git project", () => {
     render(
       <WorkspaceTree
         projects={[{ id: "project-1", name: "Project 1", supportsGitFeatures: false }]}
-        nodes={[{ id: "node-1", name: "Node 1" }]}
         workspaces={[{ id: "workspace-1", name: "Workspace 1", projectId: "project-1", nodeId: "node-1" }]}
         expandedItems={["project:project-1"]}
       />,
@@ -62,13 +43,11 @@ describe("WorkspaceTree", () => {
           { id: "project-1", name: "Project 1" },
           { id: "project-2", name: "Project 2" },
         ]}
-        nodes={[{ id: "node-1", name: "Node 1" }]}
         workspaces={[
           { id: "workspace-1", name: "Workspace 1", projectId: "project-1", nodeId: "node-1" },
           { id: "workspace-2", name: "Workspace 2", projectId: "project-2", nodeId: "node-1" },
         ]}
-        hierarchyMode="by_project"
-        expandedItems={["project:project-1", "project:project-2", "node:project-1:node-1", "node:project-2:node-1"]}
+        expandedItems={["project:project-1", "project:project-2"]}
         selectedWorkspaceId="workspace-1"
         onSelectWorkspace={onSelectWorkspace}
       />,
@@ -77,24 +56,19 @@ describe("WorkspaceTree", () => {
     const tree = getByRole("tree");
     fireEvent.keyDown(tree, { key: "ArrowDown" });
 
-    expect(onSelectWorkspace).toHaveBeenCalledWith("workspace-2", "project-2", "node-1");
+    expect(onSelectWorkspace).toHaveBeenCalledWith("workspace-2", "project-2");
   });
 
-  it("moves workspace selection with ArrowUp across node boundaries", () => {
+  it("moves workspace selection with ArrowUp within a project", () => {
     const onSelectWorkspace = vi.fn();
     const { getByRole } = render(
       <WorkspaceTree
         projects={[{ id: "project-1", name: "Project 1" }]}
-        nodes={[
-          { id: "node-1", name: "Node 1" },
-          { id: "node-2", name: "Node 2" },
-        ]}
         workspaces={[
           { id: "workspace-1", name: "Workspace 1", projectId: "project-1", nodeId: "node-1" },
           { id: "workspace-2", name: "Workspace 2", projectId: "project-1", nodeId: "node-2" },
         ]}
-        hierarchyMode="by_project"
-        expandedItems={["project:project-1", "node:project-1:node-1", "node:project-1:node-2"]}
+        expandedItems={["project:project-1"]}
         selectedWorkspaceId="workspace-2"
         onSelectWorkspace={onSelectWorkspace}
       />,
@@ -103,7 +77,7 @@ describe("WorkspaceTree", () => {
     const tree = getByRole("tree");
     fireEvent.keyDown(tree, { key: "ArrowUp" });
 
-    expect(onSelectWorkspace).toHaveBeenCalledWith("workspace-1", "project-1", "node-1");
+    expect(onSelectWorkspace).toHaveBeenCalledWith("workspace-1", "project-1");
   });
 });
 
@@ -121,7 +95,6 @@ describe("WorkspaceTree local folders", () => {
       <WorkspaceTree
         localFolderGroupLabel="Local Folders"
         projects={[]}
-        nodes={[{ id: "node-1", name: "Node 1" }]}
         workspaces={folderWorkspaces}
         expandedItems={["project:local-folder"]}
       />,
@@ -137,7 +110,6 @@ describe("WorkspaceTree local folders", () => {
       <WorkspaceTree
         localFolderGroupLabel="Local Folders"
         projects={[]}
-        nodes={[{ id: "node-1", name: "Node 1" }]}
         workspaces={folderWorkspaces}
         expandedItems={["project:local-folder"]}
       />,
@@ -154,7 +126,6 @@ describe("WorkspaceTree local folders", () => {
       <WorkspaceTree
         localFolderGroupLabel="Local Folders"
         projects={[]}
-        nodes={[{ id: "node-1", name: "Node 1" }]}
         workspaces={folderWorkspaces}
         expandedItems={["project:local-folder"]}
       />,
@@ -169,7 +140,6 @@ describe("WorkspaceTree local folders", () => {
       <WorkspaceTree
         localFolderGroupLabel="Local Folders"
         projects={[]}
-        nodes={[{ id: "node-1", name: "Node 1" }]}
         workspaces={folderWorkspaces}
         expandedItems={["project:local-folder"]}
         onExpandedItemsChange={onExpandedItemsChange}
@@ -188,7 +158,6 @@ describe("WorkspaceTree local folders", () => {
       <WorkspaceTree
         localFolderGroupLabel="Local Folders"
         projects={[]}
-        nodes={[{ id: "node-1", name: "Node 1" }]}
         workspaces={folderWorkspaces}
         expandedItems={["project:local-folder"]}
         onExpandedItemsChange={onExpandedItemsChange}
@@ -208,7 +177,6 @@ describe("WorkspaceTree local folders", () => {
       <WorkspaceTree
         localFolderGroupLabel="Local Folders"
         projects={[]}
-        nodes={[{ id: "node-1", name: "Node 1" }]}
         workspaces={folderWorkspaces}
         expandedItems={["project:local-folder"]}
         onExpandedItemsChange={onExpandedItemsChange}
@@ -229,7 +197,6 @@ describe("WorkspaceTree local folders", () => {
       <WorkspaceTree
         localFolderGroupLabel="Local Folders"
         projects={[]}
-        nodes={[{ id: "node-1", name: "Node 1" }]}
         workspaces={folderWorkspaces}
         expandedItems={["project:local-folder"]}
         onSelectWorkspace={onSelectWorkspace}
@@ -238,6 +205,6 @@ describe("WorkspaceTree local folders", () => {
 
     fireEvent.click(screen.getByTestId("workspace-row-folder-1"));
 
-    expect(onSelectWorkspace).toHaveBeenCalledWith("folder-1", "local-folder", "node-1");
+    expect(onSelectWorkspace).toHaveBeenCalledWith("folder-1", "local-folder");
   });
 });

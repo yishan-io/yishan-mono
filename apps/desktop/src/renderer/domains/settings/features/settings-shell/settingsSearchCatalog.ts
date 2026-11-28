@@ -3,7 +3,6 @@ import {
   BiBell,
   BiChip,
   type BiCog,
-  BiDesktop,
   BiDownload,
   BiGitBranch,
   BiGroup,
@@ -29,7 +28,6 @@ import {
   LOCAL_TAGS_SEARCH_ITEMS,
   MEMBERS_SEARCH_ITEMS,
   MEMORY_SEARCH_ITEMS,
-  NODES_SEARCH_ITEMS,
   NOTIFICATION_SEARCH_ITEMS,
   PROVIDERS_SEARCH_ITEMS,
   SERVICE_TOKEN_SEARCH_ITEMS,
@@ -48,7 +46,6 @@ export type SettingsTab =
   | "localTags"
   | "members"
   | "memory"
-  | "nodes"
   | "notifications"
   | "providers"
   | "serviceTokens"
@@ -95,7 +92,6 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
     titleKey: "settings.sections.organization",
     items: [
       { tab: "members", labelKey: "settings.items.members", icon: BiGroup },
-      { tab: "nodes", labelKey: "settings.items.nodes", icon: BiDesktop },
       { tab: "serviceTokens", labelKey: "settings.items.serviceTokens", icon: BiKey },
     ],
   },
@@ -138,7 +134,6 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...SKILLS_SEARCH_ITEMS,
   ...CUSTOMIZE_SEARCH_ITEMS,
   ...MEMBERS_SEARCH_ITEMS,
-  ...NODES_SEARCH_ITEMS,
   ...KEYBINDINGS_SEARCH_ITEMS,
   ...DAEMON_SEARCH_ITEMS,
   ...MEMORY_SEARCH_ITEMS,

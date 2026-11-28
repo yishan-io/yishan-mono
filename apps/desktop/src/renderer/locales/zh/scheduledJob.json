@@ -40,7 +40,6 @@
         "name": "\u540d\u79f0",
         "status": "\u72b6\u6001",
         "project": "\u9879\u76ee",
-        "node": "\u8282\u70b9",
         "cronExpression": "\u8ba1\u5212",
         "timezone": "\u65f6\u533a",
         "nextRunAt": "\u4e0b\u6b21\u8fd0\u884c",
@@ -101,7 +100,6 @@
         "sunday": "\u5468\u65e5"
       },
       "project": "\u9879\u76ee",
-      "node": "\u8282\u70b9",
       "cronExpression": "\u8ba1\u5212\uff08Cron\uff09",
       "cronExpressionPlaceholder": "0 9 * * 1-5",
       "timezone": "\u65f6\u533a",

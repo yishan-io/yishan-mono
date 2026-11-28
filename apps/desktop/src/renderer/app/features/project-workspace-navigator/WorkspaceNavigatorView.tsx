@@ -43,7 +43,6 @@ import { useWorkspaceNavigatorTreeHandlers } from "./useWorkspaceNavigatorTreeHa
 import { WorkspaceTree } from "./workspace-tree";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
 import type { WorkspaceTreeRow } from "./workspace-tree/types";
-import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderIds } from "./workspaceNavigatorOrder";
 
 /**
  * Cross-Domain workspace navigator: renders project rows and nested workspace
@@ -122,34 +121,25 @@ export function WorkspaceNavigatorView() {
 
   const {
     projectOrderIds,
-    nodeOrderByParentId,
     workspaceOrderByParentId,
     foldedProjectIds,
-    foldedNodeKeys,
     setProjectOrderIds,
-    setNodeOrderByParentId,
     setWorkspaceOrderByParentId,
     setFoldedProjectIds,
-    setFoldedNodeKeys,
     toggleProjectFold,
-    workspaceListHierarchyMode,
   } = useWorkspaceNavigatorFoldState();
 
   const {
     filteredProjects,
     treeProjects,
-    treeNodes,
     treeWorkspaces,
     expandedTreeItems,
     displayWorkspaceIdByProjectId,
     workspaceByProjectId,
   } = useWorkspaceNavigatorTreeData({
     projectOrderIds,
-    nodeOrderByParentId,
     workspaceOrderByParentId,
     foldedProjectIds,
-    foldedNodeKeys,
-    workspaceListHierarchyMode,
   });
 
   const [isAppFocused, setIsAppFocused] = useState(() => document.hasFocus());
@@ -347,17 +337,12 @@ export function WorkspaceNavigatorView() {
     [workspaceContextMenu],
   );
   const treeHandlers = useWorkspaceNavigatorTreeHandlers({
-    workspaceListHierarchyMode,
     treeWorkspaces,
     filteredProjects,
     projectOrderIds,
-    nodeOrderByParentId,
     workspaceOrderByParentId,
-    foldedProjectIds,
     setFoldedProjectIds,
-    setFoldedNodeKeys,
     setProjectOrderIds,
-    setNodeOrderByParentId,
     setWorkspaceOrderByParentId,
     activateProject,
     activateWorkspace,
@@ -380,11 +365,9 @@ export function WorkspaceNavigatorView() {
       <Box data-testid="repo-workspace-list" sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
         <WorkspaceTree
           projects={treeProjects}
-          nodes={treeNodes}
           workspaces={treeWorkspaces}
           selectedProjectId={selectedProjectId}
           selectedWorkspaceId={selectedWorkspaceId}
-          hierarchyMode={workspaceListHierarchyMode}
           expandedItems={expandedTreeItems}
           onExpandedItemsChange={treeHandlers.onExpandedItemsChange}
           deleteWorkspaceLabel={t("workspace.actions.delete")}

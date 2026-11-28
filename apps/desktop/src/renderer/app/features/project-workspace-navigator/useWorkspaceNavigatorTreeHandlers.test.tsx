@@ -8,9 +8,7 @@ import { useWorkspaceNavigatorTreeHandlers } from "./useWorkspaceNavigatorTreeHa
 function makeSetters() {
   const setters = {
     setFoldedProjectIds: vi.fn(),
-    setFoldedNodeKeys: vi.fn(),
     setProjectOrderIds: vi.fn(),
-    setNodeOrderByParentId: vi.fn(),
     setWorkspaceOrderByParentId: vi.fn(),
     activateProject: vi.fn(),
     activateWorkspace: vi.fn(),
@@ -32,31 +30,26 @@ function makeSetters() {
 
 function buildInput(overrides: Partial<Parameters<typeof useWorkspaceNavigatorTreeHandlers>[0]> = {}) {
   return {
-    workspaceListHierarchyMode: "by_project" as const,
     treeWorkspaces: [],
     filteredProjects: [],
     projectOrderIds: [],
-    nodeOrderByParentId: {},
     workspaceOrderByParentId: {},
     foldedProjectIds: [] as string[],
-    foldedNodeKeys: [] as string[],
     ...makeSetters(),
     ...overrides,
   };
 }
 
 describe("useWorkspaceNavigatorTreeHandlers onExpandedItemsChange", () => {
-  it("by_project: folding the Local Folders group persists its sentinel id in foldedProjectIds", () => {
+  it("folding the Local Folders group persists its sentinel id in foldedProjectIds", () => {
     const setters = makeSetters();
     const { result } = renderHook(() =>
       useWorkspaceNavigatorTreeHandlers(
         buildInput({
-          workspaceListHierarchyMode: "by_project",
           treeWorkspaces: [
             { id: "folder-1", projectId: LOCAL_FOLDER_PROJECT_ID, nodeId: "node-1", isLocalFolder: true },
           ],
           filteredProjects: [{ id: "repo-1" }],
-          foldedProjectIds: [],
           ...setters,
         }),
       ),
@@ -74,17 +67,15 @@ describe("useWorkspaceNavigatorTreeHandlers onExpandedItemsChange", () => {
     expect(updateFn).toContain(LOCAL_FOLDER_PROJECT_ID);
   });
 
-  it("by_project: expanding the Local Folders group keeps it out of foldedProjectIds", () => {
+  it("expanding the Local Folders group keeps it out of foldedProjectIds", () => {
     const setters = makeSetters();
     const { result } = renderHook(() =>
       useWorkspaceNavigatorTreeHandlers(
         buildInput({
-          workspaceListHierarchyMode: "by_project",
           treeWorkspaces: [
             { id: "folder-1", projectId: LOCAL_FOLDER_PROJECT_ID, nodeId: "node-1", isLocalFolder: true },
           ],
           filteredProjects: [{ id: "repo-1" }],
-          foldedProjectIds: [LOCAL_FOLDER_PROJECT_ID],
           ...setters,
         }),
       ),
@@ -97,41 +88,9 @@ describe("useWorkspaceNavigatorTreeHandlers onExpandedItemsChange", () => {
     const updateFn = setters.setFoldedProjectIds.mock.calls[0]?.[0] as string[] | undefined;
     expect(updateFn).not.toContain(LOCAL_FOLDER_PROJECT_ID);
   });
-
-  it("by_node: the per-node Local Folders group key is folded when its group row is collapsed", () => {
-    const setters = makeSetters();
-    const { result } = renderHook(() =>
-      useWorkspaceNavigatorTreeHandlers(
-        buildInput({
-          workspaceListHierarchyMode: "by_node",
-          treeWorkspaces: [
-            { id: "folder-1", projectId: LOCAL_FOLDER_PROJECT_ID, nodeId: "solo-node", isLocalFolder: true },
-          ],
-          foldedProjectIds: [],
-          ...setters,
-        }),
-      ),
-    );
-
-    act(() => {
-      // Node expanded, but the per-node Local Folders group row is collapsed.
-      result.current.onExpandedItemsChange(["node:solo-node"]);
-    });
-
-    // The group folds via its node-scoped key in foldedNodeKeys; the node
-    // itself stays expanded so it is not in foldedProjectIds.
-    const foldedProjectUpdate = setters.setFoldedProjectIds.mock.calls[0]?.[0] as string[] | undefined;
-    expect(foldedProjectUpdate).not.toContain("solo-node");
-    const foldedNodeUpdater = setters.setFoldedNodeKeys.mock.calls[0]?.[0] as (
-      current: string[],
-    ) => string[] | undefined;
-    expect(foldedNodeUpdater).toBeTypeOf("function");
-    const foldedNodeUpdate = foldedNodeUpdater?.([]);
-    expect(foldedNodeUpdate).toContain(`solo-node:${LOCAL_FOLDER_PROJECT_ID}`);
-  });
 });
 
-describe.each(["by_project", "by_node"] as const)("%s full sibling drag order", (mode) => {
+describe("full sibling drag order", () => {
   it.each(["repo-1", LOCAL_FOLDER_PROJECT_ID])(
     "persists the entire %s/node group, not just dragged rows",
     (projectId) => {
@@ -139,7 +98,6 @@ describe.each(["by_project", "by_node"] as const)("%s full sibling drag order", 
       const { result } = renderHook(() =>
         useWorkspaceNavigatorTreeHandlers(
           buildInput({
-            workspaceListHierarchyMode: mode,
             treeWorkspaces: ["c", "a", "b", "d"].map((id) => ({ id, projectId, nodeId: "node-1" })),
             workspaceOrderByParentId: order,
             setWorkspaceOrderByParentId: (updater) => {
@@ -153,7 +111,6 @@ describe.each(["by_project", "by_node"] as const)("%s full sibling drag order", 
           draggedRowId: "workspace:d",
           targetRowId: "workspace:a",
           rowKind: "workspace",
-          parentId: null,
           position: "before",
         }),
       );

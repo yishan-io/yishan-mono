@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  ButtonGroup,
   Checkbox,
   IconButton,
   List,
@@ -37,7 +36,6 @@ export function ProjectFilterPopoverView() {
   const displayRepoIds = projectStore((state) => state.displayProjectIds) ?? [];
   const [repoFilterAnchor, setRepoFilterAnchor] = useState<HTMLElement | null>(null);
   const [repoQuickSearch, setRepoQuickSearch] = useState("");
-  const workspaceListHierarchyMode = projectStore((state) => state.workspaceListHierarchyMode);
 
   const handleSelectAll = () => {
     setDisplayRepoIds(repos.map((repo) => repo.id));
@@ -86,32 +84,6 @@ export function ProjectFilterPopoverView() {
         }}
       >
         <Box sx={{ width: 240, p: 1 }}>
-          <Typography
-            variant="caption"
-            sx={{
-              color: "text.secondary",
-              display: "block",
-              mb: 0.5,
-            }}
-          >
-            {t("project.pin.sections.hirarchy")}
-          </Typography>
-          <ButtonGroup size="small" fullWidth sx={{ mb: 1 }}>
-            <Button
-              variant={workspaceListHierarchyMode === "by_project" ? "contained" : "outlined"}
-              sx={{ fontSize: 11 }}
-              onClick={() => projectStore.getState().setWorkspaceListHierarchyMode("by_project")}
-            >
-              {t("project.pin.hierarchy.byProject")}
-            </Button>
-            <Button
-              variant={workspaceListHierarchyMode === "by_node" ? "contained" : "outlined"}
-              sx={{ fontSize: 11 }}
-              onClick={() => projectStore.getState().setWorkspaceListHierarchyMode("by_node")}
-            >
-              {t("project.pin.hierarchy.byNode")}
-            </Button>
-          </ButtonGroup>
           <Stack
             direction="row"
             sx={{

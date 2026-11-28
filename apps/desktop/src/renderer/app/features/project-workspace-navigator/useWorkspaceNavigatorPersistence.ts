@@ -8,7 +8,6 @@ import {
   FETCH_RETRY_BASE_MS,
   FETCH_RETRY_MAX_MS,
   type FoldState,
-  type HierarchyMode,
   type OrderState,
   PUSH_DEBOUNCE_MS,
   buildPushPayload,
@@ -19,11 +18,11 @@ import {
 
 type ProjectListPersistenceInput = {
   organizationId: string;
-  orderStateByMode: Record<HierarchyMode, OrderState>;
-  foldStateByMode: Record<HierarchyMode, FoldState>;
+  orderState: OrderState;
+  foldState: FoldState;
   workspaceOrderByParentId: Record<string, string[]>;
-  setFoldStateByMode: React.Dispatch<React.SetStateAction<Record<HierarchyMode, FoldState>>>;
-  setOrderStateByMode: React.Dispatch<React.SetStateAction<Record<HierarchyMode, OrderState>>>;
+  setFoldState: React.Dispatch<React.SetStateAction<FoldState>>;
+  setOrderState: React.Dispatch<React.SetStateAction<OrderState>>;
   setWorkspaceOrderByParentId: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
 };
 
@@ -51,11 +50,11 @@ type PendingPush = {
 export function useWorkspaceNavigatorPersistence(input: ProjectListPersistenceInput): void {
   const {
     organizationId,
-    orderStateByMode,
-    foldStateByMode,
+    orderState,
+    foldState,
     workspaceOrderByParentId,
-    setFoldStateByMode,
-    setOrderStateByMode,
+    setFoldState,
+    setOrderState,
     setWorkspaceOrderByParentId,
   } = input;
 
@@ -75,14 +74,8 @@ export function useWorkspaceNavigatorPersistence(input: ProjectListPersistenceIn
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
-    setFoldStateByMode({
-      by_project: { ...EMPTY_FOLD_STATE },
-      by_node: { ...EMPTY_FOLD_STATE },
-    });
-    setOrderStateByMode({
-      by_project: { ...EMPTY_ORDER_STATE, nodeOrderByParentId: {} },
-      by_node: { ...EMPTY_ORDER_STATE, nodeOrderByParentId: {} },
-    });
+    setFoldState({ ...EMPTY_FOLD_STATE });
+    setOrderState({ ...EMPTY_ORDER_STATE });
     setWorkspaceOrderByParentId({});
     if (!org) {
       return;
@@ -96,7 +89,7 @@ export function useWorkspaceNavigatorPersistence(input: ProjectListPersistenceIn
         if (cancelled) {
           return;
         }
-        seedFromPreferences(preferences, setFoldStateByMode, setOrderStateByMode, setWorkspaceOrderByParentId);
+        seedFromPreferences(preferences, setFoldState, setOrderState, setWorkspaceOrderByParentId);
         lastPushedSignatureRef.current = buildSignatureFromPreferences(preferences);
         hydratedRef.current = true;
       } catch (error) {
@@ -121,18 +114,18 @@ export function useWorkspaceNavigatorPersistence(input: ProjectListPersistenceIn
         retryTimerRef.current = null;
       }
     };
-  }, [organizationId, setFoldStateByMode, setOrderStateByMode, setWorkspaceOrderByParentId]);
+  }, [organizationId, setFoldState, setOrderState, setWorkspaceOrderByParentId]);
 
   // Debounced push of order/fold state to the daemon after hydration.
   useEffect(() => {
     if (!hydratedRef.current || !organizationId.trim()) {
       return;
     }
-    const signature = buildSignatureFromState(orderStateByMode, foldStateByMode, workspaceOrderByParentId);
+    const signature = buildSignatureFromState(orderState, foldState, workspaceOrderByParentId);
     if (signature === lastPushedSignatureRef.current) {
       return;
     }
-    const preferences = buildPushPayload(orderStateByMode, foldStateByMode, workspaceOrderByParentId);
+    const preferences = buildPushPayload(orderState, foldState, workspaceOrderByParentId);
     pendingPushRef.current = { organizationId: organizationId.trim(), preferences };
     const timer = setTimeout(() => {
       lastPushedSignatureRef.current = signature;
@@ -140,7 +133,7 @@ export function useWorkspaceNavigatorPersistence(input: ProjectListPersistenceIn
       void pushPreferences(organizationId.trim(), preferences);
     }, PUSH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [foldStateByMode, orderStateByMode, organizationId, workspaceOrderByParentId]);
+  }, [foldState, orderState, organizationId, workspaceOrderByParentId]);
 
   // Flush a pending debounced push on unmount / beforeunload so the final
   // reorder survives an immediate app restart.

@@ -40,7 +40,6 @@
         "name": "Name",
         "status": "Status",
         "project": "Project",
-        "node": "Node",
         "cronExpression": "Schedule",
         "timezone": "Timezone",
         "nextRunAt": "Next run",
@@ -101,7 +100,6 @@
         "sunday": "Sunday"
       },
       "project": "Project",
-      "node": "Node",
       "cronExpression": "Schedule (cron)",
       "cronExpressionPlaceholder": "0 9 * * 1-5",
       "timezone": "Timezone",

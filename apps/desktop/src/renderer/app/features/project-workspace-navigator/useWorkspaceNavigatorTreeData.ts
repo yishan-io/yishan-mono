@@ -1,23 +1,19 @@
 import { resolveWorkspaceNotificationTone } from "@renderer/app/selectors";
 
-import { listOrgNodes } from "@renderer/domains/node";
 import { filterVisibleProjects, projectStore, supportsGitFeatures } from "@renderer/domains/project";
 
 import { chatStore } from "@renderer/domains/agent";
 import { gitProjectionStore } from "@renderer/domains/git";
-import { sessionStore } from "@renderer/domains/session";
 import type { WorkspaceItem } from "@renderer/domains/workspace";
 import { workspaceStore } from "@renderer/domains/workspace";
 import { resolveWorkspaceListDisplayName } from "@renderer/domains/workspace";
 import { LOCAL_FOLDER_PROJECT_ID } from "@shared/workspace/localFolderProjectId";
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import type { WorkspaceTreeWorkspace } from "./workspace-tree";
-import type { WorkspaceTreeNode, WorkspaceTreeProject } from "./workspace-tree/types";
+import type { WorkspaceTreeProject } from "./workspace-tree/types";
 import { createNavigatorOrderComparator } from "./workspaceNavigatorOrder";
 
 type TreeProject = WorkspaceTreeProject;
-type TreeNode = WorkspaceTreeNode;
 
 export type ProjectListTreeDataResult = {
   filteredProjects: Array<{
@@ -30,7 +26,6 @@ export type ProjectListTreeDataResult = {
     worktreePath?: string | null;
   }>;
   treeProjects: TreeProject[];
-  treeNodes: TreeNode[];
   treeWorkspaces: WorkspaceTreeWorkspace[];
   expandedTreeItems: string[];
   displayWorkspaceIdByProjectId: Record<string, string>;
@@ -38,25 +33,15 @@ export type ProjectListTreeDataResult = {
 };
 
 /**
- * Derives the tree data structures (projects, nodes, workspaces, expanded items)
+ * Derives the tree data structures (projects, workspaces, expanded items)
  * consumed by the WorkspaceTree component. All derivations are memoized.
  */
 export function useWorkspaceNavigatorTreeData(input: {
   projectOrderIds: string[];
-  nodeOrderByParentId: Record<string, string[]>;
   workspaceOrderByParentId: Record<string, string[]>;
   foldedProjectIds: string[];
-  foldedNodeKeys: string[];
-  workspaceListHierarchyMode: "by_project" | "by_node";
 }): ProjectListTreeDataResult {
-  const {
-    projectOrderIds,
-    nodeOrderByParentId,
-    workspaceOrderByParentId,
-    foldedProjectIds,
-    foldedNodeKeys,
-    workspaceListHierarchyMode,
-  } = input;
+  const { projectOrderIds, workspaceOrderByParentId, foldedProjectIds } = input;
 
   const projects = projectStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces) ?? [];
@@ -64,13 +49,6 @@ export function useWorkspaceNavigatorTreeData(input: {
   const gitChangeTotalsByWorkspaceId = gitProjectionStore((state) => state.gitChangeTotalsByWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
-  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
-
-  const nodesQuery = useQuery({
-    queryKey: ["org-nodes", selectedOrganizationId],
-    queryFn: () => listOrgNodes(selectedOrganizationId as string),
-    enabled: Boolean(selectedOrganizationId),
-  });
 
   const workspaceByProjectId = workspaces.reduce<Record<string, (typeof workspaces)[number][]>>((acc, workspace) => {
     const existing = acc[workspace.repoId];
@@ -92,14 +70,6 @@ export function useWorkspaceNavigatorTreeData(input: {
     icon: project.icon,
     color: project.color,
     supportsGitFeatures: supportsGitFeatures(project.sourceType),
-  }));
-
-  const treeNodes = (nodesQuery.data ?? []).map((node) => ({
-    id: node.id,
-    name: node.name,
-    kind: node.kind,
-    scope: node.scope,
-    isOnline: node.isOnline,
   }));
 
   const treeWorkspaces: WorkspaceTreeWorkspace[] = useMemo(() => {
@@ -142,8 +112,7 @@ export function useWorkspaceNavigatorTreeData(input: {
     // Non-git local folder workspaces are synthetic rows keyed by the sentinel
     // project id. They never map to a real project, so they are rendered under
     // a dedicated group row (useVisibleWorkspaceTree) and mirrored as children
-    // of that group. They are ordered before real projects only by node (folders
-    // are node-scoped), matching how managed workspaces behave under the group.
+    // of that group.
     const folderWorkspaces = workspaces.filter(
       (workspace) => workspace.projectId === LOCAL_FOLDER_PROJECT_ID || workspace.kind === "folder",
     );
@@ -162,7 +131,6 @@ export function useWorkspaceNavigatorTreeData(input: {
 
     const workspaceById = new Map(workspaces.map((workspace) => [workspace.id, workspace]));
     const projectById = new Map(filteredProjects.map((project) => [project.id, project]));
-    const nodeById = new Map((nodesQuery.data ?? []).map((node) => [node.id, node]));
     const comparatorByParent = new Map<string, ReturnType<typeof createNavigatorOrderComparator>>();
     const getComparator = (parentKey: string, order: string[]) => {
       let comparator = comparatorByParent.get(parentKey);
@@ -173,36 +141,17 @@ export function useWorkspaceNavigatorTreeData(input: {
       return comparator;
     };
     return rows.sort((a, b) => {
-      if (workspaceListHierarchyMode === "by_node") {
-        if (a.nodeId !== b.nodeId) {
-          return getComparator("root:node", nodeOrderByParentId["root:node"] ?? [])(
-            nodeById.get(a.nodeId) ?? { id: a.nodeId },
-            nodeById.get(b.nodeId) ?? { id: b.nodeId },
-          );
-        }
-        if (a.projectId !== b.projectId) {
-          const parentKey = `node:${a.nodeId}`;
-          return getComparator(parentKey, nodeOrderByParentId[parentKey] ?? [])(
-            projectById.get(a.projectId) ?? { id: a.projectId },
-            projectById.get(b.projectId) ?? { id: b.projectId },
-          );
-        }
-      } else {
-        if (a.projectId !== b.projectId) {
-          return getComparator("root:project", projectOrderIds)(
-            projectById.get(a.projectId) ?? { id: a.projectId },
-            projectById.get(b.projectId) ?? { id: b.projectId },
-          );
-        }
-        if (a.nodeId !== b.nodeId) {
-          const parentKey = `project:${a.projectId}`;
-          return getComparator(parentKey, nodeOrderByParentId[parentKey] ?? [])(
-            nodeById.get(a.nodeId) ?? { id: a.nodeId },
-            nodeById.get(b.nodeId) ?? { id: b.nodeId },
-          );
-        }
+      if (a.projectId !== b.projectId) {
+        return getComparator("root:project", projectOrderIds)(
+          projectById.get(a.projectId) ?? { id: a.projectId },
+          projectById.get(b.projectId) ?? { id: b.projectId },
+        );
       }
-      // The same project/node bucket is used in both hierarchy modes, including local folders.
+      if (a.nodeId !== b.nodeId) {
+        return a.nodeId < b.nodeId ? -1 : 1;
+      }
+      // Workspace order is persisted per `${projectId}:${nodeId}` bucket, where
+      // nodeId is the current daemon's node.
       const parentKey = `${a.projectId}:${a.nodeId}`;
       return getComparator(parentKey, workspaceOrderByParentId[parentKey] ?? [])(
         workspaceById.get(a.id) ?? a,
@@ -212,11 +161,8 @@ export function useWorkspaceNavigatorTreeData(input: {
   }, [
     filteredProjects,
     gitChangeTotalsByWorkspaceId,
-    nodeOrderByParentId,
-    nodesQuery.data,
     projectOrderIds,
     workspaceOrderByParentId,
-    workspaceListHierarchyMode,
     workspaceAgentStatusByWorkspaceId,
     workspaceByProjectId,
     workspaceUnreadToneByWorkspaceId,
@@ -229,77 +175,21 @@ export function useWorkspaceNavigatorTreeData(input: {
 
   const expandedTreeItems = useMemo(() => {
     const items: string[] = [];
-    const foldedTopSet = new Set(foldedProjectIds);
-    const foldedChildSet = new Set(foldedNodeKeys);
-    // Folder workspaces are synthetic rows; they never drive the fold state of
-    // real projects/nodes. In by_project mode they render under the synthetic
-    // "Local Folders" group; in by_node mode they render under a per-node
-    // "Local Folders" group row (folded via that group's own key).
-    const nonFolderWorkspaces = treeWorkspaces.filter((workspace) => !workspace.isLocalFolder);
-    const folderNodeIds = Array.from(
-      new Set(treeWorkspaces.filter((workspace) => workspace.isLocalFolder).map((workspace) => workspace.nodeId)),
-    );
-
-    if (workspaceListHierarchyMode === "by_node") {
-      // Include folder workspaces' node ids so a node that hosts only folder
-      // workspaces still renders (and can be folded) as a node row.
-      const nodeIds = Array.from(
-        new Set([...nonFolderWorkspaces.map((workspace) => workspace.nodeId), ...folderNodeIds]),
-      );
-      for (const nodeId of nodeIds) {
-        if (foldedTopSet.has(nodeId)) {
-          continue;
-        }
-
-        items.push(`node:${nodeId}`);
-        const projectIds = Array.from(
-          new Set(
-            nonFolderWorkspaces
-              .filter((workspace) => workspace.nodeId === nodeId)
-              .map((workspace) => workspace.projectId),
-          ),
-        );
-        for (const projectId of projectIds) {
-          const projectKey = `${nodeId}:${projectId}`;
-          if (!foldedChildSet.has(projectKey)) {
-            items.push(`project:${projectKey}`);
-          }
-        }
-
-        // The per-node "Local Folders" group row: expanded by default, folds
-        // via its node-scoped key in foldedNodeKeys.
-        const folderGroupKey = `${nodeId}:${LOCAL_FOLDER_PROJECT_ID}`;
-        if (folderNodeIds.includes(nodeId) && !foldedChildSet.has(folderGroupKey)) {
-          items.push(`project:${folderGroupKey}`);
-        }
-      }
-      return items;
-    }
+    const foldedSet = new Set(foldedProjectIds);
 
     // The synthetic "Local Folders" group is expanded by default and folds via
     // the sentinel project id in foldedProjectIds.
-    if (!foldedTopSet.has(LOCAL_FOLDER_PROJECT_ID)) {
+    if (!foldedSet.has(LOCAL_FOLDER_PROJECT_ID)) {
       items.push(`project:${LOCAL_FOLDER_PROJECT_ID}`);
     }
 
     for (const project of filteredProjects) {
-      if (foldedTopSet.has(project.id)) {
-        continue;
-      }
-
-      items.push(`project:${project.id}`);
-      const projectNodeIds = new Set(
-        nonFolderWorkspaces.filter((workspace) => workspace.projectId === project.id).map((w) => w.nodeId),
-      );
-      for (const nodeId of projectNodeIds) {
-        const nodeKey = `${project.id}:${nodeId}`;
-        if (!foldedChildSet.has(nodeKey)) {
-          items.push(`node:${nodeKey}`);
-        }
+      if (!foldedSet.has(project.id)) {
+        items.push(`project:${project.id}`);
       }
     }
     return items;
-  }, [filteredProjects, foldedNodeKeys, foldedProjectIds, treeWorkspaces, workspaceListHierarchyMode]);
+  }, [filteredProjects, foldedProjectIds]);
 
   const displayWorkspaceIdByProjectId = useMemo(() => {
     const displayWorkspaceIdByProjectIdMap: Record<string, string> = {};
@@ -326,7 +216,6 @@ export function useWorkspaceNavigatorTreeData(input: {
   return {
     filteredProjects,
     treeProjects,
-    treeNodes,
     treeWorkspaces,
     expandedTreeItems,
     displayWorkspaceIdByProjectId,

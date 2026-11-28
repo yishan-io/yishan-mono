@@ -6,15 +6,12 @@ import { useWorkspaceNavigatorFoldState } from "./useWorkspaceNavigatorFoldState
 
 const EMPTY_MODE = {
   projectOrderIds: [] as string[],
-  nodeOrderByParentId: {} as Record<string, string[]>,
   foldedProjectIds: [] as string[],
-  foldedNodeKeys: [] as string[],
 };
 
 const EMPTY_PREFERENCES = {
   version: 1,
   by_project: { ...EMPTY_MODE },
-  by_node: { ...EMPTY_MODE },
   workspaceOrderByParentId: {} as Record<string, string[]>,
 };
 
@@ -24,7 +21,6 @@ const mocked = vi.hoisted(() => {
   const sessionState = { selectedOrganizationId: "org-1" };
   const workspaceState = {
     displayProjectIds: ["project-1", "project-2"] as string[],
-    workspaceListHierarchyMode: "by_project" as "by_project" | "by_node",
   };
   return { getPreference, setPreference, sessionState, workspaceState };
 });
@@ -39,22 +35,15 @@ vi.mock("../../../domains/project/state/projectStore", () => {
   const projectStore = (
     selector: (state: {
       projects: unknown[];
-      workspaceListHierarchyMode: string;
       displayProjectIds: string[];
     }) => unknown,
   ) =>
     selector({
       projects: (mocked.workspaceState as { projects?: unknown[] }).projects ?? [],
-      workspaceListHierarchyMode:
-        (mocked.workspaceState as { workspaceListHierarchyMode?: string }).workspaceListHierarchyMode ?? "by_project",
       displayProjectIds: (mocked.workspaceState as { displayProjectIds?: string[] }).displayProjectIds ?? [],
     });
-  (
-    projectStore as unknown as { getState: () => { projects: unknown[]; workspaceListHierarchyMode: string } }
-  ).getState = () => ({
+  (projectStore as unknown as { getState: () => { projects: unknown[] } }).getState = () => ({
     projects: (mocked.workspaceState as { projects?: unknown[] }).projects ?? [],
-    workspaceListHierarchyMode:
-      (mocked.workspaceState as { workspaceListHierarchyMode?: string }).workspaceListHierarchyMode ?? "by_project",
   });
   return { projectStore };
 });
@@ -88,7 +77,6 @@ describe("useWorkspaceNavigatorFoldState", () => {
     vi.useFakeTimers();
     mocked.sessionState.selectedOrganizationId = "org-1";
     mocked.workspaceState.displayProjectIds = [];
-    mocked.workspaceState.workspaceListHierarchyMode = "by_project";
     mocked.getPreference.mockResolvedValue(EMPTY_PREFERENCES);
     mocked.setPreference.mockResolvedValue({ ok: true });
   });
@@ -103,11 +91,8 @@ describe("useWorkspaceNavigatorFoldState", () => {
       version: 1,
       by_project: {
         projectOrderIds: ["project-2", "project-1"],
-        nodeOrderByParentId: { "project:project-1": ["node-a"] },
         foldedProjectIds: ["project-2"],
-        foldedNodeKeys: [],
       },
-      by_node: { ...EMPTY_MODE },
       workspaceOrderByParentId: { "project-1:node-a": ["workspace-2", "workspace-1"] },
     });
 
@@ -118,32 +103,7 @@ describe("useWorkspaceNavigatorFoldState", () => {
 
     expect(mocked.getPreference).toHaveBeenCalledWith({ scope: "org-1", key: "project.navigator" });
     expect(result.current.projectOrderIds).toEqual(["project-2", "project-1"]);
-    expect(result.current.nodeOrderByParentId["project:project-1"]).toEqual(["node-a"]);
     expect(result.current.foldedProjectIds).toEqual(["project-2"]);
-    expect(result.current.workspaceOrderByParentId["project-1:node-a"]).toEqual(["workspace-2", "workspace-1"]);
-  });
-
-  it("keeps workspace order when switching between hierarchy modes", async () => {
-    const { result } = renderHook(() => useWorkspaceNavigatorFoldState());
-    await act(async () => {
-      await vi.runAllTimersAsync();
-    });
-
-    // Reorder a workspace group while in by_project mode.
-    act(() => {
-      result.current.setWorkspaceOrderByParentId((current) => ({
-        ...current,
-        "project-1:node-a": ["workspace-2", "workspace-1"],
-      }));
-    });
-    expect(result.current.workspaceOrderByParentId["project-1:node-a"]).toEqual(["workspace-2", "workspace-1"]);
-
-    // Switch to by_node mode: the same workspace order must be visible.
-    mocked.workspaceState.workspaceListHierarchyMode = "by_node";
-    act(() => {
-      result.current.setWorkspaceOrderByParentId((current) => ({ ...current }));
-    });
-    expect(result.current.workspaceListHierarchyMode).toBe("by_node");
     expect(result.current.workspaceOrderByParentId["project-1:node-a"]).toEqual(["workspace-2", "workspace-1"]);
   });
 
@@ -152,11 +112,8 @@ describe("useWorkspaceNavigatorFoldState", () => {
       version: 1,
       by_project: {
         projectOrderIds: ["project-2", "project-1"],
-        nodeOrderByParentId: {},
         foldedProjectIds: [],
-        foldedNodeKeys: [],
       },
-      by_node: { ...EMPTY_MODE },
       workspaceOrderByParentId: {},
     });
 
@@ -189,7 +146,6 @@ describe("useWorkspaceNavigatorFoldState", () => {
       key: "project.navigator",
       value: expect.objectContaining({
         by_project: expect.objectContaining({ projectOrderIds: ["project-2", "project-1"] }),
-        by_node: expect.objectContaining({ projectOrderIds: [] }),
       }),
     });
   });
@@ -199,11 +155,8 @@ describe("useWorkspaceNavigatorFoldState", () => {
       version: 1,
       by_project: {
         projectOrderIds: ["project-1"],
-        nodeOrderByParentId: {},
         foldedProjectIds: [],
-        foldedNodeKeys: [],
       },
-      by_node: { ...EMPTY_MODE },
       workspaceOrderByParentId: {},
     });
 

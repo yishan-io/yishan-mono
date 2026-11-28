@@ -4,7 +4,6 @@ import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RestApiError } from "../../api/restClient";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
-import { listOrgNodes } from "../../domains/node/commands/nodeCommands";
 import { getSessionBootstrapData } from "../../domains/session/commands/sessionCommands";
 import { sessionStore } from "../../domains/session/state/sessionStore";
 import { rendererQueryClient } from "../../queryClient";
@@ -48,10 +47,6 @@ vi.mock("../../domains/session/commands/sessionCommands", () => ({
   })),
 }));
 
-vi.mock("../../domains/node/commands/nodeCommands", () => ({
-  listOrgNodes: vi.fn(async () => []),
-}));
-
 describe("useSessionBootstrap", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -90,7 +85,6 @@ describe("useSessionBootstrap", () => {
         },
       ],
     });
-    vi.mocked(listOrgNodes).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -141,7 +135,6 @@ describe("useSessionBootstrap", () => {
       selectedOrganizationId: "org-legacy",
     });
     // Cache from the previous account must be dropped on switch.
-    rendererQueryClient.setQueryData(["org-nodes", "org-legacy"], [{ id: "node-legacy" }]);
     rendererQueryClient.setQueryData(["some-query"], { data: "stale" });
 
     const { result } = renderHook(() => useSessionBootstrap());
@@ -150,9 +143,7 @@ describe("useSessionBootstrap", () => {
       expect(result.current.bootstrapReady).toBe(true);
     });
 
-    expect(rendererQueryClient.getQueryData(["org-nodes", "org-legacy"])).toBeUndefined();
     expect(rendererQueryClient.getQueryData(["some-query"])).toBeUndefined();
-    expect(listOrgNodes).not.toHaveBeenCalledWith("org-legacy");
     expect(sessionStore.getState().currentUserId).toBe("user-1");
     expect(sessionStore.getState().currentUser?.id).toBe("user-1");
     // The previous user's org selection is dropped; the new session selects

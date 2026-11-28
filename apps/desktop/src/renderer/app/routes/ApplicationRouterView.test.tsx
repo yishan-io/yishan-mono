@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RestApiError } from "../../api/restClient";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../app/commands/appCommands";
-import { listOrgNodes } from "../../domains/node/commands/nodeCommands";
 import { createOrganization } from "../../domains/organization/commands/orgCommands";
 import { getSessionBootstrapData } from "../../domains/session/commands/sessionCommands";
 import { sessionStore } from "../../domains/session/state/sessionStore";
@@ -60,10 +59,6 @@ vi.mock("../../domains/session/commands/sessionCommands", () => ({
       },
     ],
   })),
-}));
-
-vi.mock("../../domains/node/commands/nodeCommands", () => ({
-  listOrgNodes: vi.fn(async () => []),
 }));
 
 vi.mock("../../domains/organization/commands/orgCommands", () => ({
@@ -179,7 +174,6 @@ describe("ApplicationRouterView", () => {
         },
       ],
     });
-    vi.mocked(listOrgNodes).mockResolvedValue([]);
     vi.mocked(createOrganization).mockResolvedValue({ id: "org-2", name: "New Organization" });
   });
 
@@ -232,7 +226,6 @@ describe("ApplicationRouterView", () => {
 
     expect(await screen.findByText("onboarding.firstOrganization.title")).toBeTruthy();
     expect(screen.queryByTestId("workspace-input")).toBeNull();
-    expect(listOrgNodes).not.toHaveBeenCalled();
   });
 
   it("creates first organization and enters workspace", async () => {

@@ -142,7 +142,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
             </Box>
           }
         >
-          <ScheduledJobDetailFields job={job} orgId={orgId} />
+          <ScheduledJobDetailFields job={job} />
         </SplitPaneLayout>
       </Box>
 

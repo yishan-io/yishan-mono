@@ -19,7 +19,6 @@
       "links": "Links",
       "members": "Members",
       "memory": "Memory",
-      "nodes": "Nodes",
       "notifications": "Notifications",
       "serviceTokens": "Service Tokens",
       "terminal": "Terminal",
@@ -28,52 +27,6 @@
       "customize": "Customize",
       "localTags": "Local Task Tags",
       "tagManagement": "Tag Management"
-    },
-    "nodes": {
-      "title": "Nodes",
-      "description": "Review the organization nodes available to your team and whether they are currently connected.",
-      "loadError": "Failed to load organization nodes.",
-      "empty": "No nodes are available for this organization.",
-      "columns": {
-        "name": "Node Name",
-        "type": "Node Type",
-        "kind": "Kind",
-        "version": "Version",
-        "owner": "Owner",
-        "status": "Status"
-      },
-      "kinds": {
-        "managed": "Managed",
-        "external": "External"
-      },
-      "types": {
-        "private": "Private",
-        "shared": "Shared"
-      },
-      "status": {
-        "online": "Online",
-        "offline": "Offline"
-      },
-      "values": {
-        "unknownOwner": "Unknown",
-        "unknownVersion": "Unknown"
-      },
-      "actions": {
-        "makeShared": "Make shared",
-        "makePrivate": "Make private",
-        "unregister": "Unregister node"
-      },
-      "scopeChangeDialog": {
-        "title": "Change node scope",
-        "toSharedDescription": "Making \"{{name}}\" shared will allow all organization members to use this node. Are you sure?",
-        "toPrivateDescription": "Making \"{{name}}\" private will restrict access to the node owner only. Any workspaces currently using this node may lose access. Are you sure?",
-        "confirm": "Change scope"
-      },
-      "unregisterDialog": {
-        "title": "Unregister node",
-        "description": "Unregistering \"{{name}}\" will remove it from this organization. Any workspaces using this node may lose access. Are you sure?",
-        "confirm": "Unregister"
-      }
     },
     "serviceTokens": {
       "title": "Service Tokens",

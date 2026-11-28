@@ -3,20 +3,17 @@ import { PreferencesClient, preferencesClient, request } from "@renderer/rpc";
 import { asRecord, readOptionalBoolean, readOptionalString } from "@shared/validation/primitiveReaders";
 import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord } from "../api/types";
 
-/** One hierarchy mode's left-pane order/fold state (order hints; missing ids are last). */
+/** Left-pane project order/fold state (order hints; missing ids are last). */
 export type ProjectListModePreference = {
   projectOrderIds: string[];
-  nodeOrderByParentId: Record<string, string[]>;
   foldedProjectIds: string[];
-  foldedNodeKeys: string[];
 };
 
 /** One org's persisted left-pane list state, versioned for forward compatibility. */
 export type ProjectListPreference = {
   version: number;
   by_project: ProjectListModePreference;
-  by_node: ProjectListModePreference;
-  /** Workspace order shared across modes, keyed by `${projectId}:${nodeId}`. */
+  /** Workspace order, keyed by `${projectId}:${nodeId}`. */
   workspaceOrderByParentId: Record<string, string[]>;
 };
 
@@ -104,9 +101,7 @@ function parseProjectListModePreference(value: unknown): ProjectListModePreferen
   const record = asRecord(value);
   return {
     projectOrderIds: toStringArray(record?.projectOrderIds),
-    nodeOrderByParentId: toStringArrayMap(record?.nodeOrderByParentId),
     foldedProjectIds: toStringArray(record?.foldedProjectIds),
-    foldedNodeKeys: toStringArray(record?.foldedNodeKeys),
   };
 }
 
@@ -116,17 +111,12 @@ export function parseProjectListPreference(value: unknown): ProjectListPreferenc
   const record =
     candidate?.version === undefined || candidate.version === 0 || candidate.version === 1 ? candidate : undefined;
   const legacyProject = asRecord(record?.by_project);
-  const legacyNode = asRecord(record?.by_node);
   return {
     version: 1,
     by_project: parseProjectListModePreference(record?.by_project),
-    by_node: parseProjectListModePreference(record?.by_node),
     workspaceOrderByParentId:
       record?.workspaceOrderByParentId == null
-        ? {
-            ...toStringArrayMap(legacyProject?.workspaceOrderByParentId),
-            ...toStringArrayMap(legacyNode?.workspaceOrderByParentId),
-          }
+        ? toStringArrayMap(legacyProject?.workspaceOrderByParentId)
         : toStringArrayMap(record.workspaceOrderByParentId),
   };
 }

@@ -33,16 +33,14 @@ export function selectProjectTree(): {
   };
 }
 
-/** The workspace list ordered by the left-pane hierarchy mode + display filter. */
+/** The workspace list ordered by the display filter. */
 export function selectWorkspaceList(): {
   workspaces: WorkspaceItem[];
   displayProjectIds: string[];
-  workspaceListHierarchyMode: "by_project" | "by_node";
 } {
   return {
     workspaces: workspaceStore.getState().workspaces,
     displayProjectIds: projectStore.getState().displayProjectIds,
-    workspaceListHierarchyMode: projectStore.getState().workspaceListHierarchyMode,
   };
 }
 
