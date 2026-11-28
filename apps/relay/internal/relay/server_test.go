@@ -181,11 +181,11 @@ func TestAddRemoveClient(t *testing.T) {
 	srvConn, _, cleanup := pipeWebSocket(t)
 	defer cleanup()
 
-	client := &clientConn{nodeID: "node-1", conn: srvConn}
+	client := &clientConn{key: SessionKey{UserID: "user-1", NodeID: "node-1"}, conn: srvConn}
 	srv.addClient(client)
 
 	srv.clientMu.RLock()
-	count := len(srv.clientsByNode["node-1"])
+	count := len(srv.clientsByNode[SessionKey{UserID: "user-1", NodeID: "node-1"}])
 	srv.clientMu.RUnlock()
 	if count != 1 {
 		t.Errorf("expected 1 client, got %d", count)
@@ -194,7 +194,7 @@ func TestAddRemoveClient(t *testing.T) {
 	srv.removeClient(client)
 
 	srv.clientMu.RLock()
-	_, ok := srv.clientsByNode["node-1"]
+	_, ok := srv.clientsByNode[SessionKey{UserID: "user-1", NodeID: "node-1"}]
 	srv.clientMu.RUnlock()
 	if ok {
 		t.Error("clientsByNode entry should be deleted after last client removed")
@@ -204,7 +204,7 @@ func TestAddRemoveClient(t *testing.T) {
 func TestBroadcastToNodeClients_NoClients_NoAlloc(t *testing.T) {
 	srv := newTestServer(t)
 	// Should not panic or allocate when there are no clients.
-	srv.broadcastToNodeClients("node-1", 1, []byte("hello"))
+	srv.broadcastToNodeClients(SessionKey{UserID: "user-1", NodeID: "node-1"}, 1, []byte("hello"))
 }
 
 func TestInvalidateMetricsCache(t *testing.T) {

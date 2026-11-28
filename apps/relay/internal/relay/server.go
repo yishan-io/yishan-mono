@@ -25,7 +25,7 @@ type Server struct {
 	metricsMu     sync.RWMutex
 	metricsCache  *metricsSnapshot
 	clientMu      sync.RWMutex
-	clientsByNode map[string]map[*clientConn]struct{}
+	clientsByNode map[SessionKey]map[*clientConn]struct{}
 }
 
 type metricsSnapshot struct {
@@ -34,9 +34,9 @@ type metricsSnapshot struct {
 }
 
 type clientConn struct {
-	nodeID string
-	conn   *websocket.Conn
-	write  sync.Mutex
+	key   SessionKey
+	conn  *websocket.Conn
+	write sync.Mutex
 }
 
 // NewServer creates a new relay server and wires background housekeeping.
@@ -51,7 +51,7 @@ func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, apiT
 			WriteBufferSize: wsWriteBufferSize,
 		},
 		startedAt:     time.Now(),
-		clientsByNode: make(map[string]map[*clientConn]struct{}),
+		clientsByNode: make(map[SessionKey]map[*clientConn]struct{}),
 	}
 
 	sessions.OnEvent(func(_ SessionEvent) {
@@ -112,18 +112,17 @@ func (s *Server) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	s.readLoop(session)
 }
 
-// HandleClientWebSocket upgrades HTTP to WebSocket for relay clients and bridges
-// terminal/jsonrpc traffic to a specific node session.
+// HandleClientWebSocket upgrades HTTP to WebSocket for remote-control clients
+// and bridges terminal/jsonrpc traffic to one of the caller's own node
+// sessions. The client authenticates with the user's access token (the
+// `token` query parameter, since browsers cannot set headers on upgrades); it
+// can only reach nodes registered by the same user.
 func (s *Server) HandleClientWebSocket(w http.ResponseWriter, r *http.Request) {
-	if !s.authorizeAPIRequest(w, r) {
+	key, ok := s.clientSessionKey(w, r)
+	if !ok {
 		return
 	}
-
-	nodeID := strings.TrimSpace(r.URL.Query().Get("nodeId"))
-	if nodeID == "" {
-		http.Error(w, "missing nodeId", http.StatusBadRequest)
-		return
-	}
+	nodeID := key.NodeID
 
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -131,7 +130,7 @@ func (s *Server) HandleClientWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &clientConn{nodeID: nodeID, conn: conn}
+	client := &clientConn{key: key, conn: conn}
 	s.addClient(client)
 	defer s.removeClient(client)
 
@@ -144,28 +143,51 @@ func (s *Server) HandleClientWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		node := s.sessions.Get(nodeID)
-		if node == nil || !node.isConnected() {
-			_ = client.writeJSON(relayprotocol.Response{
-				JSONRPC: "2.0",
-				ID:      nil,
-				Error: &relayprotocol.RPCError{
-					Code:    relayprotocol.CodeNodeOffline,
-					Message: "node is offline",
-				},
-			})
-			continue
-		}
-
-		if err := node.SendMessage(msgType, payload); err != nil {
-			log.Error().Err(err).Str("nodeId", nodeID).Msg("failed to relay client payload to node")
-		}
+		s.forwardClientMessage(client, msgType, payload)
 	}
+}
+
+// forwardClientMessage sends one client frame to the client's node session,
+// or answers with a node-offline error when that session is not connected.
+func (s *Server) forwardClientMessage(client *clientConn, msgType int, payload []byte) {
+	node := s.sessions.Get(client.key)
+	if node == nil || !node.isConnected() {
+		_ = client.writeJSON(relayprotocol.Response{
+			JSONRPC: "2.0",
+			ID:      nil,
+			Error: &relayprotocol.RPCError{
+				Code:    relayprotocol.CodeNodeOffline,
+				Message: "node is offline",
+			},
+		})
+		return
+	}
+	if err := node.SendMessage(msgType, payload); err != nil {
+		log.Error().Err(err).Str("nodeId", client.key.NodeID).Msg("failed to relay client payload to node")
+	}
+}
+
+// clientSessionKey authenticates a remote-control client and returns the key
+// of the node session it asked for. It writes the error response itself.
+func (s *Server) clientSessionKey(w http.ResponseWriter, r *http.Request) (SessionKey, bool) {
+	user, err := s.authenticator.AuthenticateUser(r)
+	if err != nil {
+		log.Warn().Err(err).Msg("relay client auth failed")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return SessionKey{}, false
+	}
+	nodeID := strings.TrimSpace(r.URL.Query().Get("nodeId"))
+	if nodeID == "" {
+		http.Error(w, "missing nodeId", http.StatusBadRequest)
+		return SessionKey{}, false
+	}
+	return SessionKey{UserID: user.UserID, NodeID: nodeID}, true
 }
 
 // readLoop reads messages from the node's WebSocket until disconnection.
 func (s *Server) readLoop(session *NodeSession) {
 	nodeID := session.Identity.NodeID
+	key := KeyOf(session.Identity)
 
 	for {
 		msgType, payload, err := session.conn.ReadMessage()
@@ -177,13 +199,13 @@ func (s *Server) readLoop(session *NodeSession) {
 		}
 
 		if msgType != websocket.TextMessage {
-			s.broadcastToNodeClients(nodeID, msgType, payload)
+			s.broadcastToNodeClients(key, msgType, payload)
 			continue
 		}
 
 		handled := s.handleMessage(nodeID, payload)
 		if !handled {
-			s.broadcastToNodeClients(nodeID, msgType, payload)
+			s.broadcastToNodeClients(key, msgType, payload)
 		}
 	}
 }
@@ -227,7 +249,23 @@ func (s *Server) heartbeatLoop(session *NodeSession, done <-chan struct{}) {
 	}
 }
 
-// HandleMetrics handles GET /api/v1/metrics — returns relay metrics.
+// HandleMyNodes handles GET /api/v1/me/nodes: the caller's nodes that are
+// connected right now. Authenticated with the user's access token; offline
+// nodes are not tracked, so they are not listed.
+func (s *Server) HandleMyNodes(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	user, err := s.authenticator.AuthenticateUser(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"nodes": s.sessions.ConnectedSessionsForUser(user.UserID)})
+}
+
+// HandleMetrics handles GET /api/v1/metrics (ops only, RELAY_API_TOKEN).
 func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	if !s.authorizeAPIRequest(w, r) {
 		return
@@ -302,31 +340,31 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 func (s *Server) addClient(client *clientConn) {
 	s.clientMu.Lock()
 	defer s.clientMu.Unlock()
-	set := s.clientsByNode[client.nodeID]
+	set := s.clientsByNode[client.key]
 	if set == nil {
 		set = make(map[*clientConn]struct{})
-		s.clientsByNode[client.nodeID] = set
+		s.clientsByNode[client.key] = set
 	}
 	set[client] = struct{}{}
-	log.Info().Str("nodeId", client.nodeID).Int("clients", len(set)).Msg("relay client connected")
+	log.Info().Str("nodeId", client.key.NodeID).Int("clients", len(set)).Msg("relay client connected")
 }
 
 func (s *Server) removeClient(client *clientConn) {
 	s.clientMu.Lock()
 	defer s.clientMu.Unlock()
-	set := s.clientsByNode[client.nodeID]
+	set := s.clientsByNode[client.key]
 	if set != nil {
 		delete(set, client)
 		if len(set) == 0 {
-			delete(s.clientsByNode, client.nodeID)
+			delete(s.clientsByNode, client.key)
 		}
 	}
 	_ = client.conn.Close()
 }
 
-func (s *Server) broadcastToNodeClients(nodeID string, msgType int, payload []byte) {
+func (s *Server) broadcastToNodeClients(key SessionKey, msgType int, payload []byte) {
 	s.clientMu.RLock()
-	set := s.clientsByNode[nodeID]
+	set := s.clientsByNode[key]
 	if len(set) == 0 {
 		s.clientMu.RUnlock()
 		return
@@ -341,7 +379,7 @@ func (s *Server) broadcastToNodeClients(nodeID string, msgType int, payload []by
 		// Set write deadline before each broadcast write.
 		_ = c.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 		if err := c.writeMessage(msgType, payload); err != nil {
-			log.Debug().Err(err).Str("nodeId", nodeID).Msg("dropping relay client on write failure")
+			log.Debug().Err(err).Str("nodeId", key.NodeID).Msg("dropping relay client on write failure")
 			s.removeClient(c)
 		}
 	}

@@ -38,6 +38,7 @@ func TestAuthenticate_ValidToken(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
+		"type":   "relay",
 		"sub":    "user-123",
 		"nodeId": "node-abc",
 		"iss":    "https://yishan.io",
@@ -70,6 +71,7 @@ func TestAuthenticate_ExpiredToken(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
+		"type":   "relay",
 		"sub":    "user-123",
 		"nodeId": "node-abc",
 		"iss":    "https://yishan.io",
@@ -98,6 +100,7 @@ func TestAuthenticate_WrongIssuer(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
+		"type":   "relay",
 		"sub":    "user-123",
 		"nodeId": "node-abc",
 		"iss":    "https://evil.com",
@@ -123,10 +126,11 @@ func TestAuthenticate_MissingNodeID(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
-		"sub": "user-123",
-		"iss": "https://yishan.io",
-		"aud": "api-service",
-		"exp": time.Now().Add(1 * time.Hour).Unix(),
+		"type": "relay",
+		"sub":  "user-123",
+		"iss":  "https://yishan.io",
+		"aud":  "api-service",
+		"exp":  time.Now().Add(1 * time.Hour).Unix(),
 	})
 
 	req, _ := http.NewRequest("GET", "/ws", nil)
@@ -158,6 +162,7 @@ func TestAuthenticate_QueryParamToken(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
+		"type":   "relay",
 		"sub":    "user-456",
 		"nodeId": "node-xyz",
 		"iss":    "https://yishan.io",
@@ -187,6 +192,7 @@ func TestAuthenticate_WrongSecret(t *testing.T) {
 	})
 
 	token := makeTestToken("wrong-secret", map[string]any{
+		"type":   "relay",
 		"sub":    "user-123",
 		"nodeId": "node-abc",
 		"iss":    "https://yishan.io",

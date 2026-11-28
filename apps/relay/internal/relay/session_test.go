@@ -228,9 +228,9 @@ func TestSessionManager_Disconnect_MarksSessionOffline(t *testing.T) {
 	mgr.OnEvent(func(e SessionEvent) { events = append(events, e) })
 
 	mgr.Register(nil, newTestIdentity("node-1", "user-1"))
-	mgr.Disconnect("node-1", websocket.CloseNormalClosure, "bye")
+	mgr.Disconnect(SessionKey{UserID: "user-1", NodeID: "node-1"}, websocket.CloseNormalClosure, "bye")
 
-	if mgr.IsOnline("node-1") {
+	if mgr.IsOnline(SessionKey{UserID: "user-1", NodeID: "node-1"}) {
 		t.Error("node should be offline after Disconnect")
 	}
 	// Last event should be "disconnected"
@@ -256,7 +256,7 @@ func TestSessionManager_Disconnect_AfterReconnect_DoesNotCorruptNewSession(t *te
 	if !newSession.isConnected() {
 		t.Error("new session should still be connected after old goroutine disconnects old session")
 	}
-	if !mgr.IsOnline("node-1") {
+	if !mgr.IsOnline(SessionKey{UserID: "user-1", NodeID: "node-1"}) {
 		t.Error("node should be online (new session active)")
 	}
 }
@@ -281,27 +281,27 @@ func TestSessionManager_DisconnectSession_AlreadyDisconnected_NoPanic(t *testing
 
 func TestSessionManager_Get(t *testing.T) {
 	mgr := NewSessionManager()
-	if mgr.Get("unknown") != nil {
+	if mgr.Get(SessionKey{UserID: "u", NodeID: "unknown"}) != nil {
 		t.Error("Get on unknown node should return nil")
 	}
 	identity := newTestIdentity("n", "u")
 	session := mgr.Register(nil, identity)
-	if mgr.Get("n") != session {
+	if mgr.Get(SessionKey{UserID: "u", NodeID: "n"}) != session {
 		t.Error("Get should return the registered session")
 	}
 }
 
 func TestSessionManager_IsOnline(t *testing.T) {
 	mgr := NewSessionManager()
-	if mgr.IsOnline("unknown") {
+	if mgr.IsOnline(SessionKey{UserID: "u", NodeID: "unknown"}) {
 		t.Error("unknown node should not be online")
 	}
 	mgr.Register(nil, newTestIdentity("n", "u"))
-	if !mgr.IsOnline("n") {
+	if !mgr.IsOnline(SessionKey{UserID: "u", NodeID: "n"}) {
 		t.Error("registered node should be online")
 	}
-	mgr.Disconnect("n", websocket.CloseNormalClosure, "bye")
-	if mgr.IsOnline("n") {
+	mgr.Disconnect(SessionKey{UserID: "u", NodeID: "n"}, websocket.CloseNormalClosure, "bye")
+	if mgr.IsOnline(SessionKey{UserID: "u", NodeID: "n"}) {
 		t.Error("disconnected node should not be online")
 	}
 }
@@ -310,7 +310,7 @@ func TestSessionManager_GetStats(t *testing.T) {
 	mgr := NewSessionManager()
 	mgr.Register(nil, newTestIdentity("node-1", "user-1"))
 	mgr.Register(nil, newTestIdentity("node-2", "user-2"))
-	mgr.Disconnect("node-2", websocket.CloseNormalClosure, "bye")
+	mgr.Disconnect(SessionKey{UserID: "user-2", NodeID: "node-2"}, websocket.CloseNormalClosure, "bye")
 
 	stats := mgr.GetStats()
 	if stats.TotalCount != 2 {
@@ -330,7 +330,7 @@ func TestSessionManager_EvictStale(t *testing.T) {
 
 	// Register and immediately disconnect a session.
 	mgr.Register(nil, newTestIdentity("stale", "u"))
-	mgr.Disconnect("stale", websocket.CloseNormalClosure, "bye")
+	mgr.Disconnect(SessionKey{UserID: "u", NodeID: "stale"}, websocket.CloseNormalClosure, "bye")
 
 	// Evicting with maxAge=1h should not remove any sessions (too recent).
 	n := mgr.EvictStale(time.Hour)
@@ -350,7 +350,7 @@ func TestSessionManager_EvictStale(t *testing.T) {
 		t.Errorf("expected TotalCount 1 after eviction, got %d", mgr.TotalCount())
 	}
 	// The connected session must survive.
-	if !mgr.IsOnline("active") {
+	if !mgr.IsOnline(SessionKey{UserID: "u", NodeID: "active"}) {
 		t.Error("active session should not be evicted")
 	}
 }
@@ -387,9 +387,9 @@ func TestSessionManager_ConcurrentRegistrations(t *testing.T) {
 		go func(id string) {
 			defer wg.Done()
 			mgr.Register(nil, newTestIdentity(id, "u"))
-			mgr.IsOnline(id)
+			mgr.IsOnline(SessionKey{UserID: "u", NodeID: id})
 			mgr.GetStats()
-			mgr.Disconnect(id, websocket.CloseNormalClosure, "bye")
+			mgr.Disconnect(SessionKey{UserID: "u", NodeID: id}, websocket.CloseNormalClosure, "bye")
 		}(strings.Repeat(string(rune('a'+i)), 5))
 	}
 	wg.Wait()
