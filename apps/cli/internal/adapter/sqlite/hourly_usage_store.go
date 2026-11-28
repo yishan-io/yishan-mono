@@ -107,6 +107,9 @@ func (s *HourlyUsageStore) ReplaceAgentHourlyRows(ctx context.Context, agentKind
 		}
 		existingByKey[key] = mergedRow
 	}
+	if err := fillMissingHourlyUsageOrganizations(ctx, tx); err != nil {
+		return err
+	}
 	if err := pruneCleanHourlyUsageRows(ctx, tx, time.Now().UTC()); err != nil {
 		return err
 	}
@@ -242,7 +245,9 @@ func upsertHourlyUsageRow(ctx context.Context, tx *sql.Tx, row HourlyUsageRow) e
 		run_id, updated_at, is_dirty, last_synced_at
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(project_id, workspace_id, agent_kind, model_normalized, bucket_start_hour_utc) DO UPDATE SET
-		workspace_path = excluded.workspace_path, organization_id = excluded.organization_id, model = excluded.model,
+		workspace_path = excluded.workspace_path,
+		organization_id = CASE WHEN excluded.organization_id = '' THEN token_usage_hourly.organization_id ELSE excluded.organization_id END,
+		model = excluded.model,
 		input_tokens = excluded.input_tokens, output_tokens = excluded.output_tokens,
 		cached_input_tokens = excluded.cached_input_tokens, cached_write_tokens = excluded.cached_write_tokens,
 		reasoning_tokens = excluded.reasoning_tokens, total_tokens = excluded.total_tokens,

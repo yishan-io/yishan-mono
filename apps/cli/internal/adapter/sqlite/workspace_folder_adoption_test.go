@@ -71,7 +71,8 @@ func TestWorkspaceStore_AdoptUnownedFoldersAssignsFoldersAndTheirUsage(t *testin
 	assertFolderOrganization(t, workspaceStore, unowned.ID, "org-a")
 	assertFolderOrganization(t, workspaceStore, owned.ID, "org-b")
 	assertUsageOrganization(t, workspaceStore.database, unowned.ID, "org-a")
-	assertUsageOrganization(t, workspaceStore.database, owned.ID, "")
+	// The owned folder's usage was attributed from its workspace row at write time.
+	assertUsageOrganization(t, workspaceStore.database, owned.ID, "org-b")
 
 	again, err := workspaceStore.AdoptUnownedFolders(ctx, "org-c")
 	if err != nil {
