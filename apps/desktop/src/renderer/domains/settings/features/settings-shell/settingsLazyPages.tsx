@@ -28,7 +28,6 @@ export { AgentChatWidthSettingsView } from "../agent-chat-width/AgentChatWidthSe
 export const MemberSettingsView = lazy(() =>
   import("@renderer/domains/organization").then((m) => ({ default: m.MemberSettingsView })),
 );
-export { ServiceTokenSettingsView } from "../account/ServiceTokenSettingsView";
 export const DaemonSettingsView = lazy(() =>
   import("../daemon/DaemonSettingsView").then((m) => ({ default: m.DaemonSettingsView })),
 );
