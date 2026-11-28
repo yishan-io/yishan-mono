@@ -300,7 +300,7 @@ func (s *GitService) BranchDiffSummary(ctx context.Context, root string, targetB
 
 	ctx, cancel := context.WithTimeout(ctx, branchDiffSummaryTimeout)
 	defer cancel()
-	numstat, err := s.runReadCommand(ctx, root, "", false, "diff", "--numstat", fmt.Sprintf("%s...HEAD", targetBranch))
+	numstat, err := s.readBranchNumstat(ctx, root, targetBranch)
 	if err != nil {
 		return GitBranchDiffSummary{}, err
 	}
@@ -335,4 +335,25 @@ func (s *GitService) ReadBranchComparisonDiff(ctx context.Context, root string, 
 	oldContent, _ := gitCommand(ctx, root, "show", fmt.Sprintf("%s:%s", targetBranch, path))
 	newContent, _ := gitCommand(ctx, root, "show", fmt.Sprintf("HEAD:%s", path))
 	return GitDiffContent{OldContent: oldContent, NewContent: newContent}, nil
+}
+
+// readBranchNumstat diffs HEAD against targetBranch. When git does not know
+// the target (no such remote, branch never fetched, different default branch),
+// it retries with the same fallbacks as ListCommitsToTarget and returns empty
+// output when no candidate exists, so callers see "no branch changes".
+func (s *GitService) readBranchNumstat(ctx context.Context, root string, targetBranch string) (string, error) {
+	numstat, err := s.runReadCommand(ctx, root, "", false, "diff", "--numstat", fmt.Sprintf("%s...HEAD", targetBranch))
+	if err == nil || !isUnknownRevisionError(err) {
+		return numstat, err
+	}
+	resolved, resolveErr := resolveCommitComparisonTarget(ctx, root, targetBranch)
+	if resolveErr != nil || resolved == targetBranch || !refExists(ctx, root, resolved) {
+		return "", nil
+	}
+	return s.runReadCommand(ctx, root, "", false, "diff", "--numstat", fmt.Sprintf("%s...HEAD", resolved))
+}
+
+func isUnknownRevisionError(err error) bool {
+	message := err.Error()
+	return strings.Contains(message, "unknown revision") || strings.Contains(message, "bad revision")
 }

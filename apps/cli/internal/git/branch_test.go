@@ -241,3 +241,43 @@ func TestListCommitsToTargetFileStatus(t *testing.T) {
 		t.Errorf("first commit: expected existing.txt status D, got %q", firstCommitStatusByPath["existing.txt"])
 	}
 }
+
+func TestGitServiceBranchDiffSummaryMissingTarget(t *testing.T) {
+	repo := filepath.Join(t.TempDir(), "repo")
+	runGit(t, t.TempDir(), "init", "-b", "work", repo)
+	runGit(t, repo, "config", "user.name", "Test User")
+	runGit(t, repo, "config", "user.email", "test@example.com")
+	os.WriteFile(filepath.Join(repo, "a.txt"), []byte("a\n"), 0o644)
+	runGit(t, repo, "add", "a.txt")
+	runGit(t, repo, "commit", "-m", "init")
+
+	summary, err := NewGitService().BranchDiffSummary(context.Background(), repo, "origin/main")
+	if err != nil {
+		t.Fatalf("BranchDiffSummary with missing target: %v", err)
+	}
+	if summary.FileCount != 0 || len(summary.Files) != 0 {
+		t.Fatalf("expected empty summary, got %+v", summary)
+	}
+}
+
+func TestGitServiceBranchDiffSummaryFallsBackToLocalBranch(t *testing.T) {
+	repo := filepath.Join(t.TempDir(), "repo")
+	runGit(t, t.TempDir(), "init", "-b", "main", repo)
+	runGit(t, repo, "config", "user.name", "Test User")
+	runGit(t, repo, "config", "user.email", "test@example.com")
+	os.WriteFile(filepath.Join(repo, "a.txt"), []byte("a\n"), 0o644)
+	runGit(t, repo, "add", "a.txt")
+	runGit(t, repo, "commit", "-m", "init")
+	runGit(t, repo, "checkout", "-b", "feature")
+	os.WriteFile(filepath.Join(repo, "b.txt"), []byte("b\n"), 0o644)
+	runGit(t, repo, "add", "b.txt")
+	runGit(t, repo, "commit", "-m", "feature")
+
+	summary, err := NewGitService().BranchDiffSummary(context.Background(), repo, "origin/main")
+	if err != nil {
+		t.Fatalf("BranchDiffSummary: %v", err)
+	}
+	if summary.FileCount != 1 || summary.Files[0] != "b.txt" {
+		t.Fatalf("expected diff against local main, got %+v", summary)
+	}
+}
