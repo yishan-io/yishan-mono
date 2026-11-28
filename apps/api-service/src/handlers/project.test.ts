@@ -7,8 +7,7 @@ describe("updateProjectHandler", () => {
   it("forwards primary workspace identity and path through the existing config save and keeps its response", async () => {
     const project = { id: "proj-1", name: "Renamed" };
     const updateProject = vi.fn().mockResolvedValue(project);
-    const publishWorkspaceSnapshotChanged = vi.fn().mockResolvedValue(undefined);
-    const services = { project: { updateProject }, relayEvent: { publishWorkspaceSnapshotChanged } };
+    const services = { project: { updateProject } };
     const json = vi.fn().mockReturnValue("response");
     const context = {
       get: (key: string) => (key === "sessionUser" ? { id: "user-1" } : services),
@@ -39,11 +38,5 @@ describe("updateProjectHandler", () => {
     );
     expect(json).toHaveBeenCalledWith({ project }, 200);
     expect(response).toBe("response");
-    expect(publishWorkspaceSnapshotChanged).toHaveBeenCalledWith({
-      organizationId: "org-1",
-      resource: "project",
-      change: "updated",
-      projectId: "proj-1",
-    });
   });
 });

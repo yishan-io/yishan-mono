@@ -1,9 +1,6 @@
-import { HTTPException } from "hono/http-exception";
 import { StatusCodes } from "http-status-codes";
 
 import type { AppContext } from "@/hono";
-import type { DispatchMessage } from "@/scheduled/queue";
-import { publishViaQueue } from "@/scheduled/queue";
 import type { NodeParamsInput } from "@/validation/node";
 
 import type {
@@ -19,12 +16,6 @@ import type {
   StartScheduledJobRunBodyInput,
   UpdateScheduledJobBodyInput,
 } from "@/validation/scheduled-job";
-
-function publishScheduledJobScheduleChanged(c: AppContext, nodeIds: string[]) {
-  for (const nodeId of new Set(nodeIds)) {
-    c.executionCtx.waitUntil(c.get("services").relayEvent.publishScheduledJobScheduleChanged(nodeId));
-  }
-}
 
 export async function listScheduledJobsHandler(
   c: AppContext,
@@ -64,8 +55,6 @@ export async function createScheduledJobHandler(
     timezone: body.timezone,
   });
 
-  publishScheduledJobScheduleChanged(c, [job.nodeId]);
-
   return c.json({ job }, StatusCodes.CREATED);
 }
 
@@ -90,8 +79,6 @@ export async function updateScheduledJobHandler(
     timezone: body.timezone,
   });
 
-  publishScheduledJobScheduleChanged(c, [updateResult.previousNodeId, updateResult.job.nodeId]);
-
   return c.json({ job: updateResult.job });
 }
 
@@ -103,8 +90,6 @@ export async function pauseScheduledJobHandler(c: AppContext, params: ScheduledJ
     organizationId: params.orgId,
     jobId: params.jobId,
   });
-
-  publishScheduledJobScheduleChanged(c, [job.nodeId]);
 
   return c.json({ job });
 }
@@ -118,8 +103,6 @@ export async function resumeScheduledJobHandler(c: AppContext, params: Scheduled
     jobId: params.jobId,
   });
 
-  publishScheduledJobScheduleChanged(c, [job.nodeId]);
-
   return c.json({ job });
 }
 
@@ -132,8 +115,6 @@ export async function disableScheduledJobHandler(c: AppContext, params: Schedule
     jobId: params.jobId,
   });
 
-  publishScheduledJobScheduleChanged(c, [job.nodeId]);
-
   return c.json({ job });
 }
 
@@ -145,8 +126,6 @@ export async function deleteScheduledJobHandler(c: AppContext, params: Scheduled
     organizationId: params.orgId,
     jobId: params.jobId,
   });
-
-  publishScheduledJobScheduleChanged(c, [job.nodeId]);
 
   return c.json({ ok: true }, StatusCodes.OK);
 }
@@ -166,75 +145,6 @@ export async function listScheduledJobRunsHandler(
   });
 
   return c.json({ runs });
-}
-
-export async function runScheduledJobNowHandler(c: AppContext, params: ScheduledJobParamsInput) {
-  const actorUser = c.get("sessionUser");
-  const pendingRun = await c.get("services").scheduledJob.triggerRunNow({
-    actorUserId: actorUser.id,
-    actorRole: c.get("organizationRole"),
-    organizationId: params.orgId,
-    jobId: params.jobId,
-  });
-
-  const bindings = (c.env ?? {}) as { SCHEDULED_JOB_QUEUE?: Queue<DispatchMessage> };
-  const published = await publishViaQueue(
-    {
-      SCHEDULED_JOB_QUEUE: bindings.SCHEDULED_JOB_QUEUE,
-    },
-    [
-      {
-        runId: pendingRun.runId,
-        nodeId: pendingRun.job.nodeId,
-        jobId: pendingRun.job.id,
-        projectId: pendingRun.job.projectId,
-        agentKind: pendingRun.job.agentKind,
-        prompt: pendingRun.job.prompt,
-        model: pendingRun.job.model ?? "",
-        command: pendingRun.job.command ?? "",
-        scheduledFor: pendingRun.scheduledFor.toISOString(),
-      },
-    ],
-  );
-
-  if (published === 0) {
-    const dispatchFailure = await c.get("services").scheduledJob.markRunNowDispatchFailed({
-      actorUserId: actorUser.id,
-      actorRole: c.get("organizationRole"),
-      organizationId: params.orgId,
-      jobId: params.jobId,
-      runId: pendingRun.runId,
-    });
-    if (dispatchFailure.didMarkDispatchFailed) {
-      throw new HTTPException(StatusCodes.SERVICE_UNAVAILABLE, {
-        message: "Failed to dispatch scheduled job run",
-      });
-    }
-    return c.json({ ok: true, run: dispatchFailure.run }, StatusCodes.ACCEPTED);
-  }
-
-  return c.json(
-    {
-      ok: true,
-      run: {
-        id: pendingRun.runId,
-        jobId: pendingRun.job.id,
-        organizationId: pendingRun.job.organizationId,
-        projectId: pendingRun.job.projectId,
-        nodeId: pendingRun.job.nodeId,
-        scheduledFor: pendingRun.scheduledFor,
-        startedAt: null,
-        finishedAt: null,
-        status: "pending",
-        responseBody: null,
-        errorCode: null,
-        errorMessage: null,
-        errorDetails: null,
-        createdAt: new Date(),
-      },
-    },
-    StatusCodes.ACCEPTED,
-  );
 }
 
 export async function reconcileScheduledJobsHandler(

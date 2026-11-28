@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { scheduledJobRuns, scheduledJobs, workspaces } from "@/db/schema";
 
 /**
- * Provides daily stale-run cleanup and manual Queue dispatch support.
+ * Provides daily stale-run cleanup.
  */
 export class JobEvaluatorService {
   constructor(private readonly db: AppDb) {}
@@ -75,48 +75,6 @@ export class JobEvaluatorService {
 
       return { skippedOffline: skippedOfflineRuns.length, failed: failedRuns.length };
     });
-  }
-
-  /** Gets a pending run and its authoritative trigger for the Queue consumer. */
-  async getPendingRunForDispatch(input: {
-    runId: string;
-    jobId: string;
-    nodeId: string;
-    scheduledFor: Date;
-  }): Promise<{ runId: string; trigger: "manual" | "schedule" } | null> {
-    const rows = await this.db
-      .select({ runId: scheduledJobRuns.id, trigger: scheduledJobRuns.trigger })
-      .from(scheduledJobRuns)
-      .where(
-        and(
-          eq(scheduledJobRuns.id, input.runId),
-          eq(scheduledJobRuns.jobId, input.jobId),
-          eq(scheduledJobRuns.nodeId, input.nodeId),
-          eq(scheduledJobRuns.status, "pending"),
-          eq(scheduledJobRuns.scheduledFor, input.scheduledFor),
-        ),
-      )
-      .limit(1);
-
-    return rows[0] ?? null;
-  }
-
-  async markRunSkippedOffline(input: { runId: string; nodeId: string; reason?: string }): Promise<void> {
-    await this.db
-      .update(scheduledJobRuns)
-      .set({
-        status: "skipped_offline",
-        finishedAt: new Date(),
-        errorCode: "NODE_OFFLINE",
-        errorMessage: input.reason ?? "node offline",
-      })
-      .where(
-        and(
-          eq(scheduledJobRuns.id, input.runId),
-          eq(scheduledJobRuns.nodeId, input.nodeId),
-          eq(scheduledJobRuns.status, "pending"),
-        ),
-      );
   }
 
   async findProjectPathForNode(input: { projectId: string; nodeId: string }): Promise<string | null> {

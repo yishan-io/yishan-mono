@@ -37,14 +37,6 @@ localConnectionString = "postgres://postgres:postgres@localhost:5432/yishan"
 #
 # Non-secret environment variables are set in [vars] below.
 
-[[queues.producers]]
-binding = "SCHEDULED_JOB_QUEUE"
-queue = "scheduled-job-dispatch"
-
-[[queues.consumers]]
-queue = "scheduled-job-dispatch"
-max_batch_size = 20
-
 [vars]
 APP_BASE_URL         = "https://api.yishan.io"
 LANDING_BASE_URL     = "https://yishan.io"

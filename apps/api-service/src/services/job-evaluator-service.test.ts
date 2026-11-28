@@ -10,36 +10,6 @@ const NOW = new Date("2026-06-16T00:00:30.000Z");
 const DUE_AT = new Date("2026-06-16T00:00:00.000Z");
 const SQL_DIALECT = new PgDialect();
 
-describe("JobEvaluatorService queue dispatch", () => {
-  it("reads the run trigger from the pending run rather than the queue message", async () => {
-    let selectedColumns: Record<string, unknown> | undefined;
-    const db = {
-      select: vi.fn((columns: Record<string, unknown>) => {
-        selectedColumns = columns;
-        return {
-          from: vi.fn(() => ({
-            where: vi.fn(() => ({
-              limit: vi.fn(async () => [{ runId: "run-1", trigger: "manual" }]),
-            })),
-          })),
-        };
-      }),
-    } as unknown as AppDb;
-    const service = new JobEvaluatorService(db);
-
-    await expect(
-      service.getPendingRunForDispatch({
-        runId: "run-1",
-        jobId: "job-1",
-        nodeId: "node-1",
-        scheduledFor: DUE_AT,
-      }),
-    ).resolves.toEqual({ runId: "run-1", trigger: "manual" });
-
-    expect(selectedColumns).toEqual({ runId: scheduledJobRuns.id, trigger: scheduledJobRuns.trigger });
-  });
-});
-
 describe("JobEvaluatorService.terminalizeStaleRuns", () => {
   it("records a stale running summary at the run start time", async () => {
     const staleRunStartedAt = new Date("2026-06-15T23:40:00.000Z");

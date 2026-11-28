@@ -9,7 +9,6 @@ API service built with Hono + Bun, deployed to both Cloudflare Workers and a rem
 - Database: Postgres via Cloudflare Hyperdrive + node-postgres
 - ORM: Drizzle ORM
 - Auth: Google OAuth + GitHub OAuth
-- Manual Run Now dispatch: Cloudflare Queue → Relay service → Daemon (WebSocket push)
 
 ## Environment Variables
 
@@ -32,7 +31,7 @@ Copy `.env.example` to `.env` (Bun) and `.dev.vars` (Wrangler local dev):
 - `GITHUB_CLIENT_ID`
 - `GITHUB_CLIENT_SECRET`
 - `RELAY_URL` (URL of the relay service, e.g. `https://relay.yishan.io`)
-- `RELAY_API_TOKEN` (bearer token for authenticating with the relay's dispatch endpoint)
+- `RELAY_API_TOKEN` (bearer token for the relay's metrics endpoint)
 
 ## Scripts
 
@@ -90,101 +89,7 @@ Notes:
 
 ## Scheduled Jobs
 
-Scheduled jobs let you define recurring agent tasks. Each job stores a prompt, optional model and command, and a cron schedule. The API service manages job definitions and run history; the CLI daemon on each node executes agent tasks.
-
-### Architecture
-
-```
-Daemon scheduler
-  -> claims its assigned recurring jobs from the API
-  -> executes the agent and reports the run lifecycle
-
-Cloudflare Queue (Run Now only)
-  -> Relay service
-  -> daemon
-
-CF Worker cron (03:00 UTC)
-  -> cleanup, including stale-run terminalization
-```
-
-- **API service**: stores job definitions and run history, authorizes daemon claims, and accepts lifecycle reports.
-- **CLI daemon**: owns recurring schedule timing and execution for its assigned node.
-- **Cloudflare Queue and Relay**: retain the manual Run Now dispatch path.
-- **CF Worker cleanup**: terminalizes abandoned pending/running runs during the daily cleanup.
-
-### Run status lifecycle
-
-```
-pending -> running -> succeeded
-                   -> failed
-pending -> skipped_offline  (terminalized during daily cleanup)
-```
-
-### Dispatch provenance
-
-This first release persists each run's `trigger`: `schedule` for a daemon-claimed recurring occurrence and `manual` for Run Now. Manual runs may start after their parent job is paused; scheduled runs require an active job still assigned to the reporting node.
-
-### Create a scheduled job
-
-`POST /orgs/:orgId/scheduled-jobs`
-
-```json
-{
-  "name": "Nightly Code Review",
-  "projectId": "<project-id>",
-  "nodeId": "<daemon-node-id>",
-  "agentKind": "claude",
-  "prompt": "Review all open PRs and leave comments",
-  "model": "claude-sonnet-4-20250514",
-  "command": "git diff main..HEAD",
-  "cronExpression": "0 2 * * *",
-  "timezone": "UTC"
-}
-```
-
-Fields:
-- `name` (required): human-readable label, max 120 chars
-- `projectId` (required): which project this job belongs to
-- `nodeId` (required): daemon node that will execute the job
-- `agentKind` (optional): agent CLI to execute (`opencode`, `codex`, `claude`, `gemini`, `pi`, `copilot`, `cursor`), defaults to `opencode`
-- `prompt` (required): agent instruction, max 4096 chars
-- `model` (optional): model identifier, max 120 chars
-- `command` (optional): CLI command for the agent, max 2048 chars
-- `cronExpression` (required): 5-field cron, max 120 chars
-- `timezone` (optional): IANA timezone, defaults to UTC
-
-### Daemon endpoints
-
-- `PUT /nodes/:nodeId/scheduled-jobs/runs/start` -- mark run as started
-- `PUT /nodes/:nodeId/scheduled-jobs/runs/complete` -- report run result (status, error info)
-
-### Pause/Resume/Disable semantics
-
-- `pause`: keep configuration but stop evaluating until resumed
-- `resume`: activate again and recompute `nextRunAt` from current time
-- `disable`: permanently stop evaluating without deleting the configuration
-
-### Run visibility and failures
-
-- `GET /orgs/:orgId/scheduled-jobs/:jobId/runs` returns latest runs (default `limit=20`, max `100`)
-- Each run includes `status`, `responseBody`, `errorCode`, `errorMessage`, and `errorDetails`
-- Job record also keeps latest run summary fields (`lastRunStatus`, `lastErrorCode`, `lastErrorMessage`)
-
-### Schedule format and limits
-
-- Format: **5-field cron** (`minute hour day-of-month month day-of-week`)
-- Supported tokens: `*`, comma lists, ranges (`1-5`), step values (`*/5`, `1-30/2`)
-- Day-of-week supports `0-6` (`0=Sunday`) and short names (`SUN`..`SAT`)
-- Timezone: IANA timezone name (e.g. `UTC`, `America/Los_Angeles`)
-- Evaluation: the assigned daemon evaluates recurring schedules and claims each occurrence through the API
-- Deduplication: claimed scheduled runs are protected by the unique `(jobId, scheduledFor)` index
-- Current hard limits:
-  - `name`: 120 chars
-  - `prompt`: 4096 chars
-  - `model`: 120 chars
-  - `command`: 2048 chars
-  - `cronExpression`: 120 chars
-  - run history query `limit`: 1-100
+Scheduled jobs are owned by the local daemon: definitions, runs and scheduling live in each node's `yishan.db`, and Run Now is a daemon RPC. The api-service `scheduled-jobs` routes and tables remain only so the daemon can import existing jobs once; they will be removed together with Postgres. The daily cleanup cron still terminalizes abandoned runs in those tables.
 
 ## Local Hyperdrive
 
@@ -203,7 +108,6 @@ bun run dev:worker
 - [Neon](https://neon.tech) project with a Postgres database
 - Cloudflare account with Workers plan
 - `wrangler` CLI authenticated (`wrangler login`)
-- Cloudflare Queue `scheduled-job-dispatch` for manual Run Now dispatch
 - Relay service deployed and accessible
 
 ### 1. Neon Database
@@ -239,14 +143,6 @@ Copy the returned Hyperdrive config ID and update the `[[hyperdrive]]` section i
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "<your-hyperdrive-config-id>"
-```
-
-### 3a. Create the Cloudflare Queue
-
-Create the queue referenced by the `SCHEDULED_JOB_QUEUE` producer and consumer bindings in `wrangler.toml`:
-
-```sh
-wrangler queues create scheduled-job-dispatch
 ```
 
 ### 4. Set Worker Secrets

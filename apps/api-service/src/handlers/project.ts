@@ -18,12 +18,6 @@ export async function ensureProjectTaskPrefixHandler(c: AppContext, params: Proj
     organizationId: params.orgId,
     projectId: params.projectId,
   });
-  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-    organizationId: params.orgId,
-    resource: "project",
-    change: "updated",
-    projectId: project.id,
-  });
 
   return c.json({ project }, StatusCodes.OK);
 }
@@ -78,14 +72,6 @@ export async function createProjectHandler(
     icon: body.icon,
     color: body.color,
   });
-  c.executionCtx.waitUntil(
-    c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-      organizationId: params.orgId,
-      resource: "project",
-      change: "created",
-      projectId: project.id,
-    }),
-  );
 
   return c.json({ project }, StatusCodes.CREATED);
 }
@@ -97,14 +83,6 @@ export async function deleteProjectHandler(c: AppContext, params: ProjectWorkspa
     organizationId: params.orgId,
     projectId: params.projectId,
   });
-  c.executionCtx.waitUntil(
-    c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-      organizationId: params.orgId,
-      resource: "project",
-      change: "deleted",
-      projectId: params.projectId,
-    }),
-  );
 
   return c.json({ ok: true });
 }
@@ -120,12 +98,6 @@ export async function promoteGitLocalProjectHandler(
     organizationId: params.orgId,
     projectId: params.projectId,
     remoteUrl: body.remoteUrl,
-  });
-  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-    organizationId: params.orgId,
-    resource: "project",
-    change: "updated",
-    projectId: project.id,
   });
 
   return c.json({ project }, StatusCodes.OK);
@@ -151,12 +123,6 @@ export async function updateProjectHandler(
     postScript: body.postScript,
     commands: body.commands,
     contextEnabled: body.contextEnabled,
-  });
-  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-    organizationId: params.orgId,
-    resource: "project",
-    change: "updated",
-    projectId: project.id,
   });
 
   return c.json({ project }, StatusCodes.OK);
