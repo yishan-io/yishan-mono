@@ -54,6 +54,7 @@ func startServer() error {
 	mux.HandleFunc("/ws", srv.HandleWebSocket)
 	mux.HandleFunc("/client/ws", srv.HandleClientWebSocket)
 	mux.HandleFunc("/healthz", handleHealthz)
+	mux.HandleFunc("/api/v1/me/nodes", srv.HandleMyNodes)
 	mux.HandleFunc("/api/v1/metrics", srv.HandleMetrics)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)

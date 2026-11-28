@@ -1,8 +1,10 @@
-// Package auth provides node-scoped JWT authentication for relay connections.
+// Package auth provides JWT authentication for relay connections.
 //
-// Nodes connect with a Bearer token (JWT access token issued by the API service).
-// The relay validates signature, expiry, issuer, and audience, then extracts
-// the sub (userId) and nodeId claims to scope the connection.
+// Both token kinds are issued by the API service and share its signing
+// secret, issuer and audience; the `type` claim tells them apart:
+//   - nodes connect to /ws with a relay token (type "relay") that carries the
+//     owning user (sub) and the nodeId;
+//   - remote-control clients use the user's access token (type "access").
 package auth
 
 import (
@@ -28,9 +30,21 @@ type Config struct {
 	Audience string
 }
 
-// nodeClaims extends RegisteredClaims with the custom nodeId claim.
-type nodeClaims struct {
+// UserIdentity is the authenticated user of a remote-control client or API call.
+type UserIdentity struct {
+	UserID string
+}
+
+const (
+	tokenTypeRelay  = "relay"
+	tokenTypeAccess = "access"
+)
+
+// tokenClaims covers both relay and access tokens; nodeId and
+// organizationIds are only present on relay tokens.
+type tokenClaims struct {
 	jwt.RegisteredClaims
+	Type            string   `json:"type"`
 	NodeID          string   `json:"nodeId"`
 	OrganizationIDs []string `json:"organizationIds"`
 }
@@ -45,23 +59,54 @@ func NewAuthenticator(config Config) *Authenticator {
 	return &Authenticator{config: config}
 }
 
-// Authenticate validates a Bearer token from the request and returns the node identity.
-// Returns nil and an error if authentication fails.
+// Authenticate validates a node's relay token from the request and returns the
+// node identity. Returns nil and an error if authentication fails.
 func (a *Authenticator) Authenticate(r *http.Request) (*NodeIdentity, error) {
+	claims, err := a.claimsFromRequest(r, tokenTypeRelay)
+	if err != nil {
+		return nil, err
+	}
+	if claims.NodeID == "" {
+		return nil, fmt.Errorf("token missing nodeId claim")
+	}
+	return &NodeIdentity{
+		UserID:          claims.Subject,
+		NodeID:          claims.NodeID,
+		OrganizationIDs: claims.OrganizationIDs,
+		DaemonVersion:   strings.TrimSpace(r.URL.Query().Get("version")),
+	}, nil
+}
+
+// AuthenticateUser validates a user access token from the request.
+func (a *Authenticator) AuthenticateUser(r *http.Request) (*UserIdentity, error) {
+	claims, err := a.claimsFromRequest(r, tokenTypeAccess)
+	if err != nil {
+		return nil, err
+	}
+	return &UserIdentity{UserID: claims.Subject}, nil
+}
+
+// claimsFromRequest validates the request's bearer token and requires the
+// given token type and a subject.
+func (a *Authenticator) claimsFromRequest(r *http.Request, tokenType string) (*tokenClaims, error) {
 	tokenString := ExtractBearerToken(r)
 	if tokenString == "" {
 		return nil, fmt.Errorf("missing bearer token")
 	}
-
-	identity, err := a.validateToken(tokenString)
+	claims, err := a.validateToken(tokenString)
 	if err != nil {
 		return nil, err
 	}
-	identity.DaemonVersion = strings.TrimSpace(r.URL.Query().Get("version"))
-	return identity, nil
+	if claims.Type != tokenType {
+		return nil, fmt.Errorf("token type %q, want %q", claims.Type, tokenType)
+	}
+	if claims.Subject == "" {
+		return nil, fmt.Errorf("token missing sub claim")
+	}
+	return claims, nil
 }
 
-func (a *Authenticator) validateToken(tokenString string) (*NodeIdentity, error) {
+func (a *Authenticator) validateToken(tokenString string) (*tokenClaims, error) {
 	options := []jwt.ParserOption{
 		jwt.WithValidMethods([]string{"HS256", "HS384", "HS512"}),
 		jwt.WithExpirationRequired(),
@@ -73,7 +118,7 @@ func (a *Authenticator) validateToken(tokenString string) (*NodeIdentity, error)
 		options = append(options, jwt.WithAudience(a.config.Audience))
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, &nodeClaims{}, func(token *jwt.Token) (any, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &tokenClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
 		}
@@ -83,23 +128,11 @@ func (a *Authenticator) validateToken(tokenString string) (*NodeIdentity, error)
 		return nil, fmt.Errorf("token validation: %w", err)
 	}
 
-	claims, ok := token.Claims.(*nodeClaims)
+	claims, ok := token.Claims.(*tokenClaims)
 	if !ok {
 		return nil, fmt.Errorf("unexpected claims type")
 	}
-
-	if claims.Subject == "" {
-		return nil, fmt.Errorf("token missing sub claim")
-	}
-	if claims.NodeID == "" {
-		return nil, fmt.Errorf("token missing nodeId claim")
-	}
-
-	return &NodeIdentity{
-		UserID:          claims.Subject,
-		NodeID:          claims.NodeID,
-		OrganizationIDs: claims.OrganizationIDs,
-	}, nil
+	return claims, nil
 }
 
 // ExtractBearerToken extracts a bearer token from the Authorization header or

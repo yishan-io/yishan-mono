@@ -102,7 +102,7 @@
         { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
       );
 
-      return new SignJWT({ nodeId, organizationIds: orgIds })
+      return new SignJWT({ type: 'relay', nodeId, organizationIds: orgIds })
         .setProtectedHeader({ alg: 'HS256' })
         .setSubject(userId)
         .setExpirationTime('1h')

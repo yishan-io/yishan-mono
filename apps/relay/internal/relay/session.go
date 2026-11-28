@@ -166,10 +166,23 @@ type SessionEventHandler func(SessionEvent)
 // SessionManager tracks all node sessions.
 // ---------------------------------------------------------------------------
 
+// SessionKey identifies a node session. A node is always looked up together
+// with its owning user, so one user can never reach or replace a session that
+// another user registered under the same nodeId.
+type SessionKey struct {
+	UserID string
+	NodeID string
+}
+
+// KeyOf returns the session key for an authenticated node identity.
+func KeyOf(identity auth.NodeIdentity) SessionKey {
+	return SessionKey{UserID: identity.UserID, NodeID: identity.NodeID}
+}
+
 // SessionManager manages the lifecycle of node WebSocket sessions.
 type SessionManager struct {
 	mu       sync.RWMutex
-	sessions map[string]*NodeSession // keyed by nodeId
+	sessions map[SessionKey]*NodeSession
 
 	// handlerMu protects the handlers slice. Handlers are registered once at
 	// startup so reads dominate; use RWMutex to avoid copying on every emit.
@@ -180,7 +193,7 @@ type SessionManager struct {
 // NewSessionManager creates a new SessionManager.
 func NewSessionManager() *SessionManager {
 	return &SessionManager{
-		sessions: make(map[string]*NodeSession),
+		sessions: make(map[SessionKey]*NodeSession),
 	}
 }
 
@@ -219,10 +232,11 @@ func (m *SessionManager) emit(event SessionEvent) {
 // Register, so it never re-looks up sessions[nodeID] and cannot corrupt the new
 // live session.
 func (m *SessionManager) Register(conn *websocket.Conn, identity auth.NodeIdentity) *NodeSession {
+	key := KeyOf(identity)
 	m.mu.Lock()
-	existing := m.sessions[identity.NodeID]
+	existing := m.sessions[key]
 	session := newNodeSession(conn, identity)
-	m.sessions[identity.NodeID] = session
+	m.sessions[key] = session
 	m.mu.Unlock()
 
 	if existing != nil && existing.isConnected() {
@@ -268,12 +282,12 @@ func (m *SessionManager) DisconnectSession(session *NodeSession, code int, reaso
 	})
 }
 
-// Disconnect is the nodeID-based variant kept for callers that don't hold
+// Disconnect is the key-based variant kept for callers that don't hold
 // a session pointer. It guards against corrupting a new session by only
 // calling markDisconnected on the exact session pointer currently in the map.
-func (m *SessionManager) Disconnect(nodeID string, code int, reason string) {
+func (m *SessionManager) Disconnect(key SessionKey, code int, reason string) {
 	m.mu.RLock()
-	session := m.sessions[nodeID]
+	session := m.sessions[key]
 	m.mu.RUnlock()
 
 	if session == nil {
@@ -281,22 +295,22 @@ func (m *SessionManager) Disconnect(nodeID string, code int, reason string) {
 	}
 
 	// Guard: only disconnect if the stored pointer is still the same session
-	// this call is about. After a reconnect, sessions[nodeID] already points
+	// this call is about. After a reconnect, sessions[key] already points
 	// to the new session — we must not mark it disconnected.
 	m.DisconnectSession(session, code, reason)
 }
 
-// Get returns a session by node ID, or nil if not found.
-func (m *SessionManager) Get(nodeID string) *NodeSession {
+// Get returns a session by key, or nil if not found.
+func (m *SessionManager) Get(key SessionKey) *NodeSession {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.sessions[nodeID]
+	return m.sessions[key]
 }
 
 // IsOnline checks if a node is currently connected.
-func (m *SessionManager) IsOnline(nodeID string) bool {
+func (m *SessionManager) IsOnline(key SessionKey) bool {
 	m.mu.RLock()
-	s := m.sessions[nodeID]
+	s := m.sessions[key]
 	m.mu.RUnlock()
 	return s != nil && s.isConnected()
 }
@@ -312,12 +326,12 @@ func (m *SessionManager) GetStats() SessionStats {
 		ConnectedIDs:      make([]string, 0, len(m.sessions)),
 		ConnectedSessions: make([]ConnectedSessionView, 0, len(m.sessions)),
 	}
-	for id, s := range m.sessions {
+	for _, s := range m.sessions {
 		if !s.isConnected() {
 			continue
 		}
 		stats.ConnectedCount++
-		stats.ConnectedIDs = append(stats.ConnectedIDs, id)
+		stats.ConnectedIDs = append(stats.ConnectedIDs, s.Identity.NodeID)
 		view := ConnectedSessionView{
 			NodeID: s.Identity.NodeID,
 			UserID: s.Identity.UserID,
@@ -339,6 +353,18 @@ func (m *SessionManager) ConnectedNodeIDs() []string {
 // ConnectedSessions returns the connected node sessions with live identity metadata.
 func (m *SessionManager) ConnectedSessions() []ConnectedSessionView {
 	return m.GetStats().ConnectedSessions
+}
+
+// ConnectedSessionsForUser returns the connected sessions owned by one user.
+func (m *SessionManager) ConnectedSessionsForUser(userID string) []ConnectedSessionView {
+	all := m.GetStats().ConnectedSessions
+	owned := make([]ConnectedSessionView, 0, len(all))
+	for _, view := range all {
+		if view.UserID == userID {
+			owned = append(owned, view)
+		}
+	}
+	return owned
 }
 
 // ConnectedCount returns the number of currently connected nodes.
