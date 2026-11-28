@@ -27,7 +27,7 @@ vi.mock("@xterm/addon-web-links", () => ({
   },
 }));
 
-import { loadTerminalAddons } from "./terminalAddons";
+import { createTerminalLinkHandler, loadTerminalAddons } from "./terminalAddons";
 
 describe("loadTerminalAddons", () => {
   it("loads fit addon first and attempts all addons including webgl", () => {
@@ -138,5 +138,26 @@ describe("loadTerminalAddons", () => {
         uri: "file:///tmp/private.txt",
       });
     });
+  });
+
+  it("opens OSC 8 hyperlinks through openLink instead of window.open", async () => {
+    const logger = { warn: vi.fn() };
+    const windowOpen = vi.spyOn(window, "open");
+    const confirmSpy = vi.spyOn(window, "confirm");
+    mocks.openLink.mockResolvedValueOnce({ opened: true });
+
+    const handler = createTerminalLinkHandler(logger);
+    const preventDefault = vi.fn();
+    const range = { start: { x: 1, y: 1 }, end: { x: 10, y: 1 } };
+    handler.activate({ preventDefault } as unknown as MouseEvent, "https://yishan.io/pr/1", range);
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(mocks.openLink).toHaveBeenCalledWith({ url: "https://yishan.io/pr/1" });
+    });
+    expect(windowOpen).not.toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    windowOpen.mockRestore();
+    confirmSpy.mockRestore();
   });
 });

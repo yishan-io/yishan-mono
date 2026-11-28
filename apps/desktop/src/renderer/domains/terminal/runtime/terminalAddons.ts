@@ -6,7 +6,7 @@ import { SearchAddon } from "@xterm/addon-search";
 import { WebFontsAddon } from "@xterm/addon-web-fonts";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
-import type { ITerminalAddon, Terminal } from "@xterm/xterm";
+import type { ILinkHandler, ITerminalAddon, Terminal } from "@xterm/xterm";
 
 type Logger = Pick<Console, "warn">;
 const TERMINAL_DISABLED_ADDONS_STORAGE_KEY = "yishan.terminal.disabledAddons";
@@ -139,6 +139,18 @@ function getDisabledAddonNames(): ReadonlySet<string> {
   } catch {
     return new Set();
   }
+}
+
+/**
+ * Handles OSC 8 hyperlinks (escape-sequence links such as the ones Claude Code
+ * prints). xterm routes these through the `linkHandler` option, not
+ * WebLinksAddon; without it xterm falls back to `confirm()` + `window.open()`
+ * and bypasses the built-in browser.
+ */
+export function createTerminalLinkHandler(logger: Logger = console): ILinkHandler {
+  return {
+    activate: (event, uri) => void openExternalLink(event, uri, logger),
+  };
 }
 
 async function openExternalLink(event: MouseEvent, uri: string, logger: Logger): Promise<void> {
