@@ -125,19 +125,14 @@ API-backed subcommands:
 - `whoami` (alias: `me`)
 - `auth refresh --refresh-token <token>`
 - `auth revoke --refresh-token <token>`
-- `org list|create|delete|use|current|clear`
-- `org member add|remove`
-- `node list|create|delete`
 - `project list|create`
 - `workspace list|get|create|close`
 
 Organization context:
 
-- Set active org: `yishan org use <org-id>`
-- Show active org: `yishan org current`
-- Clear active org: `yishan org clear`
-- Commands with `--org-id` fall back to active org when flag is omitted.
-- `workspace create` creates workspace metadata via API first; for local nodes it then provisions via local daemon using the returned workspace id.
+- The active org is the one last selected in the desktop app; the daemon saves it to `settings.yaml`.
+- Commands with `--org-id` fall back to the active org when the flag is omitted.
+- `workspace create` runs on the local daemon.
 
 Workspace lifecycle examples:
 

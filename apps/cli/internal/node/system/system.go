@@ -3,7 +3,6 @@ package system
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"yishan/apps/cli/internal/adapter/cloud"
@@ -146,32 +145,6 @@ func (s *Service) TokenUsageDebugState(ctx context.Context) (any, error) {
 		"enabled": true,
 		"state":   s.deps.TokenUsage.DebugState(),
 	}, nil
-}
-
-func (s *Service) ProjectList(ctx context.Context, req rpc.SystemProjectListParams) (any, error) {
-	orgID := strings.TrimSpace(req.OrgID)
-	if orgID == "" {
-		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "orgId is required")
-	}
-	client := s.deps.Session.APIClient()
-	resp, err := client.ListProjects(orgID)
-	if err != nil {
-		return nil, fmt.Errorf("list projects: %w", err)
-	}
-	return resp.Projects, nil
-}
-
-func (s *Service) NodeList(ctx context.Context, req rpc.SystemNodeListParams) (any, error) {
-	orgID := strings.TrimSpace(req.OrgID)
-	if orgID == "" {
-		return nil, rpc.NewRPCError(rpc.CodeInvalidParams, "orgId is required")
-	}
-	client := s.deps.Session.APIClient()
-	resp, err := client.ListNodes(orgID)
-	if err != nil {
-		return nil, fmt.Errorf("list nodes: %w", err)
-	}
-	return resp.Nodes, nil
 }
 
 // parseBoolRefreshParam extracts the optional `refresh` boolean from a params object.

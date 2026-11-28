@@ -149,3 +149,40 @@ func TestClient_Run_CancellationClosesIdlePeer(t *testing.T) {
 		t.Fatal("idle relay peer was not closed after cancellation")
 	}
 }
+
+func TestClient_Run_SendsNodeIDAndBearerToken(t *testing.T) {
+	upgrader := websocket.Upgrader{CheckOrigin: func(_ *http.Request) bool { return true }}
+	type dial struct{ nodeID, auth string }
+	dials := make(chan dial, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		select {
+		case dials <- dial{nodeID: request.URL.Query().Get("nodeId"), auth: request.Header.Get("Authorization")}:
+		default:
+		}
+		conn, err := upgrader.Upgrade(writer, request, nil)
+		if err != nil {
+			return
+		}
+		_ = conn.Close()
+	}))
+	defer server.Close()
+
+	client := NewClient(ClientConfig{
+		NodeID:      "node-42",
+		URL:         "ws" + strings.TrimPrefix(server.URL, "http"),
+		StaticToken: "test-token",
+		Server:      rpc.NewServer(rpc.HandlerFunc(func(context.Context, *rpc.Connection, string, json.RawMessage) (any, error) { return nil, nil })),
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go client.Run(ctx)
+
+	select {
+	case got := <-dials:
+		if got.nodeID != "node-42" || got.auth != "Bearer test-token" {
+			t.Fatalf("dial = %+v", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("relay was not dialed")
+	}
+}

@@ -15,6 +15,7 @@ import (
 
 	relayprotocol "yishan/packages/relay-protocol-go"
 
+	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	release "yishan/apps/cli/internal/platform/release"
 	"yishan/apps/cli/internal/rpc"
@@ -78,8 +79,8 @@ func (c *Client) Status() *Status {
 	return c.status
 }
 
-// Run runs the reconnect loop until ctx is cancelled. It mints relay tokens,
-// dials the relay, runs one session per successful dial, and reconnects with
+// Run runs the reconnect loop until ctx is cancelled. It fetches the user's
+// access token, dials the relay, runs one session per successful dial, and reconnects with
 // exponential backoff on failure.
 func (c *Client) Run(ctx context.Context) {
 	endpoint, err := normalizeWSURL(c.url)
@@ -92,7 +93,7 @@ func (c *Client) Run(ctx context.Context) {
 	var cachedToken string
 	var cachedTokenExpiry time.Time
 
-	// Static token provided (local dev) — use it directly, skip API minting.
+	// Static token provided (local dev) — use it directly, skip the API.
 	if c.staticToken != "" {
 		cachedToken = c.staticToken
 		cachedTokenExpiry = time.Now().Add(365 * 24 * time.Hour) // effectively never expires
@@ -130,14 +131,14 @@ func (c *Client) Run(ctx context.Context) {
 
 		loggedWaitingForLogin = false
 
-		// Reuse the cached token if it is still valid; only mint a new one
+		// Reuse the cached token if it is still valid; only fetch a fresh one
 		// when the token is missing or about to expire.
 		now := time.Now()
 		if c.staticToken == "" && (cachedToken == "" || now.After(cachedTokenExpiry.Add(-tokenEarlyRefreshWindow))) {
-			token, expiry, err := c.mintToken()
+			token, expiry, err := c.accessToken()
 			if err != nil {
-				log.Warn().Err(err).Str("nodeId", c.nodeID).Msg("relay token mint failed")
-				c.status.setDisconnected("token mint failed: " + err.Error())
+				log.Warn().Err(err).Str("nodeId", c.nodeID).Msg("relay access token unavailable")
+				c.status.setDisconnected("access token unavailable: " + err.Error())
 				select {
 				case <-ctx.Done():
 					return
@@ -150,7 +151,7 @@ func (c *Client) Run(ctx context.Context) {
 			cachedTokenExpiry = expiry
 		}
 
-		endpointWithMetadata := appendClientMetadata(endpoint)
+		endpointWithMetadata := appendClientMetadata(endpoint, c.nodeID)
 		headers := http.Header{}
 		headers.Set("Authorization", "Bearer "+cachedToken)
 		conn, resp, err := websocket.DefaultDialer.DialContext(ctx, endpointWithMetadata, headers)
@@ -199,26 +200,20 @@ func (c *Client) Run(ctx context.Context) {
 	}
 }
 
-func (c *Client) mintToken() (string, time.Time, error) {
-	client := c.runtime.APIClient()
-	resp, err := client.RelayToken(c.nodeID)
+// accessToken returns the user's access token, refreshing it first when it is
+// about to expire. The relay authenticates nodes with this token plus the
+// nodeId query parameter, so the node never registers with the API.
+func (c *Client) accessToken() (string, time.Time, error) {
+	token, expiresAt, err := c.runtime.EnsureFreshAccessToken()
 	if err != nil {
-		return "", time.Time{}, fmt.Errorf("request relay token: %w", err)
+		return "", time.Time{}, fmt.Errorf("get access token: %w", err)
 	}
-	if strings.TrimSpace(resp.Token) == "" {
-		return "", time.Time{}, fmt.Errorf("empty relay token in response")
-	}
-	expiry := time.Time{}
-	if resp.ExpiresAt != "" {
-		if t, err := time.Parse(time.RFC3339, resp.ExpiresAt); err == nil {
-			expiry = t
-		}
-	}
-	// If no expiry was returned, treat it as valid for 5 minutes.
-	if expiry.IsZero() {
+	expiry, ok := cloud.ParseExpiry(expiresAt)
+	if !ok {
+		// Without a known expiry, check again on the next reconnect window.
 		expiry = time.Now().Add(5 * time.Minute)
 	}
-	return resp.Token, expiry, nil
+	return token, expiry, nil
 }
 
 // nextDelay doubles the current delay up to reconnectMaxDelay and adds ±25%
@@ -238,12 +233,15 @@ func nextDelay(current time.Duration) time.Duration {
 	return result
 }
 
-func appendClientMetadata(endpoint string) string {
+func appendClientMetadata(endpoint string, nodeID string) string {
 	parsed, err := url.Parse(endpoint)
 	if err != nil {
 		return endpoint
 	}
 	query := parsed.Query()
+	if trimmed := strings.TrimSpace(nodeID); trimmed != "" {
+		query.Set("nodeId", trimmed)
+	}
 	if version := strings.TrimSpace(release.Version); version != "" {
 		query.Set("version", version)
 	}

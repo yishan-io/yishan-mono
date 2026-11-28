@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 )
 
-// SystemHandler owns the daemon./app./agent./tokenUsage./node./cliTools./
+// SystemHandler owns the daemon./app./agent./tokenUsage./cliTools./
 // integration. RPC methods that fall through the namespace router to system.
 type SystemHandler struct {
 	Services SystemService
@@ -54,18 +54,6 @@ func (h *SystemHandler) Call(ctx context.Context, connection *Connection, method
 		return h.Services.AgentListModels(ctx, req)
 	case MethodTokenUsageDebugState:
 		return h.Services.TokenUsageDebugState(ctx)
-	case MethodProjectList:
-		var req SystemProjectListParams
-		if err := DecodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		return h.Services.ProjectList(ctx, req)
-	case MethodNodeList:
-		var req SystemNodeListParams
-		if err := DecodeParams(params, &req); err != nil {
-			return nil, err
-		}
-		return h.Services.NodeList(ctx, req)
 	default:
 		return nil, NewRPCError(CodeMethodNotFound, "method not found: "+method)
 	}

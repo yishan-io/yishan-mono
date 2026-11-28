@@ -2,14 +2,18 @@
 //
 // Both token kinds are issued by the API service and share its signing
 // secret, issuer and audience; the `type` claim tells them apart:
-//   - nodes connect to /ws with a relay token (type "relay") that carries the
-//     owning user (sub) and the nodeId;
+//   - nodes connect to /ws with the user's access token (type "access") and
+//     name themselves with the `nodeId` query parameter. Sessions are keyed by
+//     (user, node), so a node id never needs to be registered with the server;
+//   - daemons up to v0.27 still connect with a relay token (type "relay") that
+//     carries the nodeId claim;
 //   - remote-control clients use the user's access token (type "access").
 package auth
 
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -59,19 +63,25 @@ func NewAuthenticator(config Config) *Authenticator {
 	return &Authenticator{config: config}
 }
 
-// Authenticate validates a node's relay token from the request and returns the
-// node identity. Returns nil and an error if authentication fails.
+// Authenticate validates a node connection and returns the node identity.
+// It accepts the user's access token with a `nodeId` query parameter, or a
+// legacy relay token whose nodeId claim wins. Returns nil and an error if
+// authentication fails.
 func (a *Authenticator) Authenticate(r *http.Request) (*NodeIdentity, error) {
-	claims, err := a.claimsFromRequest(r, tokenTypeRelay)
+	claims, err := a.claimsFromRequest(r, tokenTypeAccess, tokenTypeRelay)
 	if err != nil {
 		return nil, err
 	}
-	if claims.NodeID == "" {
-		return nil, fmt.Errorf("token missing nodeId claim")
+	nodeID := claims.NodeID
+	if claims.Type == tokenTypeAccess {
+		nodeID = strings.TrimSpace(r.URL.Query().Get("nodeId"))
+	}
+	if nodeID == "" {
+		return nil, fmt.Errorf("missing nodeId")
 	}
 	return &NodeIdentity{
 		UserID:          claims.Subject,
-		NodeID:          claims.NodeID,
+		NodeID:          nodeID,
 		OrganizationIDs: claims.OrganizationIDs,
 		DaemonVersion:   strings.TrimSpace(r.URL.Query().Get("version")),
 	}, nil
@@ -86,9 +96,9 @@ func (a *Authenticator) AuthenticateUser(r *http.Request) (*UserIdentity, error)
 	return &UserIdentity{UserID: claims.Subject}, nil
 }
 
-// claimsFromRequest validates the request's bearer token and requires the
-// given token type and a subject.
-func (a *Authenticator) claimsFromRequest(r *http.Request, tokenType string) (*tokenClaims, error) {
+// claimsFromRequest validates the request's bearer token and requires one of
+// the given token types and a subject.
+func (a *Authenticator) claimsFromRequest(r *http.Request, tokenTypes ...string) (*tokenClaims, error) {
 	tokenString := ExtractBearerToken(r)
 	if tokenString == "" {
 		return nil, fmt.Errorf("missing bearer token")
@@ -97,8 +107,8 @@ func (a *Authenticator) claimsFromRequest(r *http.Request, tokenType string) (*t
 	if err != nil {
 		return nil, err
 	}
-	if claims.Type != tokenType {
-		return nil, fmt.Errorf("token type %q, want %q", claims.Type, tokenType)
+	if !slices.Contains(tokenTypes, claims.Type) {
+		return nil, fmt.Errorf("token type %q, want one of %q", claims.Type, tokenTypes)
 	}
 	if claims.Subject == "" {
 		return nil, fmt.Errorf("token missing sub claim")

@@ -9,11 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"yishan/apps/cli/internal/adapter/cloud/session"
 	agentsetup "yishan/apps/cli/internal/agent/setup"
 	"yishan/apps/cli/internal/app"
 	hook "yishan/apps/cli/internal/node/hook"
-	nodesystem "yishan/apps/cli/internal/node/system"
 
 	"github.com/rs/zerolog/log"
 )
@@ -75,25 +73,6 @@ func handleShutdownSignal(stop chan os.Signal, cancelShutdown context.CancelFunc
 	if err := server.Shutdown(ctx); err != nil {
 		log.Error().Err(err).Msg("failed to shutdown daemon server")
 	}
-}
-
-func registerNode(dr *daemonRuntime, runtime *session.Session) error {
-	if runtime == nil || !runtime.APIConfigured() {
-		return nil
-	}
-	agentDetectionStatus := nodesystem.ListAgentDetectionStatuses(false)
-	if err := registerRemoteNode(runtime, nodeRegistration{
-		ID:                   dr.daemonID,
-		Endpoint:             "http://" + dr.actualAddr,
-		AgentDetectionStatus: agentDetectionStatus,
-	}); err != nil {
-		if isReauthRequiredError(err) {
-			log.Warn().Err(err).Msg("daemon started without remote node registration; re-authentication required")
-			return nil
-		}
-		return fmt.Errorf("register daemon node: %w", err)
-	}
-	return nil
 }
 
 func (sc *shutdownContext) waitForShutdown() error {

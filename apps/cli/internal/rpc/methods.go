@@ -32,7 +32,6 @@ const (
 	MethodProjectDelete           = "project.delete"
 	MethodProjectPromoteGit       = "project.promoteGit"
 	MethodProjectEnsureTaskPrefix = "project.ensureTaskPrefix"
-	MethodNodeList                = "node.list"
 
 	MethodScheduledJobList     = "scheduledJob.list"
 	MethodScheduledJobCreate   = "scheduledJob.create"

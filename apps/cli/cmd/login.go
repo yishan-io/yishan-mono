@@ -3,18 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"yishan/apps/cli/internal/adapter/cloud"
-	release "yishan/apps/cli/internal/platform/release"
-	"yishan/apps/cli/internal/daemon"
-	"yishan/apps/cli/internal/adapter/cloud/login"
-	nodeid "yishan/apps/cli/internal/node/id"
 	"yishan/apps/cli/cmd/output"
+	"yishan/apps/cli/internal/adapter/cloud"
+	"yishan/apps/cli/internal/adapter/cloud/login"
 )
 
 var loginCmd = &cobra.Command{
@@ -71,13 +65,6 @@ local credential file and the local daemon node is registered with the API.`,
 			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: running daemon auth session was not refreshed; restart the daemon or login again if daemon requests re-authentication: %v\n", persistenceResult.Warning)
 		}
 
-		if err := registerLocalNodeAfterLogin(); err != nil {
-			log.Warn().Err(err).Msg("failed to register local node after login")
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: local node registration failed: %v\n", err)
-		} else {
-			log.Info().Msg("local node registered successfully after login")
-		}
-
 		return output.PrintAny(map[string]string{"status": "ok", "message": "login successful"})
 	},
 }
@@ -85,57 +72,4 @@ local credential file and the local daemon node is registered with the API.`,
 func init() {
 	rootCmd.AddCommand(loginCmd)
 	loginCmd.Flags().String("provider", "google", "oauth provider (google|github)")
-}
-
-// registerLocalNodeAfterLogin registers the local daemon node with the API
-// immediately after login so that downstream workspace/project flows have
-// a node available without waiting for the daemon to start. The call is
-// idempotent — the API upserts on the daemon ID.
-func registerLocalNodeAfterLogin() error {
-	if appConfig.API.BaseURL == "" || appConfig.API.Token == "" {
-		return fmt.Errorf("API is not configured; skipping node registration")
-	}
-
-	statePath, err := daemon.ResolveStateFilePath(appConfig.ConfigPath)
-	if err != nil {
-		return fmt.Errorf("resolve daemon state path: %w", err)
-	}
-
-	daemonIDPath := filepath.Join(filepath.Dir(statePath), nodeid.FileName)
-	daemonID, err := nodeid.EnsureDaemonID(daemonIDPath)
-	if err != nil {
-		return fmt.Errorf("ensure daemon id: %w", err)
-	}
-
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "local-daemon"
-	}
-
-	updateIfExists := false
-	client := cloud.NewClient(
-		appConfig.API.BaseURL,
-		appConfig.API.Token,
-		appConfig.API.RefreshToken,
-		appConfig.API.AccessTokenExpiresAt,
-		appConfig.API.RefreshTokenExpiresAt,
-		nil,
-	)
-	_, err = client.RegisterNode(cloud.RegisterNodeInput{
-		NodeID: daemonID,
-		Name:   hostname,
-		Kind:   "managed",
-		Scope:  "private",
-		Metadata: map[string]any{
-			"os":      runtime.GOOS,
-			"version": release.Version,
-		},
-		UpdateIfExists: &updateIfExists,
-	})
-	if err != nil {
-		return fmt.Errorf("register node %q: %w", daemonID, err)
-	}
-
-	log.Debug().Str("nodeId", daemonID).Str("hostname", hostname).Msg("registered local node after login")
-	return nil
 }

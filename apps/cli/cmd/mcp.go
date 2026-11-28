@@ -140,7 +140,7 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 		&mcp.Tool{Name: "project_list", Description: "List all projects in the current organization. Returns project id, name, repo URL, repo key, and related metadata for each project."},
 		func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
 			if orgID == "" {
-				return textErrorResult("no current organization: set one with \"yishan org use <org-id>\""), nil, nil
+				return textErrorResult("no current organization: open the Yishan app and select one"), nil, nil
 			}
 
 			var projects []map[string]any
@@ -155,30 +155,6 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 			encoded, err := json.MarshalIndent(projects, "", "  ")
 			if err != nil {
 				return textErrorResult(fmt.Sprintf("failed to encode projects: %v", err)), nil, nil
-			}
-			return textResult(string(encoded)), nil, nil
-		},
-	)
-
-	mcp.AddTool(server,
-		&mcp.Tool{Name: "node_list", Description: "List all nodes in the current organization. Returns node id, name, kind, scope, endpoint, and metadata for each node."},
-		func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
-			if orgID == "" {
-				return textErrorResult("no current organization: set one with \"yishan org use <org-id>\""), nil, nil
-			}
-
-			var nodes []map[string]any
-			if err := daemonClient.Call("node.list", map[string]any{"orgId": orgID}, &nodes); err != nil {
-				return textErrorResult(fmt.Sprintf("failed to list nodes: %v", err)), nil, nil
-			}
-
-			if len(nodes) == 0 {
-				return textResult("No nodes found."), nil, nil
-			}
-
-			encoded, err := json.MarshalIndent(nodes, "", "  ")
-			if err != nil {
-				return textErrorResult(fmt.Sprintf("failed to encode nodes: %v", err)), nil, nil
 			}
 			return textResult(string(encoded)), nil, nil
 		},
@@ -256,7 +232,7 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 		&mcp.Tool{Name: "workspace_create", Description: "Create a new yishan workspace (git worktree) on a branch. Use this when an agent needs to start work on a feature or fix. Requires repoKey, sourcePath, targetBranch, and sourceBranch. Supports progress notifications during creation."},
 		func(_ context.Context, req *mcp.CallToolRequest, args workspaceCreateArgs) (*mcp.CallToolResult, any, error) {
 			if orgID == "" {
-				return textErrorResult("no current organization: set one with \"yishan org use <org-id>\""), nil, nil
+				return textErrorResult("no current organization: open the Yishan app and select one"), nil, nil
 			}
 			if args.RepoKey == "" || args.SourcePath == "" || args.TargetBranch == "" || args.SourceBranch == "" {
 				return textErrorResult("repoKey, sourcePath, targetBranch, and sourceBranch are required"), nil, nil
@@ -327,7 +303,7 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 		&mcp.Tool{Name: "workspace_close", Description: "Close a yishan workspace and optionally remove its git branch. Use when an agent is done with a feature or fix."},
 		func(_ context.Context, _ *mcp.CallToolRequest, args workspaceCloseArgs) (*mcp.CallToolResult, any, error) {
 			if orgID == "" {
-				return textErrorResult("no current organization: set one with \"yishan org use <org-id>\""), nil, nil
+				return textErrorResult("no current organization: open the Yishan app and select one"), nil, nil
 			}
 			if args.WorkspaceID == "" {
 				return textErrorResult("workspaceId is required"), nil, nil

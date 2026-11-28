@@ -15,7 +15,8 @@ func addOrgIDFlag(cmd *cobra.Command) {
 
 // resolveOrgID returns the organization ID to use for a command, in priority order:
 //  1. --org-id flag (explicit override)
-//  2. default_org_id from context.yaml (set via `yishan org default --org-id <id>`)
+//  2. default_org_id from settings.yaml, which the daemon writes whenever the
+//     desktop app selects an organization
 func resolveOrgID(cmd *cobra.Command) (string, error) {
 	orgID, err := cmd.Flags().GetString("org-id")
 	if err != nil {
@@ -29,5 +30,5 @@ func resolveOrgID(cmd *cobra.Command) (string, error) {
 		return appConfig.DefaultOrgID, nil
 	}
 
-	return "", fmt.Errorf("no default org set: run `yishan org default --org-id <org-id>` or pass --org-id")
+	return "", fmt.Errorf("no organization selected: open the Yishan app once or pass --org-id")
 }
