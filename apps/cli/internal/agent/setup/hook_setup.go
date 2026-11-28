@@ -12,13 +12,11 @@ import (
 	"yishan/apps/cli/internal/platform/config"
 )
 
-const RemoteHostPolicyEnvKey = "YISHAN_REMOTE_HOST_POLICY"
-
 // NotifyScriptPathEnvKey is the env var set in managed terminals pointing to the notify script.
 const NotifyScriptPathEnvKey = "YISHAN_NOTIFY_SCRIPT_PATH"
 
 // EnsureManagedAgentRuntime materializes managed agent wrapper assets and hook configuration.
-func EnsureManagedAgentRuntime(disablePersona bool) {
+func EnsureManagedAgentRuntime() {
 	managedRootDir, err := resolveManagedHookRootDir()
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to resolve agent hook root")
@@ -42,7 +40,6 @@ func EnsureManagedAgentRuntime(disablePersona bool) {
 	if err := hooksetup.EnsureAgentHookSetup(hooksetup.AgentHookSetupConfig{
 		NotifyScriptPath: notifyScriptPath,
 		XDGConfigHome:    managedOpenCodeConfigHome,
-		DisablePersona:   disablePersona,
 	}); err != nil {
 		log.Warn().Err(err).Msg("failed to install agent hook setup")
 	}

@@ -31,8 +31,8 @@ var accountDataItemNames = []string{
 }
 
 // ensureUserIDForAccountResolution backfills a missing user_id in
-// credential.yaml from WhoAmI when tokens are present (service tokens and
-// env-var credentials carry no cached user_id), and revalidates a user_id
+// credential.yaml from WhoAmI when tokens are present (env-var credentials
+// carry no cached user_id), and revalidates a user_id
 // that was backfilled from env-var credentials: env tokens are never
 // persisted to the file, so a stale user_id from a previous env account would
 // otherwise pin the current env account to the wrong data dir. Errors are

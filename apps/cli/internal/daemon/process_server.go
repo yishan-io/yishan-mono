@@ -28,12 +28,7 @@ func saveDaemonState(cfg RunConfig, dr *daemonRuntime) error {
 		return fmt.Errorf("save daemon state: %w", err)
 	}
 	_ = os.Setenv("YISHAN_HOOK_INGRESS_URL", "http://"+dr.actualAddr+hook.AgentHookIngestPath)
-	if usesRemoteHostPolicy(dr.app.Session) {
-		_ = os.Setenv(agentsetup.RemoteHostPolicyEnvKey, "1")
-	} else {
-		_ = os.Unsetenv(agentsetup.RemoteHostPolicyEnvKey)
-	}
-	agentsetup.EnsureManagedAgentRuntime(usesRemoteHostPolicy(dr.app.Session))
+	agentsetup.EnsureManagedAgentRuntime()
 	return nil
 }
 

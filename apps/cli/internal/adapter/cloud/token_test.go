@@ -28,12 +28,6 @@ func TestParseUserIDFromJWT_ReturnsSubClaim(t *testing.T) {
 	}
 }
 
-func TestParseUserIDFromJWT_RejectsServiceToken(t *testing.T) {
-	if _, ok := ParseUserIDFromJWT("yst_live_abc123"); ok {
-		t.Fatal("expected service token to be rejected")
-	}
-}
-
 func TestParseUserIDFromJWT_RejectsNonJWTString(t *testing.T) {
 	if _, ok := ParseUserIDFromJWT("not-a-jwt"); ok {
 		t.Fatal("expected non-JWT string to be rejected")

@@ -19,30 +19,15 @@ import (
 
 var loginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Login via OAuth in browser or service token",
-	Long: `Authenticate with Yishan via an OAuth browser flow or a service token.
+	Short: "Login via OAuth in browser",
+	Long: `Authenticate with Yishan via an OAuth browser flow.
 
 Opens your default browser to complete authentication with the selected
 provider. On success the access and refresh tokens are persisted to the
-local credential file and the local daemon node is registered with the API.
-
-For non-interactive environments (remote hosts, CI), use --token with a
-service token created via "yishan auth create-service-token".`,
+local credential file and the local daemon node is registered with the API.`,
 	Example: `  yishan login
-  yishan login --provider github
-  yishan login --token yst_...`,
+  yishan login --provider github`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		token, err := cmd.Flags().GetString("token")
-		if err != nil {
-			return err
-		}
-
-		// Service token login (non-interactive)
-		if token != "" {
-			return loginWithServiceToken(cmd, token)
-		}
-
-		// Browser OAuth flow (interactive)
 		provider, err := cmd.Flags().GetString("provider")
 		if err != nil {
 			return err
@@ -100,38 +85,6 @@ service token created via "yishan auth create-service-token".`,
 func init() {
 	rootCmd.AddCommand(loginCmd)
 	loginCmd.Flags().String("provider", "google", "oauth provider (google|github)")
-	loginCmd.Flags().String("token", "", "service token for non-interactive login (created via 'yishan auth create-service-token')")
-}
-
-func loginWithServiceToken(cmd *cobra.Command, token string) error {
-	// Verify the token before persisting: WhoAmI provides the user_id needed
-	// for account data dir resolution, so it must run first.
-	client := cloud.NewClient(appConfig.API.BaseURL, token, "", "", "", nil)
-	me, err := client.WhoAmI()
-	if err != nil {
-		return fmt.Errorf("service token verification failed: %w", err)
-	}
-
-	persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), cloud.TokenUpdate{
-		AccessToken: token,
-		UserID:      me.User.ID,
-	})
-	if err != nil {
-		return err
-	}
-	if persistenceResult.Warning != nil {
-		log.Warn().Err(persistenceResult.Warning).Msg("failed to sync auth tokens to running daemon after service token login")
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: running daemon auth session was not refreshed; restart the daemon or login again if daemon requests re-authentication: %v\n", persistenceResult.Warning)
-	}
-
-	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Authenticated as %s (%s)\n", me.User.Email, me.User.Name)
-
-	if err := registerLocalNodeAfterLogin(); err != nil {
-		log.Warn().Err(err).Msg("failed to register local node after login")
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: local node registration failed: %v\n", err)
-	}
-
-	return output.PrintAny(map[string]string{"status": "ok", "message": "login successful (service token)"})
 }
 
 // registerLocalNodeAfterLogin registers the local daemon node with the API

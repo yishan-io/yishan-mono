@@ -65,22 +65,11 @@ type shutdownContext struct {
 	serverErr <-chan error
 }
 
-func usesRemoteHostPolicy(runtime *session.Session) bool {
-	if runtime == nil {
-		return false
-	}
-	return runtime.UsesServiceTokenAuth()
-}
-
-func buildMemorySummarizerConfig(cfg RunConfig, runtime *session.Session) memory.SummarizerConfig {
+func buildMemorySummarizerConfig(cfg RunConfig) memory.SummarizerConfig {
 	memoryCfg := memory.SummarizerConfig{
 		Enabled:   cfg.MemorySummarizer,
 		AgentKind: cfg.MemorySummarizerAgent,
 		Model:     cfg.MemorySummarizerModel,
-	}
-	if usesRemoteHostPolicy(runtime) {
-		memoryCfg.DisableProjectMemory = true
-		memoryCfg.DisablePersona = true
 	}
 	return memoryCfg
 }

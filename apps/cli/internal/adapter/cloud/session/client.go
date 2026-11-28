@@ -48,10 +48,6 @@ func APIToken() string {
 	return defaultSession.APIToken()
 }
 
-func UsesServiceTokenAuth() bool {
-	return defaultSession.UsesServiceTokenAuth()
-}
-
 func PersistAuthTokens(update cloud.TokenUpdate) error {
 	return defaultSession.PersistAuthTokens(update)
 }
@@ -117,10 +113,6 @@ func (r *Session) APIToken() string {
 		return ""
 	}
 	return r.appCfg.API.Token
-}
-
-func (r *Session) UsesServiceTokenAuth() bool {
-	return cloud.IsServiceToken(r.APIToken())
 }
 
 func (r *Session) PersistAuthTokens(update cloud.TokenUpdate) error {

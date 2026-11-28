@@ -119,15 +119,6 @@ func NewClient(
 const accessTokenEarlyRefreshWindow = 30 * time.Second
 const refreshTokenExpiryGuardWindow = 30 * time.Second
 const invalidRefreshTokenMessage = "invalid refresh token"
-const serviceTokenPrefix = "yst_"
-
-func isServiceToken(token string) bool {
-	return strings.HasPrefix(token, serviceTokenPrefix)
-}
-
-func IsServiceToken(token string) bool {
-	return isServiceToken(strings.TrimSpace(token))
-}
 
 func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
 	return c.DoRawContext(context.Background(), method, path, body)
@@ -135,11 +126,6 @@ func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
 
 // DoRawContext sends a request bound to ctx while preserving DoRaw's authentication behavior.
 func (c *Client) DoRawContext(ctx context.Context, method string, path string, body any) ([]byte, error) {
-	// Service tokens are long-lived and never need refresh.
-	if isServiceToken(c.accessToken) {
-		return c.doRaw(ctx, method, path, body)
-	}
-
 	if c.shouldProactivelyRefresh(path) {
 		log.Debug().Str("path", path).Dur("window", accessTokenEarlyRefreshWindow).Msg("proactively refreshing API access token")
 		if err := c.refreshAccessTokenContext(ctx); err != nil {

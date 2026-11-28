@@ -128,7 +128,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *session.Session, dae
 		EnvDir:           envDir,
 		DataDir:          dataDir,
 		SettingsPath:     config.SettingsFilePath(dataDir),
-		MemorySummarizer: buildMemorySummarizerConfig(cfg, runtime),
+		MemorySummarizer: buildMemorySummarizerConfig(cfg),
 		RelayEnabled:     cfg.RelayEnabled,
 		RelayURL:         cfg.RelayURL,
 		RelayToken:       cfg.RelayToken,
