@@ -263,6 +263,7 @@ vi.mock("@xterm/xterm", () => {
 
 vi.mock("../../../../domains/terminal/runtime/terminalAddons", () => ({
   loadTerminalAddons: mocked.loadTerminalAddons,
+  createTerminalLinkHandler: () => ({ activate: () => undefined }),
 }));
 
 afterEach(() => {

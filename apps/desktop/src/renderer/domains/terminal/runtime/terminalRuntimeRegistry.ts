@@ -1,6 +1,6 @@
 import { createFixedRuntimeLayer } from "@renderer/domains/workbench";
 import { Terminal } from "@xterm/xterm";
-import { loadTerminalAddons } from "./terminalAddons";
+import { createTerminalLinkHandler, loadTerminalAddons } from "./terminalAddons";
 import {
   MIN_FIT_INTERVAL_MS,
   MIN_HOST_SIZE_DELTA_PX,
@@ -111,7 +111,7 @@ export function ensureTerminalRuntime(tabId: string, tabData?: TerminalTabData):
   runtimeLayer.register(tabId, hostElement);
 
   // Create xterm instance and open it into the host (now connected to DOM).
-  const terminal = new Terminal(TERMINAL_OPTIONS);
+  const terminal = new Terminal({ ...TERMINAL_OPTIONS, linkHandler: createTerminalLinkHandler() });
   terminal.open(hostElement);
   const { fitAddon, searchAddon } = loadTerminalAddons(terminal);
   const writeQueue = createTerminalWriteQueue(terminal);
