@@ -121,14 +121,13 @@ remote), node/project/service, node/system (system, scheduler), plus
 `Client`/`NewClient`/`NewRuntimeClient` in cmd/root and node services.
 
 Symbols with no direct production importer (used only inside the package or by
-tests — response payload types and input builders): `AddOrganizationMemberResponse`,
-`CreateNodeResponse`, `CreateOrganizationResponse`, `CreateProjectResponse`,
+tests — response payload types and input builders): `CreateProjectResponse`,
 `CreateWorkspaceResponse`, `CreateWorkspaceInput`,
 `HealthResponse`, `ListProjectsWithWorkspacesResponse`, 
 `ListTokenUsageHourlyInput`, `MeResponse`, `OKResponse`, `OrganizationMember`,
-`ProjectWithWorkspaces`, `RefreshTokenResponse`, `RegisterNodeResponse`,
-`RelayTokenResponse`, `ScheduledJob`, `TokenUsageHourlyRowOutput`,
-`UpdateNodeScopeResponse`, `UpdateWorkspaceInput`, `UpsertWorkspacePullRequestInput`,
+`ProjectWithWorkspaces`, `RefreshTokenResponse`,
+`ScheduledJob`, `TokenUsageHourlyRowOutput`,
+`UpdateWorkspaceInput`, `UpsertWorkspacePullRequestInput`,
 `CreateProjectInput`. These are wire contract types; Phase 27 keeps them next to
 their resource files. Candidate for Phase 30 review.
 
@@ -282,8 +281,7 @@ into test_support_test.go; pi_agent_setup_test.go renamed agents_managed_test.go
 
 ```text
 client.go             # shared HTTP mechanics + client-level endpoints (keep; DoRaw/DoDecode/refresh, Health/WhoAmI/RefreshToken/RevokeToken, shared DTOs OKResponse/HealthResponse/MeResponse/User/RefreshTokenResponse/TokenUpdate)
-organizations.go      # org methods + org DTOs
-nodes.go              # node methods + node DTOs (incl. RelayToken)
+organizations.go      # org list (scheduled-job import) + org DTOs
 projects.go           # project methods + project DTOs
 workspaces.go         # workspace methods + workspace DTOs + input builders (was workspace_inputs.go)
 pull_requests.go      # UpsertWorkspacePullRequest + input

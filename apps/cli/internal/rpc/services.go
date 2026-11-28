@@ -172,6 +172,4 @@ type SystemService interface {
 	AppReloadAuthConfig(ctx context.Context) (any, error)
 	AgentListModels(ctx context.Context, req SystemAgentListModelsParams) (any, error)
 	TokenUsageDebugState(ctx context.Context) (any, error)
-	ProjectList(ctx context.Context, req SystemProjectListParams) (any, error)
-	NodeList(ctx context.Context, req SystemNodeListParams) (any, error)
 }

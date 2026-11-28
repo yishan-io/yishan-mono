@@ -31,10 +31,6 @@ type Project struct {
 	UpdatedAt       string           `json:"updatedAt"`
 }
 
-type ListProjectsResponse struct {
-	Projects []Project `json:"projects"`
-}
-
 type ProjectWithWorkspaces struct {
 	Project
 	Workspaces []Workspace `json:"workspaces"`
@@ -49,16 +45,5 @@ type ListProjectsWithWorkspacesResponse struct {
 func (c *Client) ListProjectsWithWorkspacesContext(ctx context.Context, orgID string) (ListProjectsWithWorkspacesResponse, error) {
 	var response ListProjectsWithWorkspacesResponse
 	err := c.DoDecodeContext(ctx, "GET", "/orgs/"+orgID+"/projects?withWorkspaces=true", nil, &response)
-	return response, err
-}
-
-func (c *Client) ListProjects(orgID string) (ListProjectsResponse, error) {
-	return c.ListProjectsContext(context.Background(), orgID)
-}
-
-// ListProjectsContext lists an organization's projects using the supplied request context.
-func (c *Client) ListProjectsContext(ctx context.Context, orgID string) (ListProjectsResponse, error) {
-	var response ListProjectsResponse
-	err := c.DoDecodeContext(ctx, "GET", "/orgs/"+orgID+"/projects", nil, &response)
 	return response, err
 }

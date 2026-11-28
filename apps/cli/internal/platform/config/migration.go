@@ -15,7 +15,7 @@ import (
 // History: default_org_id was first written to context.yaml by the CLI, then
 // to settings.yaml by the daemon, with a one-way context → settings fold on
 // every load. context.yaml is now fully retired: settings.yaml is the single
-// source, and org.go writes it directly.
+// source, written by the daemon when the desktop app selects an organization.
 func MigrateSettings(settingsPath string, legacyViper *viper.Viper) error {
 	v := viper.New()
 	v.SetConfigFile(settingsPath)

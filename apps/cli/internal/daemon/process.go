@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 
 	"yishan/apps/cli/internal/adapter/cloud/session"
 	"yishan/apps/cli/internal/adapter/relay"
@@ -105,12 +104,6 @@ func Run(cfg RunConfig, statePath string, runtime *session.Session) error {
 	}
 	defer sc.cleanup()
 
-	if err := registerNode(dr, runtime); err != nil {
-		dr.app.Close()
-		shutdownServer(dr.server)
-		return err
-	}
-
 	return sc.waitForShutdown()
 }
 
@@ -120,13 +113,5 @@ func (dr *daemonRuntime) closeListener() {
 			return
 		}
 		log.Warn().Err(closeErr).Msg("failed to close daemon listener")
-	}
-}
-
-func shutdownServer(server *http.Server) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
-		log.Error().Err(err).Msg("failed to shutdown daemon server after startup error")
 	}
 }

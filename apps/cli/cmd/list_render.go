@@ -1,66 +1,9 @@
 package cmd
 
 import (
-	"yishan/apps/cli/internal/adapter/cloud"
 	"yishan/apps/cli/cmd/output"
+	"yishan/apps/cli/internal/adapter/cloud"
 )
-
-func renderProjectsList(response cloud.ListProjectsResponse, includeAll bool) output.RenderData {
-	rows := make([]map[string]any, 0, len(response.Projects))
-	for _, project := range response.Projects {
-		row := map[string]any{
-			"id":   project.ID,
-			"name": project.Name,
-		}
-		if includeAll {
-			row["organizationId"] = project.OrganizationID
-			row["nodeId"] = project.NodeID
-			row["sourceType"] = project.SourceType
-			row["repoProvider"] = project.RepoProvider
-			row["repoUrl"] = project.RepoURL
-			row["repoKey"] = project.RepoKey
-			row["contextEnabled"] = project.ContextEnabled
-			row["setupScript"] = project.SetupScript
-			row["postScript"] = project.PostScript
-			row["createdAt"] = project.CreatedAt
-			row["updatedAt"] = project.UpdatedAt
-		}
-		rows = append(rows, row)
-	}
-
-	columns := []string{"id", "name"}
-	if includeAll {
-		columns = []string{"id", "name", "organizationId", "nodeId", "sourceType", "repoProvider", "repoUrl", "repoKey", "contextEnabled", "setupScript", "postScript", "createdAt", "updatedAt"}
-	}
-
-	return output.RenderData{Title: "projects", Columns: columns, Rows: rows}
-}
-
-func renderNodesList(response cloud.ListNodesResponse, includeAll bool) output.RenderData {
-	rows := make([]map[string]any, 0, len(response.Nodes))
-	for _, node := range response.Nodes {
-		row := map[string]any{
-			"id":    node.ID,
-			"name":  node.Name,
-			"scope": node.Scope,
-		}
-		if includeAll {
-			row["organizationId"] = node.OrganizationID
-			row["endpoint"] = node.Endpoint
-			row["metadata"] = node.Metadata
-			row["createdAt"] = node.CreatedAt
-			row["updatedAt"] = node.UpdatedAt
-		}
-		rows = append(rows, row)
-	}
-
-	columns := []string{"id", "name", "scope"}
-	if includeAll {
-		columns = []string{"id", "name", "scope", "organizationId", "endpoint", "metadata", "createdAt", "updatedAt"}
-	}
-
-	return output.RenderData{Title: "nodes", Columns: columns, Rows: rows}
-}
 
 func renderWorkspacesList(response cloud.ListWorkspacesResponse, includeAll bool, includeProjectColumn bool, projectNames map[string]string) output.RenderData {
 	rows := make([]map[string]any, 0, len(response.Workspaces))

@@ -431,14 +431,6 @@ type SystemAgentListModelsParams struct {
 	ForceRefresh bool   `json:"forceRefresh"`
 }
 
-type SystemProjectListParams struct {
-	OrgID string `json:"orgId"`
-}
-
-type SystemNodeListParams struct {
-	OrgID string `json:"orgId"`
-}
-
 type SystemCLIToolInstallParams struct {
 	ToolID string `json:"toolId"`
 }
