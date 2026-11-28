@@ -1,15 +1,12 @@
 // Package terminal is the Node application service for the terminal.* RPC
-// namespace: local terminal session operations, remote terminal stream
-// subscriptions over the relay, and the binary terminal I/O fast-path. It
+// namespace: local terminal session operations and the binary terminal I/O
+// fast-path. It
 // receives a small dependency set and never imports the composition root or
 // the daemon.
 package terminal
 
 import (
-	"sync"
-
 	"yishan/apps/cli/internal/adapter/cloud/session"
-	"yishan/apps/cli/internal/adapter/relay"
 	"yishan/apps/cli/internal/events"
 	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 	"yishan/apps/cli/internal/rpc"
@@ -29,21 +26,10 @@ type Deps struct {
 	NodeID    string
 }
 
-// Service implements the terminal.* RPC namespace and owns the remote
-// terminal stream subscription state (which desktop connections on this node
-// subscribe to a remote PTY session). Each method is named after the wire
+// Service implements the terminal.* RPC namespace. Each method is named after the wire
 // method tail; the service type already carries the namespace.
 type Service struct {
 	deps Deps
-
-	// relayClient owns the relay connection state (internal/relay); the
-	// composition root attaches it after the relay client is built.
-	relayClient *relay.Client
-
-	// remoteStreamSubs tracks desktop connections subscribed to remote
-	// terminal PTY streams (terminal.remote.subscribe).
-	remoteStreamMu   sync.Mutex
-	remoteStreamSubs map[string]map[*rpc.Connection]struct{}
 
 	// router is the namespace routing table for tests (callRPCForTest routes
 	// through the same path rpc.Server uses for live connections). Production
@@ -54,10 +40,7 @@ type Service struct {
 // NewService builds the terminal application service and wires terminal
 // lifecycle events into the frontend event hub.
 func NewService(deps Deps) *Service {
-	service := &Service{
-		deps:             deps,
-		remoteStreamSubs: make(map[string]map[*rpc.Connection]struct{}),
-	}
+	service := &Service{deps: deps}
 	WireTerminalListeners(deps.Terminals, deps.Events)
 	return service
 }
@@ -94,10 +77,4 @@ func WireTerminalListeners(terminals *term.Manager, events *eventbus.Hub) {
 			},
 		})
 	})
-}
-
-// SetRelayClient attaches the relay client after it is built (needs the rpc
-// server). The composition root owns relay enablement.
-func (s *Service) SetRelayClient(client *relay.Client) {
-	s.relayClient = client
 }

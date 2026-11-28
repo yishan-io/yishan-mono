@@ -1,7 +1,6 @@
 // Package relayprotocol owns the wire protocol shared by the CLI daemon
 // (apps/cli) and the relay server (apps/relay): JSON-RPC 2.0 envelopes,
-// relay method constants, job-run messages, terminal stream messages,
-// workspace snapshot routing, and the binary PTY frame format.
+// relay heartbeat method constants, and the binary PTY frame format.
 //
 // The module contains wire types, protocol constants, encoding helpers, and
 // compatibility tests only. Connection state, reconnect behavior, token

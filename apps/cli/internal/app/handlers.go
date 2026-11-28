@@ -5,11 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"yishan/apps/cli/internal/adapter/relay"
 	nodeagent "yishan/apps/cli/internal/node/agent"
-	nodesystem "yishan/apps/cli/internal/node/system"
-	nodeterminal "yishan/apps/cli/internal/node/terminal"
-	nodeworkspace "yishan/apps/cli/internal/node/workspace"
 	"yishan/apps/cli/internal/rpc"
 )
 
@@ -36,29 +32,4 @@ func (h appHandler) OnConnect(connection *rpc.Connection, request *http.Request)
 	connection.AddCloseHook(func() {
 		h.agent.UntrackDesktop(connection)
 	})
-}
-
-// relayHandler dispatches relay-level messages the relay client does not own:
-// workspace snapshot changes go to the workspace service, terminal
-// session/stream messages to the terminal service. Scheduled jobs are local,
-// so api-service's job notifications are answered or ignored here.
-type relayHandler struct {
-	system    *nodesystem.Service
-	workspace *nodeworkspace.Service
-	terminal  *nodeterminal.Service
-}
-
-// HandleRelayMessage implements relay.MessageHandler.
-func (h relayHandler) HandleRelayMessage(ctx context.Context, connState *rpc.Connection, nodeID string, method string, params json.RawMessage) bool {
-	switch method {
-	case relay.MethodJobScheduleChanged:
-		return true
-	case relay.MethodJobRun:
-		nodesystem.RejectRelayJobRun(connState, params)
-		return true
-	case relay.MethodWorkspaceSnapshotChanged:
-		return h.workspace.HandleRelayMessage(ctx, connState, nodeID, method, params)
-	default:
-		return h.terminal.HandleRelayMessage(ctx, connState, nodeID, method, params)
-	}
 }
